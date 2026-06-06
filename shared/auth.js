@@ -22,7 +22,7 @@
   const INACTIVITY_TTL   = 30 * 60 * 1000;   // 30 min idle
   const ABSOLUTE_TTL     = 8  * 60 * 60 * 1000; // 8 hr hard limit
   const SERVER_CHECK_INT = 5  * 60 * 1000;    // server ping every 5 min
-  const ALLOWED_ORIGIN   = 'https://effimalik.github.io/FleetManagement/';
+  const ALLOWED_ORIGIN   = 'https://effimalik.github.io/Testing/';
   const API_BASE         = 'https://script.google.com/macros/s/AKfycbx9O_58jlTsohkp8bNYA1rO2EQm9M9FeXoe1FT3E0n8yJ91jseidhKiM0Ss7meNkl7Elg/exec';
      
      // 'https://script.google.com/macros/s/AKfycbyOkXshkQIhwtBjNcDbtQCsU4t6_WlH5aii6O6xElMuQa1ZB4Fn9E31c4NoO-au8TXCEw/exec';
@@ -324,61 +324,19 @@
      * Expected server response:
      * { success: true, permissions: { ap2_employee: true, ap2_bike: false, ... } }
      */
-    async fetchPermissions() {
-      try {
-        const s = _readSession();
-        if (!s || !s.email) {
-          console.warn('[Auth] fetchPermissions: no session email');
-          return null;
-        }
-
-        // Matches your doGet style — just type + email, no session params needed
-        const url = `${API_BASE}?type=getPermissions`
-          + `&email=${encodeURIComponent(s.email)}`
-          + `&_t=${Date.now()}`;
-
-        console.log('[Auth] fetchPermissions: requesting for', s.email);
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) {
-          console.warn('[Auth] fetchPermissions: HTTP', res.status);
-          return null;
-        }
-
-        const data = await res.json();
-        if (!data || data.success === false) {
-          console.warn('[Auth] fetchPermissions: server returned failure', data);
-          return null;
-        }
-
-        // Normalise: accept either { permissions: {...} } or bare flat object
-        const perms = data.permissions || data;
-        if (typeof perms !== 'object') {
-          console.warn('[Auth] fetchPermissions: unexpected response shape', data);
-          return null;
-        }
-
-        // Normalise values: "TRUE"/"FALSE" strings → booleans
-        const normalised = {};
-        for (const [k, v] of Object.entries(perms)) {
-          const key = String(k).trim();
-          if (!key) continue;
-          if (typeof v === 'boolean') { normalised[key] = v; continue; }
-          const str = String(v).trim().toUpperCase();
-          normalised[key] = str === 'TRUE' || str === '1' || str === 'YES';
-        }
-
-        // Persist into session so every page can read without another network call
-        s.permissions = normalised;
-        _writeSession(s);
-
-        console.log('[Auth] fetchPermissions: stored', Object.keys(normalised).length, 'portals:', normalised);
-        return normalised;
-
-      } catch (e) {
-        console.warn('[Auth] fetchPermissions error:', e.message);
-        return null;
-      }
-    },
+    // auth.js — replace the entire fetchPermissions() body:
+async fetchPermissions() {
+  try {
+    const s = _readSession();
+    if (!s) return null;
+    const perms = s.permissions || null;
+    console.log('[Auth] fetchPermissions: reading from session →', perms);
+    return perms;
+  } catch (e) {
+    console.warn('[Auth] fetchPermissions error:', e.message);
+    return null;
+  }
+},
 
     /**
      * getPermissions — returns the stored permissions map or null.
