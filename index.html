@@ -1092,12 +1092,17 @@ async function cmRefresh(key, btn) {
 })();
 
 
-/* ══ SECTION MAP ══ */
+/* ══ SECTION MAP ══
+   permKey: matches column name in the Permissions sheet (e.g. ap2_employee).
+   If permKey is null the section is always visible (admin utilities etc.).
+   If Auth.getPermissions() returns null (perms not loaded yet) all sections
+   with a permKey are hidden until _applyPermissions() is called.            */
 const SECTIONS = {
   'ib-emp': {
     icon:'ti-users', label:'Employees',
     pageLabel:'Employees', pageSub:'Staff directory',
     pillBg:'var(--accent-dim)', pillColor:'var(--accent)', pillIcon:'ti-users',
+    permKey: 'ap2_employee',   // ← Permissions sheet column
     groups:[
       { label:'Directory', items:[
         { label:'Employee List', file:'Reg/allEmp.html', icon:'ti-list',      sub:'All staff records'     },
@@ -1112,6 +1117,7 @@ const SECTIONS = {
     icon:'ti-motorbike', label:'Bike Fleet',
     pageLabel:'Bike Fleet', pageSub:'Fleet registry',
     pillBg:'var(--teal-dim)', pillColor:'var(--teal)', pillIcon:'ti-motorbike',
+    permKey: 'ap2_bike',
     groups:[
       { label:'Fleet', items:[
         { label:'Bike List',     file:'Reg/allBike.html', icon:'ti-list', sub:'All registered bikes' },
@@ -1127,6 +1133,7 @@ const SECTIONS = {
     icon:'ti-cash', label:'Advance Salary',
     pageLabel:'Advance Salary', pageSub:'Salary advances',
     pillBg:'var(--amber-dim)', pillColor:'var(--amber)', pillIcon:'ti-cash',
+    permKey: 'ap2_master',   // master sheet controls salary advance visibility
     groups:[
       { label:'Salary', items:[
         { label:'All Requests',    file:'Reg/penReq.html', icon:'ti-clipboard-list', sub:'Advance history'   },
@@ -1139,6 +1146,7 @@ const SECTIONS = {
     icon:'ti-file-alert', label:'Expiring Docs',
     pageLabel:'Expiring Docs', pageSub:'Document tracker',
     pillBg:'var(--red-dim)', pillColor:'var(--red)', pillIcon:'ti-file-alert',
+    permKey: null,   // always visible — set to 'ap2_employee' or similar if needed
     groups:[
       { label:'Expiry Tracker', items:[
         { label:'Employee Docs', file:'pages/empExp.html', icon:'ti-users',     sub:'Visa · EID · Labour', badge:true },
@@ -1152,6 +1160,71 @@ let activeSection = null;
 let subOpen = true;
 let sidebarVisible = true;
 let subHideTimer = null;
+
+/* ══ PERMISSIONS — show/hide nav buttons based on Permissions sheet ══
+   Called once on load (after Auth.getPermissions() is available) and
+   again if permissions are refreshed during the session.
+
+   Logic:
+   • If getPermissions() returns null → no perms fetched yet → hide ALL
+     permKey sections with a "loading…" state until perms arrive.
+   • For each SECTIONS entry with a permKey, show/hide the matching
+     icon-bar button and topbar shortcut.
+   • Sections with permKey:null are always visible.
+   • If the first permitted section isn't 'ib-emp', auto-open it.         */
+function _applyPermissions() {
+  const perms = window.Auth && window.Auth.getPermissions
+    ? window.Auth.getPermissions()
+    : null;
+
+  let firstAllowed = null;
+
+  for (const [id, sec] of Object.entries(SECTIONS)) {
+    const btn = document.getElementById(id);
+    if (!btn) continue;
+
+    const allowed = !sec.permKey || (perms && perms[sec.permKey] === true);
+
+    btn.style.display = allowed ? '' : 'none';
+    if (allowed && !firstAllowed) firstAllowed = id;
+  }
+
+  // Also hide topbar shortcuts that are permission-gated
+  // Map shortcut selector → permKey
+  const shortcutGates = [
+    { sel: '.tb-sc.emp',  permKey: 'ap2_employee' },
+    { sel: '.tb-sc.bike', permKey: 'ap2_bike'     },
+    { sel: '.tb-sc.adv',  permKey: 'ap2_master'   },
+  ];
+  for (const { sel, permKey } of shortcutGates) {
+    document.querySelectorAll(sel).forEach(el => {
+      el.style.display = (!perms || perms[permKey] === true) ? '' : 'none';
+    });
+  }
+
+  // If the default active section (ib-emp) is hidden, open the first allowed one
+  if (firstAllowed && firstAllowed !== 'ib-emp') {
+    const activeBtn = document.getElementById(firstAllowed);
+    if (activeBtn) ibOpen(firstAllowed, activeBtn);
+  }
+
+  // If NO sections are allowed at all, show a locked state in the main frame
+  if (!firstAllowed) {
+    const frame = document.getElementById('main-frame');
+    if (frame) {
+      frame.srcdoc = `<html><body style="font-family:sans-serif;display:flex;align-items:center;
+        justify-content:center;height:100vh;margin:0;background:#0d1117;color:#8b949e;">
+        <div style="text-align:center;">
+          <div style="font-size:48px;margin-bottom:16px;">🔒</div>
+          <div style="font-size:16px;font-weight:600;color:#e6edf3;">No Access</div>
+          <div style="font-size:13px;margin-top:8px;">You don't have permission to access any portal.<br>
+          Contact your administrator.</div>
+        </div></body></html>`;
+    }
+  }
+
+  console.log('[Permissions] applied — firstAllowed:', firstAllowed, '| perms:', perms);
+}
 
 /* ── Sidebar toggle ── */
 function toggleSidebar() {
@@ -1425,10 +1498,35 @@ function populateUserChip() {
 window.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('theme') || 'dark';
   setTheme(saved);
-  ibOpen('ib-emp', document.getElementById('ib-emp'));
   populateUserChip();
   updateCacheHealthDot();
   setInterval(updateCacheHealthDot, 30000);
+
+  // ── PERMISSIONS ──────────────────────────────────────────────
+  // First apply what's already in the session (instant, no network)
+  _applyPermissions();
+
+  // If permissions weren't stored yet (e.g. first load after login didn't
+  // call fetchPermissions), fetch them now and re-apply.
+  if (window.Auth && typeof window.Auth.getPermissions === 'function') {
+    if (!window.Auth.getPermissions()) {
+      // Async — page is already shown, nav updates when perms arrive
+      window.Auth.fetchPermissions().then(perms => {
+        if (perms) _applyPermissions();
+      }).catch(e => console.warn('[index] Permission fetch failed:', e));
+    }
+  }
+  // ─────────────────────────────────────────────────────────────
+
+  // Open first visible section after permissions are applied
+  // (ibOpen defers gracefully if btn is hidden)
+  const firstVisible = Object.keys(SECTIONS).find(id => {
+    const btn = document.getElementById(id);
+    return btn && btn.style.display !== 'none';
+  });
+  if (firstVisible) {
+    ibOpen(firstVisible, document.getElementById(firstVisible));
+  }
 
   // Reset sub-bar autohide timer on any activity inside sub-bar
   const sb = document.getElementById('sub-bar');
@@ -1442,7 +1540,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const _bc = new BroadcastChannel('ap-theme');
     _bc.onmessage = (evt) => {
       if (evt.data && evt.data.type === 'ap-theme' && evt.data.theme) {
-        // Only apply if different to avoid loop
         const cur = document.documentElement.getAttribute('data-theme');
         if (cur !== evt.data.theme) setTheme(evt.data.theme);
       }
@@ -1451,7 +1548,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Periodic miss check (every 60s) — keeps badge updated even when panel is closed
   setInterval(() => {
-    // Always update the miss/stale badge count; cmScanAll guards autohide internally
     cmScanAll();
     updateCacheHealthDot();
   }, 60000);
