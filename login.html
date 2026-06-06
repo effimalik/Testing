@@ -14,6 +14,7 @@
   before the user clicks — only after a successful server response.
 -->
 <script src="https://effimalik.github.io/Testing/shared/auth.js?v=5"></script>
+<script src="https://effimalik.github.io/Testing/shared/dataLayer.js?v=5"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 
@@ -774,7 +775,7 @@ async function startGoogleLogin() {
   }
 
      setStep(5, 'done');
-     showStatus('loading', 'Loading permissions…', 'ti-loader-2');
+     showStatus('loading', 'Preparing portal…', 'ti-loader-2');
      await sleep(300);
 
      // ── Fetch portal permissions for this user ──────────────────
@@ -790,13 +791,18 @@ async function startGoogleLogin() {
      }
 
      showStatus('loading', 'Pre-loading data…', 'ti-loader-2');
-     await sleep(300);
  
-     // Warm all datasets in background — non-blocking, best-effort
+     // Warm all permitted datasets BEFORE redirect — dataLayer.js is now loaded
+     // on this page so cache is pre-filled. index.html will load instantly.
      if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
-       try { await AdminPro.warmIfEmpty(); } catch (_) {}
+       try {
+         await AdminPro.warmIfEmpty();
+         console.log('[Login] Data pre-loaded into cache — index.html will be instant');
+       } catch (e) {
+         console.warn('[Login] warmIfEmpty failed (non-fatal):', e.message);
+       }
      }
- 
+
      doRedirect();
 }
 </script>

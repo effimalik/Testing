@@ -1146,7 +1146,7 @@ const SECTIONS = {
     icon:'ti-file-alert', label:'Expiring Docs',
     pageLabel:'Expiring Docs', pageSub:'Document tracker',
     pillBg:'var(--red-dim)', pillColor:'var(--red)', pillIcon:'ti-file-alert',
-    permKey: null,   // always visible — set to 'ap2_employee' or similar if needed
+    permKey: 'ap2_employee',   // requires employee permission — document tracker uses employee data
     groups:[
       { label:'Expiry Tracker', items:[
         { label:'Employee Docs', file:'pages/empExp.html', icon:'ti-users',     sub:'Visa · EID · Labour', badge:true },
@@ -1202,28 +1202,12 @@ function _applyPermissions() {
     });
   }
 
-  // If the default active section (ib-emp) is hidden, open the first allowed one
-  if (firstAllowed && firstAllowed !== 'ib-emp') {
-    const activeBtn = document.getElementById(firstAllowed);
-    if (activeBtn) ibOpen(firstAllowed, activeBtn);
-  }
-
-  // If NO sections are allowed at all, show a locked state in the main frame
-  if (!firstAllowed) {
-    const frame = document.getElementById('main-frame');
-    if (frame) {
-      frame.srcdoc = `<html><body style="font-family:sans-serif;display:flex;align-items:center;
-        justify-content:center;height:100vh;margin:0;background:#0d1117;color:#8b949e;">
-        <div style="text-align:center;">
-          <div style="font-size:48px;margin-bottom:16px;">🔒</div>
-          <div style="font-size:16px;font-weight:600;color:#e6edf3;">No Access</div>
-          <div style="font-size:13px;margin-top:8px;">You don't have permission to access any portal.<br>
-          Contact your administrator.</div>
-        </div></body></html>`;
-    }
-  }
+  // Note: ibOpen() and No-Access frame are handled by DOMContentLoaded init,
+  // NOT here. _applyPermissions() only shows/hides nav buttons — it does NOT
+  // trigger navigation (avoids double-open race conditions).
 
   console.log('[Permissions] applied — firstAllowed:', firstAllowed, '| perms:', perms);
+  return firstAllowed;
 }
 
 /* ── Sidebar toggle ── */
@@ -1276,6 +1260,23 @@ function ibOpen(id, btn) {
   sb.classList.remove('collapsed');
   activeSection = id;
   startSubHideTimer();
+
+  // Auto-load the first item of the first group into the main frame
+  // This ensures data is visible immediately without a manual click
+  const firstGroup = sec.groups && sec.groups[0];
+  const firstItem  = firstGroup && firstGroup.items && firstGroup.items[0];
+  if (firstItem) {
+    const frame = document.getElementById('main-frame');
+    if (frame && !frame.src.endsWith(firstItem.file)) {
+      // Mark first nav item as active
+      setTimeout(() => {
+        const firstNavEl = document.querySelector('#sb2-nav .sb2-item');
+        if (firstNavEl) firstNavEl.classList.add('active');
+      }, 0);
+      loadPage(firstItem.file, null, firstItem.label, firstItem.icon || sec.icon, firstItem.sub,
+               sec.pillBg, sec.pillColor);
+    }
+  }
 }
 
 /* ── Load page ── */
@@ -1495,55 +1496,61 @@ function populateUserChip() {
 }
 
 /* ── Init ── */
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   const saved = localStorage.getItem('theme') || 'dark';
   setTheme(saved);
   populateUserChip();
   updateCacheHealthDot();
   setInterval(updateCacheHealthDot, 30000);
 
-  // ── PERMISSIONS ──────────────────────────────────────────────
-  // First apply what's already in the session (instant, no network)
+  // ── STEP 1: Apply permissions from session immediately (instant, no network) ──
   _applyPermissions();
-  // Build DS_META from permissions — only permitted datasets visible in cache panel
   _buildDsMeta();
-  // Warm cache for permitted datasets in parallel
+
+  // ── STEP 2: Warm cache — fetch any missing/stale datasets before opening pages ──
+  // This runs BEFORE opening the first page so child iframes get fresh data.
+  // dataLayer._autoInit() already called warmIfEmpty() in background;
+  // we await it here so the first page loads into a warmed cache.
   if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
-    AdminPro.warmIfEmpty().then(() => {
-      updateCacheHealthDot();
-      cmScanAll();
-    }).catch(() => {});
-  }
-
-  // If permissions weren't stored yet (e.g. first load after login didn't
-  // call fetchPermissions), fetch them now and re-apply.
-  if (window.Auth && typeof window.Auth.getPermissions === 'function') {
-    if (!window.Auth.getPermissions()) {
-      // Async — page is already shown, nav updates when perms arrive
-      window.Auth.fetchPermissions().then(perms => {
-        if (perms) {
-          _applyPermissions();
-          _buildDsMeta();  // rebuild DS_META with fresh permissions
-          if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
-            AdminPro.warmIfEmpty().then(() => {
-              updateCacheHealthDot();
-              cmScanAll();
-            }).catch(() => {});
-          }
-        }
-      }).catch(e => console.warn('[index] Permission fetch failed:', e));
+    try {
+      await AdminPro.warmIfEmpty();
+    } catch(e) {
+      console.warn('[index] warmIfEmpty error (non-fatal):', e.message);
     }
+    updateCacheHealthDot();
+    cmScanAll();
   }
-  // ─────────────────────────────────────────────────────────────
 
-  // Open first visible section after permissions are applied
-  // (ibOpen defers gracefully if btn is hidden)
+  // ── STEP 3: Open the first permitted section → loads first sub-page into frame ──
   const firstVisible = Object.keys(SECTIONS).find(id => {
     const btn = document.getElementById(id);
     return btn && btn.style.display !== 'none';
   });
   if (firstVisible) {
     ibOpen(firstVisible, document.getElementById(firstVisible));
+  }
+
+  // ── STEP 4: If permissions weren't in session (edge case), fetch then re-apply ──
+  if (window.Auth && typeof window.Auth.getPermissions === 'function') {
+    if (!window.Auth.getPermissions()) {
+      window.Auth.fetchPermissions().then(async perms => {
+        if (perms) {
+          _applyPermissions();
+          _buildDsMeta();
+          if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
+            await AdminPro.warmIfEmpty().catch(() => {});
+            updateCacheHealthDot();
+            cmScanAll();
+          }
+          // Re-open first visible section now that permissions are known
+          const fv = Object.keys(SECTIONS).find(id => {
+            const btn = document.getElementById(id);
+            return btn && btn.style.display !== 'none';
+          });
+          if (fv && !activeSection) ibOpen(fv, document.getElementById(fv));
+        }
+      }).catch(e => console.warn('[index] fetchPermissions failed:', e));
+    }
   }
 
   // Reset sub-bar autohide timer on any activity inside sub-bar
@@ -1892,21 +1899,24 @@ function updateCacheHealthDot() {
     const age = getCacheAge(key);
     const meta = DS_META[key];
     const isStale = age === Infinity || age > meta.ttlMs;
+    const frame = document.getElementById('main-frame');
     if (isStale && window.AdminPro && AdminPro.forceRefresh) {
       try {
-        await AdminPro.forceRefresh(key);
+        const data = await AdminPro.forceRefresh(key);
         updateCacheHealthDot();
-        // Notify child that data is ready
-        const frame = document.getElementById('main-frame');
+        // Notify child that data is ready — include data so child can use it directly
         if (frame && frame.contentWindow) {
-          frame.contentWindow.postMessage({ type:'ap-cache-ready', key }, '*');
+          frame.contentWindow.postMessage({ type:'ap-cache-ready', key, data }, '*');
         }
       } catch(e) { console.warn('[cacheWatchdog] refresh failed for', key, e); }
-    } else if (!isStale) {
-      // Data is fresh — immediately tell child
-      const frame = document.getElementById('main-frame');
+    } else {
+      // Data is fresh — immediately tell child (pass data too)
+      let data = null;
+      try {
+        if (window.AdminPro && AdminPro.cache) data = AdminPro.cache.get(key)?.data ?? null;
+      } catch(_) {}
       if (frame && frame.contentWindow) {
-        frame.contentWindow.postMessage({ type:'ap-cache-ready', key }, '*');
+        frame.contentWindow.postMessage({ type:'ap-cache-ready', key, data }, '*');
       }
     }
   });
