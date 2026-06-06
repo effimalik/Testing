@@ -1633,43 +1633,39 @@ function closeCachePanel() {
   if (_cpOutsideHandler) { document.removeEventListener('click', _cpOutsideHandler); _cpOutsideHandler = null; }
 }
 
-/* ── DS_META visual config — one entry per possible dataset key.
-   Only entries whose permKey is in the user's permissions are
-   exposed at runtime via _buildDsMeta(). Nothing here is sent
-   to the server — it is display metadata only.                 */
-const DS_META_ALL = {
-  bike:          { label:'Bikes',            icon:'ti-motorbike',          color:'var(--teal)',   colorDim:'var(--teal-dim)',   ttlMs: 15*60*1000, permKey:'ap2_bike'      },
-  employee:      { label:'Employees',        icon:'ti-users',              color:'var(--accent)', colorDim:'var(--accent-dim)', ttlMs: 10*60*1000, permKey:'ap2_employee'  },
-  master:        { label:'Master Sheet',     icon:'ti-table',              color:'var(--purple)', colorDim:'var(--purple-dim)', ttlMs:  5*60*1000, permKey:'ap2_master'    },
-  cioLog:        { label:'Check-In/Out Log', icon:'ti-arrows-horizontal',  color:'var(--orange)', colorDim:'var(--orange-dim)', ttlMs:  5*60*1000, permKey:'ap2_bike'      },
-  approvedSheet: { label:'Approved Sheet',   icon:'ti-clipboard-check',    color:'var(--teal)',   colorDim:'var(--teal-dim)',   ttlMs:  3*60*1000, permKey:'ap2_master'    },
-  recovery:      { label:'Recovery',         icon:'ti-wallet',             color:'var(--amber)',  colorDim:'var(--amber-dim)',  ttlMs:  6*60*60*1000, permKey:'ap2_master'  },
+/* ── DS_META — visual display config for the cache panel.
+   Icon/colour metadata keyed by dataset name.
+   The active set is always driven by dataLayer.js (DATASETS),
+   which is permission-filtered at runtime. This map is UI-only. */
+const DS_META_ICONS = {
+  bike:          { icon:'ti-motorbike',         color:'var(--teal)',   colorDim:'var(--teal-dim)'   },
+  employee:      { icon:'ti-users',             color:'var(--accent)', colorDim:'var(--accent-dim)' },
+  master:        { icon:'ti-table',             color:'var(--purple)', colorDim:'var(--purple-dim)' },
+  cioLog:        { icon:'ti-arrows-horizontal', color:'var(--orange)', colorDim:'var(--orange-dim)' },
+  approvedSheet: { icon:'ti-clipboard-check',   color:'var(--teal)',   colorDim:'var(--teal-dim)'   },
+  recovery:      { icon:'ti-wallet',            color:'var(--amber)',  colorDim:'var(--amber-dim)'  },
 };
 
-/* Builds DS_META dynamically — only includes datasets the user has permission for.
-   Called once after permissions are loaded, and the result is cached in _DS_META.
-   All cache functions read DS_META (the getter) so they automatically see only
-   permitted datasets without any other changes needed.                           */
-let _DS_META = null;
-
-function _buildDsMeta() {
-  const perms = window.Auth && window.Auth.getPermissions ? window.Auth.getPermissions() : null;
-  const result = {};
-  for (const [key, meta] of Object.entries(DS_META_ALL)) {
-    if (!meta.permKey || (perms && perms[meta.permKey] === true)) {
-      result[key] = meta;
-    }
-  }
-  _DS_META = result;
-  console.log('[DS_META] built for user — datasets:', Object.keys(result));
-  return result;
-}
-
-/* All code reads DS_META — returns cached build or rebuilds if not ready yet */
+/* DS_META getter — always derived from dataLayer’s active (permitted) datasets.
+   All cache panel functions (cmScanAll, renderCacheTable, updateCacheHealthDot,
+   cacheWatchdog) read DS_META and automatically see only what the user can access.
+   No hardcoded list here — permissions drive everything.                          */
 Object.defineProperty(window, 'DS_META', {
-  get() { return _DS_META || _buildDsMeta(); },
+  get() {
+    if (!window.AdminPro || !AdminPro.getActiveDatasets) return {};
+    const active = AdminPro.getActiveDatasets();
+    const result = {};
+    for (const [key, ds] of Object.entries(active)) {
+      const icons = DS_META_ICONS[key] || { icon:'ti-database', color:'var(--accent)', colorDim:'var(--accent-dim)' };
+      result[key] = { label: ds.label, ttlMs: ds.ttlMs, ...icons };
+    }
+    return result;
+  },
   configurable: true,
 });
+
+/* No-op stub — kept so DOMContentLoaded calls don’t throw */
+function _buildDsMeta() {}
 
 function fmtTtl(ms) {
   if (ms <= 0) return '—';
