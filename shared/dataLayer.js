@@ -5,7 +5,7 @@
    ARCHITECTURE:
    ─ window.AdminPro  → public API (warmIfEmpty, get*, forceRefresh, etc.)
    ─ window.DataLayer → alias for window.AdminPro (backwards compat)
-   ─ Cache layer      → localStorage with prefix 'ap2_' + key
+   ─ Cache layer      → sessionStorage with prefix 'ap2_' + key
    ─ Auth gate        → every fetch checks window.Auth.getCredentials()
 
    DATASETS (must match DS_META in index.html):
@@ -77,7 +77,7 @@
   };
 
   /* ─────────────────────────────────────────
-     CACHE  — localStorage wrappers
+     CACHE  — sessionStorage wrappers
      Format: { ts: <epoch ms>, data: <value> }
   ───────────────────────────────────────── */
   const _cache = {
@@ -85,7 +85,7 @@
 
     get(name) {
       try {
-        const raw = localStorage.getItem(this._key(name));
+        const raw = sessionStorage.getItem(this._key(name));
         if (!raw) return null;
         return JSON.parse(raw);        // { ts, data }
       } catch { return null; }
@@ -93,27 +93,27 @@
 
     set(name, data) {
       try {
-        localStorage.setItem(this._key(name), JSON.stringify({ ts: Date.now(), data }));
+        sessionStorage.setItem(this._key(name), JSON.stringify({ ts: Date.now(), data }));
         return true;
       } catch (e) {
-        // localStorage full — try evicting the oldest entry and retry once
-        console.warn('[DataLayer] localStorage full — evicting oldest cache entry');
+        // sessionStorage full — try evicting the oldest entry and retry once
+        console.warn('[DataLayer] sessionStorage full — evicting oldest cache entry');
         try { _evictOldest(); } catch {}
         try {
-          localStorage.setItem(this._key(name), JSON.stringify({ ts: Date.now(), data }));
+          sessionStorage.setItem(this._key(name), JSON.stringify({ ts: Date.now(), data }));
           return true;
         } catch { return false; }
       }
     },
 
     clear(name) {
-      try { localStorage.removeItem(this._key(name)); } catch {}
+      try { sessionStorage.removeItem(this._key(name)); } catch {}
     },
 
     clearAll() {
       try {
-        const keys = Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX));
-        keys.forEach(k => localStorage.removeItem(k));
+        const keys = Object.keys(sessionStorage).filter(k => k.startsWith(CACHE_PREFIX));
+        keys.forEach(k => sessionStorage.removeItem(k));
       } catch {}
     },
 
@@ -135,14 +135,14 @@
 
   function _evictOldest() {
     let oldest = null, oldestKey = null;
-    for (const k of Object.keys(localStorage)) {
+    for (const k of Object.keys(sessionStorage)) {
       if (!k.startsWith(CACHE_PREFIX)) continue;
       try {
-        const { ts } = JSON.parse(localStorage.getItem(k));
+        const { ts } = JSON.parse(sessionStorage.getItem(k));
         if (!oldest || ts < oldest) { oldest = ts; oldestKey = k; }
       } catch {}
     }
-    if (oldestKey) localStorage.removeItem(oldestKey);
+    if (oldestKey) sessionStorage.removeItem(oldestKey);
   }
 
   /* ─────────────────────────────────────────
@@ -250,25 +250,27 @@
      Runs in parallel — does NOT block the redirect.
   ───────────────────────────────────────── */
   async function warmIfEmpty() {
-    const keys = Object.keys(DATASETS);
-    console.log('[DataLayer] warmIfEmpty: checking', keys.length, 'datasets…');
+    const perms = window.Auth && window.Auth.getPermissions
+      ? window.Auth.getPermissions()
+      : null;
 
-    const tasks = keys.map(async (key) => {
-      const status = _cache.status(key);
-      if (status === 'fresh') {
-        console.log(`[DataLayer] warmIfEmpty: ${key} already fresh — skipping`);
-        return;
-      }
-      try {
-        await _fetchFromServer(key);
-      } catch (e) {
-        // Non-blocking — log and continue so other datasets still load
-        console.warn(`[DataLayer] warmIfEmpty: ${key} failed —`, e.message);
-      }
-    });
+    if (!perms) {
+      console.warn('[DataLayer] warmIfEmpty: no permissions found — skipping warm');
+      return;
+    }
 
-    await Promise.allSettled(tasks);
-    console.log('[DataLayer] warmIfEmpty: done');
+    const allowedKeys = Object.keys(perms).filter(k => perms[k] === true);
+    console.log('[DataLayer] warmIfEmpty: parallel fetch for', allowedKeys.length, 'datasets:', allowedKeys);
+
+    await Promise.allSettled(
+      allowedKeys.map(permKey => {
+        const dsKey = permKey.replace('ap2_', '');
+        if (!DATASETS[dsKey]) return Promise.resolve();
+        return _fetchFromServer(dsKey);
+      })
+    );
+
+    console.log('[DataLayer] warmIfEmpty: all done');
   }
 
   /* ─────────────────────────────────────────

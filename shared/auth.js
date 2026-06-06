@@ -324,19 +324,20 @@
      * Expected server response:
      * { success: true, permissions: { ap2_employee: true, ap2_bike: false, ... } }
      */
-    // auth.js — replace the entire fetchPermissions() body:
-async fetchPermissions() {
-  try {
-    const s = _readSession();
-    if (!s) return null;
-    const perms = s.permissions || null;
-    console.log('[Auth] fetchPermissions: reading from session →', perms);
-    return perms;
-  } catch (e) {
-    console.warn('[Auth] fetchPermissions error:', e.message);
-    return null;
-  }
-},
+    async fetchPermissions() {
+      try {
+        const s = _readSession();
+        if (!s) return null;
+        // Permissions are bundled in the login response and stored by createSession()
+        // No network call needed — just read from session
+        const perms = s.permissions || null;
+        console.log('[Auth] fetchPermissions: reading from session →', perms);
+        return perms;
+      } catch (e) {
+        console.warn('[Auth] fetchPermissions error:', e.message);
+        return null;
+      }
+    },
 
     /**
      * getPermissions — returns the stored permissions map or null.
