@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AdminPro UAE — Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
+<!--
+  LOAD ORDER MATTERS:
+  auth.js is loaded FIRST — but on login.html it skips all session guards.
+  The login flow here is self-contained: it does NOT call Auth.isAuthenticated()
+  before the user clicks — only after a successful server response.
+-->
+<script src="https://effimalik.github.io/FleetManagement/shared/auth.js?v=5"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
+:root,[data-theme="dark"]{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2333;
+  --surface:#21262d;--surface2:#2d333b;
+  --border:#30363d;--border2:#444c56;
+  --text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
+  --accent:#58a6ff;--accent-dim:rgba(88,166,255,.12);--accent-glow:rgba(88,166,255,.28);
+  --teal:#39d353;--teal-dim:rgba(57,211,83,.12);
+  --amber:#e3b341;--amber-dim:rgba(227,179,65,.12);
+  --red:#f85149;--red-dim:rgba(248,81,73,.12);
+  --purple:#a371f7;--purple-dim:rgba(163,113,247,.12);
+  --font:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
+  --shadow-lg:0 8px 32px rgba(0,0,0,.6);
+}
+
+html,body{
+  height:100%;width:100%;
+  font-family:var(--font);
+  background:var(--bg);
+  color:var(--text);
+  font-size:14px;
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+
+/* ── Subtle grid background ── */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(88,166,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(88,166,255,.04) 1px, transparent 1px);
+  background-size:48px 48px;
+  pointer-events:none;z-index:0;
+}
+body::after{
+  content:'';position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(88,166,255,.07) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 40% at 90% 90%, rgba(163,113,247,.06) 0%, transparent 60%);
+  pointer-events:none;z-index:0;
+}
+
+/* ── Top bar ── */
+.topbar{
+  position:fixed;top:0;left:0;right:0;
+  height:52px;background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;
+  padding:0 20px;gap:12px;z-index:100;
+}
+.topbar::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--accent) 0%,var(--purple) 40%,var(--teal) 100%);
+  opacity:.75;
+}
+.tb-logo{
+  width:32px;height:32px;
+  background:linear-gradient(135deg,var(--accent) 0%,#1f6feb 100%);
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:15px;
+  box-shadow:0 0 14px var(--accent-glow),0 2px 4px rgba(0,0,0,.3);
+  flex-shrink:0;
+}
+.tb-name{font-size:13px;font-weight:700;color:var(--text);letter-spacing:-.015em;}
+.tb-sub{font-size:10px;color:var(--text3);letter-spacing:.05em;text-transform:uppercase;margin-top:1px;}
+.tb-spacer{flex:1;}
+.tb-clock{
+  display:flex;align-items:center;gap:6px;
+  padding:0 10px;height:28px;border-radius:6px;
+  background:var(--bg3);border:1px solid var(--border);
+}
+.tb-clock i{font-size:12px;color:var(--teal);}
+.tb-time{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text);letter-spacing:.04em;}
+.tb-sep{width:1px;height:12px;background:var(--border2);}
+.tb-date{font-size:10.5px;color:var(--text2);}
+
+/* ── Login card ── */
+.page{
+  position:fixed;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  padding-top:52px;z-index:10;
+}
+.card{
+  width:100%;max-width:420px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:36px 36px 32px;
+  box-shadow:var(--shadow-lg),0 0 0 1px rgba(88,166,255,.04);
+  position:relative;overflow:hidden;
+  animation:cardIn .45s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes cardIn{
+  from{opacity:0;transform:translateY(20px) scale(.97);}
+  to{opacity:1;transform:translateY(0) scale(1);}
+}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--accent-glow),transparent);
+}
+.card-icon{
+  width:52px;height:52px;
+  background:linear-gradient(135deg,var(--accent) 0%,#1f6feb 100%);
+  border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:24px;
+  box-shadow:0 0 22px var(--accent-glow),0 4px 12px rgba(0,0,0,.3);
+  margin-bottom:20px;
+}
+.card-title{font-size:20px;font-weight:700;color:var(--text);letter-spacing:-.02em;margin-bottom:4px;}
+.card-subtitle{font-size:13px;color:var(--text2);line-height:1.5;}
+.divider{height:1px;background:var(--border);margin:24px 0;}
+
+.info-box{
+  display:flex;gap:10px;align-items:flex-start;
+  padding:12px 14px;border-radius:10px;
+  background:var(--accent-dim);border:1px solid rgba(88,166,255,.18);
+  margin-bottom:22px;
+}
+.info-box i{font-size:15px;color:var(--accent);flex-shrink:0;margin-top:1px;}
+.info-box p{font-size:12px;color:var(--text2);line-height:1.55;}
+.info-box strong{color:var(--text);font-weight:600;}
+
+/* ── Google button ── */
+.btn-google{
+  width:100%;height:46px;
+  display:flex;align-items:center;justify-content:center;gap:11px;
+  border-radius:10px;
+  border:1px solid var(--border2);
+  background:var(--surface);
+  color:var(--text);
+  font-family:var(--font);font-size:13.5px;font-weight:600;
+  cursor:pointer;
+  transition:all .18s;
+  position:relative;overflow:hidden;
+}
+.btn-google::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(88,166,255,.06) 0%,rgba(163,113,247,.04) 100%);
+  opacity:0;transition:opacity .18s;
+}
+.btn-google:hover:not(:disabled){
+  border-color:var(--accent);
+  box-shadow:0 0 16px var(--accent-glow),0 2px 8px rgba(0,0,0,.3);
+  transform:translateY(-1px);
+}
+.btn-google:hover::before{opacity:1;}
+.btn-google:active:not(:disabled){transform:translateY(0);box-shadow:none;}
+.btn-google:disabled{opacity:.45;cursor:not-allowed;transform:none!important;box-shadow:none!important;}
+.g-icon{width:20px;height:20px;flex-shrink:0;}
+
+/* ── Status panel ── */
+.status{
+  margin-top:18px;border-radius:10px;overflow:hidden;
+  border:1px solid var(--border);display:none;
+}
+.status.show{display:block;}
+.status-header{
+  padding:10px 14px;
+  display:flex;align-items:center;gap:8px;
+  font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  border-bottom:1px solid var(--border);background:var(--bg3);
+}
+.status-body{padding:12px 14px;}
+.status-msg{font-size:12.5px;color:var(--text2);line-height:1.6;}
+
+.status.loading .status-header{color:var(--accent);}
+.status.loading .status-header i{animation:spin .9s linear infinite;}
+.status.success .status-header{color:var(--teal);}
+.status.error   .status-header{color:var(--red);}
+.status.blocked .status-header{color:var(--amber);}
+
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.steps{display:flex;flex-direction:column;gap:7px;margin-top:4px;}
+.step{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--text3);transition:color .2s;}
+.step.active{color:var(--text);}
+.step.done{color:var(--teal);}
+.step.fail{color:var(--red);}
+.step-dot{
+  width:7px;height:7px;border-radius:50%;background:var(--border2);
+  flex-shrink:0;transition:background .2s,box-shadow .2s;
+}
+.step.active .step-dot{background:var(--accent);box-shadow:0 0 6px var(--accent-glow);}
+.step.done   .step-dot{background:var(--teal);}
+.step.fail   .step-dot{background:var(--red);}
+
+/* ── Card footer ── */
+.card-footer{
+  margin-top:22px;padding-top:16px;
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;
+}
+.card-footer i{font-size:13px;color:var(--text3);}
+.card-footer p{font-size:11px;color:var(--text3);line-height:1.5;}
+
+/* ── Access denied overlay ── */
+.error-overlay{
+  position:fixed;inset:0;
+  display:none;align-items:center;justify-content:center;
+  background:rgba(13,17,23,.95);backdrop-filter:blur(4px);
+  z-index:1000;padding:24px;
+}
+.error-overlay.show{display:flex;}
+.error-card{
+  max-width:400px;width:100%;
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:14px;padding:32px;text-align:center;
+  animation:cardIn .3s ease both;
+}
+.err-icon{
+  width:56px;height:56px;border-radius:50%;
+  background:var(--red-dim);border:1px solid rgba(248,81,73,.3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;color:var(--red);margin:0 auto 20px;
+}
+.err-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;}
+.err-email-wrap{margin-bottom:14px;}
+.err-email{
+  display:inline-block;
+  padding:4px 10px;border-radius:6px;
+  background:var(--surface);border:1px solid var(--border2);
+  font-family:var(--mono);font-size:12px;color:var(--text);
+}
+.err-msg{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:22px;}
+.btn-retry{
+  width:100%;height:40px;
+  border-radius:9px;border:1px solid var(--border2);
+  background:var(--surface);color:var(--text2);
+  font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;
+  transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-retry:hover{border-color:var(--accent);color:var(--accent);}
+
+/* ── FedCM fallback button ── */
+#google-button-container{
+  margin-top:14px;
+  display:none;
+  flex-direction:column;gap:8px;
+}
+#google-button-container.show{display:flex;}
+#google-button-container p{
+  font-size:11.5px;color:var(--text3);text-align:center;
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="tb-logo"><i class="ti ti-truck"></i></div>
+  <div>
+    <div class="tb-name">AdminPro UAE</div>
+    <div class="tb-sub">HR &amp; Fleet Management</div>
+  </div>
+  <div class="tb-spacer"></div>
+  <div class="tb-clock">
+    <i class="ti ti-clock"></i>
+    <span class="tb-time" id="tb-time">00:00:00</span>
+    <div class="tb-sep"></div>
+    <span class="tb-date" id="tb-date"></span>
+  </div>
+</header>
+
+<!-- LOGIN CARD -->
+<div class="page">
+  <div class="card">
+    <div class="card-icon"><i class="ti ti-shield-lock"></i></div>
+    <div class="card-title">Secure Sign In</div>
+    <div class="card-subtitle">Access AdminPro UAE with your authorised Google account.</div>
+
+    <div class="divider"></div>
+
+    <div class="info-box">
+      <i class="ti ti-info-circle"></i>
+      <p>Only <strong>pre-approved Google accounts</strong> can access this system. Your email is verified against the access database automatically after sign-in.</p>
+    </div>
+
+    <!-- Primary one-tap / popup button -->
+    <button class="btn-google" id="btn-google" onclick="startGoogleLogin()">
+      <svg class="g-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Continue with Google
+    </button>
+
+    <!-- FedCM fallback: rendered Google Sign-In button (shown if one-tap fails) -->
+    <div id="google-button-container">
+      <p>One-tap not available — use the button below:</p>
+      <div id="g-btn-render"></div>
+    </div>
+
+    <!-- Status / progress panel -->
+    <div class="status" id="status-panel">
+      <div class="status-header">
+        <i class="ti ti-loader-2" id="status-icon"></i>
+        <span id="status-title">Verifying Access</span>
+      </div>
+      <div class="status-body">
+        <div class="steps">
+          <div class="step" id="step-1"><div class="step-dot"></div><span>Connecting to Google</span></div>
+          <div class="step" id="step-2"><div class="step-dot"></div><span>Retrieving your account</span></div>
+          <div class="step" id="step-3"><div class="step-dot"></div><span>Checking access database</span></div>
+          <div class="step" id="step-4"><div class="step-dot"></div><span>Validating account status</span></div>
+          <div class="step" id="step-5"><div class="step-dot"></div><span>Opening AdminPro UAE</span></div>
+        </div>
+        <div class="status-msg" id="status-msg" style="display:none;margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <div class="card-footer">
+      <i class="ti ti-lock"></i>
+      <p>Restricted to authorised personnel only. Unauthorised access attempts are logged.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ACCESS DENIED OVERLAY -->
+<div class="error-overlay" id="error-overlay">
+  <div class="error-card">
+    <div class="err-icon" id="err-icon"><i class="ti ti-shield-x" id="err-icon-i"></i></div>
+    <div class="err-title" id="err-title">Access Denied</div>
+    <div class="err-email-wrap" id="err-email-wrap" style="display:none;">
+      <span class="err-email" id="err-email"></span>
+    </div>
+    <div class="err-msg" id="err-msg">Your account is not authorised to access this system.</div>
+    <button class="btn-retry" onclick="resetLogin()">
+      <i class="ti ti-refresh"></i> Try a Different Account
+    </button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════
+   CONFIG — single source of truth
+   Keep in sync with auth.js and Code.gs CFG block
+═══════════════════════════════════════════════════ */
+const CONFIG = {
+  // ← Your deployed Apps Script web app URL
+  API_BASE         : 'https://script.google.com/macros/s/AKfycbzDk9vOmUL39H4LF-CbHpqJfkHOXEEtNlQIANaQIIHKYAH50mAg92N7Qlsv6cKCFdFBzA/exec',
+  GOOGLE_CLIENT_ID : '743775120253-lr54jgst59jqr5s61vc3i4o3rnfn596a.apps.googleusercontent.com',
+};
+const ALLOWED_ORIGIN = 'https://effimalik.github.io/FleetManagement/';
+const DEFAULT_PAGE   = ALLOWED_ORIGIN + 'index.html';
+
+/* ═══════════════════════════════════════════════════
+   CLOCK
+═══════════════════════════════════════════════════ */
+(function tick(){
+  const now = new Date();
+  const p   = n => String(n).padStart(2, '0');
+  const t   = document.getElementById('tb-time');
+  const d   = document.getElementById('tb-date');
+  if (t) t.textContent = `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`;
+  if (d) {
+    const days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    d.textContent = `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+  }
+  setTimeout(tick, 1000);
+})();
+
+/* ═══════════════════════════════════════════════════
+   SKIP LOGIN IF ALREADY AUTHENTICATED
+   Only skip if we have a valid client-side session
+   — never auto-redirect if session is missing/expired.
+═══════════════════════════════════════════════════ */
+(function checkExistingSession() {
+  try {
+    // window.Auth is set by auth.js (loaded above)
+    if (window.Auth && typeof window.Auth.getCredentials === 'function') {
+      const creds = window.Auth.getCredentials();
+      if (creds && creds.sessionId && creds.token) {
+        console.log('[Login] Existing valid session detected — redirecting...');
+        doRedirect();
+      }
+    }
+  } catch (e) {
+    // If auth.js failed to load for any reason, just stay on login page
+    console.warn('[Login] checkExistingSession error (safe to ignore):', e.message);
+  }
+})();
+
+/* ═══════════════════════════════════════════════════
+   REDIRECT HELPER — safe, origin-checked
+═══════════════════════════════════════════════════ */
+function doRedirect() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const next   = decodeURIComponent(params.get('next') || '');
+    if (next && next.startsWith(ALLOWED_ORIGIN) && !next.includes('login.html')) {
+      window.location.replace(next);
+    } else {
+      window.location.replace(DEFAULT_PAGE);
+    }
+  } catch {
+    window.location.replace(DEFAULT_PAGE);
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   GSI LOADER — lazy, idempotent
+═══════════════════════════════════════════════════ */
+let _gsiLoaded = false;
+function loadGSI() {
+  return new Promise((resolve, reject) => {
+    if (window.google && window.google.accounts) { _gsiLoaded = true; resolve(); return; }
+    if (_gsiLoaded) { resolve(); return; }
+    const s   = document.createElement('script');
+    s.src     = 'https://accounts.google.com/gsi/client';
+    s.async   = true;
+    s.defer   = true;
+    s.onload  = () => { _gsiLoaded = true; resolve(); };
+    s.onerror = () => reject(new Error('Failed to load Google Sign-In. Check your network connection.'));
+    document.head.appendChild(s);
+  });
+}
+
+/* ═══════════════════════════════════════════════════
+   GET GOOGLE ID TOKEN
+   Strategy:
+   1. Try one-tap / FedCM prompt first (silent, UX-friendly)
+   2. If prompt is suppressed/unavailable → fall back to rendered button
+   3. Both paths resolve with the same credential string
+═══════════════════════════════════════════════════ */
+function getGoogleIdToken() {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+
+    function settle(type, value) {
+      if (settled) return;
+      settled = true;
+      if (type === 'ok')     resolve(value);
+      else                   reject(value);
+    }
+
+    // Shared callback for both paths
+    function onCredential(response) {
+      if (response && response.credential) {
+        settle('ok', response.credential);
+      } else {
+        settle('err', { type: 'auth_error', message: 'Google did not return credentials.' });
+      }
+    }
+
+    // Initialize GSI
+    google.accounts.id.initialize({
+      client_id            : CONFIG.GOOGLE_CLIENT_ID,
+      callback             : onCredential,
+      ux_mode              : 'popup',
+      use_fedcm_for_prompt : true,
+      use_fedcm_for_button : true,
+      cancel_on_tap_outside: false,
+    });
+
+    // Try one-tap / FedCM prompt
+    google.accounts.id.prompt(notification => {
+      if (settled) return;
+
+      const mt = notification.getMomentType ? notification.getMomentType() : '';
+      const isSkipped   = notification.isSkippedMoment   ? notification.isSkippedMoment()   : false;
+      const isDismissed = notification.isDismissedMoment ? notification.isDismissedMoment() : false;
+      const isNotDisplayed = notification.isNotDisplayed ? notification.isNotDisplayed()    : false;
+
+      if (isNotDisplayed || isSkipped) {
+        // Prompt suppressed (FedCM unavailable, cookies blocked, etc.)
+        // Show the rendered Google button as fallback
+        _showFallbackButton(onCredential, reject);
+        return;
+      }
+
+      if (isDismissed && !settled) {
+        const reason = notification.getDismissedReason ? notification.getDismissedReason() : 'dismissed';
+        if (reason === 'credential_returned') return; // credential is coming via callback
+        settle('err', { type: 'user_cancel', message: 'Sign-in was cancelled.' });
+      }
+    });
+  });
+}
+
+/* Render the standard Google sign-in button as fallback */
+function _showFallbackButton(onCredential, onReject) {
+  const container = document.getElementById('google-button-container');
+  const target    = document.getElementById('g-btn-render');
+  if (!container || !target) return;
+
+  // Re-initialize with button callback
+  google.accounts.id.initialize({
+    client_id            : CONFIG.GOOGLE_CLIENT_ID,
+    callback             : onCredential,
+    ux_mode              : 'popup',
+    use_fedcm_for_button : true,
+    cancel_on_tap_outside: false,
+  });
+
+  google.accounts.id.renderButton(target, {
+    type         : 'standard',
+    shape        : 'rectangular',
+    theme        : 'outline',
+    text         : 'signin_with',
+    size         : 'large',
+    width        : '340',
+    logo_alignment: 'left',
+  });
+
+  container.classList.add('show');
+
+  // Re-enable the primary button so user isn't stuck
+  const btn = document.getElementById('btn-google');
+  if (btn) btn.disabled = false;
+
+  // Update status to tell user what happened
+  showStatus('loading', 'Choose Your Account', 'ti-user-circle');
+  showMsg('One-tap sign-in is not available in this browser. Use the Google button below to continue.');
+  setStep(2, 'active');
+}
+
+/* ═══════════════════════════════════════════════════
+   SEND TOKEN TO APPS SCRIPT
+   Content-Type: text/plain avoids CORS preflight
+═══════════════════════════════════════════════════ */
+async function verifyWithAppsScript(idToken) {
+  const controller  = new AbortController();
+  const timeoutId   = setTimeout(() => controller.abort(), 30_000); // 30 s timeout
+
+  try {
+    const res = await fetch(CONFIG.API_BASE, {
+      method  : 'POST',
+      headers : { 'Content-Type': 'text/plain' },
+      body    : JSON.stringify({ type: 'login', token: idToken }),
+      signal  : controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      throw new Error('Server returned HTTP ' + res.status + '. Please try again.');
+    }
+
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      console.error('[Login] Non-JSON response from server:', text.substring(0, 200));
+      throw new Error('Server returned an unexpected response. Please try again.');
+    }
+
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') {
+      throw new Error('Request timed out (30s). Check your connection and try again.');
+    }
+    throw e;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   UI HELPERS
+═══════════════════════════════════════════════════ */
+function setStep(n, state) {
+  const el = document.getElementById('step-' + n);
+  if (el) el.className = 'step ' + state;
+}
+function showStatus(type, titleText, iconClass) {
+  const panel = document.getElementById('status-panel');
+  const title = document.getElementById('status-title');
+  const icon  = document.getElementById('status-icon');
+  if (panel) panel.className = 'status show ' + type;
+  if (title) title.textContent = titleText;
+  if (icon)  icon.className   = 'ti ' + iconClass;
+}
+function showMsg(msg) {
+  const el = document.getElementById('status-msg');
+  if (el) { el.style.display = 'block'; el.textContent = msg; }
+}
+function hideMsg() {
+  const el = document.getElementById('status-msg');
+  if (el) el.style.display = 'none';
+}
+function resetSteps() {
+  for (let i = 1; i <= 5; i++) setStep(i, '');
+  hideMsg();
+}
+function showDenied(email, msg, title, iconClass, isWarning) {
+  const overlay   = document.getElementById('error-overlay');
+  const errIcon   = document.getElementById('err-icon');
+  const errIconI  = document.getElementById('err-icon-i');
+  const errTitle  = document.getElementById('err-title');
+  const errMsg    = document.getElementById('err-msg');
+  const errEmailW = document.getElementById('err-email-wrap');
+  const errEmail  = document.getElementById('err-email');
+
+  if (errIconI)  errIconI.className          = 'ti ' + (iconClass || 'ti-shield-x');
+  if (errIcon) {
+    errIcon.style.background  = isWarning ? 'var(--amber-dim)' : 'var(--red-dim)';
+    errIcon.style.borderColor = isWarning ? 'rgba(227,179,65,.3)' : 'rgba(248,81,73,.3)';
+  }
+  if (errIconI)  errIconI.style.color        = isWarning ? 'var(--amber)' : 'var(--red)';
+  if (errTitle)  errTitle.textContent        = title || 'Access Denied';
+  if (errMsg)    errMsg.textContent          = msg   || 'Contact your administrator.';
+  if (errEmailW) errEmailW.style.display     = email ? 'block' : 'none';
+  if (errEmail && email) errEmail.textContent = email;
+  if (overlay)   overlay.className           = 'error-overlay show';
+}
+function resetLogin() {
+  const overlay = document.getElementById('error-overlay');
+  const panel   = document.getElementById('status-panel');
+  const btn     = document.getElementById('btn-google');
+  const fbCont  = document.getElementById('google-button-container');
+  if (overlay) overlay.className = 'error-overlay';
+  if (panel)   panel.className   = 'status';
+  if (btn)     btn.disabled      = false;
+  if (fbCont)  fbCont.classList.remove('show');
+  resetSteps();
+  // Revoke any pending Google credential to allow fresh sign-in
+  try {
+    if (window.google && google.accounts && google.accounts.id) {
+      google.accounts.id.cancel();
+    }
+  } catch {}
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ═══════════════════════════════════════════════════
+   MAIN LOGIN FLOW
+   Defensive at every step — never crashes silently.
+═══════════════════════════════════════════════════ */
+async function startGoogleLogin() {
+  const btn = document.getElementById('btn-google');
+  if (btn) btn.disabled = true;
+  resetSteps();
+
+  /* ── Step 1: Load Google Sign-In library ── */
+  setStep(1, 'active');
+  showStatus('loading', 'Connecting to Google', 'ti-loader-2');
+
+  try {
+    await loadGSI();
+  } catch (e) {
+    setStep(1, 'fail');
+    showStatus('error', 'Connection Failed', 'ti-alert-circle');
+    showMsg(e.message || 'Could not load Google Sign-In. Check your internet connection and try again.');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  setStep(1, 'done');
+
+  /* ── Step 2: Get Google ID token ── */
+  setStep(2, 'active');
+  let idToken = null;
+
+  try {
+    idToken = await getGoogleIdToken();
+  } catch (e) {
+    if (e && e.type === 'user_cancel') {
+      resetLogin(); // user dismissed — no error shown
+      return;
+    }
+    setStep(2, 'fail');
+    showStatus('error', 'Sign-In Failed', 'ti-alert-circle');
+    showMsg((e && e.message) || 'Google sign-in failed. Please try again.');
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+  // Hide fallback button once we have the token
+  const fbCont = document.getElementById('google-button-container');
+  if (fbCont) fbCont.classList.remove('show');
+
+  setStep(2, 'done');
+
+  /* ── Step 3: Verify with Apps Script ── */
+  setStep(3, 'active');
+  showStatus('loading', 'Verifying Access', 'ti-loader-2');
+  let result = null;
+
+  try {
+    result = await verifyWithAppsScript(idToken);
+  } catch (e) {
+    setStep(3, 'fail');
+    showStatus('error', 'Server Error', 'ti-alert-circle');
+    showMsg((e && e.message) || 'Could not reach the verification server. Please try again.');
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+  setStep(3, 'done');
+
+  /* ── Step 4: Check server result ── */
+  setStep(4, 'active');
+  await sleep(300);
+
+  if (!result || !result.allowed) {
+    setStep(4, 'fail');
+    showStatus('error', 'Access Denied', 'ti-shield-x');
+    await sleep(350);
+    showDenied(
+      result && result.email   ? result.email   : null,
+      result && result.reason  ? result.reason  : 'Your account is not authorised to access AdminPro UAE. Contact your administrator.',
+      result && result.title   ? result.title   : 'Access Denied',
+      result && result.status === 'inactive' ? 'ti-user-off' : 'ti-shield-x',
+      result && result.status === 'inactive'  // isWarning = true for inactive accounts
+    );
+    return;
+  }
+
+  setStep(4, 'done');
+
+  /* ── Step 5: Create session and redirect ── */
+  setStep(5, 'active');
+  showStatus('success', 'Access Granted — Opening App', 'ti-check');
+  await sleep(600);
+
+  // Validate server response has the required fields
+  if (!result.sessionId || !result.token || !result.email) {
+    setStep(5, 'fail');
+    showStatus('error', 'Session Error', 'ti-alert-circle');
+    showMsg(
+      'Server response is missing required fields: ' +
+      (!result.sessionId ? 'sessionId ' : '') +
+      (!result.token     ? 'token '     : '') +
+      (!result.email     ? 'email'      : '') +
+      '. Please contact your administrator.'
+    );
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+  // Create client-side session
+  let sessionCreated = false;
+  try {
+    sessionCreated = window.Auth && window.Auth.createSession({
+      sessionId : result.sessionId,
+      token     : result.token,
+      email     : result.email,
+      name      : result.name || result.email,
+      role      : result.role || 'User',
+    });
+  } catch (e) {
+    console.error('[Login] Auth.createSession threw:', e.message);
+    sessionCreated = false;
+  }
+
+  if (!sessionCreated) {
+    setStep(5, 'fail');
+    showStatus('error', 'Session Error', 'ti-alert-circle');
+    showMsg('Could not create a local session. Try using a different browser or disable private/incognito mode (sessionStorage must be available).');
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+     setStep(5, 'done');
+     showStatus('loading', 'Pre-loading data…', 'ti-loader-2');
+     await sleep(400);
+ 
+     // Warm all datasets in background — non-blocking, best-effort
+     if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
+       try { await AdminPro.warmIfEmpty(); } catch (_) {}
+     }
+ 
+     doRedirect();
+}
+</script>
+</body>
+</html>

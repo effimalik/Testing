@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bike Fleet — UAE Fleet Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
+<script src="https://effimalik.github.io/FleetManagement/shared/auth.js"></script>
+<script src="https://effimalik.github.io/FleetManagement/shared/dataLayer.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root,[data-theme="dark"]{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2333;
+  --surface:#21262d;--surface2:#2d333b;
+  --border:#30363d;--border2:#444c56;
+  --text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
+  --accent:#58a6ff;--accent-dim:rgba(88,166,255,.12);--accent-glow:rgba(88,166,255,.25);
+  --teal:#39d353;--teal-dim:rgba(57,211,83,.12);--teal-border:rgba(57,211,83,.25);
+  --amber:#e3b341;--amber-dim:rgba(227,179,65,.12);--amber-border:rgba(227,179,65,.25);
+  --red:#f85149;--red-dim:rgba(248,81,73,.12);--red-border:rgba(248,81,73,.25);
+  --purple:#a371f7;--purple-dim:rgba(163,113,247,.12);
+  --radius:8px;--radius-lg:12px;--radius-xl:16px;
+  --font:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
+  --shadow:0 1px 3px rgba(0,0,0,.4),0 1px 2px rgba(0,0,0,.3);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.6);
+}
+[data-theme="light"]{
+  --bg:#f0f2f5;--bg2:#ffffff;--bg3:#e8ecf0;
+  --surface:#ffffff;--surface2:#e2e7ed;
+  --border:#c8d0d9;--border2:#9aa5b1;
+  --text:#0d1117;--text2:#3d454f;--text3:#5a6370;
+  --accent:#0550ae;--accent-dim:rgba(5,80,174,.12);--accent-glow:rgba(5,80,174,.22);
+  --teal:#116329;--teal-dim:rgba(17,99,41,.13);--teal-border:rgba(17,99,41,.3);
+  --amber:#7d4e00;--amber-dim:rgba(125,78,0,.13);--amber-border:rgba(125,78,0,.3);
+  --red:#a8111b;--red-dim:rgba(168,17,27,.11);--red-border:rgba(168,17,27,.3);
+  --purple:#6639c8;--purple-dim:rgba(102,57,200,.13);
+  --shadow:0 1px 3px rgba(0,0,0,.10),0 1px 2px rgba(0,0,0,.08);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.15);
+}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+.page{min-height:100%;padding:18px 22px 48px;max-width:100%;overflow-x:hidden;}
+@media(max-width:600px){.page{padding:10px 10px 40px;}}
+
+/* ── HEADER ── */
+.page-header{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);flex-wrap:nowrap;}
+.page-header-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
+.ph-icon{width:36px;height:36px;border-radius:10px;flex-shrink:0;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:18px;}
+.ph-title{font-size:15px;font-weight:700;color:var(--text);}
+.ph-sub{font-size:11px;color:var(--text3);margin-top:1px;}
+.ph-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+@media(max-width:700px){
+  .ph-sub{display:none;}
+  .btn .btn-label{display:none;}
+  .btn{padding:0 9px;gap:0;height:30px;}
+}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:0 13px;height:33px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text2);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.btn i{font-size:14px;}
+.btn:hover{background:var(--surface2);color:var(--text);border-color:var(--border2);}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn.primary:hover{filter:brightness(1.1);}
+.btn.teal{background:var(--teal-dim);color:var(--teal);border-color:var(--teal-border);}
+.btn.teal:hover{background:var(--teal);color:#0d1117;}
+.btn.amber{background:var(--amber-dim);color:var(--amber);border-color:var(--amber-border);}
+.btn.amber:hover{background:var(--amber);color:#0d1117;}
+.btn.danger{background:var(--red-dim);color:var(--red);border-color:var(--red-border);}
+.btn.danger:hover{background:var(--red);color:#fff;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+
+/* ── CACHE BAR (inline with toolbar) ── */
+
+/* ━━ TOP ROW: cards + toolbar fused on big screen ━━ */
+.top-row{display:flex;align-items:stretch;gap:8px;margin-bottom:11px;flex-wrap:nowrap;min-width:0;}
+/* Cards strip */
+.stat-grid{display:flex;align-items:stretch;gap:8px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+.stat-grid::-webkit-scrollbar{display:none;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 13px;position:relative;overflow:hidden;transition:border-color .2s,transform .15s;cursor:pointer;flex:1;min-width:100px;flex-shrink:0;}
+.stat-card:hover{border-color:var(--border2);transform:translateY(-1px);}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat-card.c-accent::before{background:var(--accent);}
+.stat-card.c-teal::before{background:var(--teal);}
+.stat-card.c-amber::before{background:var(--amber);}
+.stat-card.c-red::before{background:var(--red);}
+.stat-card.c-gray::before{background:var(--border2);}
+/* Card inner */
+.sc-top{display:flex;align-items:center;gap:5px;margin-bottom:4px;white-space:nowrap;overflow:hidden;}
+.sc-icon{font-size:14px;flex-shrink:0;}
+.stat-card.c-accent .sc-icon{color:var(--accent);}
+.stat-card.c-teal .sc-icon{color:var(--teal);}
+.stat-card.c-amber .sc-icon{color:var(--amber);}
+.stat-card.c-red .sc-icon{color:var(--red);}
+.stat-card.c-gray .sc-icon{color:var(--text3);}
+.sc-label{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sc-bottom{display:flex;align-items:baseline;gap:6px;}
+.sc-val{font-size:20px;font-weight:700;letter-spacing:-.02em;color:var(--text);font-family:var(--mono);line-height:1;}
+.sc-val2{font-size:13px;font-weight:700;letter-spacing:-.01em;font-family:var(--mono);line-height:1;}
+.sc-val2.v-amber{color:var(--amber);}
+.sc-val2.v-red{color:var(--red);}
+.sc-sub{font-size:9.5px;color:var(--text3);margin-top:2px;white-space:nowrap;}
+/* Toolbar inline with cards on big screen */
+.toolbar{display:flex;align-items:center;gap:5px;flex-shrink:0;flex-wrap:nowrap;}
+.search-wrap{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:0 10px;flex-shrink:0;width:160px;}
+.search-wrap i{color:var(--text3);font-size:13px;flex-shrink:0;}
+.search-wrap input{border:none;background:transparent;color:var(--text);font-family:var(--font);font-size:12px;height:32px;outline:none;width:100%;min-width:0;}
+.search-wrap input::placeholder{color:var(--text3);}
+.filter-pills{display:flex;gap:3px;flex-wrap:nowrap;flex-shrink:0;}
+/* Filter pills — icon only, show label on big screens */
+.fp{display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:0 9px;height:32px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;transition:all .14s;font-family:var(--font);white-space:nowrap;}
+.fp i{font-size:13px;}
+.fp .fp-label{display:none;} /* hidden by default, shown on wider screens */
+.fp:hover{background:var(--surface2);}
+.fp.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent);}
+.fp.fa-expiring.active{background:var(--amber-dim);color:var(--amber);border-color:var(--amber);}
+.fp.fa-expired.active{background:var(--red-dim);color:var(--red);border-color:var(--red);}
+.fp.fa-active.active{background:var(--teal-dim);color:var(--teal);border-color:var(--teal);}
+.fp.fa-inactive.active{background:var(--red-dim);color:var(--red);border-color:var(--red);}
+/* Show badge counts on filter pills */
+.fp .fp-badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border-radius:8px;font-size:9px;font-weight:700;background:currentColor;line-height:1;}
+.fp .fp-badge span{color:var(--bg);}
+/* Bigger screens: show labels too */
+@media(min-width:1200px){.fp .fp-label{display:inline;font-size:11px;}}
+/* Small screen: two rows — cards row + toolbar row */
+@media(max-width:700px){
+  .top-row{flex-wrap:wrap;gap:6px;}
+  .stat-grid{order:1;width:100%;flex:none;overflow-x:auto;}
+  .toolbar{order:2;width:100%;overflow-x:auto;scrollbar-width:none;}
+  .toolbar::-webkit-scrollbar{display:none;}
+  .stat-card{padding:7px 9px;min-width:85px;}
+  .sc-icon{font-size:12px;}
+  .sc-label{font-size:8px;}
+  .sc-val{font-size:15px;}
+  .sc-val2{font-size:10px;}
+  .sc-sub{display:none;}
+  .search-wrap{width:130px;}
+}
+
+/* ── TABLE ── */
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;min-width:0;}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;}
+table{width:100%;border-collapse:collapse;}
+th{padding:9px 12px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);background:var(--bg3);border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--text);vertical-align:middle;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:rgba(88,166,255,.04);}
+.row-expired td{background:rgba(248,81,73,.04);}
+.row-expiring td{background:rgba(227,179,65,.04);}
+.row-inactive td{opacity:.65;}
+/* No vertical border lines in table */
+th, td { border-left: none !important; border-right: none !important; }
+
+/* Responsive column hiding */
+@media(max-width:1100px){.c-chassis{display:none;}}
+@media(max-width:600px){.c-emirate{display:none;}}
+
+/* ── DATE CELL ── */
+.date-cell{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-family:var(--mono);font-weight:500;padding:2px 7px;border-radius:6px;}
+.date-cell.dc-valid{color:var(--teal);background:var(--teal-dim);}
+.date-cell.dc-expiring{color:var(--amber);background:var(--amber-dim);}
+.date-cell.dc-expired{color:var(--red);background:var(--red-dim);}
+.date-cell.dc-empty{color:var(--text3);background:transparent;font-style:italic;}
+.date-cell i{font-size:11px;}
+
+/* ── STATUS BADGE ── */
+.sbadge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;border:1px solid;}
+.sbadge.s-active{background:var(--teal-dim);color:var(--teal);border-color:var(--teal-border);}
+.sbadge.s-inactive{background:rgba(110,118,129,.15);color:var(--text2);border-color:var(--border2);}
+.sbadge.s-maintenance{background:var(--amber-dim);color:var(--amber);border-color:var(--amber-border);}
+.sbadge.s-retired{background:rgba(110,118,129,.15);color:var(--text2);border-color:var(--border2);}
+.sbadge.s-expired{background:var(--red-dim);color:var(--red);border-color:var(--red-border);}
+.sbadge.s-expiring{background:var(--amber-dim);color:var(--amber);border-color:var(--amber-border);}
+.sbadge.s-deactivated{background:rgba(110,118,129,.15);color:var(--text3);border-color:var(--border);}
+
+/* ── DOC HEALTH BADGE ── */
+.doc-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600;border:1px solid;}
+.doc-badge.db-ok{background:var(--teal-dim);color:var(--teal);border-color:var(--teal-border);}
+.doc-badge.db-expiring{background:var(--amber-dim);color:var(--amber);border-color:var(--amber-border);}
+.doc-badge.db-expired{background:var(--red-dim);color:var(--red);border-color:var(--red-border);}
+.doc-badge.db-empty{background:var(--surface2);color:var(--text3);border-color:var(--border);}
+.doc-badge i{font-size:10px;}
+
+/* ── PLATE ── */
+.plate{display:inline-flex;align-items:font-family:var(--mono);font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:5px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);letter-spacing:.04em;}
+
+/* ── BIKE ICON ── */
+.bk-av{width:30px;height:30px;border-radius:var(--radius);display:inline-flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+
+/* ── ROW BTNS ── */
+.rb{display:inline-flex;align-items:center;gap:3px;padding:4px 8px;border-radius:6px;border:1.5px solid;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.rb i{font-size:12px;}
+.rb-view{background:var(--teal-dim);border-color:var(--teal);color:var(--teal);}
+.rb-view:hover{background:var(--teal);color:#fff;}
+.rb-edit{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+.rb-edit:hover{background:var(--accent);color:#fff;}
+
+/* ── PAGINATION ── */
+.pagination{display:flex;align-items:center;gap:4px;padding:9px 12px;flex-wrap:wrap;}
+.pg-btn{padding:3px 8px;font-size:11.5px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-family:var(--font);transition:all .14px;}
+.pg-btn:hover{background:var(--surface2);}
+.pg-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.pg-btn:disabled{opacity:.35;cursor:default;}
+.pg-info{font-size:11px;color:var(--text3);margin-left:4px;}
+
+/* ── DETAIL PANEL ── */
+#detail-panel{position:fixed;inset:0;z-index:300;pointer-events:none;display:flex;justify-content:flex-end;}
+#detail-panel.open{pointer-events:auto;}
+.dp-back{position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);opacity:0;transition:opacity .28s;}
+#detail-panel.open .dp-back{opacity:1;}
+.dp-sheet{position:relative;width:min(520px,100%);background:var(--bg2);border-left:1px solid var(--border2);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:-8px 0 40px rgba(0,0,0,.4);overflow:hidden;}
+#detail-panel.open .dp-sheet{transform:translateX(0);}
+.dp-hdr{padding:16px 20px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.dp-hdr-info{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
+.dp-av{width:38px;height:38px;border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
+.dp-name{font-size:14px;font-weight:700;color:var(--text);}
+.dp-sub{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:1px;}
+.dp-close{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--border2);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);transition:all .14s;flex-shrink:0;}
+.dp-close:hover{background:var(--red-dim);color:var(--red);border-color:var(--red);}
+.dp-close i{font-size:13px;}
+.dp-body{flex:1;overflow-y:auto;}
+.dp-sec{padding:14px 20px;border-bottom:1px solid var(--border);}
+.dp-sec:last-child{border-bottom:none;}
+.dp-sec-title{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:11px;}
+.dp-sec-title i{color:var(--accent);font-size:12px;}
+.dp-rows{display:flex;flex-direction:column;}
+.dp-row{display:flex;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);}
+.dp-row:last-child{border-bottom:none;}
+.dp-lbl{font-size:11.5px;color:var(--text3);width:145px;flex-shrink:0;}
+.dp-val{font-size:12.5px;color:var(--text);flex:1;text-align:right;word-break:break-word;}
+.dp-mono{font-family:var(--mono);}
+/* Expiry cards in panel — 3 col */
+.dp-ex-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:0;}
+.dp-ex-card{padding:10px 11px;border-radius:var(--radius);border:1px solid;display:flex;flex-direction:column;gap:2px;}
+.dp-ex-valid{background:var(--teal-dim);border-color:var(--teal-border);}
+.dp-ex-expired{background:var(--red-dim);border-color:var(--red-border);}
+.dp-ex-expiring{background:var(--amber-dim);border-color:var(--amber-border);}
+.dp-ex-na{background:var(--surface2);border-color:var(--border);}
+.dp-ex-icon{font-size:15px;margin-bottom:2px;}
+.dp-ex-valid .dp-ex-icon{color:var(--teal);}
+.dp-ex-expired .dp-ex-icon{color:var(--red);}
+.dp-ex-expiring .dp-ex-icon{color:var(--amber);}
+.dp-ex-na .dp-ex-icon{color:var(--text3);}
+.dp-ex-label{font-size:9.5px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
+.dp-ex-status{font-size:11px;font-weight:600;color:var(--text);}
+.dp-ex-date{font-size:10px;font-family:var(--mono);color:var(--text2);}
+.dp-ftr{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:7px;flex-wrap:wrap;flex-shrink:0;}
+.dp-btn{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface);color:var(--text2);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .14s;}
+.dp-btn:hover{background:var(--surface2);}
+.dp-btn-edit{background:var(--accent-dim);color:var(--accent);border-color:rgba(88,166,255,.3);}
+.dp-btn-edit:hover{background:var(--accent);color:#fff;}
+.dp-btn-save{background:var(--teal-dim);color:var(--teal);border-color:var(--teal-border);}
+.dp-btn-save:hover{background:var(--teal);color:#fff;}
+.dp-btn-discard{background:var(--amber-dim);color:var(--amber);border-color:var(--amber-border);}
+
+/* ── EDIT FORM IN PANEL ── */
+.dp-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media(max-width:420px){.dp-edit-grid{grid-template-columns:1fr;}}
+.dp-field{display:flex;flex-direction:column;gap:3px;}
+.dp-field label{font-size:10.5px;font-weight:600;color:var(--text3);}
+.dp-field input,.dp-field select{height:32px;padding:0 9px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font);font-size:12px;outline:none;transition:border-color .14s;}
+.dp-field input:focus,.dp-field select:focus{border-color:var(--accent);}
+.dp-field input::placeholder{color:var(--text3);}
+.dp-field input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.5);cursor:pointer;}
+.dp-field select option{background:var(--surface2);}
+.dp-saving-overlay{display:none;position:absolute;inset:0;background:rgba(13,17,23,.7);z-index:10;align-items:center;justify-content:center;backdrop-filter:blur(2px);}
+.dp-saving-overlay.show{display:flex;}
+.dp-saving-inner{display:flex;flex-direction:column;align-items:center;gap:12px;color:var(--text);}
+.dp-spinner{width:28px;height:28px;border-radius:50%;border:2.5px solid var(--border2);border-top-color:var(--accent);animation:spin 1s linear infinite;}
+
+/* ── UPLOAD MODAL ── */
+.modal-back{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:400;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
+.modal-back.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-xl);width:100%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:mIn .22s cubic-bezier(.34,1.56,.64,1);}
+@keyframes mIn{from{opacity:0;transform:scale(.95) translateY(8px);}to{opacity:1;transform:none;}}
+.m-hdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.m-hdr h2{font-size:14px;font-weight:600;display:flex;align-items:center;gap:7px;}
+.m-hdr h2 i{color:var(--accent);}
+.m-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;transition:all .14s;}
+.m-close:hover{background:var(--surface2);color:var(--text);}
+.m-body{padding:18px 20px;}
+.m-ftr{padding:13px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.upload-zone{border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:28px 20px;text-align:center;transition:border-color .2s,background .2s;cursor:pointer;margin-bottom:14px;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:var(--accent-dim);}
+.upload-zone i{font-size:32px;color:var(--text3);display:block;margin:0 auto 8px;}
+.upload-zone p{font-size:12.5px;color:var(--text2);margin-bottom:3px;}
+.upload-zone span{font-size:11px;color:var(--text3);}
+.up-mode-tabs{display:flex;gap:5px;margin-bottom:14px;}
+.up-mode-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:7px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text2);font-size:12px;cursor:pointer;transition:all .14s;font-family:var(--font);}
+.up-mode-btn.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent);}
+.up-info{font-size:11.5px;color:var(--text3);margin-bottom:12px;line-height:1.6;}
+.up-info strong{color:var(--text2);}
+.up-preview{display:none;padding:10px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;color:var(--text2);align-items:flex-start;gap:8px;margin-bottom:10px;}
+.up-preview.show{display:flex;}
+.up-preview i{color:var(--teal);font-size:15px;flex-shrink:0;margin-top:1px;}
+.up-err{display:none;padding:9px 12px;background:var(--red-dim);border:1px solid var(--red-border);border-radius:var(--radius);font-size:12px;color:var(--red);margin-bottom:10px;}
+.up-err.show{display:block;}
+.up-merge-note{font-size:11px;color:var(--text3);line-height:1.6;}
+.up-merge-note strong{color:var(--amber);}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);padding:10px 16px;border-radius:var(--radius-lg);font-size:12.5px;font-weight:500;z-index:999;opacity:0;transform:translateY(10px);transition:all .26s cubic-bezier(.34,1.56,.64,1);pointer-events:none;display:flex;align-items:center;gap:9px;box-shadow:var(--shadow-lg);max-width:340px;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.success{background:var(--teal-dim);color:var(--teal);border-color:rgba(57,211,83,.25);}
+.toast.error{background:var(--red-dim);color:var(--red);border-color:rgba(248,81,73,.25);}
+.toast.info{background:var(--accent-dim);color:var(--accent);border-color:rgba(88,166,255,.25);}
+
+/* ── MISC ── */
+.empty-state{text-align:center;padding:44px 24px;color:var(--text3);}
+.empty-state i{font-size:36px;opacity:.3;display:block;margin:0 auto 10px;}
+.empty-state p{font-size:12.5px;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+.status-pair{display:flex;flex-direction:column;gap:3px;align-items:flex-start;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="ph-icon"><i class="ti ti-motorbike"></i></div>
+      <div>
+        <div class="ph-title">Bike Fleet</div>
+        <div class="ph-sub">UAE fleet compliance &amp; document tracking</div>
+      </div>
+    </div>
+    <div class="ph-actions">
+      <button class="btn" onclick="downloadTemplate()"><i class="ti ti-download"></i><span class="btn-label">Template</span></button>
+      <button class="btn amber" onclick="openUploadModal()"><i class="ti ti-upload"></i><span class="btn-label">Upload / Update</span></button>
+    </div>
+  </div>
+
+  <!-- CARDS + TOOLBAR (one row on big screen, two on small) -->
+  <div class="top-row">
+    <div class="stat-grid" id="bike-stats"></div>
+    <div class="toolbar">
+      <div class="search-wrap">
+        <i class="ti ti-search"></i>
+        <input type="text" id="bike-search" placeholder="Search…" oninput="filterBikes(this.value)" />
+      </div>
+      <div class="filter-pills" id="filter-pills">
+        <button class="fp active" data-filter="all" onclick="setFilter('all')"><i class="ti ti-layout-list"></i><span class="fp-label">All</span></button>
+        <button class="fp fa-expiring" data-filter="expiring" onclick="setFilter('expiring')" title="Expiring soon"><i class="ti ti-clock"></i><span class="fp-badge" id="fp-badge-expiring" style="display:none;"><span></span></span></button>
+        <button class="fp fa-expired" data-filter="expired" onclick="setFilter('expired')" title="Expired"><i class="ti ti-alert-circle"></i><span class="fp-badge" id="fp-badge-expired" style="display:none;"><span></span></span></button>
+        <button class="fp fa-active" data-filter="active" onclick="setFilter('active')" title="Active"><i class="ti ti-circle-check"></i></button>
+        <button class="fp fa-inactive" data-filter="inactive" onclick="setFilter('inactive')" title="Inactive"><i class="ti ti-ban"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Bike</th>
+            <th>Plate No</th>
+            <th class="c-chassis">Chassis</th>
+            <th class="c-emirate">Emirate</th>
+            <th title="● Mulkiya  ● Passing  ● Insurance">Docs</th>
+            <th>Doc Health</th>
+            <th>Fleet Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="bike-tbody"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="bike-pagination"></div>
+  </div>
+
+</div><!-- /page -->
+
+<!-- ═══ DETAIL / EDIT PANEL ═══ -->
+<div id="detail-panel">
+  <div class="dp-back" onclick="closePanel()"></div>
+  <div class="dp-sheet">
+    <div class="dp-saving-overlay" id="dp-saving">
+      <div class="dp-saving-inner"><div class="dp-spinner"></div><span style="font-size:13px;color:var(--text2);">Saving to Sheet…</span></div>
+    </div>
+    <div class="dp-hdr">
+      <div class="dp-hdr-info">
+        <div class="dp-av" id="dp-av"></div>
+        <div>
+          <div class="dp-name" id="dp-name">—</div>
+          <div class="dp-sub"  id="dp-sub">—</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
+          <span class="sbadge" id="dp-badge-fleet">—</span>
+          <span class="sbadge" id="dp-badge-doc">—</span>
+        </div>
+      </div>
+      <button class="dp-close" onclick="closePanel()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="dp-body" id="dp-body"></div>
+    <div class="dp-ftr" id="dp-ftr">
+      <button class="dp-btn" onclick="closePanel()"><i class="ti ti-x"></i> Close</button>
+      <button class="dp-btn dp-btn-edit" id="dp-edit-btn" onclick="enterEditMode()"><i class="ti ti-pencil"></i> Edit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ UPLOAD MODAL ═══ -->
+<div class="modal-back" id="upload-modal">
+  <div class="modal">
+    <div class="m-hdr">
+      <h2><i class="ti ti-upload"></i> Upload / Update Bikes</h2>
+      <button class="m-close" onclick="closeUploadModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="m-body">
+      <div class="up-mode-tabs">
+        <button class="up-mode-btn active" id="mode-add" onclick="setUpMode('add')"><i class="ti ti-circle-plus"></i> Add New Bikes</button>
+        <button class="up-mode-btn" id="mode-update" onclick="setUpMode('update')"><i class="ti ti-pencil"></i> Update Existing</button>
+      </div>
+      <div class="up-info" id="up-info-add">
+        Upload a CSV to <strong>add new bikes</strong>. Rows with a plate number that already exists will be skipped. Use <a href="#" onclick="downloadTemplate();return false;" style="color:var(--accent);">Download Template</a> for correct columns.
+      </div>
+      <div class="up-info" id="up-info-update" style="display:none;">
+        Upload a CSV to <strong>update existing bikes</strong>. Match is done by <strong>Plate Number</strong>. Only non-empty columns in your CSV will overwrite the existing record — blank cells keep the original data.<br><br>
+        <span class="up-merge-note"><strong>Example:</strong> Upload a CSV with only "plate" and "status" columns — only the status will change for that bike, all other fields remain untouched.</span>
+      </div>
+
+      <div class="upload-zone" id="upload-zone"
+        onclick="document.getElementById('file-input').click()"
+        ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
+        <i class="ti ti-file-spreadsheet"></i>
+        <p>Click to browse or drag &amp; drop a CSV file</p>
+        <span>Columns: timestamp, bikeId, plate, chassis, make, model, emirate, mulkiyaExp, passingExp, insExp, status</span>
+      </div>
+      <input type="file" id="file-input" accept=".csv,.txt" style="display:none;" onchange="handleFile(this.files[0])"/>
+
+      <div class="up-preview" id="up-preview">
+        <i class="ti ti-file-check"></i>
+        <div id="up-preview-text"></div>
+      </div>
+      <div class="up-err" id="up-err"></div>
+    </div>
+    <div class="m-ftr">
+      <button class="btn" onclick="closeUploadModal()">Cancel</button>
+      <button class="btn primary" id="up-confirm-btn" onclick="confirmUpload()" disabled><i class="ti ti-check"></i> Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><i id="toast-icon" class="ti ti-circle-check"></i><span id="toast-msg"></span></div>
+
+<script>
+'use strict';
+/* Stub so any legacy reference to API_BASE is harmless */
+const API_BASE = '';
+const WARN_DAYS = 60;
+const CACHE_KEY = 'ap2_bike';
+
+/* Sheet column order (0-based) */
+const COL = {
+  timestamp:0, bikeId:1, plate:2, chassis:3, make:4, model:5,
+  emirate:6, mulkiyaExp:7, passingExp:8, insExp:9, status:10
+};
+
+const AV_FG  = ['#58a6ff','#3fb950','#e3b341','#d2a8ff','#ffa198','#22d3ee'];
+const AV_BG  = ['rgba(31,111,235,.2)','rgba(26,127,55,.2)','rgba(154,103,0,.2)','rgba(110,64,201,.2)','rgba(191,69,66,.2)','rgba(14,116,144,.2)'];
+
+/* ═══  STATE  ═══ */
+let bikes = [];
+let _panelId = null;
+let _editMode = false;
+let searchQ = '';
+let filterMode = 'all';
+let page = 1;
+const PAGE_SIZE = 100;
+let _pendingUpload = [];
+let _upMode = 'add';
+
+/* ═══  UTILITY  ═══ */
+const today      = () => new Date();
+const daysUntil  = d => { if(!d) return Infinity; const diff = new Date(d)-today(); return Math.ceil(diff/86400000); };
+const isExpired  = d => daysUntil(d) < 0;
+const isExpiring = d => { const n=daysUntil(d); return n>=0 && n<=WARN_DAYS; };
+const hasDate    = d => d && String(d).trim().length > 0;
+
+/** docStatus: status of a single date field
+ *  Missing, blank, or invalid date → treated as expired (red) */
+function docStatus(d) {
+  if (!hasDate(d)) return 'expired';                    // missing = expired
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return 'expired';            // invalid = expired
+  if (isExpired(d))  return 'expired';
+  if (isExpiring(d)) return 'expiring';
+  return 'valid';
+}
+
+/** fleetStatus: normalise sheet status.
+ *  Only "available" (any case) → 'available'.
+ *  Everything else (inactive, maintenance, retired, deactivated, active, …) → 'unavailable'.
+ *  We still preserve the raw value for display purposes. */
+function fleetStatus(b) {
+  const raw = (b.status || '').toLowerCase().trim();
+  return raw === 'available' ? 'available' : 'unavailable';
+}
+
+/** fleetStatusRaw: the exact value from the sheet, title-cased */
+function fleetStatusRaw(b) {
+  const raw = (b.status || 'unknown').trim();
+  return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+}
+
+/** docHealthStatus: computed from the 3 expiry dates.
+ *  Missing/invalid dates are counted as expired. */
+function docHealthStatus(b) {
+  const s = d => docStatus(d);
+  if (s(b.mulkiyaExp)==='expired' || s(b.passingExp)==='expired' || s(b.insExp)==='expired') return 'expired';
+  if (s(b.mulkiyaExp)==='expiring'|| s(b.passingExp)==='expiring'|| s(b.insExp)==='expiring') return 'expiring';
+  return 'ok';
+}
+
+function fmtDate(d) {
+  if (!d) return null;
+  try { return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); } catch { return d; }
+}
+
+function dateCell(d) {
+  const st = docStatus(d);
+  if (st === 'expired')  return `<span class="date-cell dc-expired"><i class="ti ti-alert-triangle"></i>${hasDate(d) && !isNaN(new Date(d)) ? fmtDate(d) : '—'}</span>`;
+  if (st === 'expiring') return `<span class="date-cell dc-expiring"><i class="ti ti-clock"></i>${fmtDate(d)}</span>`;
+  return `<span class="date-cell dc-valid"><i class="ti ti-circle-check"></i>${fmtDate(d)}</span>`;
+}
+
+/** Single dot indicator for a date — used in the compact table column */
+function dateDot(d, label) {
+  const st = docStatus(d);
+  const color = st === 'valid' ? 'var(--teal)' : st === 'expiring' ? 'var(--amber)' : 'var(--red)';
+  const tip = `${label}: ${hasDate(d) && !isNaN(new Date(d)) ? fmtDate(d) : 'missing'}`;
+  return `<span title="${tip}" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0;"></span>`;
+}
+
+function fleetBadge(b) {
+  const fs = fleetStatus(b);
+  const raw = fleetStatusRaw(b);
+  if (fs === 'available') {
+    return `<span class="sbadge s-active" title="Available">Available</span>`;
+  }
+  return `<span class="sbadge s-inactive" title="${raw}">Unavailable</span>`;
+}
+
+function bikeAv(i) {
+  const idx = i % AV_FG.length;
+  return `<div class="bk-av" style="background:${AV_BG[idx]};color:${AV_FG[idx]};"><i class="ti ti-motorbike"></i></div>`;
+}
+
+/* ═══  CACHE  ═══ */
+function bikeCacheSave(rows) { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ts:Date.now(),data:rows})); } catch {} }
+function bikeCacheLoad() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const ts = parsed.ts;
+    const rows = parsed.data || parsed.rows || parsed; // support {data:[...]}, {rows:[...]}, or raw array
+    return Array.isArray(rows) ? rows : null;
+  } catch { return null; }
+}
+function bikeCacheClear() { try { localStorage.removeItem(CACHE_KEY); } catch {} }
+
+
+/* ═══  NORMALISE ROW  ═══ */
+function normaliseRow(r, i) {
+  if (!r) return null;
+  if (Array.isArray(r)) {
+    if (typeof r[COL.plate] === 'string' && r[COL.plate].toLowerCase().includes('plate')) return null;
+    const plate = (r[COL.plate]||'').toString().trim();
+    if (!plate) return null;
+    return {
+      _rowIndex: i+2,
+      timestamp:  (r[COL.timestamp]||'').toString(),
+      bikeId:     (r[COL.bikeId]   ||String(i+1)).toString(),
+      plate,
+      chassis:    (r[COL.chassis]  ||'').toString(),
+      make:       (r[COL.make]     ||'—').toString(),
+      model:      (r[COL.model]    ||'—').toString(),
+      emirate:    (r[COL.emirate]  ||'').toString(),
+      mulkiyaExp: (r[COL.mulkiyaExp]||'').toString(),
+      passingExp: (r[COL.passingExp]||'').toString(),
+      insExp:     (r[COL.insExp]   ||'').toString(),
+      status:     (r[COL.status]   ||'active').toString().toLowerCase(),
+    };
+  }
+  const plate = (r.plate||r.plateNumber||r['Plate Number']||'').toString().trim();
+  if (!plate) return null;
+  return {
+    _rowIndex: r._rowIndex || (i+2),
+    timestamp:  (r.timestamp||r.Timestamp||'').toString(),
+    bikeId:     (r.bikeId||r['Bike ID']||String(i+1)).toString(),
+    plate,
+    chassis:    (r.chassis||r['Chassis Number']||'').toString(),
+    make:       (r.make||r.Make||'—').toString(),
+    model:      (r.model||r.Model||'—').toString(),
+    emirate:    (r.emirate||r.Emirate||'').toString(),
+    mulkiyaExp: (r.mulkiyaExp||r['Mulkiya Expiry']||'').toString(),
+    passingExp: (r.passingExp||r['Passing Expiry']||'').toString(),
+    insExp:     (r.insExp||r['Insurance Expiry']||'').toString(),
+    status:     (r.status||r.Status||'active').toString().toLowerCase(),
+  };
+}
+
+/* ═══  LOAD  ═══ */
+function loadBikes() {
+  const tbody = document.getElementById('bike-tbody');
+  const cached = bikeCacheLoad();
+  if (cached && cached.length) {
+    bikes = cached.map((r,i) => normaliseRow(r,i)).filter(Boolean);
+    renderAll();
+  } else {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text3);">
+      <i class="ti ti-database-off" style="font-size:22px;display:block;margin-bottom:8px;"></i>
+      No data in cache yet. Data will appear automatically once the cache (<code style="font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:4px;">ap2_bike</code>) is populated.
+    </td></tr>`;
+  }
+}
+
+/* ═══  BACKGROUND CACHE WATCHER  ═══ */
+/* Listens for any tab/window writing to ap2_bike and silently refreshes */
+window.addEventListener('storage', function(e) {
+  if (e.key !== CACHE_KEY) return;
+  if (!e.newValue) return; // cache was cleared, do nothing
+  try {
+    const parsed = JSON.parse(e.newValue);
+    const rows = parsed.data || parsed.rows || parsed;
+    if (!rows || !rows.length) return;
+    const updated = rows.map((r,i) => normaliseRow(r,i)).filter(Boolean);
+    if (!updated.length) return;
+    bikes = updated;
+    renderAll();
+  } catch {}
+});
+
+/* ═══  STATS  ═══ */
+function renderStats() {
+  const total       = bikes.length;
+  const docExpired  = bikes.filter(b => docHealthStatus(b)==='expired').length;
+  const docExpiring = bikes.filter(b => docHealthStatus(b)==='expiring').length;
+  const available   = bikes.filter(b => fleetStatus(b)==='available').length;
+  const hasIssues   = docExpired > 0 || docExpiring > 0;
+
+  document.getElementById('bike-stats').innerHTML = `
+    <div class="stat-card c-accent" onclick="setFilter('all')">
+      <div class="sc-top"><i class="ti ti-motorbike sc-icon"></i><span class="sc-label">Total Bikes</span></div>
+      <div class="sc-bottom"><span class="sc-val">${total}</span></div>
+      <div class="sc-sub">Registered fleet</div>
+    </div>
+    <div class="stat-card c-teal" onclick="setFilter('active')">
+      <div class="sc-top"><i class="ti ti-circle-check sc-icon"></i><span class="sc-label">Available</span></div>
+      <div class="sc-bottom"><span class="sc-val">${available}</span></div>
+      <div class="sc-sub">Status = available</div>
+    </div>
+    <div class="stat-card ${docExpired>0?'c-red':docExpiring>0?'c-amber':'c-gray'}" onclick="setFilter('expired')">
+      <div class="sc-top"><i class="ti ti-alert-triangle sc-icon"></i><span class="sc-label">Expired</span></div>
+      <div class="sc-bottom">
+        <span class="sc-val" style="color:var(${docExpired>0?'--red':'--text3'});">${docExpired}</span>
+      </div>
+      <div class="sc-sub">Docs expired</div>
+    </div>
+    <div class="stat-card ${docExpiring>0?'c-amber':'c-gray'}" onclick="setFilter('expiring')">
+      <div class="sc-top"><i class="ti ti-clock sc-icon"></i><span class="sc-label">Expiring</span></div>
+      <div class="sc-bottom">
+        <span class="sc-val" style="color:var(${docExpiring>0?'--amber':'--text3'});">${docExpiring}</span>
+      </div>
+      <div class="sc-sub">Within ${WARN_DAYS}d</div>
+    </div>`;
+
+  // Update badge counts on filter pills
+  const expiredBadge  = document.getElementById('fp-badge-expired');
+  const expiringBadge = document.getElementById('fp-badge-expiring');
+  if (expiredBadge) {
+    if (docExpired > 0) { expiredBadge.style.display='inline-flex'; expiredBadge.querySelector('span').textContent=docExpired; }
+    else { expiredBadge.style.display='none'; }
+  }
+  if (expiringBadge) {
+    if (docExpiring > 0) { expiringBadge.style.display='inline-flex'; expiringBadge.querySelector('span').textContent=docExpiring; }
+    else { expiringBadge.style.display='none'; }
+  }
+}
+
+/* ═══  TABLE  ═══ */
+function getFiltered() {
+  const lq = searchQ.toLowerCase().trim();
+  return bikes.filter(b => {
+    if (lq) {
+      const m = [b.plate,b.make,b.model,b.bikeId,b.emirate,b.chassis,b.status].some(v => (v||'').toLowerCase().includes(lq));
+      if (!m) return false;
+    }
+    if (filterMode !== 'all') {
+      const fs = fleetStatus(b);
+      const dh = docHealthStatus(b);
+      if (filterMode === 'expired'   && dh !== 'expired')   return false;
+      if (filterMode === 'expiring'  && dh !== 'expiring')  return false;
+      if (filterMode === 'active'    && fs !== 'available') return false;
+      if (filterMode === 'inactive'  && fs !== 'unavailable') return false;
+    }
+    return true;
+  });
+}
+
+function docHealthBadge(b) {
+  const dh = docHealthStatus(b);
+  const map = {
+    ok:       {cls:'db-ok',      icon:'ti-circle-check', label:'OK'},
+    expiring: {cls:'db-expiring',icon:'ti-clock',        label:'Expiring'},
+    expired:  {cls:'db-expired', icon:'ti-alert-triangle',label:'Expired'},
+  };
+  const m = map[dh] || map.expired;
+  return `<span class="doc-badge ${m.cls}"><i class="ti ${m.icon}"></i>${m.label}</span>`;
+}
+
+function buildRow(b, i) {
+  const fs = fleetStatus(b);
+  const dh = docHealthStatus(b);
+  const rowCls = fs==='unavailable' ? 'row-inactive'
+               : dh==='expired'  ? 'row-expired'
+               : dh==='expiring' ? 'row-expiring' : '';
+  return `<tr class="${rowCls}">
+    <td>
+      <div style="display:flex;align-items:center;gap:8px;">
+        ${bikeAv(i)}
+        <div>
+          <div style="font-weight:500;font-size:12.5px;">${b.make} ${b.model}</div>
+          <div style="font-size:10.5px;color:var(--text3);">${b.bikeId}</div>
+        </div>
+      </div>
+    </td>
+    <td><span class="plate">${b.plate||'—'}</span></td>
+    <td class="c-chassis" style="font-size:11px;color:var(--text3);font-family:var(--mono);">${b.chassis||'—'}</td>
+    <td class="c-emirate" style="font-size:12px;">${b.emirate||'—'}</td>
+    <td>
+      <div style="display:flex;align-items:center;gap:5px;" title="Mulkiya · Passing · Insurance">
+        ${dateDot(b.mulkiyaExp,'Mulkiya')}
+        ${dateDot(b.passingExp,'Passing')}
+        ${dateDot(b.insExp,'Insurance')}
+      </div>
+    </td>
+    <td>${docHealthBadge(b)}</td>
+    <td>${fleetBadge(b)}</td>
+    <td style="padding:7px 10px;">
+      <button class="rb rb-view" onclick="viewBike('${b.bikeId}')"><i class="ti ti-eye"></i> View</button>
+    </td>
+  </tr>`;
+}
+
+function renderTable() {
+  const tbody = document.getElementById('bike-tbody');
+  const filtered = getFiltered();
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><i class="ti ti-motorbike"></i><p>No bikes match this filter</p></div></td></tr>`;
+    document.getElementById('bike-pagination').innerHTML='';
+    return;
+  }
+  const totalPages = Math.ceil(filtered.length/PAGE_SIZE);
+  page = Math.max(1,Math.min(page,totalPages));
+  const start = (page-1)*PAGE_SIZE;
+  tbody.innerHTML = filtered.slice(start,start+PAGE_SIZE).map((b,i)=>buildRow(b,start+i)).join('');
+  renderPagination(filtered.length,page);
+}
+
+function renderPagination(total,pg) {
+  const el = document.getElementById('bike-pagination');
+  const totalPages = Math.ceil(total/PAGE_SIZE);
+  if (totalPages<=1){el.innerHTML='';return;}
+  const btn=(label,p,disabled,active)=>`<button class="pg-btn${active?' active':''}" onclick="goPage(${p})" ${disabled?'disabled':''}>${label}</button>`;
+  const s=(pg-1)*PAGE_SIZE+1, e=Math.min(pg*PAGE_SIZE,total);
+  let pages='';
+  for(let p=1;p<=totalPages;p++){
+    if(p===1||p===totalPages||(p>=pg-2&&p<=pg+2)) pages+=btn(p,p,false,p===pg);
+    else if(p===pg-3||p===pg+3) pages+=`<span class="pg-info">…</span>`;
+  }
+  el.innerHTML=btn('‹',pg-1,pg===1,false)+pages+btn('›',pg+1,pg===totalPages,false)+`<span class="pg-info">${s}–${e} of ${total}</span>`;
+}
+
+function goPage(p){page=p;renderTable();}
+function filterBikes(q){searchQ=q||'';page=1;renderTable();}
+function setFilter(f){
+  filterMode=f; page=1;
+  document.querySelectorAll('.fp').forEach(b=>b.classList.toggle('active',b.dataset.filter===f));
+  renderTable();
+}
+function renderAll(){renderStats();renderTable();}
+
+/* ═══  DETAIL PANEL — VIEW MODE  ═══ */
+function viewBike(bikeId, editDirectly=false) {
+  const b = bikes.find(x=>x.bikeId===bikeId);
+  if (!b) return;
+  _panelId = bikeId;
+  _editMode = false;
+
+  const idx = bikes.indexOf(b);
+  const avBg = AV_BG[idx%AV_FG.length], avFg = AV_FG[idx%AV_FG.length];
+
+  document.getElementById('dp-av').style.cssText=`background:${avBg};color:${avFg};`;
+  document.getElementById('dp-av').innerHTML='<i class="ti ti-motorbike" style="font-size:19px;"></i>';
+  document.getElementById('dp-name').textContent=`${b.make} ${b.model}`;
+  document.getElementById('dp-sub').textContent=b.plate||'No plate';
+
+  // Fleet status badge
+  const fbadge = document.getElementById('dp-badge-fleet');
+  const fs = fleetStatus(b);
+  fbadge.className = 'sbadge ' + (fs === 'available' ? 's-active' : 's-inactive');
+  fbadge.textContent = fs === 'available' ? 'Available' : `Unavailable (${fleetStatusRaw(b)})`;
+
+  // Doc health badge
+  const dh = docHealthStatus(b);
+  const dbadge = document.getElementById('dp-badge-doc');
+  const dmap = {'ok':'s-active','expiring':'s-expiring','expired':'s-expired'};
+  const dlbl = {'ok':'Docs OK','expiring':'Doc Expiring','expired':'Expired / Missing'};
+  dbadge.className='sbadge '+(dmap[dh]||'s-expired');
+  dbadge.textContent=dlbl[dh]||'Expired / Missing';
+
+  document.getElementById('detail-panel').classList.add('open');
+  renderViewMode(b);
+
+  if (editDirectly) setTimeout(enterEditMode, 50);
+}
+
+function renderViewMode(b) {
+  _editMode = false;
+  const exCard = (label, d) => {
+    const st = docStatus(d);
+    const cls = {valid:'dp-ex-valid',expired:'dp-ex-expired',expiring:'dp-ex-expiring'}[st] || 'dp-ex-expired';
+    const icon = {valid:'ti-circle-check',expired:'ti-alert-triangle',expiring:'ti-clock'}[st] || 'ti-alert-triangle';
+    const lbl  = {valid:'Valid',expired: hasDate(d) ? 'Expired' : 'Missing',expiring:'Expiring'}[st] || 'Missing';
+    const daysLeft = hasDate(d) && !isNaN(new Date(d)) ? daysUntil(d) : null;
+    const daysNote = daysLeft !== null
+      ? daysLeft < 0
+        ? `<div class="dp-ex-date" style="color:var(--red);">${Math.abs(daysLeft)}d overdue</div>`
+        : `<div class="dp-ex-date">${daysLeft}d left</div>`
+      : `<div class="dp-ex-date" style="color:var(--red);">No date set</div>`;
+    return `<div class="dp-ex-card ${cls}">
+      <i class="ti ${icon} dp-ex-icon"></i>
+      <div class="dp-ex-label">${label}</div>
+      <div class="dp-ex-status">${lbl}</div>
+      <div class="dp-ex-date">${hasDate(d) && !isNaN(new Date(d)) ? fmtDate(d) : '—'}</div>
+      ${daysNote}
+    </div>`;
+  };
+
+  document.getElementById('dp-body').innerHTML = `
+    <div class="dp-sec">
+      <div class="dp-sec-title"><i class="ti ti-info-circle"></i> Vehicle Info</div>
+      <div class="dp-rows">
+        <div class="dp-row"><span class="dp-lbl">Bike ID</span><span class="dp-val dp-mono">${b.bikeId}</span></div>
+        <div class="dp-row"><span class="dp-lbl">Plate</span><span class="dp-val"><span class="plate">${b.plate||'—'}</span></span></div>
+        <div class="dp-row"><span class="dp-lbl">Make</span><span class="dp-val">${b.make}</span></div>
+        <div class="dp-row"><span class="dp-lbl">Model</span><span class="dp-val">${b.model}</span></div>
+        <div class="dp-row"><span class="dp-lbl">Chassis / VIN</span><span class="dp-val dp-mono" style="font-size:11px;">${b.chassis||'—'}</span></div>
+        <div class="dp-row"><span class="dp-lbl">Emirate</span><span class="dp-val">${b.emirate||'—'}</span></div>
+        <div class="dp-row"><span class="dp-lbl">Timestamp</span><span class="dp-val dp-mono" style="font-size:11px;">${b.timestamp||'—'}</span></div>
+      </div>
+    </div>
+    <div class="dp-sec">
+      <div class="dp-sec-title"><i class="ti ti-shield-check"></i> Status</div>
+      <div class="dp-rows">
+        <div class="dp-row"><span class="dp-lbl">Fleet Status</span><span class="dp-val">${fleetBadge(b)} <span style="font-size:11px;color:var(--text3);margin-left:4px;">(${fleetStatusRaw(b)})</span></span></div>
+        <div class="dp-row"><span class="dp-lbl">Doc Health</span><span class="dp-val">${(()=>{const dh=docHealthStatus(b);const dmap={'ok':'s-active','expiring':'s-expiring','expired':'s-expired'};const dlbl={'ok':'Docs OK','expiring':'Expiring Soon','expired':'Expired / Missing'};return `<span class="sbadge ${dmap[dh]||'s-expired'}">${dlbl[dh]||'Expired / Missing'}</span>`;})()}</span></div>
+      </div>
+    </div>
+    <div class="dp-sec">
+      <div class="dp-sec-title"><i class="ti ti-calendar-stats"></i> Document Expiry</div>
+      <div class="dp-ex-grid">
+        ${exCard('Mulkiya', b.mulkiyaExp)}
+        ${exCard('Passing', b.passingExp)}
+        ${exCard('Insurance', b.insExp)}
+      </div>
+    </div>`;
+
+  const ftr = document.getElementById('dp-ftr');
+  ftr.innerHTML = `
+    <button class="dp-btn" onclick="closePanel()"><i class="ti ti-x"></i> Close</button>
+    <button class="dp-btn dp-btn-edit" onclick="enterEditMode()"><i class="ti ti-pencil"></i> Edit</button>`;
+}
+
+/* ═══  EDIT MODE  ═══ */
+function enterEditMode() {
+  const b = bikes.find(x=>x.bikeId===_panelId);
+  if (!b) return;
+  _editMode = true;
+
+  document.getElementById('dp-body').innerHTML = `
+    <div class="dp-sec">
+      <div class="dp-sec-title"><i class="ti ti-pencil"></i> Edit Record</div>
+      <div class="dp-edit-grid">
+        <div class="dp-field"><label>Plate Number</label><input id="ef-plate" value="${b.plate||''}" placeholder="Plate No"/></div>
+        <div class="dp-field"><label>Bike ID</label><input id="ef-bikeId" value="${b.bikeId||''}" placeholder="Bike ID"/></div>
+        <div class="dp-field"><label>Make</label><input id="ef-make" value="${b.make==='—'?'':b.make}" placeholder="e.g. Yamaha"/></div>
+        <div class="dp-field"><label>Model</label><input id="ef-model" value="${b.model==='—'?'':b.model}" placeholder="e.g. NMAX 155"/></div>
+        <div class="dp-field"><label>Chassis / VIN</label><input id="ef-chassis" value="${b.chassis||''}" placeholder="17-char VIN"/></div>
+        <div class="dp-field">
+          <label>Emirate</label>
+          <select id="ef-emirate">
+            <option value="" ${!b.emirate?'selected':''}>— Select —</option>
+            ${['Dubai','Abu Dhabi','Sharjah','Ras Al Khaimah','Ajman','Fujairah','Umm Al Quwain'].map(e=>`<option ${b.emirate===e?'selected':''}>${e}</option>`).join('')}
+          </select>
+        </div>
+        <div class="dp-field"><label>Mulkiya Expiry</label><input type="date" id="ef-mulkiya" value="${b.mulkiyaExp||''}"/></div>
+        <div class="dp-field"><label>Passing Expiry</label><input type="date" id="ef-passing" value="${b.passingExp||''}"/></div>
+        <div class="dp-field" style="grid-column:span 2;"><label>Insurance Expiry</label><input type="date" id="ef-ins" value="${b.insExp||''}"/></div>
+        <div class="dp-field" style="grid-column:span 2;">
+          <label>Fleet Status</label>
+          <select id="ef-status">
+            ${['active','inactive','maintenance','retired','deactivated'].map(s=>`<option ${b.status===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>`;
+
+  const ftr = document.getElementById('dp-ftr');
+  ftr.innerHTML = `
+    <button class="dp-btn dp-btn-discard" onclick="renderViewMode(bikes.find(x=>x.bikeId===_panelId))"><i class="ti ti-arrow-back"></i> Discard</button>
+    <button class="dp-btn dp-btn-save" onclick="saveEdit()"><i class="ti ti-device-floppy"></i> Save</button>`;
+}
+
+async function saveEdit() {
+  const b = bikes.find(x=>x.bikeId===_panelId);
+  if (!b) return;
+
+  const updated = {
+    ...b,
+    plate:      document.getElementById('ef-plate').value.trim(),
+    bikeId:     document.getElementById('ef-bikeId').value.trim(),
+    make:       document.getElementById('ef-make').value.trim()||'—',
+    model:      document.getElementById('ef-model').value.trim()||'—',
+    chassis:    document.getElementById('ef-chassis').value.trim(),
+    emirate:    document.getElementById('ef-emirate').value,
+    mulkiyaExp: document.getElementById('ef-mulkiya').value,
+    passingExp: document.getElementById('ef-passing').value,
+    insExp:     document.getElementById('ef-ins').value,
+    status:     document.getElementById('ef-status').value,
+  };
+
+  document.getElementById('dp-saving').classList.add('show');
+
+  try {
+    Object.assign(b, updated);
+    bikeCacheSave(bikes);
+    document.getElementById('dp-name').textContent=`${b.make} ${b.model}`;
+    document.getElementById('dp-sub').textContent=b.plate;
+
+    const fs2 = fleetStatus(b);
+    const dh2 = docHealthStatus(b);
+    const fbadge2 = document.getElementById('dp-badge-fleet');
+    fbadge2.className = 'sbadge ' + (fs2 === 'available' ? 's-active' : 's-inactive');
+    fbadge2.textContent = fs2 === 'available' ? 'Available' : `Unavailable (${fleetStatusRaw(b)})`;
+    const dmap2 = {'ok':'s-active','expiring':'s-expiring','expired':'s-expired'};
+    const dlbl2 = {'ok':'Docs OK','expiring':'Doc Expiring','expired':'Doc Expired'};
+    const dbadge2 = document.getElementById('dp-badge-doc');
+    dbadge2.className='sbadge '+(dmap2[dh2]||'s-expired');
+    dbadge2.textContent=dlbl2[dh2]||'Doc Expired';
+
+    document.getElementById('dp-saving').classList.remove('show');
+    renderViewMode(b);
+    renderAll();
+    toast('Saved ✓');
+  } catch(e) {
+    document.getElementById('dp-saving').classList.remove('show');
+    toast('Save failed: '+e.message,'error');
+  }
+}
+
+function closePanel(){
+  document.getElementById('detail-panel').classList.remove('open');
+  _panelId=null; _editMode=false;
+}
+
+/* ═══  TEMPLATE DOWNLOAD  ═══ */
+function downloadTemplate() {
+  const headers = ['Timestamp','Bike ID','Plate Number','Chassis Number','Make','Model','Emirate','Mulkiya Expiry','Passing Expiry','Insurance Expiry','Status'];
+  const example = [new Date().toISOString(),'BIKE-001','A 12345 Dubai','VIN1234567890ABCDE','Yamaha','NMAX 155','Dubai','2025-12-31','2025-10-15','2025-11-30','active'];
+  const csv = [headers.join(','), example.join(',')].join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href=url; a.download='bike_fleet_template.csv';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast('Template downloaded');
+}
+
+/* ═══  UPLOAD MODAL  ═══ */
+function openUploadModal(){
+  _pendingUpload=[];
+  document.getElementById('file-input').value='';
+  document.getElementById('up-preview').classList.remove('show');
+  document.getElementById('up-err').classList.remove('show');
+  document.getElementById('up-confirm-btn').disabled=true;
+  document.getElementById('upload-modal').classList.add('open');
+  setUpMode('add');
+}
+function closeUploadModal(){ document.getElementById('upload-modal').classList.remove('open'); }
+
+function setUpMode(mode){
+  _upMode = mode;
+  document.getElementById('mode-add').classList.toggle('active',mode==='add');
+  document.getElementById('mode-update').classList.toggle('active',mode==='update');
+  document.getElementById('up-info-add').style.display     = mode==='add'?'':'none';
+  document.getElementById('up-info-update').style.display  = mode==='update'?'':'none';
+  _pendingUpload=[];
+  document.getElementById('file-input').value='';
+  document.getElementById('up-preview').classList.remove('show');
+  document.getElementById('up-err').classList.remove('show');
+  document.getElementById('up-confirm-btn').disabled=true;
+}
+
+function dragOver(e){e.preventDefault();document.getElementById('upload-zone').classList.add('drag');}
+function dragLeave(){document.getElementById('upload-zone').classList.remove('drag');}
+function dropFile(e){e.preventDefault();dragLeave();if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);}
+
+/* CSV header alias map */
+const HEADER_ALIASES = {
+  timestamp:  ['timestamp','Timestamp','time'],
+  bikeId:     ['bikeId','Bike ID','bike id','id','bike_id'],
+  plate:      ['plate','Plate Number','plate number','platenumber','plate_number'],
+  chassis:    ['chassis','Chassis Number','chassis number','vin','chassisno'],
+  make:       ['make','Make','brand','Brand'],
+  model:      ['model','Model'],
+  emirate:    ['emirate','Emirate','state'],
+  mulkiyaExp: ['mulkiyaExp','Mulkiya Expiry','mulkiya expiry','mulkiya','mulkiya_exp'],
+  passingExp: ['passingExp','Passing Expiry','passing expiry','passing','passing_exp'],
+  insExp:     ['insExp','Insurance Expiry','insurance expiry','insurance','ins_exp'],
+  status:     ['status','Status'],
+};
+
+function handleFile(file) {
+  if (!file) return;
+  const errEl  = document.getElementById('up-err');
+  const prevEl = document.getElementById('up-preview');
+  const btn    = document.getElementById('up-confirm-btn');
+  errEl.classList.remove('show'); prevEl.classList.remove('show'); btn.disabled=true; _pendingUpload=[];
+
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const text = ev.target.result;
+      const lines = text.split(/\r?\n/).filter(l=>l.trim());
+      if (lines.length < 2) throw new Error('File needs at least a header row and one data row.');
+
+      const rawHeaders = lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+      const colIdx = {};
+      for (const [field, aliases] of Object.entries(HEADER_ALIASES)) {
+        const idx = rawHeaders.findIndex(h => aliases.some(a => a.toLowerCase()===h.toLowerCase()));
+        colIdx[field] = idx >= 0 ? idx : -1;
+      }
+
+      const plateIdx = colIdx.plate;
+      if (plateIdx < 0) throw new Error('CSV must have a "plate" or "Plate Number" column to match records.');
+
+      const get = (cols, field) => {
+        const i = colIdx[field];
+        return i >= 0 ? (cols[i]||'').replace(/^"|"$/g,'').trim() : '';
+      };
+
+      const parsed = [];
+      for (let r=1; r<lines.length; r++) {
+        const cols = lines[r].split(',');
+        const plate = (cols[plateIdx]||'').replace(/^"|"$/g,'').trim();
+        if (!plate) continue;
+        const entry = { plate, _csvFields: Object.keys(colIdx).filter(f=>colIdx[f]>=0) };
+        for (const field of entry._csvFields) {
+          entry[field] = get(cols, field);
+        }
+        parsed.push(entry);
+      }
+
+      if (!parsed.length) throw new Error('No valid rows found. Make sure the "plate" column has data.');
+
+      _pendingUpload = parsed;
+      const modeLabel = _upMode==='add' ? 'add' : 'update';
+      document.getElementById('up-preview-text').innerHTML =
+        `<strong>${file.name}</strong> — ${parsed.length} row${parsed.length!==1?'s':''} ready to <strong>${modeLabel}</strong>.<br>
+         <span style="font-size:11px;color:var(--text3);">Fields detected: ${parsed[0]._csvFields.join(', ')}</span>`;
+      prevEl.classList.add('show');
+      btn.disabled = false;
+    } catch(e) {
+      errEl.textContent = e.message;
+      errEl.classList.add('show');
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function confirmUpload() {
+  if (!_pendingUpload.length) return;
+  document.getElementById('up-confirm-btn').disabled=true;
+  document.getElementById('up-confirm-btn').innerHTML='<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block;"></i> Processing…';
+
+  let added=0, updated=0, skipped=0, errors=0;
+
+  if (_upMode === 'add') {
+    const existingPlates = new Set(bikes.map(b=>(b.plate||'').toLowerCase()));
+    const toAdd = _pendingUpload.filter(r=>!existingPlates.has((r.plate||'').toLowerCase()));
+    skipped = _pendingUpload.length - toAdd.length;
+
+    for (const r of toAdd) {
+      const newBike = {
+        _rowIndex: bikes.length + 2,
+        timestamp:  r.timestamp  || new Date().toISOString(),
+        bikeId:     r.bikeId     || 'BIKE-'+String(Date.now()).slice(-5),
+        plate:      r.plate,
+        chassis:    r.chassis    || '',
+        make:       r.make       || '—',
+        model:      r.model      || '—',
+        emirate:    r.emirate    || '',
+        mulkiyaExp: r.mulkiyaExp || '',
+        passingExp: r.passingExp || '',
+        insExp:     r.insExp     || '',
+        status:     r.status     || 'active',
+      };
+      bikes.push(newBike);
+      added++;
+    }
+  } else {
+    // UPDATE MODE — merge only non-empty fields
+    for (const r of _pendingUpload) {
+      const existing = bikes.find(b=>(b.plate||'').toLowerCase()===(r.plate||'').toLowerCase());
+      if (!existing) { skipped++; continue; }
+
+      const MERGEABLE = ['bikeId','chassis','make','model','emirate','mulkiyaExp','passingExp','insExp','status'];
+      const merged = {...existing};
+      for (const f of MERGEABLE) {
+        if (r._csvFields.includes(f) && r[f]) merged[f] = r[f];
+      }
+
+      Object.assign(existing, merged);
+      updated++;
+    }
+  }
+
+  closeUploadModal();
+  bikeCacheSave(bikes);
+  renderAll();
+
+  let msg = _upMode==='add'
+    ? `Added ${added} bike${added!==1?'s':''}${skipped>0?' ('+skipped+' duplicate'+(skipped>1?'s':'')+' skipped)':''}${errors>0?' | '+errors+' error(s)':''}.`
+    : `Updated ${updated} bike${updated!==1?'s':''}${skipped>0?' ('+skipped+' not found)':''}${errors>0?' | '+errors+' error(s)':''}.`;
+  toast(msg, errors>0?'error':'success');
+}
+
+/* ═══  THEME  ═══ */
+(function(){
+  try {
+    const t = window.parent.document.documentElement.getAttribute('data-theme')||localStorage.getItem('theme')||'dark';
+    document.documentElement.setAttribute('data-theme',t);
+    new MutationObserver(()=>document.documentElement.setAttribute('data-theme',window.parent.document.documentElement.getAttribute('data-theme')||'dark'))
+      .observe(window.parent.document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  } catch { document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'dark'); }
+})();
+
+/* ═══  TOAST  ═══ */
+let _toastTimer;
+function toast(msg,type='success'){
+  const el=document.getElementById('toast');
+  clearTimeout(_toastTimer);
+  el.className='toast';
+  document.getElementById('toast-msg').textContent=msg;
+  document.getElementById('toast-icon').className=type==='error'?'ti ti-x-circle':type==='info'?'ti ti-info-circle':'ti ti-circle-check';
+  requestAnimationFrame(()=>el.classList.add('show',type));
+  _toastTimer=setTimeout(()=>el.classList.remove('show'),4000);
+}
+
+/* ═══  INIT  ═══ */
+document.addEventListener('DOMContentLoaded', loadBikes);
+</script>
+</body>
+</html>
