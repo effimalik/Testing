@@ -101,7 +101,7 @@
         + `&token=${encodeURIComponent(s.token)}`
         + `&_t=${Date.now()}`;
 
-      const res  = await fetch(url, { cache: 'no-store' });
+      const res  = await fetch(url, { cache: 'no-store', redirect: 'follow', mode: 'cors' });
 
       if (!res.ok) {
         // HTTP error (5xx etc.) — keep session, don't force logout

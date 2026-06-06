@@ -194,7 +194,7 @@
 
       let res;
       try {
-        res = await fetch(url, { cache: 'no-store', signal: controller.signal });
+        res = await fetch(url, { cache: 'no-store', redirect: 'follow', mode: 'cors', signal: controller.signal });
       } finally {
         clearTimeout(timeoutId);
       }
@@ -265,11 +265,27 @@
       return;
     }
 
-    console.log('[DataLayer] warmIfEmpty: parallel fetch for', allowedKeys.length, 'datasets:', allowedKeys);
+    // Only fetch datasets that are missing or stale — skip fresh ones
+    // This is the correct behaviour for "warm if empty": don't re-fetch what we already have
+    const toFetch = allowedKeys.filter(key => {
+      const status = _cache.status(key);
+      return status !== 'fresh'; // null (missing) or 'stale' → fetch; 'fresh' → skip
+    });
+
+    if (!toFetch.length) {
+      console.log('[DataLayer] warmIfEmpty: all datasets are fresh — skipping fetch');
+      _startAllTimers();
+      return;
+    }
+
+    console.log('[DataLayer] warmIfEmpty: fetching', toFetch.length, 'missing/stale datasets:', toFetch);
 
     await Promise.allSettled(
-      allowedKeys.map(key => _fetchFromServer(key))
+      toFetch.map(key => _fetchFromServer(key))
     );
+
+    // Schedule refresh timers for all permitted datasets
+    _startAllTimers();
 
     console.log('[DataLayer] warmIfEmpty: all done');
   }
@@ -434,17 +450,51 @@
 
     if (isLoginPage) return;
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => {
-        _buildDatasets();
-        _startAllTimers();
-      });
-    } else {
+    // On index.html (and any protected page): rebuild permitted datasets from session,
+    // then warm any missing/stale entries. This handles returning from another portal tab
+    // where sessionStorage cache may have been partially or fully cleared.
+    function _initAndWarm() {
       _buildDatasets();
       _startAllTimers();
+      // Non-blocking background warm — fills in any missing/stale cache entries
+      warmIfEmpty().catch(e => console.warn('[DataLayer] autoInit warmIfEmpty error:', e.message));
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', _initAndWarm);
+    } else {
+      _initAndWarm();
     }
   })();
 
   console.log('[DataLayer] v2.0 loaded — window.AdminPro ready');
 
 })();
+
+  /* ─────────────────────────────────────────
+     VISIBILITY CHANGE WATCHER
+     When user returns to this tab (from another portal or browser tab),
+     re-warm any datasets that went stale while the tab was hidden.
+     This is the fix for "cache miss on returning to portal".
+  ───────────────────────────────────────── */
+  (function _visibilityWatcher() {
+    const isLoginPage = window.location.pathname.endsWith('login.html')
+      || window.location.href.includes('/login.html');
+    if (isLoginPage) return;
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      // Tab is now visible — check for stale/empty entries and warm them
+      _buildDatasets(); // re-read permissions (session might have been refreshed)
+      const staleKeys = Object.keys(DATASETS).filter(key => {
+        const status = _cache.status(key);
+        return status !== 'fresh'; // 'stale', null (empty), or missing
+      });
+      if (staleKeys.length) {
+        console.log('[DataLayer] Tab visible — refreshing stale datasets:', staleKeys);
+        Promise.allSettled(staleKeys.map(key => _fetchFromServer(key))).then(() => {
+          _startAllTimers();
+        });
+      }
+    });
+  })();
