@@ -753,11 +753,12 @@ async function startGoogleLogin() {
   let sessionCreated = false;
   try {
     sessionCreated = window.Auth && window.Auth.createSession({
-      sessionId : result.sessionId,
-      token     : result.token,
-      email     : result.email,
-      name      : result.name || result.email,
-      role      : result.role || 'User',
+      sessionId   : result.sessionId,
+      token       : result.token,
+      email       : result.email,
+      name        : result.name || result.email,
+      role        : result.role || 'User',
+      permissions : result.permissions || null,
     });
   } catch (e) {
     console.error('[Login] Auth.createSession threw:', e.message);
