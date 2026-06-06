@@ -1033,7 +1033,7 @@ async function cmRefresh(key, btn) {
     if (window.AdminPro && AdminPro.forceRefresh) {
       await AdminPro.forceRefresh(key);
     } else {
-      localStorage.removeItem('ap2_' + key);
+      sessionStorage.removeItem('ap2_' + key);
     }
     setTimeout(() => { cmScanAll(); renderCacheTable(); updateCacheHealthDot(); }, 300);
   } catch(e) {
@@ -1049,7 +1049,7 @@ async function cmRefresh(key, btn) {
   let _prevSnap = {};
   function _snap() {
     const s = {};
-    Object.keys(localStorage).filter(k => k.startsWith('ap2_')).forEach(k => { s[k] = localStorage.getItem(k); });
+    Object.keys(sessionStorage).filter(k => k.startsWith('ap2_')).forEach(k => { s[k] = sessionStorage.getItem(k); });
     return s;
   }
   _prevSnap = _snap();
@@ -1741,7 +1741,7 @@ function renderCacheTable() {
 
 function getCacheAge(key) {
   try {
-    const raw = localStorage.getItem('ap2_' + key);
+    const raw = sessionStorage.getItem('ap2_' + key);
     if (!raw) return Infinity;
     const { ts } = JSON.parse(raw);
     return Date.now() - ts;
@@ -1750,7 +1750,7 @@ function getCacheAge(key) {
 
 function getCacheData(key) {
   try {
-    const raw = localStorage.getItem('ap2_' + key);
+    const raw = sessionStorage.getItem('ap2_' + key);
     if (!raw) return null;
     return JSON.parse(raw).data;
   } catch { return null; }
@@ -1765,7 +1765,7 @@ async function hardRefreshDataset(key, btn) {
       await AdminPro.forceRefresh(key);
     } else {
       // fallback: just clear the key
-      localStorage.removeItem('ap2_' + key);
+      sessionStorage.removeItem('ap2_' + key);
     }
     setTimeout(() => { renderCacheTable(); updateCacheHealthDot(); cmScanAll(); }, 300);
   } catch(e) {
@@ -1782,7 +1782,7 @@ function deleteCacheDataset(key, btn) {
   if (window.AdminPro && AdminPro.cache) {
     AdminPro.cache.clear(key);
   } else {
-    localStorage.removeItem('ap2_' + key);
+    sessionStorage.removeItem('ap2_' + key);
   }
   renderCacheTable();
   updateCacheHealthDot();
@@ -1811,7 +1811,7 @@ function deleteAllCache() {
   if (window.AdminPro && AdminPro.cache) {
     AdminPro.cache.clearAll();
   } else {
-    Object.keys(localStorage).filter(k => k.startsWith('ap2_')).forEach(k => localStorage.removeItem(k));
+    Object.keys(sessionStorage).filter(k => k.startsWith('ap2_')).forEach(k => sessionStorage.removeItem(k));
   }
   renderCacheTable();
   updateCacheHealthDot();
@@ -1837,11 +1837,9 @@ function updateCacheHealthDot() {
 /* ══ CACHE STALENESS AUTO-REQUEST LISTENER ══
    Listens for messages from child pages requesting a data refresh,
    and also proactively re-fetches stale datasets when AdminPro.forceRefresh is available.
-   Cache is stored in localStorage under ap2_* keys — it is SHARED across all
-   users on the same browser/device (same localStorage origin). If a different
-   user logs in on the same device they will see the same cached data until
-   TTL expires or they hard-refresh. To isolate per-user, prefix keys with the
-   user email (handled in dataLayer.js if ap_user_cache_isolation is set). */
+   Cache is stored in sessionStorage under ap2_* keys — scoped to this tab only.
+   Data is cleared automatically when the tab or browser closes.
+   Each user gets a clean cache on every login. */
 (function cacheWatchdog() {
   // Listen for child iframe requests: { type:'ap-cache-request', key:'employee' }
   window.addEventListener('message', async function(evt) {
