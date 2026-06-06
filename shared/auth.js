@@ -281,7 +281,7 @@
 
     /**
      * createSession — called by login.html after Apps Script confirms credentials.
-     * Stores: sessionId, token, email, name, role, loginAt, lastActive.
+     * Stores: sessionId, token, email, name, role, loginAt, lastActive, permissions.
      * Returns true on success, false on missing required fields.
      */
     createSession(payload) {
@@ -295,13 +295,14 @@
           return false;
         }
         const s = {
-          sessionId  : String(payload.sessionId).trim(),
-          token      : String(payload.token).trim(),
-          email      : String(payload.email).trim().toLowerCase(),
-          name       : String(payload.name  || payload.email).trim(),
-          role       : String(payload.role  || 'User').trim(), // display only
-          loginAt    : Date.now(),
-          lastActive : Date.now(),
+          sessionId   : String(payload.sessionId).trim(),
+          token       : String(payload.token).trim(),
+          email       : String(payload.email).trim().toLowerCase(),
+          name        : String(payload.name  || payload.email).trim(),
+          role        : String(payload.role  || 'User').trim(), // display only
+          permissions : payload.permissions || null, // portal access map
+          loginAt     : Date.now(),
+          lastActive  : Date.now(),
         };
         const wrote = _writeSession(s);
         if (!wrote) {
@@ -313,6 +314,95 @@
         console.error('[Auth] createSession exception:', e.message);
         return false;
       }
+    },
+
+    /**
+     * fetchPermissions — fetches portal permissions for the current user from the server.
+     * Call this after createSession. Returns the permissions object or null on failure.
+     * Permissions are stored in session for the lifetime of the tab.
+     *
+     * Expected server response:
+     * { success: true, permissions: { ap2_employee: true, ap2_bike: false, ... } }
+     */
+    async fetchPermissions() {
+      try {
+        const s = _readSession();
+        if (!s || !s.sessionId || !s.token) {
+          console.warn('[Auth] fetchPermissions: no valid session');
+          return null;
+        }
+
+        const url = `${API_BASE}?type=getPermissions`
+          + `&sessionId=${encodeURIComponent(s.sessionId)}`
+          + `&token=${encodeURIComponent(s.token)}`
+          + `&email=${encodeURIComponent(s.email)}`
+          + `&_t=${Date.now()}`;
+
+        console.log('[Auth] fetchPermissions: requesting for', s.email);
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) {
+          console.warn('[Auth] fetchPermissions: HTTP', res.status);
+          return null;
+        }
+
+        const data = await res.json();
+        if (!data || data.success === false) {
+          console.warn('[Auth] fetchPermissions: server returned failure', data);
+          return null;
+        }
+
+        // Normalise: accept either { permissions: {...} } or bare flat object
+        const perms = data.permissions || data;
+        if (typeof perms !== 'object') {
+          console.warn('[Auth] fetchPermissions: unexpected response shape', data);
+          return null;
+        }
+
+        // Normalise values: "TRUE"/"FALSE" strings → booleans
+        const normalised = {};
+        for (const [k, v] of Object.entries(perms)) {
+          const key = String(k).trim();
+          if (!key) continue;
+          if (typeof v === 'boolean') { normalised[key] = v; continue; }
+          const str = String(v).trim().toUpperCase();
+          normalised[key] = str === 'TRUE' || str === '1' || str === 'YES';
+        }
+
+        // Persist into session so every page can read without another network call
+        s.permissions = normalised;
+        _writeSession(s);
+
+        console.log('[Auth] fetchPermissions: stored', Object.keys(normalised).length, 'portals:', normalised);
+        return normalised;
+
+      } catch (e) {
+        console.warn('[Auth] fetchPermissions error:', e.message);
+        return null;
+      }
+    },
+
+    /**
+     * getPermissions — returns the stored permissions map or null.
+     * { ap2_employee: true, ap2_bike: false, ap2_master: true, ... }
+     */
+    getPermissions() {
+      try {
+        const s = _readSession();
+        return (s && s.permissions) ? s.permissions : null;
+      } catch { return null; }
+    },
+
+    /**
+     * hasPermission(portal) — quick boolean check for a single portal.
+     * Returns true if the user has access, false if denied or no perms loaded.
+     * portal: 'ap2_employee' | 'ap2_bike' | 'ap2_master' | 'ap2_recovery' | 'ap2_approvedSheet' | 'ap2_cioLog'
+     */
+    hasPermission(portal) {
+      try {
+        const perms = this.getPermissions();
+        if (!perms) return false; // fail-closed: no perms = no access
+        return perms[portal] === true;
+      } catch { return false; }
     },
 
     /**
