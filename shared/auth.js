@@ -26,7 +26,6 @@
   const SERVER_CHECK_INT = 5  * 60 * 1000;    // server ping every 5 min
   const ALLOWED_ORIGIN   = 'https://effimalik.github.io/FleetManagement/';
   const API_BASE         = 'https://script.google.com/macros/s/AKfycbyD8i5eeactz16QgDElI7-X6VhUuAL2fpVUkzv7n5i3JrwotQFrGiLjrM9_ilNdRa8rNQ/exec';
-     https://script.google.com/macros/s/AKfycbyD8i5eeactz16QgDElI7-X6VhUuAL2fpVUkzv7n5i3JrwotQFrGiLjrM9_ilNdRa8rNQ/exec
      
      // 'https://script.google.com/macros/s/AKfycbyOkXshkQIhwtBjNcDbtQCsU4t6_WlH5aii6O6xElMuQa1ZB4Fn9E31c4NoO-au8TXCEw/exec';
 
