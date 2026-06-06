@@ -1,6 +1,4 @@
-
-     
- /* ═══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
    auth.js — AdminPro UAE  v3.0
    Server-validated sessions · absolute + inactivity expiry · secure logout
    LOAD FIRST on every page (before dataLayer.js and any page JS)
@@ -25,7 +23,7 @@
   const ABSOLUTE_TTL     = 8  * 60 * 60 * 1000; // 8 hr hard limit
   const SERVER_CHECK_INT = 5  * 60 * 1000;    // server ping every 5 min
   const ALLOWED_ORIGIN   = 'https://effimalik.github.io/FleetManagement/';
-  const API_BASE         = 'https://script.google.com/macros/s/AKfycbyD8i5eeactz16QgDElI7-X6VhUuAL2fpVUkzv7n5i3JrwotQFrGiLjrM9_ilNdRa8rNQ/exec';
+  const API_BASE         = 'https://script.google.com/macros/s/AKfycbw9TrCmSsUG_SCaNFgUY5Y_lzSXca-sMBAjB-FK4Yrxko8qiNQ09ixynveks_lp72pJ3Q/exec';
      
      // 'https://script.google.com/macros/s/AKfycbyOkXshkQIhwtBjNcDbtQCsU4t6_WlH5aii6O6xElMuQa1ZB4Fn9E31c4NoO-au8TXCEw/exec';
 
