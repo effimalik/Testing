@@ -1,32 +1,35 @@
 /* ═══════════════════════════════════════════════════════════════
-   dataLayer.js — AdminPro UAE  v1.0
-   Cache-first data layer · localStorage persistence · session-auth
+   dataLayer.js — AdminPro UAE  v2.0
+   Cache-first data layer · sessionStorage persistence · session-auth
+   Permission-driven: only permitted datasets are fetched or cached.
 
    ARCHITECTURE:
    ─ window.AdminPro  → public API (warmIfEmpty, get*, forceRefresh, etc.)
    ─ window.DataLayer → alias for window.AdminPro (backwards compat)
    ─ Cache layer      → sessionStorage with prefix 'ap2_' + key
    ─ Auth gate        → every fetch checks window.Auth.getCredentials()
+   ─ Permission gate  → DATASETS built from Auth.getPermissions() at runtime
 
-   DATASETS (must match DS_META in index.html):
-     bike          | Bikes list            | 15 min TTL
-     employee      | Employees list        | 10 min TTL
-     master        | Master Sheet          |  5 min TTL
-     cioLog        | Check-In/Out Log      |  5 min TTL
-     approvedSheet | Approved Sheet        |  3 min TTL
-     recovery      | Recovery data         |  6 hr  TTL
+   DATASETS_ALL (full registry — permission-filtered at runtime):
+     bike          | Bikes list            | 15 min TTL | permKey: ap2_bike
+     employee      | Employees list        | 10 min TTL | permKey: ap2_employee
+     master        | Master Sheet          |  5 min TTL | permKey: ap2_master
+     cioLog        | Check-In/Out Log      |  5 min TTL | permKey: ap2_bike
+     approvedSheet | Approved Sheet        |  3 min TTL | permKey: ap2_master
+     recovery      | Recovery data         |  6 hr  TTL | permKey: ap2_master
 
    FLOW:
-     login.html → Auth.createSession() ✓
-               → AdminPro.warmIfEmpty()   ← background pre-fetch all datasets
-               → handleLoginRedirect()    ← redirect to index / ?next=
+     login.html → Auth.createSession({ permissions }) ✓
+               → AdminPro.init()      ← builds DATASETS from permissions
+               → AdminPro.warmIfEmpty() ← parallel fetch permitted datasets only
+               → redirect to index
 
      anyPage.js → AdminPro.getEmployees() / AdminPro.getBikes() / …
                → cache HIT  → returns instantly, zero network
                → cache MISS → fetch → store → return
 
    LOAD ORDER:
-     1. auth.js      (session guard)
+     1. auth.js      (session guard + permissions)
      2. dataLayer.js (this file)
      3. page JS
 ═══════════════════════════════════════════════════════════════ */
@@ -41,40 +44,42 @@
 
   const CACHE_PREFIX = 'ap2_';
 
-  /* Dataset registry — single source of truth inside dataLayer.
-     TTLs mirror DS_META in index.html (keep in sync).        */
-  const DATASETS = {
-    bike: {
-      label    : 'Bikes',
-      apiType  : 'bikes',            // ?type=getBikes sent to Apps Script
-      ttlMs    : 1 * 60 * 1000,        // 15 min
-    },
-    employee: {
-      label    : 'Employees',
-      apiType  : 'employees',
-      ttlMs    : 1 * 60 * 1000,        // 10 min
-    },
-    master: {
-      label    : 'Master Sheet',
-      apiType  : 'getMasterSheet',
-      ttlMs    :  5 * 60 * 1000,        //  5 min
-    },
-    cioLog: {
-      label    : 'Check-In/Out Log',
-      apiType  : 'getCioLog',
-      ttlMs    :  5 * 60 * 1000,        //  5 min
-    },
-    approvedSheet: {
-      label    : 'Approved Sheet',
-      apiType  : 'getApprovedSheet',
-      ttlMs    :  3 * 60 * 1000,        //  3 min
-    },
-    recovery: {
-      label    : 'Recovery',
-      apiType  : 'getRecovery',
-      ttlMs    :  6 * 60 * 60 * 1000,   //  6 hr
-    },
+  /* ── Full registry — all possible datasets.
+     permKey: must match the column name in the Permissions sheet.
+     No dataset is fetched, cached, timed, or shown in the cache panel
+     unless the user's session permissions include its permKey === true. */
+  const DATASETS_ALL = {
+    bike:          { label:'Bikes',            apiType:'bikes',            ttlMs: 15*60*1000,    permKey:'ap2_bike'     },
+    employee:      { label:'Employees',        apiType:'employees',        ttlMs: 10*60*1000,    permKey:'ap2_employee' },
+    master:        { label:'Master Sheet',     apiType:'getMasterSheet',   ttlMs:  5*60*1000,    permKey:'ap2_master'   },
+    cioLog:        { label:'Check-In/Out Log', apiType:'getCioLog',        ttlMs:  5*60*1000,    permKey:'ap2_bike'     },
+    approvedSheet: { label:'Approved Sheet',   apiType:'getApprovedSheet', ttlMs:  3*60*1000,    permKey:'ap2_master'   },
+    recovery:      { label:'Recovery',         apiType:'getRecovery',      ttlMs:  6*60*60*1000, permKey:'ap2_master'   },
   };
+
+  /* ── Active datasets — permission-filtered at runtime.
+     All internal functions use DATASETS (this), never DATASETS_ALL.
+     Rebuilt by _buildDatasets() after permissions are available.    */
+  let DATASETS = {};
+
+  function _buildDatasets() {
+    const perms = window.Auth && window.Auth.getPermissions
+      ? window.Auth.getPermissions()
+      : null;
+
+    const result = {};
+    for (const [key, ds] of Object.entries(DATASETS_ALL)) {
+      if (!ds.permKey || (perms && perms[ds.permKey] === true)) {
+        result[key] = ds;
+      }
+    }
+    DATASETS = result;
+    console.log('[DataLayer] active datasets:', Object.keys(DATASETS));
+    return DATASETS;
+  }
+
+  /* Build immediately — permissions may already be in session (post-login). */
+  _buildDatasets();
 
   /* ─────────────────────────────────────────
      CACHE  — sessionStorage wrappers
@@ -156,7 +161,7 @@
      Attaches session credentials to every request.
      Returns parsed data array/object, or throws.
   ───────────────────────────────────────── */
-  async function _fetchFromServer(dsKey, force) {
+  async function _fetchFromServer(dsKey) {
     // Dedup: if a fetch for this key is already in flight, piggyback on it
     if (_inflight[dsKey]) {
       console.log(`[DataLayer] ${dsKey}: piggyback on in-flight fetch`);
@@ -174,6 +179,8 @@
       }
 
       const ds  = DATASETS[dsKey];
+      if (!ds) throw new Error(`[DataLayer] ${dsKey}: not in active datasets — permission denied`);
+
       const url = `${API_BASE}?type=${encodeURIComponent(ds.apiType)}`
         + `&sessionId=${encodeURIComponent(creds.sessionId)}`
         + `&token=${encodeURIComponent(creds.token)}`
@@ -221,7 +228,7 @@
   ───────────────────────────────────────── */
   async function _get(dsKey, force) {
     const ds = DATASETS[dsKey];
-    if (!ds) throw new Error(`[DataLayer] Unknown dataset key: "${dsKey}"`);
+    if (!ds) throw new Error(`[DataLayer] "${dsKey}" not permitted or unknown`);
 
     if (!force) {
       const entry = _cache.get(dsKey);
@@ -240,34 +247,28 @@
       _cache.clear(dsKey);
     }
 
-    return _fetchFromServer(dsKey, force);
+    return _fetchFromServer(dsKey);
   }
 
   /* ─────────────────────────────────────────
      WARM-IF-EMPTY
-     Called by login.html after Auth.createSession() succeeds.
-     Pre-fetches every dataset that isn't already Fresh.
-     Runs in parallel — does NOT block the redirect.
+     Called after login. Rebuilds DATASETS from permissions first,
+     then fires all permitted fetches in parallel.
   ───────────────────────────────────────── */
   async function warmIfEmpty() {
-    const perms = window.Auth && window.Auth.getPermissions
-      ? window.Auth.getPermissions()
-      : null;
+    // Always rebuild from permissions before warming
+    _buildDatasets();
 
-    if (!perms) {
-      console.warn('[DataLayer] warmIfEmpty: no permissions found — skipping warm');
+    const allowedKeys = Object.keys(DATASETS);
+    if (!allowedKeys.length) {
+      console.warn('[DataLayer] warmIfEmpty: no permitted datasets — nothing to fetch');
       return;
     }
 
-    const allowedKeys = Object.keys(perms).filter(k => perms[k] === true);
     console.log('[DataLayer] warmIfEmpty: parallel fetch for', allowedKeys.length, 'datasets:', allowedKeys);
 
     await Promise.allSettled(
-      allowedKeys.map(permKey => {
-        const dsKey = permKey.replace('ap2_', '');
-        if (!DATASETS[dsKey]) return Promise.resolve();
-        return _fetchFromServer(dsKey);
-      })
+      allowedKeys.map(key => _fetchFromServer(key))
     );
 
     console.log('[DataLayer] warmIfEmpty: all done');
@@ -275,8 +276,7 @@
 
   /* ─────────────────────────────────────────
      BACKGROUND REFRESH TIMERS
-     Each dataset auto-refreshes 30s before its TTL expires.
-     Timers only run while the page is visible.
+     Each permitted dataset auto-refreshes 30s before its TTL expires.
   ───────────────────────────────────────── */
   const _timers = {};
 
@@ -313,6 +313,7 @@
   }
 
   function _startAllTimers() {
+    // Only start timers for permitted datasets
     Object.keys(DATASETS).forEach(_scheduleRefresh);
   }
 
@@ -321,7 +322,15 @@
   ───────────────────────────────────────── */
   window.AdminPro = {
 
-    /* ── WARMUP (called from login.html before redirect) ── */
+    /* ── INIT — rebuild permitted DATASETS + start timers.
+       Call this once after Auth.createSession() on login.   */
+    init() {
+      _buildDatasets();
+      _startAllTimers();
+      console.log('[DataLayer] init: ready with', Object.keys(DATASETS).length, 'datasets');
+    },
+
+    /* ── WARMUP — rebuild permissions then parallel-fetch all permitted ── */
     warmIfEmpty,
 
     /* ── GETTERS  — cache-first, auto-fetch on miss/stale ── */
@@ -338,13 +347,16 @@
     /* ── FORCE REFRESH  — clears cache + re-fetches immediately ── */
     async forceRefresh(dsKey) {
       if (dsKey) {
+        if (!DATASETS[dsKey]) {
+          console.warn(`[DataLayer] forceRefresh: "${dsKey}" not permitted — skipping`);
+          return;
+        }
         const data = await _get(dsKey, true);
         _scheduleRefresh(dsKey);
         return data;
       }
-      // No key = refresh ALL
-      const keys = Object.keys(DATASETS);
-      await Promise.allSettled(keys.map(k => _get(k, true)));
+      // No key = refresh ALL permitted
+      await Promise.allSettled(Object.keys(DATASETS).map(k => _get(k, true)));
       _startAllTimers();
     },
 
@@ -364,22 +376,22 @@
     },
 
     /* ── getCacheStatus()
-       Returns the array that index.html's renderCacheTable() expects:
+       Returns ONLY permitted datasets — what the cache panel shows.
        [{ key, label, ageMs, ageLabel, fresh, hasData, lastSync, ttl }]
     ── */
     getCacheStatus() {
       return Object.entries(DATASETS).map(([key, ds]) => {
-        const entry  = _cache.get(key);
-        const ageMs  = entry ? Date.now() - entry.ts : Infinity;
+        const entry   = _cache.get(key);
+        const ageMs   = entry ? Date.now() - entry.ts : Infinity;
         const hasData = entry && entry.data != null
           ? (Array.isArray(entry.data) ? entry.data.length > 0 : true)
           : false;
-        const fresh  = hasData && ageMs < ds.ttlMs;
+        const fresh   = hasData && ageMs < ds.ttlMs;
 
         const ageLabel = ageMs === Infinity ? 'Not loaded'
-          : ageMs < 60000      ? Math.floor(ageMs / 1000)       + 's ago'
-          : ageMs < 3600000    ? Math.floor(ageMs / 60000)      + 'm ago'
-          :                      Math.floor(ageMs / 3600000)    + 'h ago';
+          : ageMs < 60000      ? Math.floor(ageMs / 1000)    + 's ago'
+          : ageMs < 3600000    ? Math.floor(ageMs / 60000)   + 'm ago'
+          :                      Math.floor(ageMs / 3600000) + 'h ago';
 
         let lastSync = null;
         if (ageMs !== Infinity) {
@@ -388,7 +400,6 @@
             + ', ' + d.toLocaleDateString([], { day:'2-digit', month:'short' });
         }
 
-        /* Extra details for the expanded panel */
         const rowCount  = (entry && Array.isArray(entry.data)) ? entry.data.length : null;
         const remaining = ageMs === Infinity ? 0 : Math.max(0, ds.ttlMs - ageMs);
         const inFlight  = !!_inflight[key];
@@ -396,6 +407,11 @@
         return { key, label: ds.label, ageMs, ageLabel, fresh, hasData, lastSync,
                  ttl: ds.ttlMs, rowCount, remaining, inFlight };
       });
+    },
+
+    /* ── getActiveDatasets — exposes permitted keys to index.html ── */
+    getActiveDatasets() {
+      return { ...DATASETS };
     },
 
     /* ── stopAllTimers  — called by Auth.signOut() ── */
@@ -410,23 +426,25 @@
 
   /* ─────────────────────────────────────────
      AUTO-INIT
-     On non-login pages: start background refresh timers
-     so data auto-refreshes while the user works.
+     On non-login pages: build permitted datasets + start timers.
   ───────────────────────────────────────── */
   (function _autoInit() {
     const isLoginPage = window.location.pathname.endsWith('login.html')
       || window.location.href.includes('/login.html');
 
-    if (isLoginPage) return;  // login.html calls warmIfEmpty() manually after createSession
+    if (isLoginPage) return;
 
-    // Start timers after DOM ready so auth.js has already run its boot check
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', _startAllTimers);
+      document.addEventListener('DOMContentLoaded', () => {
+        _buildDatasets();
+        _startAllTimers();
+      });
     } else {
+      _buildDatasets();
       _startAllTimers();
     }
   })();
 
-  console.log('[DataLayer] v1.0 loaded — window.AdminPro ready');
+  console.log('[DataLayer] v2.0 loaded — window.AdminPro ready');
 
 })();
