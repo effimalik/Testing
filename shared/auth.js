@@ -23,7 +23,7 @@
   const ABSOLUTE_TTL     = 8  * 60 * 60 * 1000; // 8 hr hard limit
   const SERVER_CHECK_INT = 5  * 60 * 1000;    // server ping every 5 min
   const ALLOWED_ORIGIN   = 'https://effimalik.github.io/FleetManagement/';
-  const API_BASE         = 'https://script.google.com/macros/s/AKfycbx_V5okKhfhrovadG6bDyx41D14JugBTRvqk-jZHr8IRI3d1U02U6gopnO_lj6UmPxHuQ/exec';
+  const API_BASE         = 'https://script.google.com/macros/s/AKfycbx9O_58jlTsohkp8bNYA1rO2EQm9M9FeXoe1FT3E0n8yJ91jseidhKiM0Ss7meNkl7Elg/exec';
      
      // 'https://script.google.com/macros/s/AKfycbyOkXshkQIhwtBjNcDbtQCsU4t6_WlH5aii6O6xElMuQa1ZB4Fn9E31c4NoO-au8TXCEw/exec';
 
