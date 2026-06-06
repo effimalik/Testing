@@ -1,4 +1,6 @@
-/* ═══════════════════════════════════════════════════════════════
+
+     
+ /* ═══════════════════════════════════════════════════════════════
    auth.js — AdminPro UAE  v3.0
    Server-validated sessions · absolute + inactivity expiry · secure logout
    LOAD FIRST on every page (before dataLayer.js and any page JS)
@@ -327,14 +329,13 @@
     async fetchPermissions() {
       try {
         const s = _readSession();
-        if (!s || !s.sessionId || !s.token) {
-          console.warn('[Auth] fetchPermissions: no valid session');
+        if (!s || !s.email) {
+          console.warn('[Auth] fetchPermissions: no session email');
           return null;
         }
 
+        // Matches your doGet style — just type + email, no session params needed
         const url = `${API_BASE}?type=getPermissions`
-          + `&sessionId=${encodeURIComponent(s.sessionId)}`
-          + `&token=${encodeURIComponent(s.token)}`
           + `&email=${encodeURIComponent(s.email)}`
           + `&_t=${Date.now()}`;
 
