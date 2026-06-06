@@ -773,8 +773,23 @@ async function startGoogleLogin() {
   }
 
      setStep(5, 'done');
+     showStatus('loading', 'Loading permissions…', 'ti-loader-2');
+     await sleep(300);
+
+     // ── Fetch portal permissions for this user ──────────────────
+     // This calls ?type=getPermissions on your Apps Script and stores
+     // the result in sessionStorage so index.html can apply it instantly.
+     try {
+       if (window.Auth && typeof window.Auth.fetchPermissions === 'function') {
+         await window.Auth.fetchPermissions();
+       }
+     } catch (_) {
+       // Non-blocking — index.html will retry automatically on load
+       console.warn('[Login] fetchPermissions failed — will retry on index.html');
+     }
+
      showStatus('loading', 'Pre-loading data…', 'ti-loader-2');
-     await sleep(400);
+     await sleep(300);
  
      // Warm all datasets in background — non-blocking, best-effort
      if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
