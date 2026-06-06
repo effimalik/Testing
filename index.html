@@ -1505,6 +1505,15 @@ window.addEventListener('DOMContentLoaded', () => {
   // ── PERMISSIONS ──────────────────────────────────────────────
   // First apply what's already in the session (instant, no network)
   _applyPermissions();
+  // Build DS_META from permissions — only permitted datasets visible in cache panel
+  _buildDsMeta();
+  // Warm cache for permitted datasets in parallel
+  if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
+    AdminPro.warmIfEmpty().then(() => {
+      updateCacheHealthDot();
+      cmScanAll();
+    }).catch(() => {});
+  }
 
   // If permissions weren't stored yet (e.g. first load after login didn't
   // call fetchPermissions), fetch them now and re-apply.
@@ -1512,7 +1521,16 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!window.Auth.getPermissions()) {
       // Async — page is already shown, nav updates when perms arrive
       window.Auth.fetchPermissions().then(perms => {
-        if (perms) _applyPermissions();
+        if (perms) {
+          _applyPermissions();
+          _buildDsMeta();  // rebuild DS_META with fresh permissions
+          if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
+            AdminPro.warmIfEmpty().then(() => {
+              updateCacheHealthDot();
+              cmScanAll();
+            }).catch(() => {});
+          }
+        }
       }).catch(e => console.warn('[index] Permission fetch failed:', e));
     }
   }
@@ -1615,14 +1633,43 @@ function closeCachePanel() {
   if (_cpOutsideHandler) { document.removeEventListener('click', _cpOutsideHandler); _cpOutsideHandler = null; }
 }
 
-const DS_META = {
-  bike:          { label:'Bikes',            icon:'ti-motorbike', color:'var(--teal)',   colorDim:'var(--teal-dim)',   ttlMs: 15*60*1000 },
-  employee:      { label:'Employees',        icon:'ti-users',     color:'var(--accent)', colorDim:'var(--accent-dim)', ttlMs: 10*60*1000 },
-  master:        { label:'Master Sheet',     icon:'ti-table',     color:'var(--purple)', colorDim:'var(--purple-dim)', ttlMs:  5*60*1000 },
-  cioLog:        { label:'Check-In/Out Log', icon:'ti-arrows-horizontal', color:'var(--orange)', colorDim:'var(--orange-dim)', ttlMs: 5*60*1000 },
-  approvedSheet: { label:'Approved Sheet',   icon:'ti-clipboard-check', color:'var(--teal)', colorDim:'var(--teal-dim)', ttlMs: 3*60*1000 },
-  recovery:      { label:'Recovery',         icon:'ti-wallet',    color:'var(--amber)',  colorDim:'var(--amber-dim)',  ttlMs:  6*60*60*1000 },
+/* ── DS_META visual config — one entry per possible dataset key.
+   Only entries whose permKey is in the user's permissions are
+   exposed at runtime via _buildDsMeta(). Nothing here is sent
+   to the server — it is display metadata only.                 */
+const DS_META_ALL = {
+  bike:          { label:'Bikes',            icon:'ti-motorbike',          color:'var(--teal)',   colorDim:'var(--teal-dim)',   ttlMs: 15*60*1000, permKey:'ap2_bike'      },
+  employee:      { label:'Employees',        icon:'ti-users',              color:'var(--accent)', colorDim:'var(--accent-dim)', ttlMs: 10*60*1000, permKey:'ap2_employee'  },
+  master:        { label:'Master Sheet',     icon:'ti-table',              color:'var(--purple)', colorDim:'var(--purple-dim)', ttlMs:  5*60*1000, permKey:'ap2_master'    },
+  cioLog:        { label:'Check-In/Out Log', icon:'ti-arrows-horizontal',  color:'var(--orange)', colorDim:'var(--orange-dim)', ttlMs:  5*60*1000, permKey:'ap2_bike'      },
+  approvedSheet: { label:'Approved Sheet',   icon:'ti-clipboard-check',    color:'var(--teal)',   colorDim:'var(--teal-dim)',   ttlMs:  3*60*1000, permKey:'ap2_master'    },
+  recovery:      { label:'Recovery',         icon:'ti-wallet',             color:'var(--amber)',  colorDim:'var(--amber-dim)',  ttlMs:  6*60*60*1000, permKey:'ap2_master'  },
 };
+
+/* Builds DS_META dynamically — only includes datasets the user has permission for.
+   Called once after permissions are loaded, and the result is cached in _DS_META.
+   All cache functions read DS_META (the getter) so they automatically see only
+   permitted datasets without any other changes needed.                           */
+let _DS_META = null;
+
+function _buildDsMeta() {
+  const perms = window.Auth && window.Auth.getPermissions ? window.Auth.getPermissions() : null;
+  const result = {};
+  for (const [key, meta] of Object.entries(DS_META_ALL)) {
+    if (!meta.permKey || (perms && perms[meta.permKey] === true)) {
+      result[key] = meta;
+    }
+  }
+  _DS_META = result;
+  console.log('[DS_META] built for user — datasets:', Object.keys(result));
+  return result;
+}
+
+/* All code reads DS_META — returns cached build or rebuilds if not ready yet */
+Object.defineProperty(window, 'DS_META', {
+  get() { return _DS_META || _buildDsMeta(); },
+  configurable: true,
+});
 
 function fmtTtl(ms) {
   if (ms <= 0) return '—';
@@ -1649,7 +1696,7 @@ function renderCacheTable() {
     if (window.AdminPro && AdminPro.getCacheStatus) {
       rows = AdminPro.getCacheStatus();
     } else {
-      // Build from DS_META directly reading localStorage
+      // Build from DS_META directly reading sessionStorage
       rows = Object.entries(DS_META).map(([key, meta]) => {
         const ageMs = getCacheAge(key);
         const ttl   = meta.ttlMs;
