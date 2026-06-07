@@ -7,8 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
-  <script src="https://effimalik.github.io/FleetManagement/shared/auth.js"></script>
-<script src="https://effimalik.github.io/FleetManagement/shared/dataLayer.js"></script>
 <style>
 /* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -581,32 +579,20 @@ function showCacheBanner(syncing, cacheStatus) {
         <span class="cache-banner-status syncing"><i class="ti ti-refresh" style="animation:spin 1s linear infinite;display:inline-flex;"></i> Refreshing…</span>
         <button class="cache-banner-icon-btn" disabled style="opacity:.45;cursor:not-allowed;"><i class="ti ti-refresh" style="animation:spin 1s linear infinite;display:inline-flex;"></i> Refresh</button>
       </div>`;
-    return;
-  }
-
-  // cacheStatus may be undefined if DATASETS wasn't built yet — treat as not loaded
-  if (!cacheStatus || !cacheStatus.hasData) {
-    // Show a neutral "not yet loaded" state with a refresh button
+  } else {
+    // Use dataLayer cache timestamp if available, otherwise fall back to now
+    const syncTime = cacheStatus && cacheStatus.lastSync ? cacheStatus.lastSync : (() => {
+      const now = new Date();
+      return now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) + ', ' + now.toLocaleDateString([], { day:'2-digit', month:'short' });
+    })();
+    const rowInfo  = cacheStatus && cacheStatus.rowCount != null ? ` · ${cacheStatus.rowCount} records` : '';
     banner.innerHTML = `
       <div class="cache-banner-main">
-        <span class="cache-banner-status syncing" style="background:var(--bg4,#333);color:var(--text3);"><i class="ti ti-database-off"></i> Not loaded</span>
-        <button class="cache-banner-icon-btn" onclick="forceRefreshEmployees();" title="Load data from sheet"><i class="ti ti-refresh"></i> Refresh</button>
+        <span class="cache-banner-status synced"><i class="ti ti-circle-check"></i> Synced</span>
+        <span class="cache-banner-datetime"><i class="ti ti-clock"></i> ${syncTime}${rowInfo}</span>
+        <button class="cache-banner-icon-btn" onclick="forceRefreshEmployees();" title="Force refresh from sheet"><i class="ti ti-refresh"></i> Refresh</button>
       </div>`;
-    return;
   }
-
-  // Fresh data — show sync time and row count
-  const syncTime = cacheStatus.lastSync || (() => {
-    const now = new Date();
-    return now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) + ', ' + now.toLocaleDateString([], { day:'2-digit', month:'short' });
-  })();
-  const rowInfo = cacheStatus.rowCount != null ? ` · ${cacheStatus.rowCount} records` : '';
-  banner.innerHTML = `
-    <div class="cache-banner-main">
-      <span class="cache-banner-status synced"><i class="ti ti-circle-check"></i> Synced</span>
-      <span class="cache-banner-datetime"><i class="ti ti-clock"></i> ${syncTime}${rowInfo}</span>
-      <button class="cache-banner-icon-btn" onclick="forceRefreshEmployees();" title="Force refresh from sheet"><i class="ti ti-refresh"></i> Refresh</button>
-    </div>`;
 }
 
 function toggleCacheSub() {
@@ -617,7 +603,7 @@ function toggleCacheSub() {
 /* ═══════════ LOAD ═══════════ */
 async function loadEmployees() {
   // Gate 1 — permission check before touching any data
-  if (!window.Auth || !window.Auth.hasPermission('ap2_employee')) {
+  if (!window.parent.Auth || !window.parent.Auth.hasPermission('ap2_employee')) {
     const tbody = document.getElementById('emp-tbody');
     if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;color:var(--red);">
       <i class="ti ti-shield-x" style="font-size:26px;display:block;margin-bottom:8px;"></i>
@@ -627,14 +613,14 @@ async function loadEmployees() {
   }
 
   // Gate 2 — check dataLayer cache status (reads ap2_employee from localStorage)
-  const cacheStatus = window.AdminPro && window.AdminPro.getCacheStatus
-    ? window.AdminPro.getCacheStatus().find(s => s.key === 'employee')
+  const cacheStatus = window.parent.AdminPro && window.parent.AdminPro.getCacheStatus
+    ? window.parent.AdminPro.getCacheStatus().find(s => s.key === 'employee')
     : null;
 
   if (cacheStatus && cacheStatus.fresh) {
     // Cache is valid — use it instantly, no network call
     showCacheBanner(false, cacheStatus);
-    const rows = await window.AdminPro.getEmployees();
+    const rows = await window.parent.AdminPro.getEmployees();
     employees = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
     renderEmpTable(employees);
     return;
@@ -652,10 +638,10 @@ async function loadEmployees() {
 
   try {
     // AdminPro.getEmployees() — fetches with sessionId+token, stores in ap2_employee
-    const rows = await window.AdminPro.getEmployees();
+    const rows = await window.parent.AdminPro.getEmployees();
     employees = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
     renderEmpTable(employees);
-    const updated = window.AdminPro.getCacheStatus().find(s => s.key === 'employee');
+    const updated = window.parent.AdminPro.getCacheStatus().find(s => s.key === 'employee');
     showCacheBanner(false, updated);
   } catch (err) {
     console.error('[allEmp] loadEmployees error:', err);
@@ -670,15 +656,15 @@ async function loadEmployees() {
 
 // Force-refresh: clears ap2_employee cache, re-fetches via dataLayer (auth-gated)
 async function forceRefreshEmployees() {
-  if (!window.Auth || !window.Auth.hasPermission('ap2_employee')) {
+  if (!window.parent.Auth || !window.parent.Auth.hasPermission('ap2_employee')) {
     toast('Permission denied.', 'error'); return;
   }
   showCacheBanner(true);
   try {
-    const rows = await window.AdminPro.getEmployees(true); // true = force refresh
+    const rows = await window.parent.AdminPro.getEmployees(true); // true = force refresh
     employees = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
     renderEmpTable(employees);
-    const updated = window.AdminPro.getCacheStatus().find(s => s.key === 'employee');
+    const updated = window.parent.AdminPro.getCacheStatus().find(s => s.key === 'employee');
     showCacheBanner(false, updated);
     toast('Data refreshed successfully.');
   } catch (err) {
@@ -1020,12 +1006,12 @@ async function _dpSave() {
 
   renderEmpTable(employees);
   // Invalidate the dataLayer cache so next load re-fetches fresh data from the sheet
-  if (window.AdminPro && window.AdminPro.cache) window.AdminPro.cache.clear('employee');
+  if (window.parent.AdminPro && window.parent.AdminPro.cache) window.parent.AdminPro.cache.clear('employee');
   _dpResetButtons(); _renderEmpDetail(emp, emp.expiry || {});
 
   // Post update with session credentials via dataLayer API_BASE
-  const creds   = window.Auth && window.Auth.getCredentials ? window.Auth.getCredentials() : null;
-  const API_BASE = window.AdminPro?._apiBase || 'https://script.google.com/macros/s/AKfycbx9O_58jlTsohkp8bNYA1rO2EQm9M9FeXoe1FT3E0n8yJ91jseidhKiM0Ss7meNkl7Elg/exec';
+  const creds   = window.parent.Auth && window.parent.Auth.getCredentials ? window.parent.Auth.getCredentials() : null;
+  const API_BASE = window.parent.AdminPro?._apiBase || 'https://script.google.com/macros/s/AKfycbx9O_58jlTsohkp8bNYA1rO2EQm9M9FeXoe1FT3E0n8yJ91jseidhKiM0Ss7meNkl7Elg/exec';
   const payload = { action:'updateEmployee', empId:String(emp.id), name:emp.name, eid:emp.eid, mobile:emp.mobile, mobilePak:emp.mobilePak||'', reference:emp.ref||'', eidExpiry:vals.eidExp||'', licExpiry:vals.licExpiry||'', labourExpiry:vals.labourExpiry||'', insExpiry:vals.insExpiry||'',
     ...(creds ? { sessionId: creds.sessionId, token: creds.token } : {}) };
   try {
@@ -1391,9 +1377,8 @@ function syncThemeFromParent() {
 }
 
 /* ═══════════ INIT ═══════════ */
-/* allEmp runs inside a parent iframe — window.Auth and window.AdminPro are
-   injected by index.html AFTER this frame's DOMContentLoaded fires.
-   Poll until both are ready (max 8 s), then load. */
+/* allEmp runs inside a parent iframe — window.parent.Auth and window.parent.AdminPro
+   are set by index.html. Poll until both exist, then load. */
 document.addEventListener('DOMContentLoaded', () => {
   syncThemeFromParent();
   _waitForGlobals();
@@ -1403,12 +1388,12 @@ function _waitForGlobals() {
   const MAX_WAIT_MS   = 8000;
   const POLL_INTERVAL = 80;
   let elapsed = 0;
-
   const tbody = document.getElementById('emp-tbody');
 
   function check() {
-    const authReady  = window.Auth    && typeof window.Auth.hasPermission    === 'function';
-    const layerReady = window.AdminPro && typeof window.AdminPro.getEmployees === 'function';
+    const p = window.parent;
+    const authReady  = p && p.Auth    && typeof p.Auth.hasPermission    === 'function';
+    const layerReady = p && p.AdminPro && typeof p.AdminPro.getEmployees === 'function';
 
     if (authReady && layerReady) {
       loadEmployees();
@@ -1417,10 +1402,10 @@ function _waitForGlobals() {
 
     elapsed += POLL_INTERVAL;
     if (elapsed >= MAX_WAIT_MS) {
-      console.error('[allEmp] Timed out waiting for Auth / AdminPro globals.');
+      console.error('[allEmp] Timed out waiting for parent Auth / AdminPro.');
       if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;color:var(--red);">
         <i class="ti ti-alert-triangle" style="font-size:26px;display:block;margin-bottom:8px;"></i>
-        <div style="font-size:13px;">Session not ready — please reload the page.</div>
+        <div style="font-size:13px;">Could not connect to session — please reload the page.</div>
       </td></tr>`;
       return;
     }
