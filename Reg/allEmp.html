@@ -662,62 +662,133 @@ function parseRows(raw) {
 
 
 
-/* ═══════════ CACHE ═══════════ */
-const _AP2_CACHE_KEY = 'ap2_employee';
-const API_BASE = ''; // stub — no network calls used
+/* ═══════════ DATA LOAD ═══════════
+   Uses AdminPro (dataLayer.js) as the single source of truth.
+   Priority:
+     1. sessionStorage cache (instant — zero network)
+     2. AdminPro.getEmployees() — fetches from server if cache is empty/stale
+     3. postMessage from parent index.html (ap-cache-ready) — parent already fetched it
 
-function _readCache() {
+   BUGS FIXED vs old version:
+   - Was reading localStorage — dataLayer uses sessionStorage → always empty
+   - Was ignoring AdminPro API entirely — bypassed the whole cache layer
+   - Storage event on localStorage never fired because wrong storage
+   - 30 s polling too slow and wrong storage
+═══════════════════════════════════════════════════════════════ */
+
+function _applyRows(rawRows) {
+  if (!rawRows || !rawRows.length) return false;
+  const parsed = rawRows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
+  if (!parsed.length) return false;
+  employees = parsed;
+  renderEmpTable(employees);
+  return true;
+}
+
+/* ── Read directly from sessionStorage (instant, no API call) ── */
+function _readSessionCache() {
   try {
-    const raw = localStorage.getItem(_AP2_CACHE_KEY);
+    const raw = sessionStorage.getItem('ap2_employee');
     if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length) return parsed;
-    if (parsed && Array.isArray(parsed.data) && parsed.data.length) return parsed.data;
-    return null;
+    const entry = JSON.parse(raw);
+    // dataLayer format: { ts: <epoch>, data: <array> }
+    const rows = Array.isArray(entry) ? entry
+               : Array.isArray(entry?.data) ? entry.data
+               : null;
+    return (rows && rows.length) ? rows : null;
   } catch { return null; }
 }
 
-/* ═══════════ LOAD ═══════════ */
-function loadEmployees() {
+/* ── Show skeleton while loading ── */
+function _showLoading() {
   const tbody = document.getElementById('emp-tbody');
-  const rows = _readCache();
-  if (rows && rows.length) {
-    employees = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
-    renderEmpTable(employees);
-  } else {
-    if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;color:var(--text3);">
-      <i class="ti ti-database-off" style="font-size:26px;display:block;margin-bottom:8px;"></i>
-      No data in cache yet. Data will appear automatically once <code style="font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:4px;">ap2_employee</code> is populated.
-    </td></tr>`;
-  }
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;color:var(--text3);">
+    <i class="ti ti-loader" style="font-size:26px;display:block;margin-bottom:8px;animation:spin 1s linear infinite;"></i>
+    Loading employees…
+  </td></tr>`;
 }
 
-/* ═══════════ BACKGROUND CACHE WATCHER ═══════════ */
-(function() {
-  function _apply(raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      const arr = Array.isArray(parsed) ? parsed
-                : Array.isArray(parsed?.data) ? parsed.data : null;
-      if (!arr || !arr.length) return;
-      const fresh = arr.map((r, i) => normaliseRow(r, i)).filter(Boolean);
-      if (!fresh.length) return;
-      employees = fresh;
-      renderEmpTable(employees);
-    } catch {}
+/* ── Main load function ── */
+async function loadEmployees() {
+  // 1. Try instant cache read first — no flicker if data is already there
+  const cached = _readSessionCache();
+  if (cached) {
+    _applyRows(cached);
+    // Also request a background refresh via parent if stale
+    _requestParentRefreshIfStale();
+    return;
   }
-  window.addEventListener('storage', function(e) {
-    if (e.key === _AP2_CACHE_KEY && e.newValue) _apply(e.newValue);
-  });
-  let _lastHash = null;
-  setInterval(function() {
+
+  // 2. Cache is empty — show loading state and try AdminPro API
+  _showLoading();
+
+  // 2a. If AdminPro (dataLayer.js) is loaded in this iframe context, use it directly
+  if (window.AdminPro && typeof AdminPro.getEmployees === 'function') {
     try {
-      const raw = localStorage.getItem(_AP2_CACHE_KEY);
-      if (!raw || raw === _lastHash) return;
-      _lastHash = raw;
-      _apply(raw);
-    } catch {}
-  }, 30000);
+      const data = await AdminPro.getEmployees();
+      if (data && data.length && _applyRows(parseRows(data))) return;
+    } catch (e) {
+      console.warn('[allEmp] AdminPro.getEmployees() failed:', e.message);
+    }
+  }
+
+  // 2b. Ask parent index.html to fetch and send data via postMessage
+  // (parent has session credentials and AdminPro loaded at top level)
+  _requestParentFetch();
+}
+
+/* ── Ask parent to provide / refresh employee data ── */
+function _requestParentFetch() {
+  try {
+    window.parent.postMessage({ type: 'ap-cache-request', key: 'employee' }, '*');
+  } catch(e) {}
+}
+
+function _requestParentRefreshIfStale() {
+  try {
+    const raw = sessionStorage.getItem('ap2_employee');
+    if (!raw) { _requestParentFetch(); return; }
+    const entry = JSON.parse(raw);
+    const age = Date.now() - (entry.ts || 0);
+    const ttlMs = 10 * 60 * 1000; // 10 min — matches dataLayer
+    if (age > ttlMs) _requestParentFetch();
+  } catch { _requestParentFetch(); }
+}
+
+/* ── Listen for parent postMessage response (ap-cache-ready) ── */
+window.addEventListener('message', function(evt) {
+  // Theme sync from parent
+  if (evt.data && evt.data.type === 'ap-theme' && evt.data.theme) {
+    document.documentElement.setAttribute('data-theme', evt.data.theme);
+    return;
+  }
+
+  // Data ready from parent cache
+  if (!evt.data || evt.data.type !== 'ap-cache-ready' || evt.data.key !== 'employee') return;
+
+  // Parent sent data directly in the message — use it immediately
+  if (evt.data.data) {
+    const rows = parseRows(evt.data.data);
+    if (rows.length) { _applyRows(rows); return; }
+  }
+
+  // Or read from sessionStorage which parent just refreshed
+  const cached = _readSessionCache();
+  if (cached) _applyRows(cached);
+});
+
+/* ── Poll sessionStorage every 2 s while table is empty (fast catch-up) ──
+   Stops as soon as data appears. Covers the race where parent finishes
+   fetching just after this iframe loaded but before postMessage fired. ── */
+(function _pollUntilReady() {
+  let attempts = 0;
+  const MAX = 15; // stop after 30 s
+  const tid = setInterval(function() {
+    if (employees.length > 0 || ++attempts > MAX) { clearInterval(tid); return; }
+    const cached = _readSessionCache();
+    if (cached && _applyRows(cached)) clearInterval(tid);
+  }, 2000);
 })();
 
 /* ═══════════ FILTER / TABLE ═══════════ */
@@ -1382,7 +1453,23 @@ function toast(msg, type='success') {
 
 /* ═══════════ INIT ═══════════ */
 document.addEventListener('DOMContentLoaded', () => {
+  // Sync theme from parent instantly (no flash)
+  try {
+    const t = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch(_) {}
+
   loadEmployees();
+
+  // Also listen for theme changes broadcast from parent during session
+  try {
+    const bc = new BroadcastChannel('ap-theme');
+    bc.onmessage = (evt) => {
+      if (evt.data?.type === 'ap-theme' && evt.data.theme) {
+        document.documentElement.setAttribute('data-theme', evt.data.theme);
+      }
+    };
+  } catch(_) {}
 });
 </script>
 </body>
