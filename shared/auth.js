@@ -294,15 +294,19 @@
           });
           return false;
         }
+        const _loginAt = Date.now();
         const s = {
-          sessionId   : String(payload.sessionId).trim(),
-          token       : String(payload.token).trim(),
-          email       : String(payload.email).trim().toLowerCase(),
-          name        : String(payload.name  || payload.email).trim(),
-          role        : String(payload.role  || 'User').trim(), // display only
-          permissions : payload.permissions || null, // portal access map
-          loginAt     : Date.now(),
-          lastActive  : Date.now(),
+          sessionId          : String(payload.sessionId).trim(),
+          token              : String(payload.token).trim(),
+          email              : String(payload.email).trim().toLowerCase(),
+          name               : String(payload.name  || payload.email).trim(),
+          role               : String(payload.role  || 'User').trim(), // display only
+          permissions        : payload.permissions || null, // portal access map — only TRUE keys from server
+          loginAt            : _loginAt,
+          lastActive         : _loginAt,
+          // Fingerprint used by dataLayer to detect a different user
+          // and automatically purge stale localStorage cache from prior sessions.
+          sessionFingerprint : String(payload.email).trim().toLowerCase() + '|' + _loginAt,
         };
         const wrote = _writeSession(s);
         if (!wrote) {
@@ -380,10 +384,13 @@
       // Wipe client session immediately — do NOT wait for server
       _clearSession();
 
-      // Stop dataLayer refresh timers if loaded
+      // Stop dataLayer refresh timers and wipe localStorage cache on sign-out
       try {
-        if (window.DataLayer && typeof DataLayer.stopAllTimers === 'function') {
-          DataLayer.stopAllTimers();
+        if (window.DataLayer || window.AdminPro) {
+          const dl = window.AdminPro || window.DataLayer;
+          if (typeof dl.stopAllTimers === 'function') dl.stopAllTimers();
+          // Wipe all ap2_* cache entries — user should not leave data behind on shared devices
+          if (dl.cache && typeof dl.cache.clearAll === 'function') dl.cache.clearAll();
         }
       } catch {}
 

@@ -1,12 +1,12 @@
 /* ═══════════════════════════════════════════════════════════════
    dataLayer.js — AdminPro UAE  v2.0
-   Cache-first data layer · sessionStorage persistence · session-auth
+   Cache-first data layer · localStorage persistence · session-auth
    Permission-driven: only permitted datasets are fetched or cached.
 
    ARCHITECTURE:
    ─ window.AdminPro  → public API (warmIfEmpty, get*, forceRefresh, etc.)
    ─ window.DataLayer → alias for window.AdminPro (backwards compat)
-   ─ Cache layer      → sessionStorage with prefix 'ap2_' + key
+   ─ Cache layer      → localStorage with prefix 'ap2_' + key
    ─ Auth gate        → every fetch checks window.Auth.getCredentials()
    ─ Permission gate  → DATASETS built from Auth.getPermissions() at runtime
 
@@ -69,56 +69,135 @@
 
     const result = {};
     for (const [key, ds] of Object.entries(DATASETS_ALL)) {
-      if (!ds.permKey || (perms && perms[ds.permKey] === true)) {
+      // SECURITY: every dataset MUST have a permKey — no permKey = no access.
+      // Only include if the session permissions explicitly grant it (=== true).
+      // This ensures denied portals are never fetched, cached, or visible.
+      if (ds.permKey && perms && perms[ds.permKey] === true) {
         result[key] = ds;
       }
     }
     DATASETS = result;
-    console.log('[DataLayer] active datasets:', Object.keys(DATASETS));
+    console.log('[DataLayer] permitted datasets:', Object.keys(DATASETS));
     return DATASETS;
+  }
+
+  /* ─────────────────────────────────────────
+     CACHE PURGE ON LOGIN
+     Called from init() after permissions are known.
+     Removes any localStorage cache entries that:
+       1. Belong to datasets the current user is NOT permitted to see.
+       2. Were written by a different user (cross-session contamination).
+     This enforces the privacy guarantee: users only ever see their own
+     permitted data, even if they share a device with another user.
+  ───────────────────────────────────────── */
+  function _purgeUnauthorisedCache() {
+    try {
+      const session = window.Auth && window.Auth.getUser ? window.Auth.getUser() : null;
+
+      // Read the fingerprint directly from sessionStorage (auth.js stores it there)
+      let currentFingerprint = null;
+      try {
+        const raw = sessionStorage.getItem('ap_session');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          currentFingerprint = parsed.sessionFingerprint || null;
+        }
+      } catch {}
+
+      const permittedCacheKeys = new Set(
+        Object.keys(DATASETS).map(k => CACHE_PREFIX + k)
+      );
+
+      // Also track which fingerprint wrote each cached entry
+      const keysToDelete = [];
+
+      for (const k of Object.keys(localStorage)) {
+        if (!k.startsWith(CACHE_PREFIX)) continue;
+
+        // Not in permitted set → delete (unauthorised dataset for this user)
+        if (!permittedCacheKeys.has(k)) {
+          keysToDelete.push(k);
+          continue;
+        }
+
+        // Same permitted key — check it was written by THIS session's user
+        if (currentFingerprint) {
+          try {
+            const entry = JSON.parse(localStorage.getItem(k));
+            // If the entry has a fingerprint that doesn't match, purge it
+            if (entry && entry.fingerprint && entry.fingerprint !== currentFingerprint) {
+              keysToDelete.push(k);
+            }
+          } catch {}
+        }
+      }
+
+      if (keysToDelete.length) {
+        keysToDelete.forEach(k => { try { localStorage.removeItem(k); } catch {} });
+        console.log('[DataLayer] purged', keysToDelete.length, 'unauthorised/stale cache entries:', keysToDelete);
+      } else {
+        console.log('[DataLayer] cache purge: nothing to remove — all entries authorised');
+      }
+
+    } catch (e) {
+      console.warn('[DataLayer] _purgeUnauthorisedCache error:', e.message);
+    }
   }
 
   /* Build immediately — permissions may already be in session (post-login). */
   _buildDatasets();
 
   /* ─────────────────────────────────────────
-     CACHE  — sessionStorage wrappers
+     CACHE  — localStorage wrappers
      Format: { ts: <epoch ms>, data: <value> }
+     NOTE: session auth stays in sessionStorage (auth.js).
+           Only dataset cache (ap2_*) uses localStorage so it
+           persists across tabs and survives tab close/reopen.
   ───────────────────────────────────────── */
   const _cache = {
     _key(name) { return CACHE_PREFIX + name; },
 
     get(name) {
       try {
-        const raw = sessionStorage.getItem(this._key(name));
+        const raw = localStorage.getItem(this._key(name));
         if (!raw) return null;
         return JSON.parse(raw);        // { ts, data }
       } catch { return null; }
     },
 
     set(name, data) {
+      // Read current session fingerprint so each cache entry is tagged to its owner.
+      // On next login by a different user, mismatched fingerprints are purged.
+      let fingerprint = null;
       try {
-        sessionStorage.setItem(this._key(name), JSON.stringify({ ts: Date.now(), data }));
+        const raw = sessionStorage.getItem('ap_session');
+        if (raw) fingerprint = (JSON.parse(raw).sessionFingerprint) || null;
+      } catch {}
+
+      const entry = { ts: Date.now(), data, fingerprint };
+
+      try {
+        localStorage.setItem(this._key(name), JSON.stringify(entry));
         return true;
       } catch (e) {
-        // sessionStorage full — try evicting the oldest entry and retry once
-        console.warn('[DataLayer] sessionStorage full — evicting oldest cache entry');
+        // localStorage full — try evicting the oldest entry and retry once
+        console.warn('[DataLayer] localStorage full — evicting oldest cache entry');
         try { _evictOldest(); } catch {}
         try {
-          sessionStorage.setItem(this._key(name), JSON.stringify({ ts: Date.now(), data }));
+          localStorage.setItem(this._key(name), JSON.stringify(entry));
           return true;
         } catch { return false; }
       }
     },
 
     clear(name) {
-      try { sessionStorage.removeItem(this._key(name)); } catch {}
+      try { localStorage.removeItem(this._key(name)); } catch {}
     },
 
     clearAll() {
       try {
-        const keys = Object.keys(sessionStorage).filter(k => k.startsWith(CACHE_PREFIX));
-        keys.forEach(k => sessionStorage.removeItem(k));
+        const keys = Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX));
+        keys.forEach(k => localStorage.removeItem(k));
       } catch {}
     },
 
@@ -140,14 +219,14 @@
 
   function _evictOldest() {
     let oldest = null, oldestKey = null;
-    for (const k of Object.keys(sessionStorage)) {
+    for (const k of Object.keys(localStorage)) {
       if (!k.startsWith(CACHE_PREFIX)) continue;
       try {
-        const { ts } = JSON.parse(sessionStorage.getItem(k));
+        const { ts } = JSON.parse(localStorage.getItem(k));
         if (!oldest || ts < oldest) { oldest = ts; oldestKey = k; }
       } catch {}
     }
-    if (oldestKey) sessionStorage.removeItem(oldestKey);
+    if (oldestKey) localStorage.removeItem(oldestKey);
   }
 
   /* ─────────────────────────────────────────
@@ -256,8 +335,9 @@
      then fires all permitted fetches in parallel.
   ───────────────────────────────────────── */
   async function warmIfEmpty() {
-    // Always rebuild from permissions before warming
+    // Always rebuild from permissions before warming, then purge any denied/stale cache
     _buildDatasets();
+    _purgeUnauthorisedCache();
 
     const allowedKeys = Object.keys(DATASETS);
     if (!allowedKeys.length) {
@@ -338,12 +418,18 @@
   ───────────────────────────────────────── */
   window.AdminPro = {
 
-    /* ── INIT — rebuild permitted DATASETS + start timers.
-       Call this once after Auth.createSession() on login.   */
+    /* ── INIT — rebuild permitted DATASETS + purge stale cache + start timers.
+       Call this once after Auth.createSession() on login.
+       Security guarantee:
+         1. DATASETS is rebuilt strictly from server-granted permissions.
+         2. Any localStorage cache for non-permitted datasets is deleted immediately.
+         3. Any cache entries written by a different user are deleted immediately.
+       Only then are timers started so background refresh never touches denied data. */
     init() {
-      _buildDatasets();
-      _startAllTimers();
-      console.log('[DataLayer] init: ready with', Object.keys(DATASETS).length, 'datasets');
+      _buildDatasets();            // step 1: filter to permitted datasets only
+      _purgeUnauthorisedCache();   // step 2: evict stale/denied/cross-user cache
+      _startAllTimers();           // step 3: schedule refresh for permitted sets only
+      console.log('[DataLayer] init: ready with', Object.keys(DATASETS).length, 'permitted datasets');
     },
 
     /* ── WARMUP — rebuild permissions then parallel-fetch all permitted ── */
@@ -452,9 +538,10 @@
 
     // On index.html (and any protected page): rebuild permitted datasets from session,
     // then warm any missing/stale entries. This handles returning from another portal tab
-    // where sessionStorage cache may have been partially or fully cleared.
+    // where localStorage cache may have been partially or fully cleared.
     function _initAndWarm() {
       _buildDatasets();
+      _purgeUnauthorisedCache(); // evict any non-permitted or cross-user cache on every page load
       _startAllTimers();
       // Non-blocking background warm — fills in any missing/stale cache entries
       warmIfEmpty().catch(e => console.warn('[DataLayer] autoInit warmIfEmpty error:', e.message));
