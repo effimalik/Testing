@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   dataLayer.js — AdminPro UAE  v2.0
+   dataLayer.js — AdminPro UAE  v2.1
    Cache-first data layer · localStorage persistence · session-auth
    Permission-driven: only permitted datasets are fetched or cached.
 
@@ -418,6 +418,8 @@
   ───────────────────────────────────────── */
   window.AdminPro = {
 
+    VERSION: '2.1',  // bump when deploying — use ?v=2.1 on the <script> tag to bust GitHub Pages cache
+
     /* ── INIT — rebuild permitted DATASETS + purge stale cache + start timers.
        Call this once after Auth.createSession() on login.
        Security guarantee:
@@ -554,15 +556,11 @@
     }
   })();
 
-  console.log('[DataLayer] v2.0 loaded — window.AdminPro ready');
-
-})();
-
   /* ─────────────────────────────────────────
      VISIBILITY CHANGE WATCHER
      When user returns to this tab (from another portal or browser tab),
      re-warm any datasets that went stale while the tab was hidden.
-     This is the fix for "cache miss on returning to portal".
+     NOTE: must stay INSIDE the main IIFE so private functions are in scope.
   ───────────────────────────────────────── */
   (function _visibilityWatcher() {
     const isLoginPage = window.location.pathname.endsWith('login.html')
@@ -571,17 +569,35 @@
 
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'visible') return;
-      // Tab is now visible — check for stale/empty entries and warm them
-      _buildDatasets(); // re-read permissions (session might have been refreshed)
-      const staleKeys = Object.keys(DATASETS).filter(key => {
-        const status = _cache.status(key);
-        return status !== 'fresh'; // 'stale', null (empty), or missing
-      });
-      if (staleKeys.length) {
-        console.log('[DataLayer] Tab visible — refreshing stale datasets:', staleKeys);
-        Promise.allSettled(staleKeys.map(key => _fetchFromServer(key))).then(() => {
-          _startAllTimers();
+
+      // Guard: _buildDatasets, _cache, _fetchFromServer and _startAllTimers are
+      // private to this IIFE. If this handler somehow fires in a context where they
+      // are out of scope (stale cached script / cross-frame race), bail cleanly
+      // instead of throwing a ReferenceError that breaks the page.
+      try {
+        _buildDatasets(); // re-read permissions (session might have been refreshed)
+      } catch (e) {
+        console.warn('[DataLayer] visibilityWatcher: _buildDatasets unavailable —', e.message);
+        return;
+      }
+
+      try {
+        const staleKeys = Object.keys(DATASETS).filter(key => {
+          const status = _cache.status(key);
+          return status !== 'fresh';
         });
+        if (staleKeys.length) {
+          console.log('[DataLayer] Tab visible — refreshing stale datasets:', staleKeys);
+          Promise.allSettled(staleKeys.map(key => _fetchFromServer(key))).then(() => {
+            _startAllTimers();
+          });
+        }
+      } catch (e) {
+        console.warn('[DataLayer] visibilityWatcher error:', e.message);
       }
     });
   })();
+
+  console.log('[DataLayer] v2.1 loaded — window.AdminPro ready');
+
+})();
