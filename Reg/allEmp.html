@@ -7,8 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
-<script src="https://effimalik.github.io/FleetManagement/shared/auth.js"></script>
-<script src="https://effimalik.github.io/FleetManagement/shared/dataLayer.js"></script>
 <style>
 /* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -581,20 +579,32 @@ function showCacheBanner(syncing, cacheStatus) {
         <span class="cache-banner-status syncing"><i class="ti ti-refresh" style="animation:spin 1s linear infinite;display:inline-flex;"></i> Refreshing…</span>
         <button class="cache-banner-icon-btn" disabled style="opacity:.45;cursor:not-allowed;"><i class="ti ti-refresh" style="animation:spin 1s linear infinite;display:inline-flex;"></i> Refresh</button>
       </div>`;
-  } else {
-    // Use dataLayer cache timestamp if available, otherwise fall back to now
-    const syncTime = cacheStatus && cacheStatus.lastSync ? cacheStatus.lastSync : (() => {
-      const now = new Date();
-      return now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) + ', ' + now.toLocaleDateString([], { day:'2-digit', month:'short' });
-    })();
-    const rowInfo  = cacheStatus && cacheStatus.rowCount != null ? ` · ${cacheStatus.rowCount} records` : '';
+    return;
+  }
+
+  // cacheStatus may be undefined if DATASETS wasn't built yet — treat as not loaded
+  if (!cacheStatus || !cacheStatus.hasData) {
+    // Show a neutral "not yet loaded" state with a refresh button
     banner.innerHTML = `
       <div class="cache-banner-main">
-        <span class="cache-banner-status synced"><i class="ti ti-circle-check"></i> Synced</span>
-        <span class="cache-banner-datetime"><i class="ti ti-clock"></i> ${syncTime}${rowInfo}</span>
-        <button class="cache-banner-icon-btn" onclick="forceRefreshEmployees();" title="Force refresh from sheet"><i class="ti ti-refresh"></i> Refresh</button>
+        <span class="cache-banner-status syncing" style="background:var(--bg4,#333);color:var(--text3);"><i class="ti ti-database-off"></i> Not loaded</span>
+        <button class="cache-banner-icon-btn" onclick="forceRefreshEmployees();" title="Load data from sheet"><i class="ti ti-refresh"></i> Refresh</button>
       </div>`;
+    return;
   }
+
+  // Fresh data — show sync time and row count
+  const syncTime = cacheStatus.lastSync || (() => {
+    const now = new Date();
+    return now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) + ', ' + now.toLocaleDateString([], { day:'2-digit', month:'short' });
+  })();
+  const rowInfo = cacheStatus.rowCount != null ? ` · ${cacheStatus.rowCount} records` : '';
+  banner.innerHTML = `
+    <div class="cache-banner-main">
+      <span class="cache-banner-status synced"><i class="ti ti-circle-check"></i> Synced</span>
+      <span class="cache-banner-datetime"><i class="ti ti-clock"></i> ${syncTime}${rowInfo}</span>
+      <button class="cache-banner-icon-btn" onclick="forceRefreshEmployees();" title="Force refresh from sheet"><i class="ti ti-refresh"></i> Refresh</button>
+    </div>`;
 }
 
 function toggleCacheSub() {
@@ -1379,10 +1389,44 @@ function syncThemeFromParent() {
 }
 
 /* ═══════════ INIT ═══════════ */
+/* allEmp runs inside a parent iframe — window.Auth and window.AdminPro are
+   injected by index.html AFTER this frame's DOMContentLoaded fires.
+   Poll until both are ready (max 8 s), then load. */
 document.addEventListener('DOMContentLoaded', () => {
   syncThemeFromParent();
-  loadEmployees();
+  _waitForGlobals();
 });
+
+function _waitForGlobals() {
+  const MAX_WAIT_MS   = 8000;
+  const POLL_INTERVAL = 80;
+  let elapsed = 0;
+
+  const tbody = document.getElementById('emp-tbody');
+
+  function check() {
+    const authReady  = window.Auth    && typeof window.Auth.hasPermission    === 'function';
+    const layerReady = window.AdminPro && typeof window.AdminPro.getEmployees === 'function';
+
+    if (authReady && layerReady) {
+      loadEmployees();
+      return;
+    }
+
+    elapsed += POLL_INTERVAL;
+    if (elapsed >= MAX_WAIT_MS) {
+      console.error('[allEmp] Timed out waiting for Auth / AdminPro globals.');
+      if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;color:var(--red);">
+        <i class="ti ti-alert-triangle" style="font-size:26px;display:block;margin-bottom:8px;"></i>
+        <div style="font-size:13px;">Session not ready — please reload the page.</div>
+      </td></tr>`;
+      return;
+    }
+    setTimeout(check, POLL_INTERVAL);
+  }
+
+  check();
+}
 </script>
 </body>
 </html>
