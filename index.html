@@ -1033,9 +1033,9 @@ async function cmRefresh(key, btn) {
     if (window.AdminPro && AdminPro.forceRefresh) {
       await AdminPro.forceRefresh(key);
     } else {
-      sessionStorage.removeItem('ap2_' + key);
+      localStorage.removeItem('ap2_' + key);
     }
-    setTimeout(() => { cmScanAll(); renderCacheTable(); updateCacheHealthDot(); }, 300);
+    setTimeout(() => { cmScanAll(); renderCacheTable(); updateCacheHealthDot(); _notifyFrame(); }, 300);
   } catch(e) {
     _logEvent('miss', 'Refresh error:', key);
   } finally {
@@ -1049,7 +1049,7 @@ async function cmRefresh(key, btn) {
   let _prevSnap = {};
   function _snap() {
     const s = {};
-    Object.keys(sessionStorage).filter(k => k.startsWith('ap2_')).forEach(k => { s[k] = sessionStorage.getItem(k); });
+    Object.keys(localStorage).filter(k => k.startsWith('ap2_')).forEach(k => { s[k] = localStorage.getItem(k); });
     return s;
   }
   _prevSnap = _snap();
@@ -1074,6 +1074,7 @@ async function cmRefresh(key, btn) {
           updateCacheHealthDot();
           renderCacheTable();
           if (_cmPanelOpen) cmScanAll();
+          _notifyFrame();
         }, 200);
       } else if (_prevSnap[k] === undefined && cur[k] !== undefined) {
         _logEvent('cache', 'Cache set:', dsKey);
@@ -1688,6 +1689,14 @@ function fmtTtlLabel(ms) {
   return Math.floor(ms/3600000) + ' hr';
 }
 
+/* ── Notify child iframe to reload from localStorage cache ── */
+function _notifyFrame() {
+  const frame = document.getElementById('main-frame');
+  if (frame && frame.contentWindow) {
+    frame.contentWindow.postMessage({ type: 'ap-cache-updated' }, '*');
+  }
+}
+
 function renderCacheTable() {
   const body = document.getElementById('cache-table-body');
   const footer = document.getElementById('cp-last-check');
@@ -1791,7 +1800,7 @@ function renderCacheTable() {
 
 function getCacheAge(key) {
   try {
-    const raw = sessionStorage.getItem('ap2_' + key);
+    const raw = localStorage.getItem('ap2_' + key);
     if (!raw) return Infinity;
     const { ts } = JSON.parse(raw);
     return Date.now() - ts;
@@ -1800,7 +1809,7 @@ function getCacheAge(key) {
 
 function getCacheData(key) {
   try {
-    const raw = sessionStorage.getItem('ap2_' + key);
+    const raw = localStorage.getItem('ap2_' + key);
     if (!raw) return null;
     return JSON.parse(raw).data;
   } catch { return null; }
@@ -1815,9 +1824,9 @@ async function hardRefreshDataset(key, btn) {
       await AdminPro.forceRefresh(key);
     } else {
       // fallback: just clear the key
-      sessionStorage.removeItem('ap2_' + key);
+      localStorage.removeItem('ap2_' + key);
     }
-    setTimeout(() => { renderCacheTable(); updateCacheHealthDot(); cmScanAll(); }, 300);
+    setTimeout(() => { renderCacheTable(); updateCacheHealthDot(); cmScanAll(); _notifyFrame(); }, 300);
   } catch(e) {
     console.warn('refresh failed', key, e);
     _logEvent('miss', 'Refresh error:', key);
@@ -1832,11 +1841,17 @@ function deleteCacheDataset(key, btn) {
   if (window.AdminPro && AdminPro.cache) {
     AdminPro.cache.clear(key);
   } else {
-    sessionStorage.removeItem('ap2_' + key);
+    localStorage.removeItem('ap2_' + key);
   }
   renderCacheTable();
   updateCacheHealthDot();
-  setTimeout(() => cmScanAll(), 250);
+  setTimeout(() => { cmScanAll(); _notifyFrame(); }, 250);
+  // Auto-fetch fresh data after delete so cache is repopulated immediately
+  if (window.AdminPro && AdminPro.forceRefresh) {
+    AdminPro.forceRefresh(key).then(() => {
+      renderCacheTable(); updateCacheHealthDot(); _notifyFrame();
+    }).catch(() => {});
+  }
 }
 
 async function refreshAllCache() {
@@ -1850,6 +1865,7 @@ async function refreshAllCache() {
     renderCacheTable();
     updateCacheHealthDot();
     cmScanAll();
+    _notifyFrame();
   } finally {
     if (btn) { btn.innerHTML = '<i class="ti ti-refresh"></i> Refresh All'; btn.disabled = false; }
   }
@@ -1861,11 +1877,17 @@ function deleteAllCache() {
   if (window.AdminPro && AdminPro.cache) {
     AdminPro.cache.clearAll();
   } else {
-    Object.keys(sessionStorage).filter(k => k.startsWith('ap2_')).forEach(k => sessionStorage.removeItem(k));
+    Object.keys(localStorage).filter(k => k.startsWith('ap2_')).forEach(k => localStorage.removeItem(k));
   }
   renderCacheTable();
   updateCacheHealthDot();
   setTimeout(() => cmScanAll(), 250);
+  // Auto-fetch all permitted datasets immediately after full clear
+  if (window.AdminPro && AdminPro.warmCache) {
+    AdminPro.warmCache().then(() => {
+      renderCacheTable(); updateCacheHealthDot(); _notifyFrame();
+    }).catch(() => {});
+  }
 }
 
 function updateCacheHealthDot() {
