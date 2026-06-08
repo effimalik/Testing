@@ -555,18 +555,26 @@ function bikeAv(i) {
 }
 
 /* ═══  CACHE  ═══ */
-function bikeCacheSave(rows) { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ts:Date.now(),data:rows})); } catch {} }
-function bikeCacheLoad() {
+function parseRows(raw) {
+  // New cache format: { bikes: { data: [...] } }
+  if (raw?.bikes?.data && Array.isArray(raw.bikes.data)) return raw.bikes.data;
+  // Generic wrapped formats
+  if (Array.isArray(raw))        return raw;
+  if (Array.isArray(raw?.data))  return raw.data;
+  if (Array.isArray(raw?.values))return raw.values;
+  if (Array.isArray(raw?.rows))  return raw.rows;
+  return [];
+}
+
+function _readCache() {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    const ts = parsed.ts;
-    const rows = parsed.data || parsed.rows || parsed; // support {data:[...]}, {rows:[...]}, or raw array
-    return Array.isArray(rows) ? rows : null;
+    const rows = parseRows(parsed);
+    return rows.length ? rows : null;
   } catch { return null; }
 }
-function bikeCacheClear() { try { localStorage.removeItem(CACHE_KEY); } catch {} }
 
 
 /* ═══  NORMALISE ROW  ═══ */
@@ -612,9 +620,9 @@ function normaliseRow(r, i) {
 /* ═══  LOAD  ═══ */
 function loadBikes() {
   const tbody = document.getElementById('bike-tbody');
-  const cached = bikeCacheLoad();
-  if (cached && cached.length) {
-    bikes = cached.map((r,i) => normaliseRow(r,i)).filter(Boolean);
+  const rows = _readCache();
+  if (rows && rows.length) {
+    bikes = rows.map((r,i) => normaliseRow(r,i)).filter(Boolean);
     renderAll();
   } else {
     if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text3);">
@@ -631,13 +639,21 @@ window.addEventListener('storage', function(e) {
   if (!e.newValue) return; // cache was cleared, do nothing
   try {
     const parsed = JSON.parse(e.newValue);
-    const rows = parsed.data || parsed.rows || parsed;
+    const rows = parseRows(parsed);
     if (!rows || !rows.length) return;
     const updated = rows.map((r,i) => normaliseRow(r,i)).filter(Boolean);
     if (!updated.length) return;
     bikes = updated;
     renderAll();
   } catch {}
+});
+
+/* Listen for cache-updated signal from parent index.html */
+window.addEventListener('message', (e) => {
+  if (!e.data) return;
+  if (e.data.type === 'ap-cache-updated') {
+    loadBikes();
+  }
 });
 
 /* ═══  STATS  ═══ */
@@ -944,7 +960,6 @@ async function saveEdit() {
 
   try {
     Object.assign(b, updated);
-    bikeCacheSave(bikes);
     document.getElementById('dp-name').textContent=`${b.make} ${b.model}`;
     document.getElementById('dp-sub').textContent=b.plate;
 
@@ -1138,7 +1153,6 @@ async function confirmUpload() {
   }
 
   closeUploadModal();
-  bikeCacheSave(bikes);
   renderAll();
 
   let msg = _upMode==='add'
