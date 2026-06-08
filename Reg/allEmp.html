@@ -671,9 +671,11 @@ function _readCache() {
     const raw = localStorage.getItem(_AP2_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length) return parsed;
-    if (parsed && Array.isArray(parsed.data) && parsed.data.length) return parsed.data;
-    return null;
+    // Route through parseRows — handles ALL known cache formats:
+    // bare array, { data }, { ts, data, fingerprint } (dataLayer.js format),
+    // { employees: { data } }, { values }, { rows }
+    const rows = parseRows(parsed);
+    return rows.length ? rows : null;
   } catch { return null; }
 }
 
@@ -697,9 +699,8 @@ function loadEmployees() {
   function _apply(raw) {
     try {
       const parsed = JSON.parse(raw);
-      const arr = Array.isArray(parsed) ? parsed
-                : Array.isArray(parsed?.data) ? parsed.data : null;
-      if (!arr || !arr.length) return;
+      const arr = parseRows(parsed);
+      if (!arr.length) return;
       const fresh = arr.map((r, i) => normaliseRow(r, i)).filter(Boolean);
       if (!fresh.length) return;
       employees = fresh;
