@@ -571,8 +571,11 @@ function normaliseRow(r, i) {
     );
     let dob, mobile, emergency, reference, eidExp, licExp, labExp, insExp, coExc;
 
+    /* The sheet always has 14 columns. col[4] is DOB (date) or mobile (phone).
+       When DOB is missing the phone number shifts into col[4], but col[13]
+       is ALWAYS the Status column regardless. */
     if (col4IsDate) {
-      /* Standard 14-column layout */
+      /* col[4] = DOB — standard 14-column layout */
       dob       = col4;
       mobile    = _str(r[5]);
       emergency = _str(r[6]);
@@ -583,7 +586,7 @@ function normaliseRow(r, i) {
       insExp    = _str(r[11]);
       coExc     = _str(r[12]);
     } else {
-      /* 13-column layout (no DOB column) */
+      /* col[4] = mobile (DOB missing/empty) — still 14 columns, shift back one */
       dob       = '';
       mobile    = _str(r[4]);
       emergency = _str(r[5]);
@@ -600,7 +603,9 @@ function normaliseRow(r, i) {
     const empName = _str(r[2]);
     if (!empName) return null; // skip blank rows
 
-    const statusRaw = _str(r[col4IsDate ? 13 : 12]);
+    /* Status is always col[13] — the last column in the 14-col sheet.
+       Fall back to col[12] only for genuinely short (legacy) rows. */
+    const statusRaw = r.length >= 14 ? _str(r[13]) : _str(r[12]);
     // col[12]: tag field — "Checkout_Exception" goes to checkout badge,
     //          anything else (e.g. "Probation") goes to HR status badge
     const isCoExc   = coExc.toLowerCase().replace(/[^a-z]/g,'').includes('checkout');
@@ -671,9 +676,6 @@ function _readCache() {
     const raw = localStorage.getItem(_AP2_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    // Route through parseRows — handles ALL known cache formats:
-    // bare array, { data }, { ts, data, fingerprint } (dataLayer.js format),
-    // { employees: { data } }, { values }, { rows }
     const rows = parseRows(parsed);
     return rows.length ? rows : null;
   } catch { return null; }
