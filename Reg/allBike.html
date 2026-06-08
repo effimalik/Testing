@@ -648,11 +648,16 @@ window.addEventListener('storage', function(e) {
   } catch {}
 });
 
-/* Listen for cache-updated signal from parent index.html */
+/* Listen for messages from parent index.html */
 window.addEventListener('message', (e) => {
   if (!e.data) return;
+  // Cache updated — reload from localStorage
   if (e.data.type === 'ap-cache-updated') {
     loadBikes();
+  }
+  // Instant theme sync — parent pushes on every theme change
+  if (e.data.type === 'ap-theme' && e.data.theme) {
+    document.documentElement.setAttribute('data-theme', e.data.theme);
   }
 });
 
@@ -1163,12 +1168,11 @@ async function confirmUpload() {
 
 /* ═══  THEME  ═══ */
 (function(){
-  try {
-    const t = window.parent.document.documentElement.getAttribute('data-theme')||localStorage.getItem('theme')||'dark';
-    document.documentElement.setAttribute('data-theme',t);
-    new MutationObserver(()=>document.documentElement.setAttribute('data-theme',window.parent.document.documentElement.getAttribute('data-theme')||'dark'))
-      .observe(window.parent.document.documentElement,{attributes:true,attributeFilter:['data-theme']});
-  } catch { document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'dark'); }
+  // Apply saved theme immediately on load (no flash)
+  const t = localStorage.getItem('theme') || 'dark';
+  try { document.documentElement.setAttribute('data-theme',
+    window.parent.document.documentElement.getAttribute('data-theme') || t);
+  } catch { document.documentElement.setAttribute('data-theme', t); }
 })();
 
 /* ═══  TOAST  ═══ */

@@ -1388,12 +1388,16 @@ document.addEventListener('DOMContentLoaded', () => {
   loadEmployees();
 });
 
-/* Listen for cache-updated signal from parent index.html
-   Fired after refresh / delete — reloads table from localStorage */
+/* Listen for messages from parent index.html */
 window.addEventListener('message', (e) => {
   if (!e.data) return;
+  // Cache updated — reload table from localStorage
   if (e.data.type === 'ap-cache-updated') {
     loadEmployees();
+  }
+  // Instant theme sync — parent pushes on every theme change
+  if (e.data.type === 'ap-theme' && e.data.theme) {
+    document.documentElement.setAttribute('data-theme', e.data.theme);
   }
 });
 </script>
