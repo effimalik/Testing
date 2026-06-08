@@ -1147,11 +1147,11 @@ const SECTIONS = {
     icon:'ti-file-alert', label:'Expiring Docs',
     pageLabel:'Expiring Docs', pageSub:'Document tracker',
     pillBg:'var(--red-dim)', pillColor:'var(--red)', pillIcon:'ti-file-alert',
-    permKey: 'ap2_employee',   // requires employee permission — document tracker uses employee data
+    permKey: null,   // section always shown if at least one child item is permitted
     groups:[
       { label:'Expiry Tracker', items:[
-        { label:'Employee Docs', file:'pages/empExp.html', icon:'ti-users',     sub:'Visa · EID · Labour', badge:true },
-        { label:'Bike Docs',     file:'pages/bikExp.html', icon:'ti-motorbike', sub:'Mulkiya · Insurance',  badge:true },
+        { label:'Employee Docs', file:'pages/empExp.html', icon:'ti-users',     sub:'Visa · EID · Labour', badge:true, permKey:'ap2_employee' },
+        { label:'Bike Docs',     file:'pages/bikExp.html', icon:'ti-motorbike', sub:'Mulkiya · Insurance',  badge:true, permKey:'ap2_bike'     },
       ]},
     ],
   },
@@ -1184,14 +1184,24 @@ function _applyPermissions() {
     const btn = document.getElementById(id);
     if (!btn) continue;
 
-    const allowed = !sec.permKey || (perms && perms[sec.permKey] === true);
+    let allowed;
+    if (sec.permKey === null) {
+      // Section has no own gate — check if at least one sub-item is permitted
+      const anyItemAllowed = sec.groups.some(g =>
+        g.items.some(item =>
+          !item.permKey || (perms && perms[item.permKey] === true)
+        )
+      );
+      allowed = anyItemAllowed;
+    } else {
+      allowed = !sec.permKey || (perms && perms[sec.permKey] === true);
+    }
 
     btn.style.display = allowed ? '' : 'none';
     if (allowed && !firstAllowed) firstAllowed = id;
   }
 
   // Also hide topbar shortcuts that are permission-gated
-  // Map shortcut selector → permKey
   const shortcutGates = [
     { sel: '.tb-sc.emp',  permKey: 'ap2_employee' },
     { sel: '.tb-sc.bike', permKey: 'ap2_bike'     },
@@ -1202,10 +1212,6 @@ function _applyPermissions() {
       el.style.display = (!perms || perms[permKey] === true) ? '' : 'none';
     });
   }
-
-  // Note: ibOpen() and No-Access frame are handled by DOMContentLoaded init,
-  // NOT here. _applyPermissions() only shows/hides nav buttons — it does NOT
-  // trigger navigation (avoids double-open race conditions).
 
   console.log('[Permissions] applied — firstAllowed:', firstAllowed, '| perms:', perms);
   return firstAllowed;
@@ -1246,15 +1252,23 @@ function ibOpen(id, btn) {
   document.getElementById('sb2-icon').className = 'ti ' + sec.icon;
   document.getElementById('sb2-title').textContent = sec.label;
 
+  const perms = window.Auth && window.Auth.getPermissions ? window.Auth.getPermissions() : null;
+
   const nav = document.getElementById('sb2-nav');
-  nav.innerHTML = sec.groups.map(g => `
-    <div class="sb2-section">${g.label}</div>
-    ${g.items.map(item => `
-      <div class="sb2-item" onclick="loadPage('${item.file}',this,'${item.label}','${item.icon||sec.icon}','${item.sub}','${sec.pillBg.replace(/'/g,'"')}','${sec.pillColor}')">
-        <i class="ti ${item.icon}"></i>${item.label}
-        ${item.badge ? '<span class="sb2-badge">!</span>' : ''}
-      </div>`).join('')}
-  `).join('');
+  nav.innerHTML = sec.groups.map(g => {
+    const visibleItems = g.items.filter(item =>
+      !item.permKey || (perms && perms[item.permKey] === true)
+    );
+    if (!visibleItems.length) return '';
+    return `
+      <div class="sb2-section">${g.label}</div>
+      ${visibleItems.map(item => `
+        <div class="sb2-item" onclick="loadPage('${item.file}',this,'${item.label}','${item.icon||sec.icon}','${item.sub}','${sec.pillBg.replace(/'/g,'"')}','${sec.pillColor}')">
+          <i class="ti ${item.icon}"></i>${item.label}
+          ${item.badge ? '<span class="sb2-badge">!</span>' : ''}
+        </div>`).join('')}
+    `;
+  }).join('');
 
   setCtx(sec.pageLabel, sec.pageSub, sec.pillBg, sec.pillColor, sec.pillIcon);
   subOpen = true;
@@ -1343,25 +1357,29 @@ function setTheme(mode) {
   // Update day/night icon
   updateDayNightIcon(mode);
 
-  // Broadcast to child iframe (postMessage)
-  try {
-    const frame = document.getElementById('main-frame');
-    if (frame && frame.contentWindow) {
-      frame.contentWindow.postMessage({ type: 'ap-theme', theme: mode }, '*');
-    }
-  } catch(_) {}
+  // ── Instant theme push to child iframe ──
+  // 1. postMessage — direct, zero-delay
+  _pushThemeToFrame(mode);
 
-  // Broadcast via BroadcastChannel so ALL child pages pick it up (even non-iframe tabs)
+  // 2. BroadcastChannel — picks up other tabs/windows
   try {
     const bc = new BroadcastChannel('ap-theme');
     bc.postMessage({ type: 'ap-theme', theme: mode });
     bc.close();
   } catch(_) {}
 
-  // Log to event monitor
   _logEvent('theme', 'Theme changed:', labelMap[mode] || mode);
-
   closeThemeDropdown();
+}
+
+/* Push theme to the child iframe immediately */
+function _pushThemeToFrame(mode) {
+  try {
+    const frame = document.getElementById('main-frame');
+    if (frame && frame.contentWindow) {
+      frame.contentWindow.postMessage({ type: 'ap-theme', theme: mode }, '*');
+    }
+  } catch(_) {}
 }
 
 function updateDayNightIcon(mode) {
@@ -1559,6 +1577,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (sb) {
     sb.addEventListener('mousemove', () => { if (subOpen) startSubHideTimer(); });
     sb.addEventListener('touchstart', () => { if (subOpen) startSubHideTimer(); }, { passive: true });
+  }
+
+  // ── Instant theme sync: push current theme every time child page finishes loading ──
+  const _frame = document.getElementById('main-frame');
+  if (_frame) {
+    _frame.addEventListener('load', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || localStorage.getItem('theme') || 'dark';
+      _pushThemeToFrame(currentTheme);
+    });
   }
 
   // BroadcastChannel — listen for theme changes from other tabs/windows
