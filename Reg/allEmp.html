@@ -1387,6 +1387,15 @@ function toast(msg, type='success') {
 document.addEventListener('DOMContentLoaded', () => {
   loadEmployees();
 });
+
+/* Listen for cache-updated signal from parent index.html
+   Fired after refresh / delete — reloads table from localStorage */
+window.addEventListener('message', (e) => {
+  if (!e.data) return;
+  if (e.data.type === 'ap-cache-updated') {
+    loadEmployees();
+  }
+});
 </script>
 </body>
 </html>
