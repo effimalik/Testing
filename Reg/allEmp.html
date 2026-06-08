@@ -7,8 +7,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
-<script src="https://effimalik.github.io/Testing/shared/auth.js"></script>
-<script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
+<script src="https://effimalik.github.io/FleetManagement/shared/auth.js"></script>
+<script src="https://effimalik.github.io/FleetManagement/shared/code.js"></script>
+<script src="https://effimalik.github.io/FleetManagement/shared/dataLayer.js"></script>
+<script src="https://effimalik.github.io/FleetManagement/shared/devPre.js"></script>
+
 <style>
 /* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -99,20 +102,6 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .page-desc i { color: var(--accent); font-size: clamp(14px, 1.8vw, 17px); flex-shrink: 0; line-height: 1; }
 @media (max-width: 600px) { .page-desc { display: none; } .page-divider { padding-top: 4px; margin-bottom: 10px; } }
 
-/* ── Cache banner refresh button — wider for label ── */
-.cache-banner-icon-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 5px 12px; height: 28px; border-radius: 6px; background: none; border: 1px solid var(--border2); color: var(--text3); cursor: pointer; font-size: 12px; font-family: var(--font); font-weight: 600; transition: all .15s; margin-left: auto; flex-shrink: 0; }
-.cache-banner-icon-btn:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
-.cache-banner-icon-btn i { font-size: 15px; line-height: 1; }
-.cache-banner { margin-bottom: 8px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); background: var(--bg3); font-size: 12px; }
-.cache-banner-main { display: flex; align-items: center; gap: 10px; padding: 7px 12px; }
-.cache-banner-status { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px; flex-shrink: 0; }
-.cache-banner-status i { font-size: 14px; line-height: 1; }
-.cache-banner-status.synced  { background: var(--teal-dim); color: var(--teal); }
-.cache-banner-status.syncing { background: var(--amber-dim); color: var(--amber); }
-.cache-banner-datetime { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text3); font-family: var(--mono); }
-.cache-banner-datetime i { font-size: 14px; line-height: 1; }
-.cache-banner-sub { display: none; }
-.cache-banner-sub.open { display: flex; }
 
 /* ── Toolbar ── */
 .emp-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; width: 100%; }
@@ -334,6 +323,16 @@ select option { background: var(--surface2); color: var(--text); }
 </head>
 <body>
 
+<!-- ═══ INSTANT THEME SYNC (no flash) ═══ -->
+<script>
+(function(){
+  try {
+    var t = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch(e) {}
+})();
+</script>
+
 <div class="page">
 
   <!-- Page header -->
@@ -492,6 +491,7 @@ select option { background: var(--surface2); color: var(--text); }
 'use strict';
 
 /* ═══════════ CONSTANTS ═══════════ */
+
 const WARN_DAYS = 60;
 
 const AV_FG  = ['#58a6ff','#3fb950','#e3b341','#d2a8ff','#ffa198','#22d3ee'];
@@ -519,162 +519,206 @@ function computeExpiry(dateStr) {
 
 function normaliseRow(r, i) {
   if (!r) return null;
-  if (Array.isArray(r)) {
-    const [id, name, eid, dob, mobile, emergency, reference, timestamp, hrStatus, checkoutException, eidDate, licenseDate, labourDate, insuranceDate] = r;
-    // DEBUG — remove after confirming columns: uncomment next line temporarily
-    // if (i < 3) console.log(`Row[${i}] raw:`, JSON.stringify(r));
-    if ((id === undefined || id === null || id === '') && (name === undefined || name === null || name === '')) return null;
+
+  /* ── Object format (named keys from DataLayer / old cache) ── */
+  if (!Array.isArray(r) && r["Name"] !== undefined) {
     return {
-      id:   (id !== undefined && id !== null && id !== '') ? id : (i + 1),
-      name: (name !== undefined && name !== null) ? String(name) : '',
-      eid:  (eid  !== undefined && eid  !== null) ? String(eid)  : '',
-      dob:  dob       ? String(dob)       : '',
-      mobile:    mobile     ? String(mobile)    : '',
-      emergency: emergency  ? String(emergency) : '',
-      reference: reference  ? String(reference) : '',
-      timestamp: timestamp  ? String(timestamp) : '',
-      hrStatus:  hrStatus   ? String(hrStatus)  : '',
-      checkoutException: checkoutException ? String(checkoutException) : '',
+      id: r["Emp ID"] || (i + 1),
+      name: r["Name"] || "",
+      eid: String(r["EID Number"] || ""),
+      dob: r["Date of Birth"] || "",
+      mobile: r["UAE Mobile No"] || "",
+      emergency: r["Emergency Mobile No"] || "",
+      reference: r["Reference"] || "",
+      timestamp: r["Timestamp"] || "",
+      hrStatus: r["HR_Status"] || "",
+      checkoutException: r["Checkout_Exception"] || "",
       expiry: {
-        eid:      computeExpiry(eidDate),
-        license:  computeExpiry(licenseDate),
-        labour:   computeExpiry(labourDate),
-        insurance:computeExpiry(insuranceDate),
+        eid: computeExpiry(r["EID Expiry"]),
+        license: computeExpiry(r["License Expiry"]),
+        labour: computeExpiry(r["Laboure Expiry"]),
+        insurance: computeExpiry(r["Insurance Expiry"])
       }
     };
   }
-  const rehydrate = (o) => {
-    if (!o || typeof o !== 'object') return computeExpiry(null);
-    if (o.status) return o;
-    return computeExpiry(o.date || null);
-  };
-  const rawExpiry = r.expiry || {};
-  return {
-    id: r.id || (i + 1), name: r.name || '', eid: r.eid || '',
-    dob: r.dob || '', mobile: r.mobile || '', emergency: r.emergency || '',
-    reference: r.reference || '', timestamp: r.timestamp || '',
-    hrStatus: r.hrStatus || '', checkoutException: r.checkoutException || '',
-    expiry: {
-      eid:      rehydrate(rawExpiry.eid),
-      license:  rehydrate(rawExpiry.license),
-      labour:   rehydrate(rawExpiry.labour),
-      insurance:rehydrate(rawExpiry.insurance),
+
+  /* ── Array format from ap2_employees cache / Apps Script API ──
+   *  Column layout (0-based):
+   *  [0]  Timestamp
+   *  [1]  Emp ID
+   *  [2]  Name
+   *  [3]  EID Number
+   *  [4]  Date of Birth  (may be missing / shifted in older rows)
+   *  [5]  UAE Mobile No
+   *  [6]  Emergency Mobile No
+   *  [7]  Reference / Visa type / HR dept
+   *  [8]  EID Expiry
+   *  [9]  License Expiry
+   *  [10] Labour Expiry
+   *  [11] Insurance Expiry
+   *  [12] Checkout_Exception / HR_Status / Probation tag
+   *  [13] Status (Active / Inactive)
+   * ─────────────────────────────────────────────────────────── */
+  if (Array.isArray(r)) {
+    const _str = v => (v !== null && v !== undefined && v !== '') ? String(v).trim() : '';
+
+    /* Detect whether col[4] looks like a date (DOB present) or a phone number */
+    const col4 = _str(r[4]);
+    // A date looks like ISO string or YYYY-MM-DD; a phone starts with + or is all digits/spaces
+    const col4IsDate = col4 && (
+      /^\d{4}-\d{2}/.test(col4) ||   // YYYY-MM-DD...
+      col4.includes('T')              // ISO datetime
+    );
+    let dob, mobile, emergency, reference, eidExp, licExp, labExp, insExp, coExc;
+
+    if (col4IsDate) {
+      /* Standard 14-column layout */
+      dob       = col4;
+      mobile    = _str(r[5]);
+      emergency = _str(r[6]);
+      reference = _str(r[7]);
+      eidExp    = _str(r[8]);
+      licExp    = _str(r[9]);
+      labExp    = _str(r[10]);
+      insExp    = _str(r[11]);
+      coExc     = _str(r[12]);
+    } else {
+      /* 13-column layout (no DOB column) */
+      dob       = '';
+      mobile    = _str(r[4]);
+      emergency = _str(r[5]);
+      reference = _str(r[6]);
+      eidExp    = _str(r[7]);
+      licExp    = _str(r[8]);
+      labExp    = _str(r[9]);
+      insExp    = _str(r[10]);
+      coExc     = _str(r[11]);
     }
-  };
+
+    const rawId   = r[1];
+    const empId   = (rawId !== null && rawId !== undefined && rawId !== '') ? rawId : (i + 1);
+    const empName = _str(r[2]);
+    if (!empName) return null; // skip blank rows
+
+    const statusRaw = _str(r[col4IsDate ? 13 : 12]);
+    // col[12]: tag field — "Checkout_Exception" goes to checkout badge,
+    //          anything else (e.g. "Probation") goes to HR status badge
+    const isCoExc   = coExc.toLowerCase().replace(/[^a-z]/g,'').includes('checkout');
+    const hrTag     = isCoExc ? '' : coExc;
+    const coExcTag  = isCoExc ? coExc : '';
+
+    return {
+      id:                empId,
+      name:              empName,
+      eid:               _str(r[3]),
+      dob:               dob,
+      mobile:            mobile,
+      emergency:         emergency,
+      reference:         reference,
+      timestamp:         _str(r[0]),
+      status:            statusRaw || 'Active',
+      hrStatus:          hrTag,
+      checkoutException: coExcTag,
+      expiry: {
+        eid:       computeExpiry(eidExp),
+        license:   computeExpiry(licExp),
+        labour:    computeExpiry(labExp),
+        insurance: computeExpiry(insExp),
+      }
+    };
+  }
+
+  return null;
+}
+
+  
+
+function parseRows(raw) {
+
+  // NEW CACHE FORMAT
+  if (raw?.employees?.data && Array.isArray(raw.employees.data)) {
+    return raw.employees.data;
+  }
+
+  // OLD FORMATS
+  if (Array.isArray(raw)) {
+    return raw;
+  }
+
+  if (Array.isArray(raw?.data)) {
+    return raw.data;
+  }
+
+  if (Array.isArray(raw?.values)) {
+    return raw.values;
+  }
+
+  if (Array.isArray(raw?.rows)) {
+    return raw.rows;
+  }
+
+  return [];
 }
 
 
-/* ═══════════ CACHE BANNER ═══════════ */
 
-function showCacheBanner(syncing, cacheStatus) {
-  let banner = document.getElementById('emp-cache-banner');
-  if (!banner) {
-    banner = document.createElement('div');
-    banner.id = 'emp-cache-banner';
-    banner.className = 'cache-banner';
-    const tbl = document.getElementById('emp-tbody')?.closest('table');
-    tbl?.parentElement?.parentElement?.insertBefore(banner, tbl.parentElement);
-  }
-  if (syncing) {
-    banner.innerHTML = `
-      <div class="cache-banner-main">
-        <span class="cache-banner-status syncing"><i class="ti ti-refresh" style="animation:spin 1s linear infinite;display:inline-flex;"></i> Refreshing…</span>
-        <button class="cache-banner-icon-btn" disabled style="opacity:.45;cursor:not-allowed;"><i class="ti ti-refresh" style="animation:spin 1s linear infinite;display:inline-flex;"></i> Refresh</button>
-      </div>`;
-  } else {
-    // Use dataLayer cache timestamp if available, otherwise fall back to now
-    const syncTime = cacheStatus && cacheStatus.lastSync ? cacheStatus.lastSync : (() => {
-      const now = new Date();
-      return now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) + ', ' + now.toLocaleDateString([], { day:'2-digit', month:'short' });
-    })();
-    const rowInfo  = cacheStatus && cacheStatus.rowCount != null ? ` · ${cacheStatus.rowCount} records` : '';
-    banner.innerHTML = `
-      <div class="cache-banner-main">
-        <span class="cache-banner-status synced"><i class="ti ti-circle-check"></i> Synced</span>
-        <span class="cache-banner-datetime"><i class="ti ti-clock"></i> ${syncTime}${rowInfo}</span>
-        <button class="cache-banner-icon-btn" onclick="forceRefreshEmployees();" title="Force refresh from sheet"><i class="ti ti-refresh"></i> Refresh</button>
-      </div>`;
-  }
-}
+/* ═══════════ CACHE ═══════════ */
+const _AP2_CACHE_KEY = 'ap2_employee';
+const API_BASE = ''; // stub — no network calls used
 
-function toggleCacheSub() {
-  const sub = document.getElementById('emp-cache-sub');
-  if (sub) sub.classList.toggle('open');
+function _readCache() {
+  try {
+    const raw = localStorage.getItem(_AP2_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length) return parsed;
+    if (parsed && Array.isArray(parsed.data) && parsed.data.length) return parsed.data;
+    return null;
+  } catch { return null; }
 }
 
 /* ═══════════ LOAD ═══════════ */
-async function loadEmployees() {
-  // Gate 1 — permission check before touching any data
-  if (!window.Auth || !window.Auth.hasPermission('ap2_employee')) {
-    const tbody = document.getElementById('emp-tbody');
-    if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;color:var(--red);">
-      <i class="ti ti-shield-x" style="font-size:26px;display:block;margin-bottom:8px;"></i>
-      <div style="font-size:13px;">You do not have permission to view employee data.</div>
-    </td></tr>`;
-    return;
-  }
-
-  // Gate 2 — check dataLayer cache status (reads ap2_employee from localStorage)
-  const cacheStatus = window.AdminPro && window.AdminPro.getCacheStatus
-    ? window.AdminPro.getCacheStatus().find(s => s.key === 'employee')
-    : null;
-
-  if (cacheStatus && cacheStatus.fresh) {
-    // Cache is valid — use it instantly, no network call
-    showCacheBanner(false, cacheStatus);
-    const rows = await window.AdminPro.getEmployees();
-    employees = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
-    renderEmpTable(employees);
-    return;
-  }
-
-  // No fresh cache — show loading state and fetch via dataLayer (auth-gated)
+function loadEmployees() {
   const tbody = document.getElementById('emp-tbody');
-  if (!employees.length) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;">
-      <i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-flex;font-size:26px;color:var(--text3);"></i>
-      <div style="margin-top:10px;color:var(--text3);font-size:13px;">Loading employees…</div>
+  const rows = _readCache();
+  if (rows && rows.length) {
+    employees = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
+    renderEmpTable(employees);
+  } else {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;color:var(--text3);">
+      <i class="ti ti-database-off" style="font-size:26px;display:block;margin-bottom:8px;"></i>
+      No data in cache yet. Data will appear automatically once <code style="font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:4px;">ap2_employee</code> is populated.
     </td></tr>`;
   }
-  showCacheBanner(true);
-
-  try {
-    // AdminPro.getEmployees() — fetches with sessionId+token, stores in ap2_employee
-    const rows = await window.AdminPro.getEmployees();
-    employees = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
-    renderEmpTable(employees);
-    const updated = window.AdminPro.getCacheStatus().find(s => s.key === 'employee');
-    showCacheBanner(false, updated);
-  } catch (err) {
-    console.error('[allEmp] loadEmployees error:', err);
-    showCacheBanner(false);
-    if (!employees.length) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--red);"><i class="ti ti-wifi-off" style="font-size:22px;display:block;margin-bottom:8px;"></i>Could not load data — check connection or session.</td></tr>`;
-    } else {
-      toast('Could not refresh — showing cached data.', 'error');
-    }
-  }
 }
 
-// Force-refresh: clears ap2_employee cache, re-fetches via dataLayer (auth-gated)
-async function forceRefreshEmployees() {
-  if (!window.Auth || !window.Auth.hasPermission('ap2_employee')) {
-    toast('Permission denied.', 'error'); return;
+/* ═══════════ BACKGROUND CACHE WATCHER ═══════════ */
+(function() {
+  function _apply(raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      const arr = Array.isArray(parsed) ? parsed
+                : Array.isArray(parsed?.data) ? parsed.data : null;
+      if (!arr || !arr.length) return;
+      const fresh = arr.map((r, i) => normaliseRow(r, i)).filter(Boolean);
+      if (!fresh.length) return;
+      employees = fresh;
+      renderEmpTable(employees);
+    } catch {}
   }
-  showCacheBanner(true);
-  try {
-    const rows = await window.AdminPro.getEmployees(true); // true = force refresh
-    employees = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
-    renderEmpTable(employees);
-    const updated = window.AdminPro.getCacheStatus().find(s => s.key === 'employee');
-    showCacheBanner(false, updated);
-    toast('Data refreshed successfully.');
-  } catch (err) {
-    console.error('[allEmp] forceRefresh error:', err);
-    showCacheBanner(false);
-    toast('Refresh failed — check connection or session.', 'error');
-  }
-}
+  window.addEventListener('storage', function(e) {
+    if (e.key === _AP2_CACHE_KEY && e.newValue) _apply(e.newValue);
+  });
+  let _lastHash = null;
+  setInterval(function() {
+    try {
+      const raw = localStorage.getItem(_AP2_CACHE_KEY);
+      if (!raw || raw === _lastHash) return;
+      _lastHash = raw;
+      _apply(raw);
+    } catch {}
+  }, 30000);
+})();
 
 /* ═══════════ FILTER / TABLE ═══════════ */
 function calcOverall(ex) {
@@ -894,13 +938,6 @@ async function viewEmployee(empId) {
   document.getElementById('dp-body').innerHTML = `<div class="dp-loading"><div class="dp-spinner"></div><span>Loading details…</span></div>`;
   document.getElementById('detail-panel').classList.add('open');
   _renderEmpDetail(emp, ex);
-
-  // Detail data comes from the already-loaded employees array (cached via dataLayer).
-  // No separate unauthenticated fetch — all data was loaded securely via AdminPro.getEmployees().
-  if (_empDetailCache[empId]) {
-    _renderEmpDetail(Object.assign({}, emp, _empDetailCache[empId], { expiry: emp.expiry }), ex);
-  }
-  // _empDetailCache is populated on save (_dpSave) with edited values only.
 }
 
 function _renderEmpDetail(emp, ex) {
@@ -1007,19 +1044,10 @@ async function _dpSave() {
   if (vals.insExpiry !== undefined) emp.expiry.insurance = computeExpiry(vals.insExpiry);
 
   renderEmpTable(employees);
-  // Invalidate the dataLayer cache so next load re-fetches fresh data from the sheet
-  if (window.AdminPro && window.AdminPro.cache) window.AdminPro.cache.clear('employee');
+  // Bust the centralized cache so next load reflects the edit
   _dpResetButtons(); _renderEmpDetail(emp, emp.expiry || {});
 
-  // Post update with session credentials via dataLayer API_BASE
-  const creds   = window.Auth && window.Auth.getCredentials ? window.Auth.getCredentials() : null;
-  const API_BASE = window.AdminPro?._apiBase || 'https://script.google.com/macros/s/AKfycbx9O_58jlTsohkp8bNYA1rO2EQm9M9FeXoe1FT3E0n8yJ91jseidhKiM0Ss7meNkl7Elg/exec';
-  const payload = { action:'updateEmployee', empId:String(emp.id), name:emp.name, eid:emp.eid, mobile:emp.mobile, mobilePak:emp.mobilePak||'', reference:emp.ref||'', eidExpiry:vals.eidExp||'', licExpiry:vals.licExpiry||'', labourExpiry:vals.labourExpiry||'', insExpiry:vals.insExpiry||'',
-    ...(creds ? { sessionId: creds.sessionId, token: creds.token } : {}) };
-  try {
-    await fetch(API_BASE, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(payload) });
-    toast('Employee saved to sheet.');
-  } catch(err) { toast('Sheet save failed: ' + err.message, 'error'); }
+  toast('Employee saved.');
 
   saveBtn.disabled=false; saveBtn.innerHTML='<i class="ti ti-device-floppy"></i> Save';
 }
@@ -1352,35 +1380,8 @@ function toast(msg, type='success') {
   toastTimer=setTimeout(()=>{ el.classList.remove('show'); }, 3500);
 }
 
-/* ═══════════ THEME — driven by parent via postMessage ═══════════ */
-const VALID_THEMES = ['dark','light','purple','ocean','slate'];
-
-function applyTheme(mode) {
-  if (!VALID_THEMES.includes(mode)) mode = 'dark';
-  document.documentElement.setAttribute('data-theme', mode);
-}
-
-/* Listen for theme broadcast from parent iframe controller */
-window.addEventListener('message', (e) => {
-  if (e.data && e.data.type === 'setTheme' && e.data.theme) {
-    applyTheme(e.data.theme);
-  }
-});
-
-/* On load: ask parent for current theme, fallback to localStorage / dark */
-function syncThemeFromParent() {
-  try {
-    // Try to read parent's html[data-theme] directly (same-origin)
-    const parentTheme = window.parent.document.documentElement.getAttribute('data-theme');
-    if (parentTheme) { applyTheme(parentTheme); return; }
-  } catch(e) { /* cross-origin — rely on postMessage */ }
-  // Fallback: use stored or default
-  applyTheme(localStorage.getItem('theme') || 'dark');
-}
-
 /* ═══════════ INIT ═══════════ */
 document.addEventListener('DOMContentLoaded', () => {
-  syncThemeFromParent();
   loadEmployees();
 });
 </script>
