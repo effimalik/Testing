@@ -667,24 +667,49 @@ function parseRows(raw) {
 
 
 
-/* ═══════════ CACHE ═══════════ */
+/* ═══════════ CACHE — IndexedDB (matches dataLayer.js ap2_fleet_cache) ═══════════ */
 const _AP2_CACHE_KEY = 'ap2_employee';
 const API_BASE = ''; // stub — no network calls used
 
-function _readCache() {
+const _IDB_NAME  = 'ap2_fleet_cache';
+const _IDB_VER   = 1;
+const _IDB_STORE = 'datasets';
+
+function _openIDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(_IDB_NAME, _IDB_VER);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(_IDB_STORE)) {
+        db.createObjectStore(_IDB_STORE, { keyPath: 'key' });
+      }
+    };
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+async function _readCache() {
   try {
-    const raw = localStorage.getItem(_AP2_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    const rows = parseRows(parsed);
-    return rows.length ? rows : null;
-  } catch { return null; }
+    const db  = await _openIDB();
+    const rec = await new Promise((res, rej) => {
+      const req = db.transaction(_IDB_STORE, 'readonly')
+                    .objectStore(_IDB_STORE).get(_AP2_CACHE_KEY);
+      req.onsuccess = () => res(req.result || null);
+      req.onerror   = () => rej(req.error);
+    });
+    if (!rec || !Array.isArray(rec.data) || !rec.data.length) return null;
+    return rec.data; // already Array<Array> — no JSON.parse needed
+  } catch(e) {
+    console.warn('[allEmp] IDB read failed:', e.message);
+    return null;
+  }
 }
 
 /* ═══════════ LOAD ═══════════ */
-function loadEmployees() {
+async function loadEmployees() {
   const tbody = document.getElementById('emp-tbody');
-  const rows = _readCache();
+  const rows  = await _readCache();
   if (rows && rows.length) {
     employees = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
     renderEmpTable(employees);
@@ -696,31 +721,22 @@ function loadEmployees() {
   }
 }
 
-/* ═══════════ BACKGROUND CACHE WATCHER ═══════════ */
+/* ═══════════ BACKGROUND CACHE WATCHER — polls IDB every 30s ═══════════ */
 (function() {
-  function _apply(raw) {
+  async function _applyFromIDB() {
     try {
-      const parsed = JSON.parse(raw);
-      const arr = parseRows(parsed);
-      if (!arr.length) return;
-      const fresh = arr.map((r, i) => normaliseRow(r, i)).filter(Boolean);
+      const rows = await _readCache();
+      if (!rows || !rows.length) return;
+      const fresh = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
       if (!fresh.length) return;
       employees = fresh;
       renderEmpTable(employees);
     } catch {}
   }
-  window.addEventListener('storage', function(e) {
-    if (e.key === _AP2_CACHE_KEY && e.newValue) _apply(e.newValue);
-  });
-  let _lastHash = null;
-  setInterval(function() {
-    try {
-      const raw = localStorage.getItem(_AP2_CACHE_KEY);
-      if (!raw || raw === _lastHash) return;
-      _lastHash = raw;
-      _apply(raw);
-    } catch {}
-  }, 30000);
+  // Poll IDB every 30 s for background refresh
+  setInterval(_applyFromIDB, 30000);
+  // Also re-load when dataLayer signals a cache update
+  window.addEventListener('ap-cache-updated', _applyFromIDB);
 })();
 
 /* ═══════════ FILTER / TABLE ═══════════ */
@@ -1391,7 +1407,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* Listen for messages from parent index.html */
 window.addEventListener('message', (e) => {
   if (!e.data) return;
-  // Cache updated — reload table from localStorage
+  // Cache updated — reload table from IndexedDB
   if (e.data.type === 'ap-cache-updated') {
     loadEmployees();
   }
