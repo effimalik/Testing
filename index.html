@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
 <script src="https://effimalik.github.io/Testing/shared/auth.js?v=5"></script>
-<script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/dataLayer.js?v=3"></script>
 
 	
 <style>
@@ -652,7 +652,7 @@ html,body{
   font-size:11px;background:var(--bg2);border:1px solid var(--border);
 }
 .cm-row.miss{border-color:rgba(248,81,73,.3);background:var(--red-dim);}
-.cm-row.error{border-color:rgba(248,81,73,.5);background:var(--red-dim);}
+.cm-row.stale{border-color:rgba(227,179,65,.3);background:var(--amber-dim);}
 .cm-row.ok{border-color:rgba(57,211,83,.25);background:var(--teal-dim);}
 .cm-row-name{flex:1;color:var(--text);font-weight:600;}
 .cm-row-info{color:var(--text3);font-size:10px;}
@@ -695,8 +695,62 @@ html,body{
 }
 .cache-miss-badge.show{display:flex;}
 
-/* ib btn badge (unused, kept for compat) */
-.ib-btn-el-badge{ display:none!important; }
+.ib-btn-el-badge{display:none!important;}
+
+/* ══════════════════════════════════════════════════
+   [11] VIRTUAL SCROLL TABLE ENGINE
+══════════════════════════════════════════════════ */
+.vs-panel{
+  position:fixed;
+  bottom:0;left:var(--icon-bar-w);right:0;
+  height:0;
+  background:var(--bg2);
+  border-top:2px solid var(--accent);
+  z-index:200;
+  display:flex;flex-direction:column;
+  transition:height .3s cubic-bezier(.4,0,.2,1);
+  overflow:hidden;
+}
+.vs-panel.open{height:340px;}
+.vs-toolbar{display:flex;align-items:center;gap:8px;padding:7px 14px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg3);}
+.vs-title{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--text);}
+.vs-title i{font-size:14px;color:var(--accent);}
+.vs-count{font-size:10px;color:var(--text3);background:var(--surface);border:1px solid var(--border);padding:2px 7px;border-radius:10px;font-family:var(--mono);}
+.vs-search{flex:1;max-width:260px;height:26px;padding:0 9px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font);font-size:11.5px;outline:none;transition:border .15s;}
+.vs-search:focus{border-color:var(--accent);}
+.vs-search::placeholder{color:var(--text3);}
+.vs-sort-info{font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px;font-family:var(--mono);}
+.vs-gap{flex:1;}
+.vs-page-info{font-size:10px;color:var(--text3);font-family:var(--mono);display:flex;align-items:center;gap:5px;}
+.vs-page-btn{width:22px;height:22px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text2);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.vs-page-btn:hover{color:var(--accent);border-color:rgba(88,166,255,.4);}
+.vs-page-btn:disabled{opacity:.35;cursor:not-allowed;}
+.vs-close-btn{width:24px;height:24px;border-radius:5px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.vs-close-btn:hover{color:var(--red);border-color:rgba(248,81,73,.4);background:var(--red-dim);}
+.vs-table-wrap{flex:1;overflow:hidden;position:relative;}
+.vs-thead{display:flex;background:var(--bg3);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:2;flex-shrink:0;}
+.vs-th{flex:1;min-width:80px;max-width:200px;padding:5px 10px;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);cursor:pointer;user-select:none;white-space:nowrap;overflow:hidden;display:flex;align-items:center;gap:4px;transition:color .12s;border-right:1px solid var(--border);}
+.vs-th:last-child{border-right:none;}
+.vs-th:hover{color:var(--text);}
+.vs-th.sorted{color:var(--accent);}
+.vs-th i{font-size:10px;flex-shrink:0;}
+.vs-viewport{overflow-y:auto;height:calc(100% - 28px);position:relative;scrollbar-width:thin;scrollbar-color:var(--border2) transparent;}
+.vs-viewport::-webkit-scrollbar{width:5px;}
+.vs-viewport::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+.vs-row{display:flex;border-bottom:1px solid var(--border);transition:background .1s;cursor:default;}
+.vs-row:hover{background:var(--surface);}
+.vs-row.even{background:rgba(255,255,255,.014);}
+.vs-cell{flex:1;min-width:80px;max-width:200px;padding:5px 10px;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-right:1px solid var(--border);display:flex;align-items:center;}
+.vs-cell:last-child{border-right:none;}
+.vs-cell a{color:var(--accent);text-decoration:none;font-size:10px;padding:1px 5px;border-radius:3px;background:var(--accent-dim);border:1px solid rgba(88,166,255,.2);display:inline-flex;align-items:center;gap:3px;}
+.vs-cell a:hover{background:var(--accent);color:#fff;}
+.vs-cell a i{font-size:10px;}
+.vs-empty{display:flex;align-items:center;justify-content:center;height:120px;color:var(--text3);font-size:12px;flex-direction:column;gap:8px;}
+.vs-empty i{font-size:24px;opacity:.4;}
+.vs-loading{display:flex;align-items:center;justify-content:center;height:120px;gap:8px;color:var(--text3);font-size:12px;}
+.vs-loading i{animation:spin 1s linear infinite;font-size:16px;color:var(--accent);}
+.vs-slice-bar{display:flex;align-items:center;justify-content:space-between;padding:4px 14px;background:var(--bg3);border-top:1px solid var(--border);font-size:9.5px;color:var(--text3);font-family:var(--mono);flex-shrink:0;}
+.vs-slice-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--teal);box-shadow:0 0 4px rgba(57,211,83,.6);margin-right:4px;}
 </style>
 </head>
 <body>
@@ -862,13 +916,45 @@ html,body{
   </div>
 </div>
 
+<!-- ══ VIRTUAL SCROLL PANEL [9][10][11][12] ══ -->
+<div class="vs-panel" id="vs-panel">
+  <div class="vs-toolbar">
+    <div class="vs-title">
+      <i class="ti ti-table" id="vs-icon"></i>
+      <span id="vs-title-text">Dataset</span>
+    </div>
+    <span class="vs-count" id="vs-count">0 rows</span>
+    <input class="vs-search" id="vs-search" type="text" placeholder="Search…" oninput="vsSearch(this.value)"/>
+    <span class="vs-sort-info" id="vs-sort-info" style="display:none;">
+      <i class="ti ti-sort-ascending"></i><span id="vs-sort-label"></span>
+    </span>
+    <div class="vs-gap"></div>
+    <!-- [10] Slice pagination -->
+    <div class="vs-page-info">
+      <button class="vs-page-btn" id="vs-prev" onclick="vsChangePage(-1)" title="Previous 50"><i class="ti ti-chevron-left"></i></button>
+      <span id="vs-page-label">1 / 1</span>
+      <button class="vs-page-btn" id="vs-next" onclick="vsChangePage(1)"  title="Next 50"><i class="ti ti-chevron-right"></i></button>
+    </div>
+    <button class="vs-close-btn" onclick="closeVsPanel()" title="Close"><i class="ti ti-x"></i></button>
+  </div>
+
+  <div class="vs-table-wrap" id="vs-table-wrap">
+    <div class="vs-thead" id="vs-thead"></div>
+    <div class="vs-viewport" id="vs-viewport" onscroll="vsOnScroll()">
+      <div id="vs-loading" class="vs-loading"><i class="ti ti-loader-2"></i> Loading…</div>
+    </div>
+  </div>
+
+  <div class="vs-slice-bar">
+    <span><span class="vs-slice-dot"></span><span id="vs-slice-info">IDB · IndexedDB backend</span></span>
+    <span id="vs-perf-info" style="font-size:9px;color:var(--text3);"></span>
+  </div>
+</div>
+
 <!-- ══ CACHE STATUS PANEL ══ -->
 <div class="cache-panel" id="cache-panel">
   <div class="cp-header">
-    <div class="cp-title">
-      <i class="ti ti-database"></i>
-      Cache Status
-    </div>
+    <div class="cp-title"><i class="ti ti-database"></i>Cache Status <span style="font-size:9px;color:var(--teal);margin-left:4px;">[IDB v3]</span></div>
     <div class="cp-actions">
       <button class="cp-action-btn" onclick="toggleMissChecker()" title="Cache miss checker" style="color:var(--amber);">
         <i class="ti ti-alert-triangle"></i> Checker
@@ -903,7 +989,7 @@ html,body{
   </table>
   </div>
   <div class="cp-footer">
-    <span class="cp-footer-note"><i class="ti ti-info-circle"></i> Cache persists across pages · Session-validated on every read</span>
+    <span class="cp-footer-note"><i class="ti ti-info-circle"></i> IDB persistent · Session-validated</span>
     <span id="cp-last-check">—</span>
   </div>
 </div>
@@ -925,7 +1011,7 @@ html,body{
 
 
 <script>
-
+'use strict';
 
 /* ════════════════════════════════════════════
    EVENT LOG — silent sink (monitor removed)
@@ -1053,7 +1139,6 @@ async function cmRefresh(key, btn) {
     return s;
   }
   _prevSnap = _snap();
-
   setInterval(async () => {
     const cur = _snap();
     const allKeys = new Set([...Object.keys(_prevSnap), ...Object.keys(cur)]);
@@ -1061,33 +1146,16 @@ async function cmRefresh(key, btn) {
     for (const k of allKeys) {
       const dsKey = k.replace('ap2_', '');
       if (_prevSnap[k] !== undefined && cur[k] === undefined) {
-        _logEvent('delete', 'Cache deleted:', dsKey);
         changed = true;
-        // Auto-refresh within 1s of deletion
         setTimeout(async () => {
-          if (window.AdminPro && AdminPro.forceRefresh) {
-            try {
-              await AdminPro.forceRefresh(dsKey);
-              _logEvent('refresh', 'Auto-refreshed after delete:', dsKey);
-            } catch(_) {}
-          }
-          updateCacheHealthDot();
-          renderCacheTable();
+          if (window.AdminPro?.forceRefresh) { try { await AdminPro.forceRefresh(dsKey); } catch(_) {} }
+          updateCacheHealthDot(); renderCacheTable();
           if (_cmPanelOpen) cmScanAll();
           _notifyFrame();
         }, 200);
-      } else if (_prevSnap[k] === undefined && cur[k] !== undefined) {
-        _logEvent('cache', 'Cache set:', dsKey);
-        changed = true;
-      } else if (_prevSnap[k] !== cur[k]) {
-        _logEvent('storage', 'Cache updated:', dsKey);
-        changed = true;
-      }
+      } else if (_prevSnap[k] !== cur[k]) { changed = true; }
     }
-    if (changed) {
-      updateCacheHealthDot();
-      if (_cmPanelOpen) cmScanAll();
-    }
+    if (changed) { updateCacheHealthDot(); if (_cmPanelOpen) cmScanAll(); }
     _prevSnap = cur;
   }, 1000);
 })();
@@ -1103,7 +1171,8 @@ const SECTIONS = {
     icon:'ti-users', label:'Employees',
     pageLabel:'Employees', pageSub:'Staff directory',
     pillBg:'var(--accent-dim)', pillColor:'var(--accent)', pillIcon:'ti-users',
-    permKey: 'ap2_employee',   // ← Permissions sheet column
+    permKey:'ap2_employee',
+    dsKey:'employee',   // [9] dataset key for virtual scroll
     groups:[
       { label:'Directory', items:[
         { label:'Employee List', file:'Reg/allEmp.html', icon:'ti-list',      sub:'All staff records'     },
@@ -1118,12 +1187,13 @@ const SECTIONS = {
     icon:'ti-motorbike', label:'Bike Fleet',
     pageLabel:'Bike Fleet', pageSub:'Fleet registry',
     pillBg:'var(--teal-dim)', pillColor:'var(--teal)', pillIcon:'ti-motorbike',
-    permKey: 'ap2_bike',
+    permKey:'ap2_bike',
+    dsKey:'bike',
     groups:[
       { label:'Fleet', items:[
         { label:'Bike List',     file:'Reg/allBike.html', icon:'ti-list', sub:'All registered bikes' },
         { label:'Register Bike', file:'Reg/addBike.html', icon:'ti-plus', sub:'Add new vehicle'      },
-		{ label:'Check In/Out', file:'Reg/inOut.html', icon:'ti-arrows-horizontal', sub:'Check In/Out'      },
+        { label:'Check In/Out',  file:'Reg/inOut.html',   icon:'ti-arrows-horizontal', sub:'Check In/Out' },
       ]},
       { label:'Documents', items:[
         { label:'Expiring Docs', file:'Reg/bikExp.html', icon:'ti-file-x', sub:'Mulkiya · Insurance', badge:true },
@@ -1134,7 +1204,8 @@ const SECTIONS = {
     icon:'ti-cash', label:'Advance Salary',
     pageLabel:'Advance Salary', pageSub:'Salary advances',
     pillBg:'var(--amber-dim)', pillColor:'var(--amber)', pillIcon:'ti-cash',
-    permKey: 'ap2_master',   // master sheet controls salary advance visibility
+    permKey:'ap2_master',
+    dsKey:'master',
     groups:[
       { label:'Salary', items:[
         { label:'All Requests',    file:'Reg/penReq.html', icon:'ti-clipboard-list', sub:'Advance history'   },
@@ -1147,7 +1218,7 @@ const SECTIONS = {
     icon:'ti-file-alert', label:'Expiring Docs',
     pageLabel:'Expiring Docs', pageSub:'Document tracker',
     pillBg:'var(--red-dim)', pillColor:'var(--red)', pillIcon:'ti-file-alert',
-    permKey: null,   // section always shown if at least one child item is permitted
+    permKey:null,
     groups:[
       { label:'Expiry Tracker', items:[
         { label:'Employee Docs', file:'pages/empExp.html', icon:'ti-users',     sub:'Visa · EID · Labour', badge:true, permKey:'ap2_employee' },
@@ -1606,6 +1677,187 @@ window.addEventListener('DOMContentLoaded', async () => {
   }, 60000);
 });
 
+/* ════════════════════════════════════════
+   [9][10][11][12] VIRTUAL SCROLL ENGINE
+════════════════════════════════════════ */
+
+const VS_VISIBLE    = 20;   // [11] rows rendered in DOM at once
+const VS_ROW_H      = 32;   // px per row
+const VS_SLICE_SIZE = 50;   // [10] rows per page/slice
+
+let _vsDs        = null;
+let _vsAllRows   = [];      // [9] hoisted full array
+let _vsFiltered  = [];
+let _vsPage      = 0;       // [10] current slice
+let _vsPageData  = [];
+let _vsSortCol   = -1;
+let _vsSortAsc   = true;
+let _vsHeaders   = [];
+let _vsScrollTop = 0;
+
+async function openVsPanel(dsKey) {
+  const ds = window.AdminPro?.getActiveDatasets?.()[dsKey];
+  if (!ds) { console.warn('[VS] dataset not permitted:', dsKey); return; }
+
+  _vsDs = dsKey;
+  _vsPage = 0;
+  _vsSortCol = -1;
+  _vsSortAsc = true;
+
+  const panel   = document.getElementById('vs-panel');
+  const titleEl = document.getElementById('vs-title-text');
+  const iconEl  = document.getElementById('vs-icon');
+  if (titleEl) titleEl.textContent = ds.label || dsKey;
+  if (iconEl)  iconEl.className = 'ti ' + (DS_META_ICONS[dsKey]?.icon || 'ti-table');
+
+  panel.classList.add('open');
+  document.getElementById('vs-loading').style.display = 'flex';
+  document.getElementById('vs-thead').innerHTML = '';
+
+  const t0 = performance.now();
+
+  let data = window.AdminPro?.hoisted?.(dsKey);
+  if (!data) {
+    try { data = await AdminPro.get(dsKey); } catch(e) { console.warn('[VS] get error:', e); data = []; }
+  }
+
+  _vsAllRows  = Array.isArray(data) ? data : [];
+  _vsFiltered = _vsAllRows;
+
+  const sample = _vsAllRows[0];
+  _vsHeaders = sample ? sample.map((_, i) => `Col ${i+1}`) : [];
+
+  _vsPage    = 0;
+  _vsPageData = AdminPro.slice(_vsFiltered, _vsPage, VS_SLICE_SIZE); // [10]
+
+  const elapsed = Math.round(performance.now() - t0);
+
+  _vsRenderHeader();
+  _vsRenderRows();
+  _vsUpdateInfo(elapsed);
+  document.getElementById('vs-loading').style.display = 'none';
+  document.getElementById('vs-search').value = '';
+}
+
+function closeVsPanel() {
+  document.getElementById('vs-panel').classList.remove('open');
+  _vsDs = null; _vsAllRows = []; _vsFiltered = []; _vsPageData = [];
+}
+
+function _vsRenderRows() {
+  const viewport = document.getElementById('vs-viewport');
+  if (!viewport) return;
+  const totalRows = _vsPageData.length;
+  const scrollTop = viewport.scrollTop;
+  const startIdx  = Math.floor(scrollTop / VS_ROW_H);
+  const visStart  = Math.max(0, startIdx - 2);
+  const visEnd    = Math.min(totalRows, visStart + VS_VISIBLE + 4);
+  const paddingTop    = visStart * VS_ROW_H;
+  const paddingBottom = Math.max(0, (totalRows - visEnd) * VS_ROW_H);
+
+  let html = `<div style="height:${paddingTop}px;flex-shrink:0;"></div>`;
+  for (let i = visStart; i < visEnd; i++) {
+    const row = _vsPageData[i];
+    if (!row) continue;
+    const evenCls = i % 2 === 0 ? ' even' : '';
+    html += `<div class="vs-row${evenCls}">`;
+    row.forEach((cell) => {
+      // [12] Detect 33-char file IDs → rebuild Drive link
+      const isId = typeof cell === 'string' && /^[A-Za-z0-9_-]{28,}$/.test(cell) && !cell.includes(' ');
+      if (isId) {
+        const url = AdminPro.rebuildLink(cell);
+        html += `<div class="vs-cell"><a href="${url}" target="_blank" rel="noopener"><i class="ti ti-external-link"></i>Open</a></div>`;
+      } else {
+        const disp = cell == null ? '' : String(cell);
+        html += `<div class="vs-cell" title="${disp.replace(/"/g,'&quot;')}">${disp}</div>`;
+      }
+    });
+    html += `</div>`;
+  }
+  html += `<div style="height:${paddingBottom}px;flex-shrink:0;"></div>`;
+  viewport.innerHTML = html;
+  if (_vsScrollTop > 0 && _vsScrollTop !== scrollTop) { viewport.scrollTop = _vsScrollTop; _vsScrollTop = 0; }
+}
+
+function vsOnScroll() { _vsRenderRows(); }
+
+function _vsRenderHeader() {
+  const thead = document.getElementById('vs-thead');
+  if (!thead || !_vsHeaders.length) return;
+  thead.innerHTML = _vsHeaders.map((h, i) => {
+    const sorted = _vsSortCol === i;
+    const sortIcon = sorted ? (_vsSortAsc ? 'ti-sort-ascending' : 'ti-sort-descending') : 'ti-selector';
+    return `<div class="vs-th ${sorted?'sorted':''}" onclick="vsSort(${i})"><span>${h}</span><i class="ti ${sortIcon}"></i></div>`;
+  }).join('');
+}
+
+function vsSort(colIdx) {
+  if (_vsSortCol === colIdx) { _vsSortAsc = !_vsSortAsc; }
+  else { _vsSortCol = colIdx; _vsSortAsc = true; }
+  const asc = _vsSortAsc;
+  _vsFiltered = [..._vsFiltered].sort((a, b) => {
+    const va = a[colIdx] ?? ''; const vb = b[colIdx] ?? '';
+    if (va === vb) return 0;
+    return asc ? (va < vb ? -1 : 1) : (va > vb ? -1 : 1);
+  });
+  _vsPage = 0;
+  _vsPageData = AdminPro.slice(_vsFiltered, _vsPage, VS_SLICE_SIZE);
+  const vp = document.getElementById('vs-viewport');
+  if (vp) vp.scrollTop = 0;
+  _vsRenderHeader(); _vsRenderRows(); _vsUpdateInfo();
+  const sortInfo  = document.getElementById('vs-sort-info');
+  const sortLabel = document.getElementById('vs-sort-label');
+  if (sortInfo)  sortInfo.style.display = 'flex';
+  if (sortLabel) sortLabel.textContent = `${_vsHeaders[colIdx]} ${asc?'↑':'↓'}`;
+}
+
+function vsSearch(query) {
+  const q = query.trim().toLowerCase();
+  _vsFiltered = !q ? _vsAllRows : _vsAllRows.filter(row => row.some(cell => cell != null && String(cell).toLowerCase().includes(q)));
+  _vsPage = 0;
+  _vsPageData = AdminPro.slice(_vsFiltered, _vsPage, VS_SLICE_SIZE);
+  const vp = document.getElementById('vs-viewport');
+  if (vp) vp.scrollTop = 0;
+  _vsRenderRows(); _vsUpdateInfo();
+}
+
+function vsChangePage(delta) {
+  const totalPages = Math.ceil(_vsFiltered.length / VS_SLICE_SIZE);
+  const newPage = _vsPage + delta;
+  if (newPage < 0 || newPage >= totalPages) return;
+  _vsPage = newPage;
+  _vsPageData = AdminPro.slice(_vsFiltered, _vsPage, VS_SLICE_SIZE);
+  const vp = document.getElementById('vs-viewport');
+  if (vp) vp.scrollTop = 0;
+  _vsScrollTop = 0;
+  _vsRenderRows(); _vsUpdateInfo();
+}
+
+function _vsUpdateInfo(elapsedMs) {
+  const total      = _vsAllRows.length;
+  const filtered   = _vsFiltered.length;
+  const totalPages = Math.max(1, Math.ceil(filtered / VS_SLICE_SIZE));
+  const sliceStart = _vsPage * VS_SLICE_SIZE + 1;
+  const sliceEnd   = Math.min((_vsPage + 1) * VS_SLICE_SIZE, filtered);
+
+  const countEl = document.getElementById('vs-count');
+  if (countEl) countEl.textContent = filtered < total ? `${filtered} of ${total} rows` : `${total} rows`;
+
+  const pageEl = document.getElementById('vs-page-label');
+  if (pageEl) pageEl.textContent = `${_vsPage + 1} / ${totalPages}`;
+
+  const prevBtn = document.getElementById('vs-prev');
+  const nextBtn = document.getElementById('vs-next');
+  if (prevBtn) prevBtn.disabled = _vsPage === 0;
+  if (nextBtn) nextBtn.disabled = _vsPage >= totalPages - 1;
+
+  const sliceInfo = document.getElementById('vs-slice-info');
+  if (sliceInfo) sliceInfo.textContent = `[10] Slice ${sliceStart}–${sliceEnd} · [11] ${VS_VISIBLE} visible · [5] IDB · [9] RAM hoisted`;
+
+  const perfEl = document.getElementById('vs-perf-info');
+  if (perfEl && elapsedMs != null) perfEl.textContent = `Loaded in ${elapsedMs}ms`;
+}
+
 /* ══ CACHE PANEL ══ */
 let cachePanelOpen = false;
 let cachePanelTimer = null;
@@ -1933,51 +2185,43 @@ function updateCacheHealthDot() {
   } catch(e) {}
 }
 
-/* ══ CACHE STALENESS AUTO-REQUEST LISTENER ══
-   Listens for messages from child pages requesting a data refresh,
-   and also proactively re-fetches stale datasets when AdminPro.forceRefresh is available.
-   Cache is stored in sessionStorage under ap2_* keys — scoped to this tab only.
-   Data is cleared automatically when the tab or browser closes.
-   Each user gets a clean cache on every login. */
+/* ════════════════════════════════════════
+   CACHE WATCHDOG (message + proactive)
+════════════════════════════════════════ */
 (function cacheWatchdog() {
-  // Listen for child iframe requests: { type:'ap-cache-request', key:'employee' }
   window.addEventListener('message', async function(evt) {
-    if (!evt.data || evt.data.type !== 'ap-cache-request') return;
-    const key = evt.data.key;
-    if (!key || !DS_META[key]) return;
-    const age = getCacheAge(key);
-    const meta = DS_META[key];
-    const isStale = age === Infinity || age > meta.ttlMs;
-    const frame = document.getElementById('main-frame');
-    if (isStale && window.AdminPro && AdminPro.forceRefresh) {
-      try {
-        const data = await AdminPro.forceRefresh(key);
-        updateCacheHealthDot();
-        // Notify child that data is ready — include data so child can use it directly
-        if (frame && frame.contentWindow) {
-          frame.contentWindow.postMessage({ type:'ap-cache-ready', key, data }, '*');
-        }
-      } catch(e) { console.warn('[cacheWatchdog] refresh failed for', key, e); }
-    } else {
-      // Data is fresh — immediately tell child (pass data too)
-      let data = null;
-      try {
-        if (window.AdminPro && AdminPro.cache) data = AdminPro.cache.get(key)?.data ?? null;
-      } catch(_) {}
-      if (frame && frame.contentWindow) {
-        frame.contentWindow.postMessage({ type:'ap-cache-ready', key, data }, '*');
+    if (!evt.data) return;
+    if (evt.data.type === 'ap-cache-request') {
+      const key = evt.data.key;
+      if (!key || !DS_META[key]) return;
+      const age = getCacheAge(key);
+      const meta = DS_META[key];
+      const isStale = age === Infinity || age > meta.ttlMs;
+      const frame = document.getElementById('main-frame');
+      if (isStale && window.AdminPro?.forceRefresh) {
+        try {
+          const data = await AdminPro.forceRefresh(key);
+          updateCacheHealthDot();
+          frame?.contentWindow?.postMessage({ type:'ap-cache-ready', key, data }, '*');
+        } catch(e) { console.warn('[cacheWatchdog] refresh failed for', key, e); }
+      } else {
+        let data = null;
+        try { if (window.AdminPro?.cache) data = (await AdminPro.cache.get(key))?.data ?? null; } catch(_) {}
+        frame?.contentWindow?.postMessage({ type:'ap-cache-ready', key, data }, '*');
       }
+    }
+    // [11] Virtual scroll open request from child frame
+    if (evt.data.type === 'ap-open-vs' && evt.data.dsKey) {
+      openVsPanel(evt.data.dsKey);
     }
   });
 
-  // Proactive watchdog: every 60 s check if any key is stale and auto-warm
+  // Proactive watchdog: every 60s check if any key is stale and auto-warm
   setInterval(async function() {
-    if (!window.AdminPro || !AdminPro.forceRefresh) return;
+    if (!window.AdminPro?.forceRefresh) return;
     for (const [key, meta] of Object.entries(DS_META)) {
       const age = getCacheAge(key);
-      if (age !== Infinity && age > meta.ttlMs) {
-        try { await AdminPro.forceRefresh(key); } catch(_) {}
-      }
+      if (age !== Infinity && age > meta.ttlMs) { try { await AdminPro.forceRefresh(key); } catch(_) {} }
     }
     updateCacheHealthDot();
   }, 60000);
