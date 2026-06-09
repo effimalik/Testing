@@ -667,7 +667,7 @@ function parseRows(raw) {
 
 
 
-/* ═══════════ CACHE — IndexedDB (matches dataLayer.js ap2_fleet_cache) ═══════════ */
+/* ═══════════ CACHE — IndexedDB only ═══════════ */
 const _AP2_CACHE_KEY = 'ap2_employee';
 const API_BASE = ''; // stub — no network calls used
 
@@ -675,35 +675,31 @@ const _IDB_NAME  = 'ap2_fleet_cache';
 const _IDB_VER   = 1;
 const _IDB_STORE = 'datasets';
 
-function _openIDB() {
+let _idbConn = null;
+function _getDB() {
+  if (_idbConn) return Promise.resolve(_idbConn);
   return new Promise((res, rej) => {
     const req = indexedDB.open(_IDB_NAME, _IDB_VER);
     req.onupgradeneeded = e => {
       const db = e.target.result;
-      if (!db.objectStoreNames.contains(_IDB_STORE)) {
+      if (!db.objectStoreNames.contains(_IDB_STORE))
         db.createObjectStore(_IDB_STORE, { keyPath: 'key' });
-      }
     };
-    req.onsuccess = e => res(e.target.result);
+    req.onsuccess = e => { _idbConn = e.target.result; res(_idbConn); };
     req.onerror   = e => rej(e.target.error);
   });
 }
 
 async function _readCache() {
-  try {
-    const db  = await _openIDB();
-    const rec = await new Promise((res, rej) => {
-      const req = db.transaction(_IDB_STORE, 'readonly')
-                    .objectStore(_IDB_STORE).get(_AP2_CACHE_KEY);
-      req.onsuccess = () => res(req.result || null);
-      req.onerror   = () => rej(req.error);
-    });
-    if (!rec || !Array.isArray(rec.data) || !rec.data.length) return null;
-    return rec.data; // already Array<Array> — no JSON.parse needed
-  } catch(e) {
-    console.warn('[allEmp] IDB read failed:', e.message);
-    return null;
-  }
+  const db  = await _getDB();
+  const rec = await new Promise((res, rej) => {
+    const req = db.transaction(_IDB_STORE, 'readonly')
+                  .objectStore(_IDB_STORE).get(_AP2_CACHE_KEY);
+    req.onsuccess = () => res(req.result || null);
+    req.onerror   = () => rej(req.error);
+  });
+  if (!rec || !Array.isArray(rec.data) || !rec.data.length) return null;
+  return rec.data;
 }
 
 /* ═══════════ LOAD ═══════════ */
@@ -733,9 +729,7 @@ async function loadEmployees() {
       renderEmpTable(employees);
     } catch {}
   }
-  // Poll IDB every 30 s for background refresh
   setInterval(_applyFromIDB, 30000);
-  // Also re-load when dataLayer signals a cache update
   window.addEventListener('ap-cache-updated', _applyFromIDB);
 })();
 
