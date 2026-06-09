@@ -11,190 +11,82 @@
 <script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
 
 <!-- ═══════════════════════════════════════════════════════════════
-     AP2-IDB  –  IndexedDB cache engine  (replaces localStorage)
-     ═══════════════════════════════════════════════════════════════
-     Features implemented:
-       Cache       – native arrays stored directly in IndexedDB
-       Stream-Query– filtered reads without loading the whole table
-       Memory-Hoist– active page kept in JS RAM for zero-latency sort
-       Slice       – 50-row blocks for fast rendering
-       VirtualScroll–20 visible rows, text-swapped on scroll
-       Render      – smooth zero-lag display
+     AP2 Static Data Store — in-memory data, no caching/storage
      ═══════════════════════════════════════════════════════════════ -->
 <script>
 (function(){
 'use strict';
 
 /* ── constants ── */
-const DB_NAME  = 'ap2_fleet_cache';
-const DB_VER   = 1;
-const STORE    = 'datasets';           // objectStore name
-const AP2_PFX  = 'ap2_';              // key prefix – matches dataLayer convention
-const SLICE_SZ = 50;                   // rows per slice block
-const VS_ROWS  = 20;                   // visible rows in virtual-scroll container
-const ROW_H    = 36;                   // px – estimated row height for spacer math
+const SLICE_SZ = 50;
+const VS_ROWS  = 20;
+const ROW_H    = 36;
 
-/* ── open db (singleton promise) ── */
-let _dbPromise = null;
-function _openDB() {
-  if (_dbPromise) return _dbPromise;
-  _dbPromise = new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VER);
-    req.onupgradeneeded = e => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(STORE)) {
-        db.createObjectStore(STORE, { keyPath: 'key' });
-      }
-    };
-    req.onsuccess = e => resolve(e.target.result);
-    req.onerror   = e => reject(e.target.error);
-  });
-  return _dbPromise;
+/* ── Static in-memory data store ── */
+const _store = new Map();
+const _changeListeners = [];
+
+function _notifyChange(key, op) {
+  _changeListeners.forEach(fn => { try { fn(key, op); } catch(_){} });
 }
 
-/* ── low-level read/write ── */
-async function idbGet(key) {
-  const db = await _openDB();
-  return new Promise((res, rej) => {
-    const tx  = db.transaction(STORE, 'readonly');
-    const req = tx.objectStore(STORE).get(AP2_PFX + key);
-    req.onsuccess = () => res(req.result || null);
-    req.onerror   = () => rej(req.error);
-  });
-}
-
-async function idbSet(key, value) {
-  const db = await _openDB();
-  return new Promise((res, rej) => {
-    const tx  = db.transaction(STORE, 'readwrite');
-    const req = tx.objectStore(STORE).put({ key: AP2_PFX + key, ...value });
-    req.onsuccess = () => res(true);
-    req.onerror   = () => rej(req.error);
-  });
-}
-
-async function idbDelete(key) {
-  const db = await _openDB();
-  return new Promise((res, rej) => {
-    const tx  = db.transaction(STORE, 'readwrite');
-    const req = tx.objectStore(STORE).delete(AP2_PFX + key);
-    req.onsuccess = () => res(true);
-    req.onerror   = () => rej(req.error);
-  });
-}
-
-async function idbKeys() {
-  const db = await _openDB();
-  return new Promise((res, rej) => {
-    const tx  = db.transaction(STORE, 'readonly');
-    const req = tx.objectStore(STORE).getAllKeys();
-    req.onsuccess = () => res((req.result || []).filter(k => k.startsWith(AP2_PFX)).map(k => k.slice(AP2_PFX.length)));
-    req.onerror   = () => rej(req.error);
-  });
-}
-
-async function idbClear() {
-  const db = await _openDB();
-  const keys = await idbKeys();
-  const tx = db.transaction(STORE, 'readwrite');
-  const st = tx.objectStore(STORE);
-  keys.forEach(k => st.delete(AP2_PFX + k));
-  return new Promise((res, rej) => {
-    tx.oncomplete = () => res(true);
-    tx.onerror    = () => rej(tx.error);
-  });
-}
-
-/* ══ Public IDB Cache API  (window.AP2Cache) ══ */
+/* ══ Public Cache API (window.AP2Cache) — in-memory only ══ */
 window.AP2Cache = {
-
-  /** Store a dataset: { data:[], ts:Date.now() } */
   async set(key, data) {
-    await idbSet(key, { data, ts: Date.now() });
+    _store.set(key, { data, ts: Date.now() });
     _notifyChange(key, 'set');
   },
-
-  /** Read a record; returns { data, ts } or null */
   async get(key) {
-    return idbGet(key);
+    return _store.get(key) || null;
   },
-
-  /** Timestamp-only (avoids deserialising large arrays) */
   async getTs(key) {
-    const rec = await idbGet(key);
+    const rec = _store.get(key);
     return rec ? rec.ts : null;
   },
-
-  /** Age in ms, or Infinity if absent */
   async getAge(key) {
-    const ts = await this.getTs(key);
-    return ts == null ? Infinity : Date.now() - ts;
+    const rec = _store.get(key);
+    return rec ? Date.now() - rec.ts : Infinity;
   },
-
-  /** Raw data array or null */
   async getData(key) {
-    const rec = await idbGet(key);
+    const rec = _store.get(key);
     return rec ? rec.data : null;
   },
-
   async delete(key) {
-    await idbDelete(key);
+    _store.delete(key);
     _notifyChange(key, 'delete');
   },
-
   async clearAll() {
-    await idbClear();
+    _store.clear();
     _notifyChange('*', 'clear');
   },
-
-  async keys() { return idbKeys(); },
-
-  /* ── Stream-Query: filter rows WITHOUT pulling whole table ──
-     Reads data from IDB, then iterates row-by-row applying predicate.
-     Returns only matching rows → keeps RAM low for large tables.      */
-  async streamQuery(key, predicateFn) {
-    const rec = await idbGet(key);
-    if (!rec || !Array.isArray(rec.data)) return [];
-    const out = [];
-    for (const row of rec.data) {
-      if (predicateFn(row)) out.push(row);
-    }
-    return out;
+  async keys() {
+    return Array.from(_store.keys());
   },
-
-  /* ── Slice: return block of 50 rows ── */
+  async streamQuery(key, predicateFn) {
+    const rec = _store.get(key);
+    if (!rec || !Array.isArray(rec.data)) return [];
+    return rec.data.filter(predicateFn);
+  },
   async slice(key, blockIndex = 0) {
-    const rec = await idbGet(key);
+    const rec = _store.get(key);
     if (!rec || !Array.isArray(rec.data)) return [];
     const start = blockIndex * SLICE_SZ;
     return rec.data.slice(start, start + SLICE_SZ);
   },
-
-  /* ── Row count ── */
   async count(key) {
-    const rec = await idbGet(key);
+    const rec = _store.get(key);
     return rec && Array.isArray(rec.data) ? rec.data.length : 0;
   },
 };
-
-/* ── Change notification bus (replaces localStorage StorageEvent) ── */
-const _changeListeners = [];
-function _notifyChange(key, op) {
-  _changeListeners.forEach(fn => { try { fn(key, op); } catch(_){} });
-}
 window.AP2Cache.onChange = fn => _changeListeners.push(fn);
 
-/* ══ Memory-Hoist layer (window.AP2Hoist) ══
-   Keeps one dataset's array in JS heap for zero-latency column sort.
-   Call AP2Hoist.load(key) → populates _hoisted.
-   Sort / filter ops run directly on the in-RAM array — no IDB round-trip. */
+/* ══ Memory-Hoist layer (window.AP2Hoist) ══ */
 window.AP2Hoist = (() => {
   let _key  = null;
-  let _rows = [];        // in-RAM page array
-
+  let _rows = [];
   return {
     async load(key) {
-      const rec = await idbGet(key);
+      const rec = _store.get(key);
       _key  = key;
       _rows = (rec && Array.isArray(rec.data)) ? rec.data : [];
       return _rows;
@@ -202,8 +94,6 @@ window.AP2Hoist = (() => {
     get key() { return _key; },
     get rows() { return _rows; },
     get count() { return _rows.length; },
-
-    /** Sort in-place (zero IDB round-trip) */
     sort(colIdx, asc = true) {
       _rows.sort((a, b) => {
         const av = a[colIdx] ?? '', bv = b[colIdx] ?? '';
@@ -211,54 +101,24 @@ window.AP2Hoist = (() => {
                    : (av > bv ? -1 : av < bv ? 1 : 0);
       });
     },
-
-    /** Filter returns new array (does NOT mutate _rows) */
-    filter(predicate) {
-      return _rows.filter(predicate);
-    },
-
-    /** Slice 50-row block from hoisted array */
+    filter(predicate) { return _rows.filter(predicate); },
     slice(blockIndex = 0) {
       const start = blockIndex * SLICE_SZ;
       return _rows.slice(start, start + SLICE_SZ);
     },
-
-    /** Total block count */
     get blockCount() { return Math.ceil(_rows.length / SLICE_SZ); },
   };
 })();
 
-/* ══ Virtual-Scroll factory (window.AP2VirtualScroll) ══
-   Attaches to a <div class="ap2-vs-container"> that contains a
-   <table><tbody id="ap2-vs-body">…</tbody></table>.
-   Only VS_ROWS (20) real DOM rows exist; data swaps in as user scrolls.
-
-   Usage:
-     const vs = AP2VirtualScroll.create({
-       container : document.getElementById('myContainer'),
-       rows      : arrayOfRows,           // hoisted JS array
-       renderRow : (row, idx) => '<tr>…</tr>',
-     });
-     vs.refresh(newRows);   // update with new data
-     vs.destroy();           // remove listeners
-*/
+/* ══ Virtual-Scroll factory (window.AP2VirtualScroll) ══ */
 window.AP2VirtualScroll = {
   create({ container, rows, renderRow }) {
     if (!container) return null;
-
-    /* structure:
-       container (overflow-y:auto, height:VS_ROWS*ROW_H px)
-         ├─ spacer-top  (height = scrollTop equivalent)
-         ├─ tbody (VS_ROWS visible rows)
-         └─ spacer-bot  */
     let _rows = rows || [];
     let _startIdx = 0;
-
     const _viewport = container;
     _viewport.style.overflowY = 'auto';
     _viewport.style.position  = 'relative';
-
-    /* find or create the tbody */
     let _tbody = _viewport.querySelector('tbody');
     if (!_tbody) {
       const t = document.createElement('table');
@@ -267,8 +127,6 @@ window.AP2VirtualScroll = {
       t.appendChild(_tbody);
       _viewport.appendChild(t);
     }
-
-    /* top/bottom spacer rows */
     const _trTop = document.createElement('tr');
     const _trBot = document.createElement('tr');
     const _tdTop = document.createElement('td'); _tdTop.colSpan = 99;
@@ -277,135 +135,69 @@ window.AP2VirtualScroll = {
     _trBot.appendChild(_tdBot);
     _tbody.insertBefore(_trTop, _tbody.firstChild);
     _tbody.appendChild(_trBot);
-
     function _setSpacers(start) {
       const bot = Math.max(0, _rows.length - start - VS_ROWS);
       _tdTop.style.height = (start * ROW_H) + 'px';
       _tdBot.style.height = (bot   * ROW_H) + 'px';
       _tdTop.style.padding = _tdBot.style.padding = '0';
     }
-
     function _paint(start) {
       _startIdx = Math.max(0, Math.min(start, Math.max(0, _rows.length - VS_ROWS)));
       const visible = _rows.slice(_startIdx, _startIdx + VS_ROWS);
-      /* swap text of existing rows if possible, else replace HTML */
       const existing = Array.from(_tbody.querySelectorAll('tr.ap2-vs-row'));
-      const html = visible.map((r, i) => {
-        const tr = renderRow(r, _startIdx + i);
-        return tr;
-      }).join('');
-      /* replace rows between spacers */
+      const html = visible.map((r, i) => renderRow(r, _startIdx + i)).join('');
       existing.forEach(r => _tbody.removeChild(r));
       const frag = document.createRange().createContextualFragment(html);
       frag.querySelectorAll('tr').forEach(tr => tr.classList.add('ap2-vs-row'));
       _tbody.insertBefore(frag, _trBot);
       _setSpacers(_startIdx);
     }
-
     function _onScroll() {
       const newStart = Math.floor(_viewport.scrollTop / ROW_H);
       if (Math.abs(newStart - _startIdx) >= 1) _paint(newStart);
     }
-
     _viewport.addEventListener('scroll', _onScroll, { passive: true });
     _paint(0);
-
     return {
-      refresh(newRows) {
-        _rows = newRows || [];
-        _paint(_startIdx);
-      },
-      scrollTo(idx) {
-        _viewport.scrollTop = idx * ROW_H;
-      },
-      destroy() {
-        _viewport.removeEventListener('scroll', _onScroll);
-      },
+      refresh(newRows) { _rows = newRows || []; _paint(_startIdx); },
+      scrollTo(idx) { _viewport.scrollTop = idx * ROW_H; },
+      destroy() { _viewport.removeEventListener('scroll', _onScroll); },
       get startIdx() { return _startIdx; },
       get totalRows() { return _rows.length; },
     };
   },
 };
 
-/* ── Expose constants and internals for child modules ── */
-window.AP2_SLICE_SZ = SLICE_SZ;
-window.AP2_VS_ROWS  = VS_ROWS;
-window._ap2OpenDB   = _openDB;  // exposed for theme helpers outside this IIFE
-
-/* ── In-memory shadow maps — declared here so the shim can reference them
-   before the lower script block populates them.                           */
-window._AP2Shadow = {
-  age  : new Map(),   // key (bare, no prefix) → ts (ms epoch)
-  data : new Map(),   // key (bare, no prefix) → raw data array / value
+/* ── Static dataset: bike records ── */
+const STATIC_DATA = {
+  bike: [
+    ["2026-05-13T20:29:47.819Z", "b id2", "p no2", "Chasis No", "Make", "Model", "Dubai", "2026-05-13T20:00:00.000Z", "2026-05-13T20:00:00.000Z", "2026-05-13T20:00:00.000Z", "Active"],
+    ["2026-05-13T21:04:06.865Z", "b id", "p no", "ch no", "mk", "mod", "Sharjah", "2026-05-13T20:00:00.000Z", "2026-05-13T20:00:00.000Z", "2026-05-13T20:00:00.000Z", "Active"],
+    ["2026-05-13T21:09:54.381Z", "BIKE-2026-0005", 12, 12, 12, 12, "Dubai", "2028-01-01T20:00:00.000Z", "2028-01-01T20:00:00.000Z", "2028-02-01T20:00:00.000Z", "Active"],
+    ["2026-05-13T21:26:31.248Z", "BIKE-2026-0005", "sd", "sd", "sd", "ds", "Abu Dhabi", "2026-05-13T20:00:00.000Z", "2026-05-13T20:00:00.000Z", "2026-05-13T20:00:00.000Z", "Active"]
+  ]
 };
 
-/* ── localStorage shim for ap2_* keys ──
-   dataLayer.js uses localStorage.setItem/getItem/removeItem with 'ap2_' keys.
-   We intercept every call:
-     setItem  → write to IndexedDB (AP2Cache) + update shadow maps; NEVER touch LS
-     getItem  → return a JSON-serialised shadow-map entry so dataLayer reads work sync
-     removeItem → delete from IDB + shadow maps; NEVER touch LS
-     clear    → clear all IDB ap2_* keys + shadow maps; NEVER call LS.clear()       */
-(function _shimLocalStorage() {
-  const origSet   = Storage.prototype.setItem;
-  const origGet   = Storage.prototype.getItem;
-  const origRem   = Storage.prototype.removeItem;
-  const origClear = Storage.prototype.clear;
+/* Seed the in-memory store with static data */
+for (const [key, data] of Object.entries(STATIC_DATA)) {
+  _store.set(key, { data, ts: Date.now() });
+}
 
-  Storage.prototype.setItem = function(k, v) {
-    if (this === localStorage && k.startsWith(AP2_PFX)) {
-      const bareKey = k.slice(AP2_PFX.length);
-      try {
-        const parsed = JSON.parse(v);
-        const data   = parsed.data ?? parsed;
-        const ts     = parsed.ts   ?? Date.now();
-        // Update shadow maps immediately (sync) so getItem returns fresh data
-        window._AP2Shadow.age.set(bareKey, ts);
-        window._AP2Shadow.data.set(bareKey, data);
-        // Persist to IndexedDB asynchronously
-        AP2Cache.set(bareKey, data).catch(() => {});
-      } catch(_) {}
-      return; // do NOT write to localStorage
-    }
-    origSet.call(this, k, v);
-  };
+/* ── In-memory shadow maps ── */
+window._AP2Shadow = {
+  age  : new Map(),
+  data : new Map(),
+};
+for (const [key, rec] of _store.entries()) {
+  window._AP2Shadow.age.set(key, rec.ts);
+  window._AP2Shadow.data.set(key, rec.data);
+}
 
-  Storage.prototype.getItem = function(k) {
-    if (this === localStorage && k.startsWith(AP2_PFX)) {
-      const bareKey = k.slice(AP2_PFX.length);
-      const data    = window._AP2Shadow.data.get(bareKey);
-      const ts      = window._AP2Shadow.age.get(bareKey);
-      if (data === undefined) return null; // not yet loaded
-      // Return in the same shape dataLayer expects: { data, ts }
-      return JSON.stringify({ data, ts: ts ?? Date.now() });
-    }
-    return origGet.call(this, k);
-  };
+/* ── Expose constants ── */
+window.AP2_SLICE_SZ = SLICE_SZ;
+window.AP2_VS_ROWS  = VS_ROWS;
 
-  Storage.prototype.removeItem = function(k) {
-    if (this === localStorage && k.startsWith(AP2_PFX)) {
-      const bareKey = k.slice(AP2_PFX.length);
-      window._AP2Shadow.age.delete(bareKey);
-      window._AP2Shadow.data.delete(bareKey);
-      AP2Cache.delete(bareKey).catch(() => {});
-      return; // do NOT touch localStorage
-    }
-    origRem.call(this, k);
-  };
-
-  Storage.prototype.clear = function() {
-    if (this === localStorage) {
-      window._AP2Shadow.age.clear();
-      window._AP2Shadow.data.clear();
-      AP2Cache.clearAll().catch(() => {});
-      return; // do NOT call localStorage.clear()
-    }
-    origClear.call(this);
-  };
-})();
-
-
-console.log('[AP2-IDB] IndexedDB cache engine ready — SLICE:', AP2_SLICE_SZ, '| VS_ROWS:', AP2_VS_ROWS);
+console.log('[AP2] Static data store ready — datasets:', Object.keys(STATIC_DATA).join(', '));
 })();
 </script>
 
@@ -1326,7 +1118,7 @@ html,body{
   </table>
   </div>
   <div class="cp-footer">
-    <span class="cp-footer-note"><i class="ti ti-database"></i> IndexedDB cache · Persists across sessions · Stream-queried &amp; virtual-scrolled</span>
+    <span class="cp-footer-note"><i class="ti ti-database"></i> In-memory data store · Static dataset · Stream-queried &amp; virtual-scrolled</span>
     <span id="cp-last-check">—</span>
   </div>
 </div>
@@ -1467,41 +1259,25 @@ async function cmRefresh(key, btn) {
   }
 }
 
-/* ══ IDB CHANGE WATCHER — replaces the old localStorage poll ══
-   AP2Cache.onChange fires whenever the IDB shim intercepts a
-   setItem / removeItem / clear call that touches ap2_* keys.      */
-(function _watchIdb() {
-  /* Track last-known keys so we can distinguish set vs update vs delete */
-  let _prevKeys = new Set();
-
-  AP2Cache.keys().then(ks => { _prevKeys = new Set(ks); }).catch(() => {});
-
+/* ══ CACHE CHANGE WATCHER ══ */
+(function _watchCache() {
   AP2Cache.onChange(async (key, op) => {
     if (op === 'set') {
-      const isNew = !_prevKeys.has(key);
-      _prevKeys.add(key);
-      _logEvent(isNew ? 'cache' : 'storage', isNew ? 'Cache set:' : 'Cache updated:', key);
+      const rec = await AP2Cache.get(key).catch(() => null);
+      if (rec) {
+        window._AP2Shadow.age.set(key, rec.ts);
+        window._AP2Shadow.data.set(key, rec.data);
+      }
+      _logEvent('cache', 'Cache updated:', key);
     } else if (op === 'delete') {
-      _prevKeys.delete(key);
+      window._AP2Shadow.age.delete(key);
+      window._AP2Shadow.data.delete(key);
       _logEvent('delete', 'Cache deleted:', key);
-      // Auto-refresh within 200ms of deletion
-      setTimeout(async () => {
-        if (window.AdminPro && AdminPro.forceRefresh) {
-          try {
-            await AdminPro.forceRefresh(key);
-            _logEvent('refresh', 'Auto-refreshed after delete:', key);
-          } catch(_) {}
-        }
-        updateCacheHealthDot();
-        renderCacheTable();
-        if (_cmPanelOpen) cmScanAll();
-        _notifyFrame();
-      }, 200);
     } else if (op === 'clear') {
-      _prevKeys.clear();
-      _logEvent('delete', 'ALL cache cleared (IDB)', '');
+      window._AP2Shadow.age.clear();
+      window._AP2Shadow.data.clear();
+      _logEvent('delete', 'ALL cache cleared', '');
     }
-
     updateCacheHealthDot();
     if (_cmPanelOpen) cmScanAll();
   });
@@ -1759,7 +1535,7 @@ const THEMES = {
 
 function setTheme(mode) {
   document.documentElement.setAttribute('data-theme', mode);
-  // Store theme preference in IndexedDB (key: 'theme', outside ap2_ dataset namespace)
+  // Store theme preference
   _idbSetTheme(mode);
 
   // Update label
@@ -1930,29 +1706,16 @@ function populateUserChip() {
   } catch (e) { console.error('[populateUserChip]:', e); }
 }
 
-/* ── Theme IDB helpers ──
-   Theme preference is stored directly in IndexedDB under key '__ui_theme'
-   (no ap2_ prefix) so it is invisible to the dataset shim and cache panel.  */
+/* ── Theme helpers — stored in sessionStorage ── */
 function _idbSetTheme(mode) {
-  window._ap2OpenDB().then(db => {
-    const tx  = db.transaction('datasets', 'readwrite');
-    tx.objectStore('datasets').put({ key: '__ui_theme', value: mode });
-  }).catch(() => {});
+  try { sessionStorage.setItem('__ui_theme', mode); } catch(_) {}
 }
 async function _idbGetTheme() {
-  try {
-    const db = await window._ap2OpenDB();
-    return new Promise(res => {
-      const tx  = db.transaction('datasets', 'readonly');
-      const req = tx.objectStore('datasets').get('__ui_theme');
-      req.onsuccess = () => res(req.result ? req.result.value : null);
-      req.onerror   = () => res(null);
-    });
-  } catch(_) { return null; }
+  try { return sessionStorage.getItem('__ui_theme') || null; } catch(_) { return null; }
 }
 /* ── Init ── */
 window.addEventListener('DOMContentLoaded', async () => {
-  // Load theme from IDB; fall back to 'dark'
+  // Load saved theme; fall back to 'dark'
   let savedTheme = 'dark';
   try { savedTheme = (await _idbGetTheme()) || 'dark'; } catch(_) {}
   setTheme(savedTheme);
@@ -2155,7 +1918,7 @@ function fmtTtlLabel(ms) {
   return Math.floor(ms/3600000) + ' hr';
 }
 
-/* ── Notify child iframe to reload from IDB cache ── */
+/* ── Notify child iframe to reload data ── */
 function _notifyFrame() {
   const frame = document.getElementById('main-frame');
   if (frame && frame.contentWindow) {
@@ -2265,58 +2028,8 @@ function renderCacheTable() {
 }
 
 /* ══ Shadow-map helpers ══
-   _AP2Shadow.age  and  _AP2Shadow.data  are the single source of truth for
-   sync reads (getCacheAge / getCacheData).  They are populated three ways:
-     1. Eagerly on page load — read every IDB record once.
-     2. On every AP2Cache.onChange — instant update when IDB changes.
-     3. Every 30 s — defensive resync in case of missed notifications.      */
-
-/* 1 — eager load from IDB */
-AP2Cache.keys().then(async keys => {
-  for (const key of keys) {
-    // skip internal UI-pref keys
-    if (key.startsWith('__')) continue;
-    const rec = await AP2Cache.get(key).catch(() => null);
-    if (rec) {
-      window._AP2Shadow.age.set(key, rec.ts);
-      window._AP2Shadow.data.set(key, rec.data);
-    }
-  }
-}).catch(() => {});
-
-/* 2 — live updates */
-AP2Cache.onChange(async (key, op) => {
-  if (key.startsWith('__')) return; // ignore UI prefs
-  if (op === 'set') {
-    const rec = await AP2Cache.get(key).catch(() => null);
-    if (rec) {
-      window._AP2Shadow.age.set(key, rec.ts);
-      window._AP2Shadow.data.set(key, rec.data);
-    }
-  } else if (op === 'delete') {
-    window._AP2Shadow.age.delete(key);
-    window._AP2Shadow.data.delete(key);
-  } else if (op === 'clear') {
-    window._AP2Shadow.age.clear();
-    window._AP2Shadow.data.clear();
-  }
-});
-
-/* 3 — periodic defensive resync */
-(async function _periodicResync() {
-  try {
-    const keys = await AP2Cache.keys();
-    for (const key of keys) {
-      if (key.startsWith('__')) continue;
-      const rec = await AP2Cache.get(key).catch(() => null);
-      if (rec) {
-        window._AP2Shadow.age.set(key, rec.ts);
-        window._AP2Shadow.data.set(key, rec.data);
-      }
-    }
-  } catch(_) {}
-  setTimeout(_periodicResync, 30000);
-})();
+   _AP2Shadow.age and _AP2Shadow.data are the single source of truth for
+   sync reads (getCacheAge / getCacheData). Pre-populated from static data. */
 
 /* Sync getters used throughout the cache panel UI */
 function getCacheAge(key) {
@@ -2335,9 +2048,6 @@ async function hardRefreshDataset(key, btn) {
   try {
     if (window.AdminPro && AdminPro.forceRefresh) {
       await AdminPro.forceRefresh(key);
-    } else {
-      // fallback: clear from IDB
-      await AP2Cache.delete(key);
     }
     setTimeout(() => { renderCacheTable(); updateCacheHealthDot(); cmScanAll(); _notifyFrame(); }, 300);
   } catch(e) {
@@ -2351,20 +2061,13 @@ async function hardRefreshDataset(key, btn) {
 
 function deleteCacheDataset(key, btn) {
   _logEvent('delete', 'Cache row deleted:', key);
-  if (window.AdminPro && AdminPro.cache) {
-    AdminPro.cache.clear(key);
-  } else {
-    AP2Cache.delete(key).catch(() => {});
-  }
-  renderCacheTable();
-  updateCacheHealthDot();
-  setTimeout(() => { cmScanAll(); _notifyFrame(); }, 250);
-  // Auto-fetch fresh data after delete so cache is repopulated immediately
-  if (window.AdminPro && AdminPro.forceRefresh) {
-    AdminPro.forceRefresh(key).then(() => {
-      renderCacheTable(); updateCacheHealthDot(); _notifyFrame();
-    }).catch(() => {});
-  }
+  AP2Cache.delete(key).then(() => {
+    window._AP2Shadow.age.delete(key);
+    window._AP2Shadow.data.delete(key);
+    renderCacheTable();
+    updateCacheHealthDot();
+    setTimeout(() => { cmScanAll(); _notifyFrame(); }, 250);
+  }).catch(() => {});
 }
 
 async function refreshAllCache() {
@@ -2385,22 +2088,15 @@ async function refreshAllCache() {
 }
 
 function deleteAllCache() {
-  if (!confirm('Clear the entire fleet_cache? All datasets will need to be re-downloaded.')) return;
+  if (!confirm('Clear all data? It will need to be re-loaded.')) return;
   _logEvent('delete', 'ALL cache cleared', '');
-  if (window.AdminPro && AdminPro.cache) {
-    AdminPro.cache.clearAll();
-  } else {
-    AP2Cache.clearAll().catch(() => {});
-  }
-  renderCacheTable();
-  updateCacheHealthDot();
-  setTimeout(() => cmScanAll(), 250);
-  // Auto-fetch all permitted datasets immediately after full clear
-  if (window.AdminPro && AdminPro.warmCache) {
-    AdminPro.warmCache().then(() => {
-      renderCacheTable(); updateCacheHealthDot(); _notifyFrame();
-    }).catch(() => {});
-  }
+  AP2Cache.clearAll().then(() => {
+    window._AP2Shadow.age.clear();
+    window._AP2Shadow.data.clear();
+    renderCacheTable();
+    updateCacheHealthDot();
+    setTimeout(() => cmScanAll(), 250);
+  }).catch(() => {});
 }
 
 function updateCacheHealthDot() {
@@ -2419,54 +2115,20 @@ function updateCacheHealthDot() {
   } catch(e) {}
 }
 
-/* ══ CACHE STALENESS AUTO-REQUEST LISTENER ══
-   Listens for messages from child pages requesting a data refresh,
-   and also proactively re-fetches stale datasets when AdminPro.forceRefresh is available.
-   Cache is stored exclusively in IndexedDB under ap2_* keys — persists across sessions.
-   Full data arrays and timestamps live exclusively in IndexedDB for high capacity.
-   In-memory maps (_idbAgeMap, _idbDataMap) shadow IDB for zero-latency sync reads. */
+/* ══ CACHE MESSAGE LISTENER ══
+   Listens for messages from child pages requesting data,
+   and responds with in-memory static data. */
 (function cacheWatchdog() {
-  // Listen for child iframe requests: { type:'ap-cache-request', key:'employee' }
-  window.addEventListener('message', async function(evt) {
+  window.addEventListener('message', function(evt) {
     if (!evt.data || evt.data.type !== 'ap-cache-request') return;
     const key = evt.data.key;
-    if (!key || !DS_META[key]) return;
-    const age = getCacheAge(key);
-    const meta = DS_META[key];
-    const isStale = age === Infinity || age > meta.ttlMs;
+    if (!key) return;
     const frame = document.getElementById('main-frame');
-    if (isStale && window.AdminPro && AdminPro.forceRefresh) {
-      try {
-        const data = await AdminPro.forceRefresh(key);
-        updateCacheHealthDot();
-        // Notify child that data is ready — include data so child can use it directly
-        if (frame && frame.contentWindow) {
-          frame.contentWindow.postMessage({ type:'ap-cache-ready', key, data }, '*');
-        }
-      } catch(e) { console.warn('[cacheWatchdog] refresh failed for', key, e); }
-    } else {
-      // Data is fresh — immediately tell child (pass data too)
-      let data = null;
-      try {
-        if (window.AdminPro && AdminPro.cache) data = AdminPro.cache.get(key)?.data ?? null;
-      } catch(_) {}
-      if (frame && frame.contentWindow) {
-        frame.contentWindow.postMessage({ type:'ap-cache-ready', key, data }, '*');
-      }
+    const data = window._AP2Shadow.data.get(key) ?? null;
+    if (frame && frame.contentWindow) {
+      frame.contentWindow.postMessage({ type:'ap-cache-ready', key, data }, '*');
     }
   });
-
-  // Proactive watchdog: every 60 s check if any key is stale and auto-warm
-  setInterval(async function() {
-    if (!window.AdminPro || !AdminPro.forceRefresh) return;
-    for (const [key, meta] of Object.entries(DS_META)) {
-      const age = getCacheAge(key);
-      if (age !== Infinity && age > meta.ttlMs) {
-        try { await AdminPro.forceRefresh(key); } catch(_) {}
-      }
-    }
-    updateCacheHealthDot();
-  }, 60000);
 })();
 </script>
 </body>
