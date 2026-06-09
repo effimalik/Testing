@@ -134,23 +134,23 @@
      • Bare Array<Object>→ values() of each object row
   ───────────────────────────────────────── */
   function _normaliseRows(raw) {
-    // Unwrap envelope if needed
+    // Unwrap { data: [...] } envelope if present
     const arr = Array.isArray(raw) ? raw
       : (raw && Array.isArray(raw.data)) ? raw.data
       : raw;
 
-    if (!Array.isArray(arr)) return arr; // non-array (e.g. object response) — return as-is
+    if (!Array.isArray(arr)) return arr; // non-array payload — return as-is
 
     return arr.map(row => {
       if (Array.isArray(row)) {
-        // Already an array row — stringify every cell
-        return row.map(cell => (cell === null || cell === undefined) ? '' : String(cell));
+        // Already Array row — keep values exactly as-is (numbers stay numbers)
+        return row;
       }
       if (row && typeof row === 'object') {
-        // Object row → values array, stringified
-        return Object.values(row).map(cell => (cell === null || cell === undefined) ? '' : String(cell));
+        // Object row → values array, types preserved
+        return Object.values(row);
       }
-      return [String(row)];
+      return [row];
     });
   }
 
@@ -232,10 +232,24 @@
   async function _idbSet(fullKey, value) {
     const db = await _openDB();
     return new Promise((res, rej) => {
-      const req = db.transaction(IDB_STORE, 'readwrite')
-                    .objectStore(IDB_STORE).put({ key: fullKey, ...value });
+      // Explicit record shape — never spread complex objects at the IDB root
+      const record = {
+        key:         fullKey,
+        ts:          value.ts,
+        data:        value.data,        // Array<Array> — structured-clone handles this
+        fingerprint: value.fingerprint || null,
+      };
+      const tx  = db.transaction(IDB_STORE, 'readwrite');
+      const req = tx.objectStore(IDB_STORE).put(record);
       req.onsuccess = () => res(true);
-      req.onerror   = () => rej(req.error);
+      req.onerror   = () => {
+        console.error('[DataLayer] IDB put error for', fullKey, req.error);
+        rej(req.error);
+      };
+      tx.onerror = () => {
+        console.error('[DataLayer] IDB tx error for', fullKey, tx.error);
+        rej(tx.error);
+      };
     });
   }
 
@@ -363,10 +377,12 @@
       // Update shadow immediately so sync callers see fresh data right away
       _shadow.set(fullKey, entry);
 
-      // Persist to IDB asynchronously
-      _idbSet(fullKey, entry).catch(e =>
-        console.warn('[DataLayer] IDB write failed for', name, e.message)
-      );
+      // Persist to IDB asynchronously — log errors loudly so they are visible
+      _idbSet(fullKey, entry).then(() => {
+        console.log('[DataLayer] IDB write OK:', fullKey, '| rows:', Array.isArray(entry.data) ? entry.data.length : typeof entry.data);
+      }).catch(e => {
+        console.error('[DataLayer] IDB write FAILED for', fullKey, e);
+      });
       return true;
     },
 
