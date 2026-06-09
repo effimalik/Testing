@@ -1,12 +1,12 @@
 /* ═══════════════════════════════════════════════════════════════
    dataLayer.js — AdminPro UAE  v2.1
-   Cache-first data layer · localStorage persistence · session-auth
+   Cache-first data layer · IndexedDB persistence · session-auth
    Permission-driven: only permitted datasets are fetched or cached.
 
    ARCHITECTURE:
    ─ window.AdminPro  → public API (warmIfEmpty, get*, forceRefresh, etc.)
    ─ window.DataLayer → alias for window.AdminPro (backwards compat)
-   ─ Cache layer      → localStorage with prefix 'ap2_' + key
+   ─ Cache layer      → IndexedDB with prefix 'ap2_' + key (same names as before)
    ─ Auth gate        → every fetch checks window.Auth.getCredentials()
    ─ Permission gate  → DATASETS built from Auth.getPermissions() at runtime
 
@@ -82,58 +82,136 @@
   }
 
   /* ─────────────────────────────────────────
+     INDEXEDDB ENGINE
+     Same key names as before: 'ap2_' + datasetName
+     Same entry shape: { ts, data, fingerprint }
+     DB: 'ap2_fleet_cache'  Store: 'datasets'  keyPath: 'key'
+  ───────────────────────────────────────── */
+  const IDB_NAME  = 'ap2_fleet_cache';
+  const IDB_VER   = 1;
+  const IDB_STORE = 'datasets';
+
+  let _dbPromise = null;
+  function _openDB() {
+    if (_dbPromise) return _dbPromise;
+    _dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(IDB_NAME, IDB_VER);
+      req.onupgradeneeded = e => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE, { keyPath: 'key' });
+        }
+      };
+      req.onsuccess = e => resolve(e.target.result);
+      req.onerror   = e => reject(e.target.error);
+    });
+    return _dbPromise;
+  }
+
+  /* Low-level IDB helpers — all async */
+  async function _idbGet(fullKey) {
+    const db = await _openDB();
+    return new Promise((res, rej) => {
+      const req = db.transaction(IDB_STORE, 'readonly')
+                    .objectStore(IDB_STORE).get(fullKey);
+      req.onsuccess = () => res(req.result || null);
+      req.onerror   = () => rej(req.error);
+    });
+  }
+
+  async function _idbSet(fullKey, value) {
+    const db = await _openDB();
+    return new Promise((res, rej) => {
+      const req = db.transaction(IDB_STORE, 'readwrite')
+                    .objectStore(IDB_STORE).put({ key: fullKey, ...value });
+      req.onsuccess = () => res(true);
+      req.onerror   = () => rej(req.error);
+    });
+  }
+
+  async function _idbDelete(fullKey) {
+    const db = await _openDB();
+    return new Promise((res, rej) => {
+      const req = db.transaction(IDB_STORE, 'readwrite')
+                    .objectStore(IDB_STORE).delete(fullKey);
+      req.onsuccess = () => res(true);
+      req.onerror   = () => rej(req.error);
+    });
+  }
+
+  async function _idbAllKeys() {
+    const db = await _openDB();
+    return new Promise((res, rej) => {
+      const req = db.transaction(IDB_STORE, 'readonly')
+                    .objectStore(IDB_STORE).getAllKeys();
+      req.onsuccess = () => res(req.result || []);
+      req.onerror   = () => rej(req.error);
+    });
+  }
+
+  async function _idbGetAll() {
+    const db = await _openDB();
+    return new Promise((res, rej) => {
+      const req = db.transaction(IDB_STORE, 'readonly')
+                    .objectStore(IDB_STORE).getAll();
+      req.onsuccess = () => res(req.result || []);
+      req.onerror   = () => rej(req.error);
+    });
+  }
+
+  /* ─────────────────────────────────────────
+     IN-MEMORY SHADOW  (sync reads for timers / status checks)
+     Mirrors IDB so _cache.get() / .status() / .age() stay synchronous.
+     Populated eagerly on load, kept live by _cache.set/clear/clearAll.
+  ───────────────────────────────────────── */
+  const _shadow = new Map();   // fullKey → { ts, data, fingerprint }
+
+  // Eager load from IDB into shadow on startup
+  _openDB().then(() => _idbGetAll()).then(records => {
+    for (const rec of records) {
+      if (rec.key && rec.key.startsWith(CACHE_PREFIX)) {
+        _shadow.set(rec.key, { ts: rec.ts, data: rec.data, fingerprint: rec.fingerprint || null });
+      }
+    }
+    console.log('[DataLayer] IDB shadow loaded —', _shadow.size, 'entries');
+  }).catch(e => console.warn('[DataLayer] IDB shadow load failed:', e.message));
+
+  /* ─────────────────────────────────────────
      CACHE PURGE ON LOGIN
-     Called from init() after permissions are known.
-     Removes any localStorage cache entries that:
-       1. Belong to datasets the current user is NOT permitted to see.
-       2. Were written by a different user (cross-session contamination).
-     This enforces the privacy guarantee: users only ever see their own
-     permitted data, even if they share a device with another user.
+     Same logic as before — now reads from IDB shadow instead of IDB directly.
   ───────────────────────────────────────── */
   function _purgeUnauthorisedCache() {
     try {
-      const session = window.Auth && window.Auth.getUser ? window.Auth.getUser() : null;
-
-      // Read the fingerprint directly from sessionStorage (auth.js stores it there)
       let currentFingerprint = null;
       try {
         const raw = sessionStorage.getItem('ap_session');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          currentFingerprint = parsed.sessionFingerprint || null;
-        }
+        if (raw) currentFingerprint = JSON.parse(raw).sessionFingerprint || null;
       } catch {}
 
-      const permittedCacheKeys = new Set(
+      const permittedFullKeys = new Set(
         Object.keys(DATASETS).map(k => CACHE_PREFIX + k)
       );
 
-      // Also track which fingerprint wrote each cached entry
       const keysToDelete = [];
 
-      for (const k of Object.keys(localStorage)) {
-        if (!k.startsWith(CACHE_PREFIX)) continue;
+      for (const [fullKey, entry] of _shadow.entries()) {
+        if (!fullKey.startsWith(CACHE_PREFIX)) continue;
 
-        // Not in permitted set → delete (unauthorised dataset for this user)
-        if (!permittedCacheKeys.has(k)) {
-          keysToDelete.push(k);
+        if (!permittedFullKeys.has(fullKey)) {
+          keysToDelete.push(fullKey);
           continue;
         }
 
-        // Same permitted key — check it was written by THIS session's user
-        if (currentFingerprint) {
-          try {
-            const entry = JSON.parse(localStorage.getItem(k));
-            // If the entry has a fingerprint that doesn't match, purge it
-            if (entry && entry.fingerprint && entry.fingerprint !== currentFingerprint) {
-              keysToDelete.push(k);
-            }
-          } catch {}
+        if (currentFingerprint && entry.fingerprint && entry.fingerprint !== currentFingerprint) {
+          keysToDelete.push(fullKey);
         }
       }
 
       if (keysToDelete.length) {
-        keysToDelete.forEach(k => { try { localStorage.removeItem(k); } catch {} });
+        keysToDelete.forEach(k => {
+          _shadow.delete(k);
+          _idbDelete(k).catch(() => {});
+        });
         console.log('[DataLayer] purged', keysToDelete.length, 'unauthorised/stale cache entries:', keysToDelete);
       } else {
         console.log('[DataLayer] cache purge: nothing to remove — all entries authorised');
@@ -148,57 +226,52 @@
   _buildDatasets();
 
   /* ─────────────────────────────────────────
-     CACHE  — localStorage wrappers
-     Format: { ts: <epoch ms>, data: <value> }
-     NOTE: session auth stays in sessionStorage (auth.js).
-           Only dataset cache (ap2_*) uses localStorage so it
-           persists across tabs and survives tab close/reopen.
+     CACHE  — IndexedDB wrappers
+     Entry shape (same as before): { ts, data, fingerprint }
+     Keys (same as before): 'ap2_' + datasetName
+     Reads are sync via _shadow; writes are async to IDB.
   ───────────────────────────────────────── */
   const _cache = {
     _key(name) { return CACHE_PREFIX + name; },
 
+    /** Sync read from shadow map — same shape as before: { ts, data, fingerprint } */
     get(name) {
-      try {
-        const raw = localStorage.getItem(this._key(name));
-        if (!raw) return null;
-        return JSON.parse(raw);        // { ts, data }
-      } catch { return null; }
+      return _shadow.get(this._key(name)) || null;
     },
 
+    /** Async write to IDB + instant shadow update */
     set(name, data) {
-      // Read current session fingerprint so each cache entry is tagged to its owner.
-      // On next login by a different user, mismatched fingerprints are purged.
       let fingerprint = null;
       try {
         const raw = sessionStorage.getItem('ap_session');
-        if (raw) fingerprint = (JSON.parse(raw).sessionFingerprint) || null;
+        if (raw) fingerprint = JSON.parse(raw).sessionFingerprint || null;
       } catch {}
 
       const entry = { ts: Date.now(), data, fingerprint };
+      const fullKey = this._key(name);
 
-      try {
-        localStorage.setItem(this._key(name), JSON.stringify(entry));
-        return true;
-      } catch (e) {
-        // localStorage full — try evicting the oldest entry and retry once
-        console.warn('[DataLayer] localStorage full — evicting oldest cache entry');
-        try { _evictOldest(); } catch {}
-        try {
-          localStorage.setItem(this._key(name), JSON.stringify(entry));
-          return true;
-        } catch { return false; }
-      }
+      // Update shadow immediately so sync callers see fresh data right away
+      _shadow.set(fullKey, entry);
+
+      // Persist to IDB asynchronously
+      _idbSet(fullKey, entry).catch(e =>
+        console.warn('[DataLayer] IDB write failed for', name, e.message)
+      );
+      return true;
     },
 
     clear(name) {
-      try { localStorage.removeItem(this._key(name)); } catch {}
+      const fullKey = this._key(name);
+      _shadow.delete(fullKey);
+      _idbDelete(fullKey).catch(() => {});
     },
 
     clearAll() {
-      try {
-        const keys = Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX));
-        keys.forEach(k => localStorage.removeItem(k));
-      } catch {}
+      const keys = Array.from(_shadow.keys()).filter(k => k.startsWith(CACHE_PREFIX));
+      keys.forEach(k => {
+        _shadow.delete(k);
+        _idbDelete(k).catch(() => {});
+      });
     },
 
     /** Returns null (no cache), 'fresh', or 'stale' */
@@ -219,14 +292,14 @@
 
   function _evictOldest() {
     let oldest = null, oldestKey = null;
-    for (const k of Object.keys(localStorage)) {
+    for (const [k, entry] of _shadow.entries()) {
       if (!k.startsWith(CACHE_PREFIX)) continue;
-      try {
-        const { ts } = JSON.parse(localStorage.getItem(k));
-        if (!oldest || ts < oldest) { oldest = ts; oldestKey = k; }
-      } catch {}
+      if (!oldest || entry.ts < oldest) { oldest = entry.ts; oldestKey = k; }
     }
-    if (oldestKey) localStorage.removeItem(oldestKey);
+    if (oldestKey) {
+      _shadow.delete(oldestKey);
+      _idbDelete(oldestKey).catch(() => {});
+    }
   }
 
   /* ─────────────────────────────────────────
@@ -424,7 +497,7 @@
        Call this once after Auth.createSession() on login.
        Security guarantee:
          1. DATASETS is rebuilt strictly from server-granted permissions.
-         2. Any localStorage cache for non-permitted datasets is deleted immediately.
+         2. Any IndexedDB cache for non-permitted datasets is deleted immediately.
          3. Any cache entries written by a different user are deleted immediately.
        Only then are timers started so background refresh never touches denied data. */
     init() {
@@ -540,7 +613,7 @@
 
     // On index.html (and any protected page): rebuild permitted datasets from session,
     // then warm any missing/stale entries. This handles returning from another portal tab
-    // where localStorage cache may have been partially or fully cleared.
+    // where IndexedDB cache may have been partially or fully cleared.
     function _initAndWarm() {
       _buildDatasets();
       _purgeUnauthorisedCache(); // evict any non-permitted or cross-user cache on every page load
@@ -598,6 +671,6 @@
     });
   })();
 
-  console.log('[DataLayer] v2.1 loaded — window.AdminPro ready');
+  console.log('[DataLayer] v2.1 loaded — IndexedDB cache — window.AdminPro ready');
 
 })();
