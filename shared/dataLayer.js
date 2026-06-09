@@ -44,6 +44,116 @@
 
   const CACHE_PREFIX = 'ap2_';
 
+  /* ─────────────────────────────────────────
+     LOGOUT CLEANUP
+     Wipes every trace of user data on sign-out:
+       • IndexedDB store (all ap2_ entries)
+       • sessionStorage (entire namespace)
+       • localStorage   (ap2_ prefixed keys only — leave 3rd-party keys intact)
+     Called automatically when Auth fires a 'ap:signout' event, and exposed
+     as AdminPro.clearAllStorage() for manual call from logout buttons.
+  ───────────────────────────────────────── */
+  async function _clearAllStorageOnLogout() {
+    // 1. Clear entire IDB store
+    try {
+      const db = await _openDB();
+      await new Promise((res, rej) => {
+        const req = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).clear();
+        req.onsuccess = () => res();
+        req.onerror   = () => rej(req.error);
+      });
+      _shadow.clear();
+      console.log('[DataLayer] logout: IndexedDB store cleared');
+    } catch (e) {
+      console.warn('[DataLayer] logout: IDB clear failed —', e.message);
+    }
+
+    // 2. Clear sessionStorage entirely (it's scoped to this origin/tab)
+    try {
+      sessionStorage.clear();
+      console.log('[DataLayer] logout: sessionStorage cleared');
+    } catch (e) {
+      console.warn('[DataLayer] logout: sessionStorage clear failed —', e.message);
+    }
+
+    // 3. Clear only ap2_ keys from localStorage (leave unrelated keys intact)
+    try {
+      const lsKeys = Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX) || k.startsWith('ap_') || k.startsWith('ap2_'));
+      lsKeys.forEach(k => localStorage.removeItem(k));
+      if (lsKeys.length) console.log('[DataLayer] logout: localStorage keys removed:', lsKeys);
+    } catch (e) {
+      console.warn('[DataLayer] logout: localStorage clear failed —', e.message);
+    }
+  }
+
+  // Listen for Auth sign-out event — triggered by auth.js
+  window.addEventListener('ap:signout', () => {
+    DATASETS = {};
+    Object.keys(_timers).forEach(k => { clearTimeout(_timers[k]); delete _timers[k]; });
+    _clearAllStorageOnLogout();
+  });
+
+  /* ─────────────────────────────────────────
+     PERMISSION NOTIFICATION HELPER
+     Shows a toast/alert when a dataset access is denied.
+  ───────────────────────────────────────── */
+  function _notifyNotAuthorized(dsKey) {
+    const label = (DATASETS_ALL[dsKey] && DATASETS_ALL[dsKey].label) || dsKey;
+    const msg   = `⛔ Not authorized to access: ${label}`;
+    console.warn('[DataLayer]', msg);
+
+    // Use a toast if the app has one (AdminPro.showToast), else fall back to a brief banner
+    if (window.AdminPro && typeof window.AdminPro.showToast === 'function') {
+      window.AdminPro.showToast(msg, 'error');
+    } else if (typeof window.showNotification === 'function') {
+      window.showNotification(msg, 'error');
+    } else {
+      // Lightweight fallback banner — auto-removes after 4 s
+      const existing = document.getElementById('_ap2_auth_banner');
+      if (existing) existing.remove();
+      const banner = document.createElement('div');
+      banner.id = '_ap2_auth_banner';
+      Object.assign(banner.style, {
+        position:'fixed', top:'16px', left:'50%', transform:'translateX(-50%)',
+        background:'#c0392b', color:'#fff', padding:'10px 22px', borderRadius:'6px',
+        fontFamily:'sans-serif', fontSize:'14px', zIndex:'99999',
+        boxShadow:'0 3px 10px rgba(0,0,0,.35)', whiteSpace:'nowrap'
+      });
+      banner.textContent = msg;
+      document.body.appendChild(banner);
+      setTimeout(() => banner.remove(), 4000);
+    }
+  }
+
+  /* ─────────────────────────────────────────
+     DATA NORMALISER
+     Converts any server response into Array<Array<string>>
+     (all cell values stringified for speed & consistency).
+     • Bare Array<Array>  → stringify each cell
+     • { data: [...] }   → unwrap then stringify
+     • Bare Array<Object>→ values() of each object row
+  ───────────────────────────────────────── */
+  function _normaliseRows(raw) {
+    // Unwrap envelope if needed
+    const arr = Array.isArray(raw) ? raw
+      : (raw && Array.isArray(raw.data)) ? raw.data
+      : raw;
+
+    if (!Array.isArray(arr)) return arr; // non-array (e.g. object response) — return as-is
+
+    return arr.map(row => {
+      if (Array.isArray(row)) {
+        // Already an array row — stringify every cell
+        return row.map(cell => (cell === null || cell === undefined) ? '' : String(cell));
+      }
+      if (row && typeof row === 'object') {
+        // Object row → values array, stringified
+        return Object.values(row).map(cell => (cell === null || cell === undefined) ? '' : String(cell));
+      }
+      return [String(row)];
+    });
+  }
+
   /* ── Full registry — all possible datasets.
      permKey: must match the column name in the Permissions sheet.
      No dataset is fetched, cached, timed, or shown in the cache panel
@@ -321,6 +431,19 @@
     }
 
     const promise = (async () => {
+      // ── PRE-REQUEST PERMISSION GATE (re-verified fresh every time) ──────────
+      // Rebuild permitted dataset map from the live session before every fetch.
+      // This catches: permission changes, session expiry, cross-user cache re-use.
+      _buildDatasets();
+
+      const ds = DATASETS[dsKey];
+      if (!ds) {
+        // Dataset not in the allowed list — notify user and abort cleanly
+        _notifyNotAuthorized(dsKey);
+        throw new Error(`[DataLayer] "${dsKey}" not permitted — access denied`);
+      }
+      // ────────────────────────────────────────────────────────────────────────
+
       // Get credentials — abort if session invalid
       const creds = window.Auth && window.Auth.getCredentials
         ? window.Auth.getCredentials()
@@ -329,9 +452,6 @@
       if (!creds || !creds.sessionId || !creds.token) {
         throw new Error(`[DataLayer] ${dsKey}: no valid session — aborting fetch`);
       }
-
-      const ds  = DATASETS[dsKey];
-      if (!ds) throw new Error(`[DataLayer] ${dsKey}: not in active datasets — permission denied`);
 
       const url = `${API_BASE}?type=${encodeURIComponent(ds.apiType)}`
         + `&sessionId=${encodeURIComponent(creds.sessionId)}`
@@ -355,10 +475,8 @@
 
       const json = await res.json();
 
-      // Accept { data: [...] } envelope OR bare array
-      const data = Array.isArray(json) ? json
-        : (json && json.data != null)  ? json.data
-        : json;
+      // Normalise to Array<Array<string>> — all cells stringified, consistent format
+      const data = _normaliseRows(json);
 
       _cache.set(dsKey, data);
       const elapsed = Math.round(performance.now() - t0);
@@ -379,8 +497,13 @@
      GET — cache-first, fetch-on-miss/stale
   ───────────────────────────────────────── */
   async function _get(dsKey, force) {
+    // Re-verify permission on every call (not just fetch — blocks stale cache returns too)
+    _buildDatasets();
     const ds = DATASETS[dsKey];
-    if (!ds) throw new Error(`[DataLayer] "${dsKey}" not permitted or unknown`);
+    if (!ds) {
+      _notifyNotAuthorized(dsKey);
+      throw new Error(`[DataLayer] "${dsKey}" not permitted or unknown`);
+    }
 
     if (!force) {
       const entry = _cache.get(dsKey);
@@ -594,6 +717,36 @@
     /* ── stopAllTimers  — called by Auth.signOut() ── */
     stopAllTimers() {
       Object.keys(_timers).forEach(k => { clearTimeout(_timers[k]); delete _timers[k]; });
+    },
+
+    /* ── signOut  — full cleanup: timers + all storage + reset DATASETS ──
+       Call this from your logout button / auth.js signOut flow.
+       Also fires automatically when the 'ap:signout' window event is dispatched. */
+    async signOut() {
+      this.stopAllTimers();
+      DATASETS = {};
+      await _clearAllStorageOnLogout();
+      console.log('[DataLayer] signOut: all storage cleared, DATASETS reset');
+    },
+
+    /* ── clearAllStorage — alias for manual calls ── */
+    clearAllStorage: _clearAllStorageOnLogout,
+
+    /* ── getDatasetNames — returns the names of ALL permitted datasets dynamically.
+       Never hardcode table names — always use this to know what's available. ── */
+    getDatasetNames() {
+      return Object.keys(DATASETS);
+    },
+
+    /* ── getDatasetMeta — full permitted dataset config (keys, labels, ttl, apiType) ── */
+    getDatasetMeta() {
+      return Object.entries(DATASETS).map(([key, ds]) => ({
+        key,
+        label:   ds.label,
+        apiType: ds.apiType,
+        ttlMs:   ds.ttlMs,
+        permKey: ds.permKey,
+      }));
     },
 
   };
