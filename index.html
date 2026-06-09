@@ -333,51 +333,59 @@ window.AP2_VS_ROWS  = VS_ROWS;
 
 /* ── Migration shim: intercept dataLayer's localStorage calls for ap2_* ──
    dataLayer.js calls localStorage.setItem/getItem/removeItem with 'ap2_' keys.
-   We proxy those calls asynchronously through AP2Cache so data lands in IDB.
-   Reads fall back to sync local-storage if IDB hasn't been written yet.      */
+   We redirect those calls exclusively through AP2Cache (IndexedDB).
+   localStorage is NOT used for ap2_* data — all storage goes to IDB only.    */
 (function _shimLocalStorage() {
-  const _orig = {
-    setItem    : localStorage.setItem.bind(localStorage),
-    getItem    : localStorage.getItem.bind(localStorage),
-    removeItem : localStorage.removeItem.bind(localStorage),
-  };
-
-  /* Override setItem — async write to IDB, keep LS as warm fallback */
+  /* Override setItem — write ap2_* exclusively to IDB, skip localStorage */
   const origSet = Storage.prototype.setItem;
   Storage.prototype.setItem = function(k, v) {
-    origSet.call(this, k, v);
     if (this === localStorage && k.startsWith(AP2_PFX)) {
+      /* Route to IDB only — do NOT write to localStorage */
       try {
         const parsed = JSON.parse(v);
         AP2Cache.set(k.slice(AP2_PFX.length), parsed.data ?? parsed)
           .catch(() => {});
       } catch(_) {}
+      return; // skip localStorage entirely
     }
+    origSet.call(this, k, v);
   };
 
-  /* Override removeItem — also delete from IDB */
+  /* Override getItem — reads ap2_* from IDB (async shim; sync callers use _idbGetData) */
+  const origGet = Storage.prototype.getItem;
+  Storage.prototype.getItem = function(k) {
+    if (this === localStorage && k.startsWith(AP2_PFX)) {
+      /* Return null synchronously; async callers use window._idbGetData */
+      return null;
+    }
+    return origGet.call(this, k);
+  };
+
+  /* Override removeItem — delete from IDB, not localStorage */
   const origRem = Storage.prototype.removeItem;
   Storage.prototype.removeItem = function(k) {
-    origRem.call(this, k);
     if (this === localStorage && k.startsWith(AP2_PFX)) {
       AP2Cache.delete(k.slice(AP2_PFX.length)).catch(() => {});
+      return; // skip localStorage entirely
     }
+    origRem.call(this, k);
   };
 
-  /* Override clear — also clear IDB ap2_ keys */
+  /* Override clear — clear IDB ap2_ keys only, do not touch localStorage */
   const origClear = Storage.prototype.clear;
   Storage.prototype.clear = function() {
-    origClear.call(this);
     if (this === localStorage) {
       AP2Cache.clearAll().catch(() => {});
+      return; // skip localStorage.clear()
     }
+    origClear.call(this);
   };
 })();
 
 /* ── Async wrappers used by index.html cache-panel functions ──
    getCacheAge / getCacheData are called synchronously in the old code.
    We replace them with async versions AND keep sync stubs that read
-   the localStorage mirror so the panel still renders instantly.      */
+   the in-memory _idbAgeMap so the panel still renders instantly.        */
 window._idbGetAge  = key => AP2Cache.getAge(key);
 window._idbGetData = key => AP2Cache.getData(key);
 
@@ -1735,7 +1743,8 @@ const THEMES = {
 
 function setTheme(mode) {
   document.documentElement.setAttribute('data-theme', mode);
-  localStorage.setItem('theme', mode);
+  // Store theme preference in IndexedDB (key: 'theme', outside ap2_ dataset namespace)
+  _idbSetTheme(mode);
 
   // Update label
   const labelMap = { dark:'Dark', light:'Light', purple:'Purple Night', ocean:'Ocean', slate:'Slate' };
@@ -1905,10 +1914,18 @@ function populateUserChip() {
   } catch (e) { console.error('[populateUserChip]:', e); }
 }
 
+/* ── Theme IDB helpers (stored under key '__ui_theme_pref' via AP2Cache) ── */
+function _idbSetTheme(mode) {
+  // Store theme preference as a single-row dataset in IndexedDB
+  AP2Cache.set('__ui_theme_pref', mode).catch(() => {});
+}
 /* ── Init ── */
 window.addEventListener('DOMContentLoaded', async () => {
-  const saved = localStorage.getItem('theme') || 'dark';
-  setTheme(saved);
+  // Load theme from IDB; fall back to 'dark'
+  let savedTheme = 'dark';
+  try { savedTheme = (await AP2Cache.get('__ui_theme_pref'))?.data || 'dark'; } catch(_) {}
+  setTheme(savedTheme);
+
   populateUserChip();
   updateCacheHealthDot();
   setInterval(updateCacheHealthDot, 30000);
@@ -1974,7 +1991,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const _frame = document.getElementById('main-frame');
   if (_frame) {
     _frame.addEventListener('load', () => {
-      const currentTheme = document.documentElement.getAttribute('data-theme') || localStorage.getItem('theme') || 'dark';
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
       _pushThemeToFrame(currentTheme);
     });
   }
@@ -2107,7 +2124,7 @@ function fmtTtlLabel(ms) {
   return Math.floor(ms/3600000) + ' hr';
 }
 
-/* ── Notify child iframe to reload from localStorage cache ── */
+/* ── Notify child iframe to reload from IDB cache ── */
 function _notifyFrame() {
   const frame = document.getElementById('main-frame');
   if (frame && frame.contentWindow) {
@@ -2216,48 +2233,69 @@ function renderCacheTable() {
   if (footer) footer.textContent = 'Updated ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
 }
 
-/* ── getCacheAge: sync (LS mirror) + async IDB path ──
-   Sync version is used by cmScanAll / renderCacheTable for instant UI.
-   Async version (window._idbGetAge) is the source of truth.           */
-function getCacheAge(key) {
-  /* Fast sync path: read localStorage mirror kept by the IDB shim */
-  try {
-    const raw = localStorage.getItem('ap2_' + key);
-    if (raw) {
-      const { ts } = JSON.parse(raw);
-      if (ts) return Date.now() - ts;
-    }
-  } catch(_) {}
-  /* Fallback: return Infinity (will be corrected on next async cycle) */
-  return Infinity;
-}
+/* ── getCacheAge: reads from in-memory IDB age cache (async-populated) ──
+   A JS Map (_idbAgeMap) is kept in sync by _syncIdbAgeMap() every 30s
+   and on every AP2Cache.onChange event, so getCacheAge() remains sync
+   for the UI while all data lives exclusively in IndexedDB.              */
+const _idbAgeMap = new Map(); // key → { ts: number }
 
-/* ── getCacheData: sync (LS mirror) ── */
-function getCacheData(key) {
-  try {
-    const raw = localStorage.getItem('ap2_' + key);
-    if (!raw) return null;
-    return JSON.parse(raw).data;
-  } catch { return null; }
-}
-
-/* ── Async IDB re-sync: periodically pull IDB ages into LS mirror so
-   getCacheAge() stays accurate without blocking the UI thread.        */
-(async function _syncIdbToLsMirror() {
+async function _syncIdbAgeMap() {
   try {
     const keys = await AP2Cache.keys();
     for (const key of keys) {
-      const rec = await AP2Cache.get(key);
-      if (!rec) continue;
-      /* Only write the metadata (ts), skip if data is very large) */
-      const mirror = { ts: rec.ts, data: Array.isArray(rec.data) ? rec.data : null };
-      try {
-        localStorage.setItem('ap2_' + key, JSON.stringify(mirror));
-      } catch(_) { /* quota exceeded — skip */ }
+      const ts = await AP2Cache.getTs(key);
+      if (ts != null) _idbAgeMap.set(key, ts);
     }
   } catch(_) {}
-  setTimeout(_syncIdbToLsMirror, 30000); // re-sync every 30s
-})()
+  setTimeout(_syncIdbAgeMap, 30000);
+}
+_syncIdbAgeMap(); // kick off immediately
+
+function getCacheAge(key) {
+  const ts = _idbAgeMap.get(key);
+  return ts == null ? Infinity : Date.now() - ts;
+}
+
+/* ── getCacheData: reads from in-memory IDB data cache (async-populated) ──
+   _idbDataMap mirrors the data arrays from IDB so getCacheData() stays sync.
+   Updated by _syncIdbAgeMap (shares the same loop) and AP2Cache.onChange.   */
+const _idbDataMap = new Map(); // key → data array
+
+// Extend _syncIdbAgeMap to also populate _idbDataMap (override after declaration)
+(function _extendSyncToData() {
+  const _origSync = _syncIdbAgeMap;
+  // Patch: after the age map runs, also pull data into _idbDataMap
+  AP2Cache.onChange(async (key, op) => {
+    if (op === 'set') {
+      const rec = await AP2Cache.get(key).catch(() => null);
+      if (rec) {
+        _idbAgeMap.set(key, rec.ts);
+        _idbDataMap.set(key, rec.data);
+      }
+    } else if (op === 'delete') {
+      _idbAgeMap.delete(key);
+      _idbDataMap.delete(key);
+    } else if (op === 'clear') {
+      _idbAgeMap.clear();
+      _idbDataMap.clear();
+    }
+  });
+})();
+
+// Eagerly populate _idbDataMap on first load
+AP2Cache.keys().then(async keys => {
+  for (const key of keys) {
+    const rec = await AP2Cache.get(key).catch(() => null);
+    if (rec) {
+      _idbAgeMap.set(key, rec.ts);
+      _idbDataMap.set(key, rec.data);
+    }
+  }
+}).catch(() => {});
+
+function getCacheData(key) {
+  return _idbDataMap.get(key) ?? null;
+}
 
 async function hardRefreshDataset(key, btn) {
   btn.classList.add('spin');
@@ -2353,9 +2391,9 @@ function updateCacheHealthDot() {
 /* ══ CACHE STALENESS AUTO-REQUEST LISTENER ══
    Listens for messages from child pages requesting a data refresh,
    and also proactively re-fetches stale datasets when AdminPro.forceRefresh is available.
-   Cache is stored in IndexedDB under ap2_* keys — persists across sessions.
-   localStorage is kept as a lightweight metadata mirror (ts only) for sync reads.
-   Full data arrays live exclusively in IndexedDB for high capacity. */
+   Cache is stored exclusively in IndexedDB under ap2_* keys — persists across sessions.
+   Full data arrays and timestamps live exclusively in IndexedDB for high capacity.
+   In-memory maps (_idbAgeMap, _idbDataMap) shadow IDB for zero-latency sync reads. */
 (function cacheWatchdog() {
   // Listen for child iframe requests: { type:'ap-cache-request', key:'employee' }
   window.addEventListener('message', async function(evt) {
