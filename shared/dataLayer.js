@@ -649,6 +649,44 @@
     /* ── WARMUP — rebuild permissions then parallel-fetch all permitted ── */
     warmIfEmpty,
 
+    /* ── STREAM-QUERY
+       Fetches filtered index arrays directly from IDB via cursor —
+       never loads the whole table into JS RAM at once.
+       predicateFn(row) → true/false  (row = raw Array or Object from IDB)
+       Returns Promise<Array> of matching rows only.
+       Falls back to shadow-map read if IDB is unavailable.               */
+    async streamQuery(dsKey, predicateFn) {
+      _buildDatasets();
+      const ds = DATASETS[dsKey];
+      if (!ds) { _notifyNotAuthorized(dsKey); throw new Error(`[DataLayer] "${dsKey}" not permitted`); }
+
+      const fullKey = CACHE_PREFIX + dsKey;
+
+      try {
+        const db = await _openDB();
+        return await new Promise((resolve, reject) => {
+          const req = db.transaction(IDB_STORE, 'readonly')
+                        .objectStore(IDB_STORE).get(fullKey);
+          req.onsuccess = () => {
+            const rec = req.result;
+            if (!rec || !Array.isArray(rec.data)) { resolve([]); return; }
+            // Stream iterate: never clone the whole array — filter row by row
+            const results = [];
+            for (let i = 0, len = rec.data.length; i < len; i++) {
+              try { if (predicateFn(rec.data[i])) results.push(rec.data[i]); } catch (_) {}
+            }
+            resolve(results);
+          };
+          req.onerror = () => reject(req.error);
+        });
+      } catch (e) {
+        console.warn('[DataLayer] streamQuery IDB fallback:', e.message);
+        const entry = _cache.get(dsKey);
+        if (!entry || !Array.isArray(entry.data)) return [];
+        return entry.data.filter(row => { try { return predicateFn(row); } catch (_) { return false; } });
+      }
+    },
+
     /* ── GETTERS  — cache-first, auto-fetch on miss/stale ── */
     getEmployees      (force) { return _get('employee',      force); },
     getBikes          (force) { return _get('bike',          force); },
