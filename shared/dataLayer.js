@@ -179,10 +179,10 @@
 
     const result = {};
     for (const [key, ds] of Object.entries(DATASETS_ALL)) {
-      // If Auth/permissions are available, apply the permission gate.
-      // If Auth is NOT loaded (no session guard on this page, or auth.js failed),
-      // fall back to allowing all datasets so data can still be fetched/cached.
-      if (!perms || (ds.permKey && perms[ds.permKey] === true)) {
+      // SECURITY: every dataset MUST have a permKey — no permKey = no access.
+      // Only include if the session permissions explicitly grant it (=== true).
+      // This ensures denied portals are never fetched, cached, or visible.
+      if (ds.permKey && perms && perms[ds.permKey] === true) {
         result[key] = ds;
       }
     }
@@ -198,7 +198,7 @@
      DB: 'ap2_fleet_cache'  Store: 'datasets'  keyPath: 'key'
   ───────────────────────────────────────── */
   const IDB_NAME  = 'ap2_fleet_cache';
-  const IDB_VER   = 2;   // bumped from 1 → forces onupgradeneeded to re-create the store
+  const IDB_VER   = 1;
   const IDB_STORE = 'datasets';
 
   let _dbPromise = null;
@@ -208,12 +208,9 @@
       const req = indexedDB.open(IDB_NAME, IDB_VER);
       req.onupgradeneeded = e => {
         const db = e.target.result;
-        // Use out-of-line keys (no keyPath) — consistent with penReq.html and all child pages.
-        // If the old keyPath:'key' store exists from v1, delete it and recreate correctly.
-        if (db.objectStoreNames.contains(IDB_STORE)) {
-          db.deleteObjectStore(IDB_STORE);
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE, { keyPath: 'key' });
         }
-        db.createObjectStore(IDB_STORE);  // out-of-line keys — key passed separately in .put(value, key)
       };
       req.onsuccess = e => resolve(e.target.result);
       req.onerror   = e => reject(e.target.error);
@@ -235,14 +232,15 @@
   async function _idbSet(fullKey, value) {
     const db = await _openDB();
     return new Promise((res, rej) => {
-      // Use out-of-line key: .put(value, key) — store does NOT have keyPath
+      // Explicit record shape — never spread complex objects at the IDB root
       const record = {
+        key:         fullKey,
         ts:          value.ts,
-        data:        value.data,
+        data:        value.data,        // Array<Array> — structured-clone handles this
         fingerprint: value.fingerprint || null,
       };
       const tx  = db.transaction(IDB_STORE, 'readwrite');
-      const req = tx.objectStore(IDB_STORE).put(record, fullKey);  // key passed as 2nd arg
+      const req = tx.objectStore(IDB_STORE).put(record);
       req.onsuccess = () => res(true);
       req.onerror   = () => {
         console.error('[DataLayer] IDB put error for', fullKey, req.error);
@@ -293,25 +291,10 @@
   const _shadow = new Map();   // fullKey → { ts, data, fingerprint }
 
   // Eager load from IDB into shadow on startup
-  // Records are stored with out-of-line keys, so we need getAllKeys() + getAll() together
-  _openDB().then(async db => {
-    const [keys, records] = await Promise.all([
-      new Promise((res, rej) => {
-        const r = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).getAllKeys();
-        r.onsuccess = () => res(r.result || []);
-        r.onerror   = () => rej(r.error);
-      }),
-      new Promise((res, rej) => {
-        const r = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).getAll();
-        r.onsuccess = () => res(r.result || []);
-        r.onerror   = () => rej(r.error);
-      }),
-    ]);
-    for (let i = 0; i < keys.length; i++) {
-      const k   = keys[i];
-      const rec = records[i];
-      if (typeof k === 'string' && k.startsWith(CACHE_PREFIX) && rec) {
-        _shadow.set(k, { ts: rec.ts, data: rec.data, fingerprint: rec.fingerprint || null });
+  _openDB().then(() => _idbGetAll()).then(records => {
+    for (const rec of records) {
+      if (rec.key && rec.key.startsWith(CACHE_PREFIX)) {
+        _shadow.set(rec.key, { ts: rec.ts, data: rec.data, fingerprint: rec.fingerprint || null });
       }
     }
     console.log('[DataLayer] IDB shadow loaded —', _shadow.size, 'entries');
@@ -464,38 +447,34 @@
     }
 
     const promise = (async () => {
-      // ── PRE-REQUEST PERMISSION GATE (re-verified fresh every time) ──────────
-      // Rebuild permitted dataset map from the live session before every fetch.
-      // This catches: permission changes, session expiry, cross-user cache re-use.
       _buildDatasets();
 
       const ds = DATASETS[dsKey];
       if (!ds) {
-        // Dataset not in the allowed list — notify user and abort cleanly
         _notifyNotAuthorized(dsKey);
         throw new Error(`[DataLayer] "${dsKey}" not permitted — access denied`);
       }
-      // ────────────────────────────────────────────────────────────────────────
 
-      // Get credentials — abort if session invalid
+      // Get credentials — optional: if unavailable, attempt a plain GET (public endpoints)
       const creds = window.Auth && window.Auth.getCredentials
         ? window.Auth.getCredentials()
         : null;
 
-      if (!creds || !creds.sessionId || !creds.token) {
-        throw new Error(`[DataLayer] ${dsKey}: no valid session — aborting fetch`);
+      const hasSession = creds && creds.sessionId && creds.token;
+
+      let url = `${API_BASE}?type=${encodeURIComponent(ds.apiType)}&_t=${Date.now()}`;
+      if (hasSession) {
+        url += `&sessionId=${encodeURIComponent(creds.sessionId)}`
+             + `&token=${encodeURIComponent(creds.token)}`;
+      } else {
+        console.warn(`[DataLayer] ${dsKey}: no session credentials — attempting unauthenticated fetch`);
       }
 
-      const url = `${API_BASE}?type=${encodeURIComponent(ds.apiType)}`
-        + `&sessionId=${encodeURIComponent(creds.sessionId)}`
-        + `&token=${encodeURIComponent(creds.token)}`
-        + `&_t=${Date.now()}`;
-
       console.log(`[DataLayer] ${dsKey}: fetching from server…`);
-      const t0  = performance.now();
+      const t0 = performance.now();
 
       const controller = new AbortController();
-      const timeoutId  = setTimeout(() => controller.abort(), 30000); // 30 s timeout
+      const timeoutId  = setTimeout(() => controller.abort(), 30000);
 
       let res;
       try {
@@ -508,12 +487,36 @@
 
       const json = await res.json();
 
-      // Normalise to Array<Array<string>> — all cells stringified, consistent format
+      // ── RESPONSE VALIDATION ─────────────────────────────────────────────────
+      // Guard against caching API error objects (e.g. { success:false, error:'...' }).
+      // If the server returns a non-array top-level response with success:false, throw
+      // so the error is surfaced in the console and nothing bad is stored in IDB.
+      if (json && typeof json === 'object' && !Array.isArray(json)) {
+        if (json.success === false) {
+          const msg = json.error || json.message || 'Unknown server error';
+          console.error(`[DataLayer] ${dsKey}: API returned error — "${msg}"`);
+          console.error(`[DataLayer] ${dsKey}: request URL was →`, url);
+          throw new Error(`[DataLayer] ${dsKey} API error: ${msg}`);
+        }
+        // Also guard: if it's an object but has no recognisable data shape, warn loudly
+        if (!json.data && !Array.isArray(json)) {
+          console.warn(`[DataLayer] ${dsKey}: unexpected response shape — not an array and no .data field:`, json);
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────────
+
+      // Normalise to Array<Array> — all cells values-preserved, consistent format
       const data = _normaliseRows(json);
+
+      // Final guard: only cache if we actually got rows
+      if (!Array.isArray(data) || data.length === 0) {
+        console.warn(`[DataLayer] ${dsKey}: response normalised to empty/non-array — not caching:`, data);
+        throw new Error(`[DataLayer] ${dsKey}: empty or invalid data received`);
+      }
 
       _cache.set(dsKey, data);
       const elapsed = Math.round(performance.now() - t0);
-      console.log(`[DataLayer] ${dsKey}: stored ${Array.isArray(data) ? data.length + ' rows' : typeof data} in cache (${elapsed} ms)`);
+      console.log(`[DataLayer] ${dsKey}: stored ${data.length} rows in cache (${elapsed} ms)`);
       return data;
     })();
 
