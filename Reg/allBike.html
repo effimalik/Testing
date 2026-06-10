@@ -456,13 +456,45 @@ th, td { border-left: none !important; border-right: none !important; }
 /* Stub so any legacy reference to API_BASE is harmless */
 const API_BASE = '';
 const WARN_DAYS = 60;
-const CACHE_KEY = 'ap2_bike';
 
 /* Sheet column order (0-based) */
 const COL = {
   timestamp:0, bikeId:1, plate:2, chassis:3, make:4, model:5,
   emirate:6, mulkiyaExp:7, passingExp:8, insExp:9, status:10
 };
+
+/* ── IndexedDB constants (same DB as dataLayer / index.html) ── */
+const _IDB_NAME  = 'ap2_fleet_cache';
+const _IDB_VER   = 1;
+const _IDB_STORE = 'datasets';
+const _AP2_CACHE_KEY = 'ap2_bike';
+
+let _idbConn = null;
+function _getDB() {
+  if (_idbConn) return Promise.resolve(_idbConn);
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(_IDB_NAME, _IDB_VER);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(_IDB_STORE))
+        db.createObjectStore(_IDB_STORE, { keyPath: 'key' });
+    };
+    req.onsuccess = e => { _idbConn = e.target.result; res(_idbConn); };
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+async function _readCache() {
+  const db  = await _getDB();
+  const rec = await new Promise((res, rej) => {
+    const req = db.transaction(_IDB_STORE, 'readonly')
+                  .objectStore(_IDB_STORE).get(_AP2_CACHE_KEY);
+    req.onsuccess = () => res(req.result || null);
+    req.onerror   = () => rej(req.error);
+  });
+  if (!rec || !Array.isArray(rec.data) || !rec.data.length) return null;
+  return rec.data;
+}
 
 const AV_FG  = ['#58a6ff','#3fb950','#e3b341','#d2a8ff','#ffa198','#22d3ee'];
 const AV_BG  = ['rgba(31,111,235,.2)','rgba(26,127,55,.2)','rgba(154,103,0,.2)','rgba(110,64,201,.2)','rgba(191,69,66,.2)','rgba(14,116,144,.2)'];
@@ -566,16 +598,6 @@ function parseRows(raw) {
   return [];
 }
 
-function _readCache() {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    const rows = parseRows(parsed);
-    return rows.length ? rows : null;
-  } catch { return null; }
-}
-
 
 /* ═══  NORMALISE ROW  ═══ */
 function normaliseRow(r, i) {
@@ -617,45 +639,121 @@ function normaliseRow(r, i) {
   };
 }
 
-/* ═══  LOAD  ═══ */
-function loadBikes() {
+/* ═══  LOAD — Stream-Query → Memory-Hoist → render  ═══
+   1. Stream-Query:  pull rows from IDB via AdminPro.streamQuery (no full table load)
+   2. Fallback:      direct IDB read if streamQuery unavailable
+   3. Memory-Hoist:  normalised result array lives in JS RAM as `bikes[]`
+   4. render:        renderAll() — stats cards + filtered/paginated table            */
+async function loadBikes() {
   const tbody = document.getElementById('bike-tbody');
-  const rows = _readCache();
-  if (rows && rows.length) {
-    bikes = rows.map((r,i) => normaliseRow(r,i)).filter(Boolean);
-    renderAll();
-  } else {
-    if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text3);">
-      <i class="ti ti-database-off" style="font-size:22px;display:block;margin-bottom:8px;"></i>
-      No data in cache yet. Data will appear automatically once the cache (<code style="font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:4px;">ap2_bike</code>) is populated.
+  if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:30px 16px;">
+    <div style="color:var(--text3);display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <i class="ti ti-loader" style="font-size:26px;animation:spin 1s linear infinite;display:inline-flex;"></i>
+      <span style="font-size:12px;">Loading bike fleet records…</span>
+    </div></td></tr>`;
+
+  try {
+    let rows = null;
+
+    // ── PRELOAD: check if parent index.html already pushed data into this frame ──
+    if (window.__AP2_PRELOAD && Array.isArray(window.__AP2_PRELOAD['bike'])) {
+      rows = window.__AP2_PRELOAD['bike'];
+    }
+
+    // ── STREAM-QUERY: fetch from IDB via dataLayer (preferred) ──
+    if (!rows || !rows.length) {
+      if (window.AdminPro && typeof AdminPro.streamQuery === 'function') {
+        try {
+          rows = await AdminPro.streamQuery('bike', () => true);
+        } catch (_) { rows = null; }
+      }
+    }
+
+    // ── FALLBACK: direct IDB read ──
+    if (!rows || !rows.length) {
+      rows = await _readCache();
+    }
+
+    if (rows && rows.length) {
+      // ── MEMORY-HOIST: normalise into plain JS objects, hold in RAM ──
+      bikes = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
+      renderAll();
+    } else {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:40px 16px;color:var(--text3);">
+        <i class="ti ti-database-off" style="font-size:26px;display:block;margin-bottom:8px;"></i>
+        No data in cache yet. Data will appear automatically once
+        <code style="font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:4px;">ap2_bike</code> is populated.
+      </td></tr>`;
+    }
+  } catch (err) {
+    console.error('[allBike] loadBikes error:', err);
+    if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:30px 16px;color:var(--red);">
+      <i class="ti ti-wifi-off" style="font-size:24px;display:block;margin-bottom:6px;"></i>
+      Failed to load bike data — ${err.message}
     </td></tr>`;
   }
 }
 
-/* ═══  BACKGROUND CACHE WATCHER  ═══ */
-/* Listens for any tab/window writing to ap2_bike and silently refreshes */
-window.addEventListener('storage', function(e) {
-  if (e.key !== CACHE_KEY) return;
-  if (!e.newValue) return; // cache was cleared, do nothing
-  try {
-    const parsed = JSON.parse(e.newValue);
-    const rows = parseRows(parsed);
-    if (!rows || !rows.length) return;
-    const updated = rows.map((r,i) => normaliseRow(r,i)).filter(Boolean);
-    if (!updated.length) return;
-    bikes = updated;
-    renderAll();
-  } catch {}
-});
+/* ═══  BACKGROUND CACHE WATCHER ═══════════════════════════════════════════
+   Polls IDB every 30s and reacts to messages from parent index.html.
+   Re-runs the full Stream-Query → Memory-Hoist → render pipeline so the
+   table always reflects the latest data without a page reload.
+   ════════════════════════════════════════════════════════════════════════ */
+(function() {
+  let _debounce = null;
+  async function _applyFromIDB() {
+    try {
+      let rows = null;
+      if (window.AdminPro && typeof AdminPro.streamQuery === 'function') {
+        try { rows = await AdminPro.streamQuery('bike', () => true); } catch (_) {}
+      }
+      if (!rows || !rows.length) rows = await _readCache();
+      if (!rows || !rows.length) return;
+      const fresh = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
+      if (!fresh.length) return;
+      // Memory-Hoist: replace hoisted array and re-render
+      bikes = fresh;
+      renderAll();
+    } catch (e) {
+      console.warn('[allBike] background refresh error:', e.message);
+    }
+  }
 
-/* Listen for messages from parent index.html */
+  function _debouncedApply() {
+    if (_debounce) clearTimeout(_debounce);
+    _debounce = setTimeout(_applyFromIDB, 200);
+  }
+
+  // Poll every 30 seconds
+  setInterval(_applyFromIDB, 30000);
+
+  // React to custom event (fired by IDB write listeners)
+  window.addEventListener('ap-cache-updated', _debouncedApply);
+})();
+
+/* ═══  MESSAGE LISTENER (from parent index.html) ═══ */
 window.addEventListener('message', (e) => {
   if (!e.data) return;
-  // Cache updated — reload from localStorage
+
+  // Instant preload push — parent injected all datasets into this frame on load.
+  // Extract bike data and re-render immediately — zero IDB round-trip.
+  if (e.data.type === 'ap-cache-preload' && e.data.datasets) {
+    window.__AP2_PRELOAD = e.data.datasets;
+    const rows = e.data.datasets['bike'];
+    if (Array.isArray(rows) && rows.length) {
+      const fresh = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
+      if (fresh.length) { bikes = fresh; renderAll(); }
+    }
+    return;
+  }
+
+  // Cache updated — re-run full IDB pipeline
   if (e.data.type === 'ap-cache-updated') {
     loadBikes();
+    return;
   }
-  // Instant theme sync — parent pushes on every theme change
+
+  // Theme sync — parent pushes on every theme change
   if (e.data.type === 'ap-theme' && e.data.theme) {
     document.documentElement.setAttribute('data-theme', e.data.theme);
   }
@@ -1166,13 +1264,14 @@ async function confirmUpload() {
   toast(msg, errors>0?'error':'success');
 }
 
-/* ═══  THEME  ═══ */
+/* ═══  THEME ═══ */
 (function(){
-  // Apply saved theme immediately on load (no flash)
-  const t = localStorage.getItem('theme') || 'dark';
-  try { document.documentElement.setAttribute('data-theme',
-    window.parent.document.documentElement.getAttribute('data-theme') || t);
-  } catch { document.documentElement.setAttribute('data-theme', t); }
+  // Inherit theme from parent index.html immediately (no flash).
+  // Falls back to sessionStorage then 'dark'.
+  let t = 'dark';
+  try { t = window.parent.document.documentElement.getAttribute('data-theme') || t; } catch(_) {}
+  try { t = sessionStorage.getItem('__ui_theme') || t; } catch(_) {}
+  document.documentElement.setAttribute('data-theme', t);
 })();
 
 /* ═══  TOAST  ═══ */
@@ -1188,7 +1287,11 @@ function toast(msg,type='success'){
 }
 
 /* ═══  INIT  ═══ */
-document.addEventListener('DOMContentLoaded', loadBikes);
+document.addEventListener('DOMContentLoaded', () => {
+  // If parent already pushed preload data into window before DOMContentLoaded,
+  // loadBikes will use it instantly. Otherwise falls through to IDB.
+  loadBikes();
+});
 </script>
 </body>
 </html>
