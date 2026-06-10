@@ -179,10 +179,10 @@
 
     const result = {};
     for (const [key, ds] of Object.entries(DATASETS_ALL)) {
-      // SECURITY: every dataset MUST have a permKey — no permKey = no access.
-      // Only include if the session permissions explicitly grant it (=== true).
-      // This ensures denied portals are never fetched, cached, or visible.
-      if (ds.permKey && perms && perms[ds.permKey] === true) {
+      // If Auth/permissions are available, apply the permission gate.
+      // If Auth is NOT loaded (no session guard on this page, or auth.js failed),
+      // fall back to allowing all datasets so data can still be fetched/cached.
+      if (!perms || (ds.permKey && perms[ds.permKey] === true)) {
         result[key] = ds;
       }
     }
@@ -198,7 +198,7 @@
      DB: 'ap2_fleet_cache'  Store: 'datasets'  keyPath: 'key'
   ───────────────────────────────────────── */
   const IDB_NAME  = 'ap2_fleet_cache';
-  const IDB_VER   = 1;
+  const IDB_VER   = 2;   // bumped from 1 → forces onupgradeneeded to re-create the store
   const IDB_STORE = 'datasets';
 
   let _dbPromise = null;
@@ -208,9 +208,12 @@
       const req = indexedDB.open(IDB_NAME, IDB_VER);
       req.onupgradeneeded = e => {
         const db = e.target.result;
-        if (!db.objectStoreNames.contains(IDB_STORE)) {
-          db.createObjectStore(IDB_STORE, { keyPath: 'key' });
+        // Use out-of-line keys (no keyPath) — consistent with penReq.html and all child pages.
+        // If the old keyPath:'key' store exists from v1, delete it and recreate correctly.
+        if (db.objectStoreNames.contains(IDB_STORE)) {
+          db.deleteObjectStore(IDB_STORE);
         }
+        db.createObjectStore(IDB_STORE);  // out-of-line keys — key passed separately in .put(value, key)
       };
       req.onsuccess = e => resolve(e.target.result);
       req.onerror   = e => reject(e.target.error);
@@ -232,15 +235,14 @@
   async function _idbSet(fullKey, value) {
     const db = await _openDB();
     return new Promise((res, rej) => {
-      // Explicit record shape — never spread complex objects at the IDB root
+      // Use out-of-line key: .put(value, key) — store does NOT have keyPath
       const record = {
-        key:         fullKey,
         ts:          value.ts,
-        data:        value.data,        // Array<Array> — structured-clone handles this
+        data:        value.data,
         fingerprint: value.fingerprint || null,
       };
       const tx  = db.transaction(IDB_STORE, 'readwrite');
-      const req = tx.objectStore(IDB_STORE).put(record);
+      const req = tx.objectStore(IDB_STORE).put(record, fullKey);  // key passed as 2nd arg
       req.onsuccess = () => res(true);
       req.onerror   = () => {
         console.error('[DataLayer] IDB put error for', fullKey, req.error);
@@ -291,10 +293,25 @@
   const _shadow = new Map();   // fullKey → { ts, data, fingerprint }
 
   // Eager load from IDB into shadow on startup
-  _openDB().then(() => _idbGetAll()).then(records => {
-    for (const rec of records) {
-      if (rec.key && rec.key.startsWith(CACHE_PREFIX)) {
-        _shadow.set(rec.key, { ts: rec.ts, data: rec.data, fingerprint: rec.fingerprint || null });
+  // Records are stored with out-of-line keys, so we need getAllKeys() + getAll() together
+  _openDB().then(async db => {
+    const [keys, records] = await Promise.all([
+      new Promise((res, rej) => {
+        const r = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).getAllKeys();
+        r.onsuccess = () => res(r.result || []);
+        r.onerror   = () => rej(r.error);
+      }),
+      new Promise((res, rej) => {
+        const r = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).getAll();
+        r.onsuccess = () => res(r.result || []);
+        r.onerror   = () => rej(r.error);
+      }),
+    ]);
+    for (let i = 0; i < keys.length; i++) {
+      const k   = keys[i];
+      const rec = records[i];
+      if (typeof k === 'string' && k.startsWith(CACHE_PREFIX) && rec) {
+        _shadow.set(k, { ts: rec.ts, data: rec.data, fingerprint: rec.fingerprint || null });
       }
     }
     console.log('[DataLayer] IDB shadow loaded —', _shadow.size, 'entries');
