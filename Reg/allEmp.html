@@ -166,14 +166,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
 
-/* ── Virtual-scroll row — fixed height must match ROW_H constant (48px) ── */
-.vs-row { height: 48px; }
+/* ── Spacer rows must be invisible ── */
 .vs-spacer-top td, .vs-spacer-bot td { padding: 0 !important; border: none !important; }
-/* Virtual-scroll wrap: contain + will-change for GPU compositing */
-.emp-table-wrap {
-  contain: strict;
-  will-change: scroll-position;
-}
 
 /* ── Toast ── */
 .toast { position: fixed; bottom: 28px; right: 28px; background: var(--surface2); color: var(--text); border: 1px solid var(--border2); padding: 13px 20px; border-radius: var(--radius-lg); font-size: 13px; font-weight: 500; z-index: 999; opacity: 0; transform: translateY(12px); transition: all .28s cubic-bezier(.34,1.56,.64,1); pointer-events: none; display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow-lg); max-width: 340px; }
@@ -509,7 +503,7 @@ const AV_BG2 = ['rgba(31,111,235,.2)','rgba(26,127,55,.2)','rgba(154,103,0,.2)',
 /* ── Pipeline constants ── */
 const SLICE_SZ = 50;   // rows per render block
 const VS_ROWS  = 20;   // visible rows in virtual-scroll window
-const ROW_H    = 48;   // px — must match .ap2-vs-row height
+let   ROW_H    = 56;   // px — updated at runtime from first rendered row
 
 /* ── State ── */
 let employees       = [];   // Memory-Hoist: active page array in RAM
@@ -1087,6 +1081,13 @@ function _buildVS_block(block, total, blockIdx) {
     _setSpacers(_startIdx);
   }
 
+  // Measure actual rendered row height so spacer math stays accurate
+  // regardless of padding/font-size/clamp values
+  function _measureRowH() {
+    const firstRow = tbody.querySelector('tr.vs-row');
+    if (firstRow) ROW_H = Math.max(firstRow.getBoundingClientRect().height, 1);
+  }
+
   function _onScroll() {
     const newStart = Math.floor(wrap.scrollTop / ROW_H);
     if (Math.abs(newStart - _startIdx) >= 1) _paint(newStart);
@@ -1094,6 +1095,7 @@ function _buildVS_block(block, total, blockIdx) {
 
   wrap.addEventListener('scroll', _onScroll, { passive: true });
   _paint(0);
+  requestAnimationFrame(_measureRowH); // measure after browser lays out the rows
 
   _vsInstance = {
     destroy() { wrap.removeEventListener('scroll', _onScroll); }
