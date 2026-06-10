@@ -382,18 +382,16 @@ html,body{
 /* ── Day/Night toggle pill ── */
 .tb-daynight{
   margin-left:auto;flex-shrink:0;
-  height:24px;padding:0 8px;
-  border-radius:20px;
-  border:1.5px solid var(--border2);
-  background:var(--bg3);
-  display:flex;align-items:center;gap:5px;
+  width:28px;height:28px;
+  border-radius:6px;
+  border:none;
+  background:transparent;
+  display:flex;align-items:center;justify-content:center;
   cursor:pointer;transition:all .2s;
-  color:var(--text2);font-size:12px;
-  font-family:var(--font);font-weight:600;
-  white-space:nowrap;
+  color:var(--text2);
 }
-.tb-daynight i{font-size:13px;transition:color .2s,transform .3s;}
-.tb-daynight:hover{background:var(--surface2);border-color:var(--accent);color:var(--text);}
+.tb-daynight i{font-size:16px;transition:color .2s,transform .3s;}
+.tb-daynight:hover{background:var(--surface);color:var(--text);}
 .tb-daynight:hover i{transform:rotate(20deg);}
 [data-theme="light"] .tb-daynight i{color:var(--amber);}
 [data-theme="dark"]  .tb-daynight i{color:#a0b4d0;}
@@ -455,21 +453,6 @@ html,body{
 
 .tb-gap{flex:1;min-width:4px;}
 
-/* clock */
-.tb-clock{
-  display:flex;align-items:center;gap:5px;
-  padding:0 8px;height:28px;
-  border-radius:6px;
-  background:var(--bg3);border:1px solid var(--border);
-  flex-shrink:0;
-}
-.tb-clock i{font-size:12px;color:var(--teal);}
-.tb-time{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text);letter-spacing:.04em;}
-@media(max-width:640px){
-  .tb-clock .ti-clock{display:none;}
-  .tb-clock{padding:0 6px;gap:0;background:transparent;border-color:transparent;}
-  .tb-time{font-size:12px;}
-}
 
 /* ══ THEME DROPDOWN ══
    The button sits inside .topbar (z:300).
@@ -675,7 +658,6 @@ html,body{
 }
 @media(max-width:520px){
   :root{--icon-bar-w:44px;--topbar-h:44px;}
-  .tb-clock{display:none;}
   .tb-vsep{display:none;}
   .tb-uname,.tb-urole{display:none;}
   .tb-user{padding:0 7px;}
@@ -1007,14 +989,6 @@ html,body{
         <span class="cache-dot" id="cache-health-dot"></span>
 
       </button>
-
-      <div class="tb-vsep"></div>
-
-      <!-- Clock — HH:MM only -->
-      <div class="tb-clock">
-        <i class="ti ti-clock"></i>
-        <span class="tb-time" id="tb-time">00:00</span>
-      </div>
 
       <div class="tb-vsep"></div>
 
@@ -1400,7 +1374,7 @@ function ibOpen(id, btn) {
   const nav = document.getElementById('sb2-nav');
   nav.innerHTML = sec.groups.map(g => {
     const visibleItems = g.items.filter(item =>
-      !item.permKey || (perms && perms[item.permKey] === true)
+      !item.permKey || perms === null || (perms && perms[item.permKey] === true)
     );
     if (!visibleItems.length) return '';
     return `
@@ -1461,7 +1435,7 @@ function startSubHideTimer() {
       sb.classList.remove('subitems-hiding');
       subOpen = false;
     }, 450);
-  }, 15000);
+  }, 5000);
 }
 
 /* ── Page context ── */
@@ -1582,15 +1556,6 @@ function closeThemeDropdown() {
   document.getElementById('theme-dropdown')?.classList.remove('open');
   document.getElementById('theme-dd-btn')?.classList.remove('open');
 }
-
-/* ── Clock — HH:MM only ── */
-(function tick() {
-  const now = new Date();
-  const pad = n => String(n).padStart(2,'0');
-  const t = document.getElementById('tb-time');
-  if (t) t.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  setTimeout(tick, 5000); // update every 5s is enough for HH:MM
-})();
 
 /* ══ SESSION GUARD ══
    auth.js (loaded in <head>) already runs _boot() on DOMContentLoaded
@@ -1765,7 +1730,7 @@ let _cpOutsideHandler = null;
 
 function _resetCpAutoHide() {
   if (_cpAutoHideTimer) clearTimeout(_cpAutoHideTimer);
-  _cpAutoHideTimer = setTimeout(closeCachePanel, 3000);
+  _cpAutoHideTimer = setTimeout(closeCachePanel, 5000);
 }
 
 function toggleCachePanel(e) {
@@ -1782,8 +1747,10 @@ function toggleCachePanel(e) {
     // Autohide on leave, cancel on re-enter
     panel.removeEventListener('mouseleave', _onCpLeave);
     panel.removeEventListener('mouseenter', _onCpEnter);
+    panel.removeEventListener('mousemove', _onCpMove);
     panel.addEventListener('mouseleave', _onCpLeave);
     panel.addEventListener('mouseenter', _onCpEnter);
+    panel.addEventListener('mousemove', _onCpMove);
     // Start the inactivity countdown immediately
     _resetCpAutoHide();
     // Cancel any prior outside-click handler then register a new one
@@ -1797,6 +1764,7 @@ function toggleCachePanel(e) {
 
 function _onCpLeave()  { _resetCpAutoHide(); }
 function _onCpEnter()  { if (_cpAutoHideTimer) { clearTimeout(_cpAutoHideTimer); _cpAutoHideTimer = null; } }
+function _onCpMove()   { if (_cpAutoHideTimer) { clearTimeout(_cpAutoHideTimer); } _cpAutoHideTimer = setTimeout(closeCachePanel, 5000); }
 
 function closePanelOutside(e) {
   const panel = document.getElementById('cache-panel');
@@ -1812,6 +1780,7 @@ function closeCachePanel() {
   panel?.classList.remove('open');
   panel?.removeEventListener('mouseleave', _onCpLeave);
   panel?.removeEventListener('mouseenter', _onCpEnter);
+  panel?.removeEventListener('mousemove', _onCpMove);
   cachePanelOpen = false;
   if (cachePanelTimer) { clearInterval(cachePanelTimer); cachePanelTimer = null; }
   if (_cpAutoHideTimer) { clearTimeout(_cpAutoHideTimer); _cpAutoHideTimer = null; }
