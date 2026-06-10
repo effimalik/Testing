@@ -983,17 +983,17 @@ html,body{
         </div>
       </div>
 
-      <!-- Shortcuts — hidden by default, shown only for permitted modules -->
+      <!-- Shortcuts — always visible, scrollable -->
       <div class="tb-shortcuts">
-        <button class="tb-sc emp" style="display:none"
+        <button class="tb-sc emp"
           onclick="loadPage('Reg/addEmp.html',null,'Add Employee','ti-user-plus','Register new employee','var(--accent-dim)','var(--accent)')">
           <i class="ti ti-user-plus"></i><span> Add Employee</span>
         </button>
-        <button class="tb-sc bike" style="display:none"
+        <button class="tb-sc bike"
           onclick="loadPage('Reg/addBike.html',null,'Add Bike','ti-motorbike','Register vehicle','var(--teal-dim)','var(--teal)')">
           <i class="ti ti-motorbike"></i><span> Add Bike</span>
         </button>
-        <button class="tb-sc adv" style="display:none"
+        <button class="tb-sc adv"
           onclick="loadPage('Reg/allEmp.html',null,'Advance Salary','ti-cash','Salary advances','var(--amber-dim)','var(--amber)')">
           <i class="ti ti-cash"></i><span> Advance</span>
         </button>
@@ -1071,16 +1071,16 @@ html,body{
     <!-- ICON BAR — never hides, always scrollable -->
     <nav id="icon-bar" aria-label="Navigation">
       <div class="ib-divider"></div>
-      <button class="ib-btn" id="ib-emp" onclick="ibOpen('ib-emp',this)" title="Employees" style="display:none">
+      <button class="ib-btn active" id="ib-emp" onclick="ibOpen('ib-emp',this)" title="Employees">
         <i class="ti ti-users"></i><span class="ib-tip">Employees</span>
       </button>
-      <button class="ib-btn" id="ib-bike" onclick="ibOpen('ib-bike',this)" title="Bike Fleet" style="display:none">
+      <button class="ib-btn" id="ib-bike" onclick="ibOpen('ib-bike',this)" title="Bike Fleet">
         <i class="ti ti-motorbike"></i><span class="ib-tip">Bike Fleet</span>
       </button>
-      <button class="ib-btn" id="ib-adv" onclick="ibOpen('ib-adv',this)" title="Advance Salary" style="display:none">
+      <button class="ib-btn" id="ib-adv" onclick="ibOpen('ib-adv',this)" title="Advance Salary">
         <i class="ti ti-cash"></i><span class="ib-tip">Advance Salary</span>
       </button>
-      <button class="ib-btn" id="ib-docs" onclick="ibOpen('ib-docs',this)" title="Expiring Docs" style="display:none">
+      <button class="ib-btn" id="ib-docs" onclick="ibOpen('ib-docs',this)" title="Expiring Docs">
         <i class="ti ti-file-alert"></i><span class="ib-tip">Expiring Docs</span>
       </button>
       <div class="ib-spacer"></div>
@@ -1098,7 +1098,7 @@ html,body{
     <!-- MAIN AREA — 5px margin container -->
     <div class="main-area">
       <div class="main-container">
-        <iframe id="main-frame" src="about:blank" title="Content"></iframe>
+        <iframe id="main-frame" src="Reg/allEmp.html" title="Content"></iframe>
       </div>
     </div>
 
@@ -1382,13 +1382,16 @@ let sidebarVisible = true;
 let subHideTimer = null;
 
 /* ══ PERMISSIONS — show/hide nav buttons based on Permissions sheet ══
-   Called once on load and again after fetchPermissions() resolves.
+   Called once on load (after Auth.getPermissions() is available) and
+   again if permissions are refreshed during the session.
 
-   Rules (fail-closed — nothing visible until perms are explicitly confirmed):
-   • perms === null  → permissions not loaded yet → hide EVERYTHING
-   • sec.permKey     → show only if perms[permKey] === true
-   • sec.permKey null→ show only if at least one child item's permKey === true
-   • Topbar shortcuts follow the same rules                                   */
+   Logic:
+   • If getPermissions() returns null → no perms fetched yet → hide ALL
+     permKey sections with a "loading…" state until perms arrive.
+   • For each SECTIONS entry with a permKey, show/hide the matching
+     icon-bar button and topbar shortcut.
+   • Sections with permKey:null are always visible.
+   • If the first permitted section isn't 'ib-emp', auto-open it.         */
 function _applyPermissions() {
   const perms = window.Auth && window.Auth.getPermissions
     ? window.Auth.getPermissions()
@@ -1400,25 +1403,24 @@ function _applyPermissions() {
     const btn = document.getElementById(id);
     if (!btn) continue;
 
-    let allowed = false; // fail-closed default
-
-    if (perms !== null) {
-      if (sec.permKey === null) {
-        // No section-level gate — allowed if ANY sub-item is permitted
-        allowed = sec.groups.some(g =>
-          g.items.some(item => !item.permKey || perms[item.permKey] === true)
-        );
-      } else {
-        // Section-level gate — must be explicitly true
-        allowed = perms[sec.permKey] === true;
-      }
+    let allowed;
+    if (sec.permKey === null) {
+      // Section has no own gate — check if at least one sub-item is permitted
+      const anyItemAllowed = sec.groups.some(g =>
+        g.items.some(item =>
+          !item.permKey || (perms && perms[item.permKey] === true)
+        )
+      );
+      allowed = anyItemAllowed;
+    } else {
+      allowed = !sec.permKey || (perms && perms[sec.permKey] === true);
     }
 
     btn.style.display = allowed ? '' : 'none';
     if (allowed && !firstAllowed) firstAllowed = id;
   }
 
-  // Topbar shortcuts — fail-closed: hidden until perms loaded AND explicitly true
+  // Also hide topbar shortcuts that are permission-gated
   const shortcutGates = [
     { sel: '.tb-sc.emp',  permKey: 'ap2_employee' },
     { sel: '.tb-sc.bike', permKey: 'ap2_bike'     },
@@ -1426,7 +1428,7 @@ function _applyPermissions() {
   ];
   for (const { sel, permKey } of shortcutGates) {
     document.querySelectorAll(sel).forEach(el => {
-      el.style.display = (perms && perms[permKey] === true) ? '' : 'none';
+      el.style.display = (!perms || perms[permKey] === true) ? '' : 'none';
     });
   }
 
@@ -1473,9 +1475,8 @@ function ibOpen(id, btn) {
 
   const nav = document.getElementById('sb2-nav');
   nav.innerHTML = sec.groups.map(g => {
-    // Fail-closed: if perms not loaded, show nothing; otherwise only permitted items
     const visibleItems = g.items.filter(item =>
-      perms !== null && (!item.permKey || perms[item.permKey] === true)
+      !item.permKey || (perms && perms[item.permKey] === true)
     );
     if (!visibleItems.length) return '';
     return `
@@ -1494,25 +1495,19 @@ function ibOpen(id, btn) {
   activeSection = id;
   startSubHideTimer();
 
-  // Auto-load the first PERMITTED item of the first group into the main frame
-  const firstPermittedItem = (() => {
-    for (const g of sec.groups) {
-      for (const item of g.items) {
-        if (perms !== null && (!item.permKey || perms[item.permKey] === true)) return item;
-      }
-    }
-    return null;
-  })();
-  if (firstPermittedItem) {
+  // Auto-load the first item of the first group into the main frame
+  // This ensures data is visible immediately without a manual click
+  const firstGroup = sec.groups && sec.groups[0];
+  const firstItem  = firstGroup && firstGroup.items && firstGroup.items[0];
+  if (firstItem) {
     const frame = document.getElementById('main-frame');
-    if (frame && !frame.src.endsWith(firstPermittedItem.file)) {
+    if (frame && !frame.src.endsWith(firstItem.file)) {
       // Mark first nav item as active
       setTimeout(() => {
         const firstNavEl = document.querySelector('#sb2-nav .sb2-item');
         if (firstNavEl) firstNavEl.classList.add('active');
       }, 0);
-      loadPage(firstPermittedItem.file, null, firstPermittedItem.label,
-               firstPermittedItem.icon || sec.icon, firstPermittedItem.sub,
+      loadPage(firstItem.file, null, firstItem.label, firstItem.icon || sec.icon, firstItem.sub,
                sec.pillBg, sec.pillColor);
     }
   }
@@ -1747,10 +1742,9 @@ async function _idbGetTheme() {
   try { return sessionStorage.getItem('__ui_theme') || null; } catch(_) { return null; }
 }
 /* ── Init ── */
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', () => {
   // Load saved theme; fall back to 'dark'
-  let savedTheme = 'dark';
-  try { savedTheme = (await _idbGetTheme()) || 'dark'; } catch(_) {}
+  const savedTheme = (() => { try { return sessionStorage.getItem('__ui_theme') || 'dark'; } catch(_) { return 'dark'; } })();
   setTheme(savedTheme);
 
   populateUserChip();
@@ -1761,48 +1755,38 @@ window.addEventListener('DOMContentLoaded', async () => {
   _applyPermissions();
   _buildDsMeta();
 
-  // ── STEP 2: Warm cache — fetch any missing/stale datasets before opening pages ──
-  // This runs BEFORE opening the first page so child iframes get fresh data.
-  // dataLayer._autoInit() already called warmIfEmpty() in background;
-  // we await it here so the first page loads into a warmed cache.
+  // ── STEP 2: Warm cache in background — do NOT await, open page immediately ──
+  // warmIfEmpty() fetches from the server only if data is missing/stale.
+  // We fire it without awaiting so the first permitted page opens instantly.
+  // When it resolves it notifies the child frame via _notifyFrame().
   if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
-    try {
-      await AdminPro.warmIfEmpty();
-    } catch(e) {
-      console.warn('[index] warmIfEmpty error (non-fatal):', e.message);
-    }
-    updateCacheHealthDot();
-    cmScanAll();
+    AdminPro.warmIfEmpty()
+      .then(() => { updateCacheHealthDot(); cmScanAll(); _notifyFrame(); })
+      .catch(e => console.warn('[index] warmIfEmpty error (non-fatal):', e.message));
   }
 
-  // ── STEP 3: Open the first permitted section after perms applied ──
-  // _applyPermissions() already ran in STEP 1. Find the first visible button
-  // and open it so the sub-bar and iframe are populated immediately.
+  // ── STEP 3: Open the first permitted section → loads first sub-page into frame ──
   const _openFirstAllowed = () => {
     const fv = Object.keys(SECTIONS).find(id => {
       const btn = document.getElementById(id);
       return btn && btn.style.display !== 'none';
     });
-    if (fv) {
-      activeSection = null; // force fresh render even if same section
-      ibOpen(fv, document.getElementById(fv));
-    }
+    if (fv) { activeSection = null; ibOpen(fv, document.getElementById(fv)); }
   };
   _openFirstAllowed();
 
-  // ── STEP 4: If permissions weren't in session yet, fetch then re-apply ──
+  // ── STEP 4: If permissions weren't in session (edge case), fetch then re-apply ──
   if (window.Auth && typeof window.Auth.getPermissions === 'function') {
     if (!window.Auth.getPermissions()) {
-      window.Auth.fetchPermissions().then(async perms => {
+      window.Auth.fetchPermissions().then(perms => {
         if (perms) {
           _applyPermissions();
           _buildDsMeta();
           if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
-            await AdminPro.warmIfEmpty().catch(() => {});
-            updateCacheHealthDot();
-            cmScanAll();
+            AdminPro.warmIfEmpty()
+              .then(() => { updateCacheHealthDot(); cmScanAll(); _notifyFrame(); })
+              .catch(() => {});
           }
-          // Re-open first permitted section now that real perms are known
           _openFirstAllowed();
         }
       }).catch(e => console.warn('[index] fetchPermissions failed:', e));
@@ -1816,12 +1800,28 @@ window.addEventListener('DOMContentLoaded', async () => {
     sb.addEventListener('touchstart', () => { if (subOpen) startSubHideTimer(); }, { passive: true });
   }
 
-  // ── Instant theme sync: push current theme every time child page finishes loading ──
+  // ── Instant data push: inject cached data into child iframe the moment it loads ──
+  // This eliminates the postMessage request/reply round-trip completely.
+  // Child pages check window.__AP2_PRELOAD first — if present, they render
+  // immediately without sending any ap-cache-request message at all.
   const _frame = document.getElementById('main-frame');
   if (_frame) {
     _frame.addEventListener('load', () => {
       const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
       _pushThemeToFrame(currentTheme);
+      // Push all cached datasets into the child frame's window directly
+      try {
+        const fw = _frame.contentWindow;
+        if (fw) {
+          const preload = {};
+          for (const [key, data] of window._AP2Shadow.data.entries()) {
+            preload[key] = data;
+          }
+          fw.__AP2_PRELOAD = preload;
+          // Also broadcast as a message so child pages that already loaded can re-use it
+          fw.postMessage({ type: 'ap-cache-preload', datasets: preload }, '*');
+        }
+      } catch(_) {}
     });
   }
 
@@ -1953,13 +1953,7 @@ function fmtTtlLabel(ms) {
   return Math.floor(ms/3600000) + ' hr';
 }
 
-/* ── Notify child iframe to reload data ── */
-function _notifyFrame() {
-  const frame = document.getElementById('main-frame');
-  if (frame && frame.contentWindow) {
-    frame.contentWindow.postMessage({ type: 'ap-cache-updated' }, '*');
-  }
-}
+/* ── _notifyFrame is defined below in cacheWatchdog section ── */
 
 function renderCacheTable() {
   const body = document.getElementById('cache-table-body');
@@ -2151,20 +2145,40 @@ function updateCacheHealthDot() {
 }
 
 /* ══ CACHE MESSAGE LISTENER ══
-   Listens for messages from child pages requesting data,
-   and responds with in-memory static data. */
+   Handles two message types:
+   • ap-cache-request  — child asking for one dataset (fallback if preload missed)
+   • ap-cache-updated  — (sent by parent) tells child to re-render with fresh data */
 (function cacheWatchdog() {
   window.addEventListener('message', function(evt) {
-    if (!evt.data || evt.data.type !== 'ap-cache-request') return;
-    const key = evt.data.key;
-    if (!key) return;
+    if (!evt.data) return;
     const frame = document.getElementById('main-frame');
-    const data = window._AP2Shadow.data.get(key) ?? null;
-    if (frame && frame.contentWindow) {
-      frame.contentWindow.postMessage({ type:'ap-cache-ready', key, data }, '*');
+    if (!frame) return;
+
+    if (evt.data.type === 'ap-cache-request') {
+      // Child is pulling a single dataset — respond immediately from shadow map
+      const key  = evt.data.key;
+      if (!key) return;
+      const data = window._AP2Shadow.data.get(key) ?? null;
+      if (frame.contentWindow)
+        frame.contentWindow.postMessage({ type:'ap-cache-ready', key, data }, '*');
     }
   });
 })();
+
+/* Override _notifyFrame to also push the full preload bundle so child
+   re-renders with the latest data without issuing new pull requests */
+function _notifyFrame() {
+  const frame = document.getElementById('main-frame');
+  if (!frame || !frame.contentWindow) return;
+  try {
+    const preload = {};
+    for (const [key, data] of window._AP2Shadow.data.entries()) {
+      preload[key] = data;
+    }
+    frame.contentWindow.postMessage({ type: 'ap-cache-preload', datasets: preload }, '*');
+  } catch(_) {}
+  frame.contentWindow.postMessage({ type: 'ap-cache-updated' }, '*');
+}
 </script>
 </body>
 </html>
