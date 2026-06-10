@@ -963,8 +963,12 @@ function _buildVS(rows) {
     tbody.querySelectorAll('tr.vs-row').forEach(r => r.remove());
     // Build fragment
     const html = visible.map((emp, i) => buildEmpRow(emp, _startIdx + i)).join('');
-    const frag = document.createRange().createContextualFragment(html);
-    frag.querySelectorAll('tr').forEach(tr => tr.classList.add('vs-row'));
+    const tbl2 = document.createElement('table');
+    const tb2  = document.createElement('tbody');
+    tbl2.appendChild(tb2);
+    tb2.innerHTML = html;
+    const frag = document.createDocumentFragment();
+    Array.from(tb2.rows).forEach(tr => { tr.classList.add('vs-row'); frag.appendChild(tr); });
     _trBot.before(frag);
     _setSpacers(_startIdx);
   }
@@ -1075,8 +1079,13 @@ function _buildVS_block(block, total, blockIdx) {
     const visible = block.slice(_startIdx, _startIdx + VS_ROWS);
     tbody.querySelectorAll('tr.vs-row').forEach(r => r.remove());
     const html = visible.map((emp, i) => buildEmpRow(emp, baseIdx + _startIdx + i)).join('');
-    const frag = document.createRange().createContextualFragment(html);
-    frag.querySelectorAll('tr').forEach(tr => tr.classList.add('vs-row'));
+    // Parse in a real table context so <td> structure is preserved by the HTML parser
+    const tbl = document.createElement('table');
+    const tb  = document.createElement('tbody');
+    tbl.appendChild(tb);
+    tb.innerHTML = html;
+    const frag = document.createDocumentFragment();
+    Array.from(tb.rows).forEach(tr => { tr.classList.add('vs-row'); frag.appendChild(tr); });
     _trBot.before(frag);
     _setSpacers(_startIdx);
   }
