@@ -678,8 +678,8 @@ function showToast(msg,type='ok'){
   toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
 }
 
-// LOAD DATA
-// Three-tier priority: __AP2_PRELOAD → AdminPro.streamQuery (IDB via dataLayer) → _idbGet fallback
+// LOAD DATA — IDB only (no API fetch)
+// Priority: __AP2_PRELOAD → AdminPro.streamQuery → _idbGet
 async function loadData(forceRefresh=false){
   setSyncLoading(true);
   allRequests=[];selectedRefs.clear();updateSelectionUI();
@@ -696,25 +696,20 @@ async function loadData(forceRefresh=false){
           try{rows=await AdminPro.streamQuery('master',()=>true);}catch(_){}
         }
       }
-      // Tier 3: direct IDB read as final fallback
+      // Tier 3: direct IDB read
       if(!rows||!rows.length){
         const entry=await _idbGet(_AP2_CACHE_KEY).catch(()=>null);
         if(entry&&entry.data)rows=entry.data;
       }
     }
     if(rows&&rows.length){
-      processFetchedData(rows);updateCacheInfo(0,false);setSyncLoading(false);return;
+      processFetchedData(rows);updateCacheInfo(0,false);
+    }else{
+      document.getElementById('pending-tbody').innerHTML=`<tr><td colspan="9"><div class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 10px;display:block;opacity:.3;"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg><p>No data in cache yet</p><small>Waiting for parent to push data</small></div></td></tr>`;
     }
-    // No cached data — fetch from API
-    const res=await fetch(`${API_BASE}?type=master&t=${Date.now()}`,{cache:'no-store'});
-    const data=await res.json();
-    rows=Array.isArray(data)?data:(data.data||[]);
-    await _idbSet(_AP2_CACHE_KEY,{ts:Date.now(),data:rows});
-    processFetchedData(rows);updateCacheInfo(0,true);
   }catch(err){
     console.error('[loadData]',err);
-    showToast('Could not load data — check network','error');
-    document.getElementById('pending-tbody').innerHTML=`<tr><td colspan="9"><div class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 10px;display:block;opacity:.3;"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg><p>Network error loading data</p><small>Check console for details</small></div></td></tr>`;
+    showToast('Could not read cache','error');
   }
   setSyncLoading(false);
 }
@@ -1015,7 +1010,7 @@ function setSyncLoading(on){
   btn.disabled=on;lbl.textContent=on?'Syncing…':'Sync Sheets';
   document.getElementById('sync-icon-wrap').style.animation=on?'pulse-spin .7s linear infinite':'none';
 }
-async function syncSheets(){await clearCache();await loadData(true);showToast('Synced from Master Sheet','ok');}
+async function syncSheets(){await loadData();showToast('Refreshed from cache','ok');}
 
 // SCROLL TOP
 window.addEventListener('scroll',()=>{document.getElementById('scroll-top').classList.toggle('show',window.scrollY>300);});
