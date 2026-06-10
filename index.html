@@ -382,16 +382,18 @@ html,body{
 /* ── Day/Night toggle pill ── */
 .tb-daynight{
   margin-left:auto;flex-shrink:0;
-  width:28px;height:28px;
-  border-radius:6px;
-  border:none;
-  background:transparent;
-  display:flex;align-items:center;justify-content:center;
+  height:24px;padding:0 8px;
+  border-radius:20px;
+  border:1.5px solid var(--border2);
+  background:var(--bg3);
+  display:flex;align-items:center;gap:5px;
   cursor:pointer;transition:all .2s;
-  color:var(--text2);
+  color:var(--text2);font-size:12px;
+  font-family:var(--font);font-weight:600;
+  white-space:nowrap;
 }
-.tb-daynight i{font-size:16px;transition:color .2s,transform .3s;}
-.tb-daynight:hover{background:var(--surface);color:var(--text);}
+.tb-daynight i{font-size:13px;transition:color .2s,transform .3s;}
+.tb-daynight:hover{background:var(--surface2);border-color:var(--accent);color:var(--text);}
 .tb-daynight:hover i{transform:rotate(20deg);}
 [data-theme="light"] .tb-daynight i{color:var(--amber);}
 [data-theme="dark"]  .tb-daynight i{color:#a0b4d0;}
@@ -453,6 +455,21 @@ html,body{
 
 .tb-gap{flex:1;min-width:4px;}
 
+/* clock */
+.tb-clock{
+  display:flex;align-items:center;gap:5px;
+  padding:0 8px;height:28px;
+  border-radius:6px;
+  background:var(--bg3);border:1px solid var(--border);
+  flex-shrink:0;
+}
+.tb-clock i{font-size:12px;color:var(--teal);}
+.tb-time{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text);letter-spacing:.04em;}
+@media(max-width:640px){
+  .tb-clock .ti-clock{display:none;}
+  .tb-clock{padding:0 6px;gap:0;background:transparent;border-color:transparent;}
+  .tb-time{font-size:12px;}
+}
 
 /* ══ THEME DROPDOWN ══
    The button sits inside .topbar (z:300).
@@ -658,6 +675,7 @@ html,body{
 }
 @media(max-width:520px){
   :root{--icon-bar-w:44px;--topbar-h:44px;}
+  .tb-clock{display:none;}
   .tb-vsep{display:none;}
   .tb-uname,.tb-urole{display:none;}
   .tb-user{padding:0 7px;}
@@ -965,17 +983,17 @@ html,body{
         </div>
       </div>
 
-      <!-- Shortcuts — always visible, scrollable -->
+      <!-- Shortcuts — hidden by default, shown only for permitted modules -->
       <div class="tb-shortcuts">
-        <button class="tb-sc emp"
+        <button class="tb-sc emp" style="display:none"
           onclick="loadPage('Reg/addEmp.html',null,'Add Employee','ti-user-plus','Register new employee','var(--accent-dim)','var(--accent)')">
           <i class="ti ti-user-plus"></i><span> Add Employee</span>
         </button>
-        <button class="tb-sc bike"
+        <button class="tb-sc bike" style="display:none"
           onclick="loadPage('Reg/addBike.html',null,'Add Bike','ti-motorbike','Register vehicle','var(--teal-dim)','var(--teal)')">
           <i class="ti ti-motorbike"></i><span> Add Bike</span>
         </button>
-        <button class="tb-sc adv"
+        <button class="tb-sc adv" style="display:none"
           onclick="loadPage('Reg/allEmp.html',null,'Advance Salary','ti-cash','Salary advances','var(--amber-dim)','var(--amber)')">
           <i class="ti ti-cash"></i><span> Advance</span>
         </button>
@@ -987,8 +1005,16 @@ html,body{
       <button class="tb-cache-btn" id="cache-status-btn" onclick="toggleCachePanel(event)" title="Cache Status">
         <i class="ti ti-database"></i>
         <span class="cache-dot" id="cache-health-dot"></span>
-
+        <span class="cache-miss-badge" id="cache-miss-badge"></span>
       </button>
+
+      <div class="tb-vsep"></div>
+
+      <!-- Clock — HH:MM only -->
+      <div class="tb-clock">
+        <i class="ti ti-clock"></i>
+        <span class="tb-time" id="tb-time">00:00</span>
+      </div>
 
       <div class="tb-vsep"></div>
 
@@ -1045,16 +1071,16 @@ html,body{
     <!-- ICON BAR — never hides, always scrollable -->
     <nav id="icon-bar" aria-label="Navigation">
       <div class="ib-divider"></div>
-      <button class="ib-btn active" id="ib-emp" onclick="ibOpen('ib-emp',this)" title="Employees">
+      <button class="ib-btn" id="ib-emp" onclick="ibOpen('ib-emp',this)" title="Employees" style="display:none">
         <i class="ti ti-users"></i><span class="ib-tip">Employees</span>
       </button>
-      <button class="ib-btn" id="ib-bike" onclick="ibOpen('ib-bike',this)" title="Bike Fleet">
+      <button class="ib-btn" id="ib-bike" onclick="ibOpen('ib-bike',this)" title="Bike Fleet" style="display:none">
         <i class="ti ti-motorbike"></i><span class="ib-tip">Bike Fleet</span>
       </button>
-      <button class="ib-btn" id="ib-adv" onclick="ibOpen('ib-adv',this)" title="Advance Salary">
+      <button class="ib-btn" id="ib-adv" onclick="ibOpen('ib-adv',this)" title="Advance Salary" style="display:none">
         <i class="ti ti-cash"></i><span class="ib-tip">Advance Salary</span>
       </button>
-      <button class="ib-btn" id="ib-docs" onclick="ibOpen('ib-docs',this)" title="Expiring Docs">
+      <button class="ib-btn" id="ib-docs" onclick="ibOpen('ib-docs',this)" title="Expiring Docs" style="display:none">
         <i class="ti ti-file-alert"></i><span class="ib-tip">Expiring Docs</span>
       </button>
       <div class="ib-spacer"></div>
@@ -1072,7 +1098,7 @@ html,body{
     <!-- MAIN AREA — 5px margin container -->
     <div class="main-area">
       <div class="main-container">
-        <iframe id="main-frame" src="Reg/allEmp.html" title="Content"></iframe>
+        <iframe id="main-frame" src="about:blank" title="Content"></iframe>
       </div>
     </div>
 
@@ -1087,6 +1113,9 @@ html,body{
       Cache Status
     </div>
     <div class="cp-actions">
+      <button class="cp-action-btn" onclick="toggleMissChecker()" title="Cache miss checker" style="color:var(--amber);">
+        <i class="ti ti-alert-triangle"></i> Checker
+      </button>
       <button class="cp-action-btn" onclick="refreshAllCache()" title="Hard refresh all datasets">
         <i class="ti ti-refresh"></i> Refresh All
       </button>
@@ -1121,75 +1150,144 @@ html,body{
     <span id="cp-last-check">—</span>
   </div>
 </div>
-<!-- cache miss checker panel removed -->
+<!-- ══ CACHE MISS CHECKER PANEL ══ -->
+<div class="cm-panel" id="cm-panel">
+  <div class="cm-header">
+    <div class="cm-title"><i class="ti ti-alert-triangle"></i>Cache Checker</div>
+    <span id="cm-last-scan" style="font-size:9.5px;color:var(--text3);margin-right:6px;"></span>
+    <button class="cm-close" onclick="closeMissPanel()" title="Close"><i class="ti ti-x"></i></button>
+  </div>
+  <div class="cm-body" id="cm-body">
+    <div style="text-align:center;color:var(--text3);padding:20px;font-size:11px;">Scanning…</div>
+  </div>
+  <div class="cm-footer-strip">
+    <span id="cm-summary">—</span>
+    <button onclick="cmScanAll()"><i class="ti ti-refresh"></i> Re-scan</button>
+  </div>
+</div>
 
 
 <script>
 
 
 /* ════════════════════════════════════════════
-   IDB HELPERS — direct IndexedDB operations
-   Used by delete/clear to wipe IDB AND shadow
+   EVENT LOG — silent sink (monitor removed)
    ════════════════════════════════════════════ */
-const _IDB_NAME  = 'ap2_fleet_cache';
-const _IDB_STORE = 'datasets';
+function _logEvent() {} // no-op; kept so cache functions compile without change
 
-function _idbOpen() {
-  return new Promise((res, rej) => {
-    const r = indexedDB.open(_IDB_NAME, 1);
-    r.onsuccess = e => res(e.target.result);
-    r.onerror   = e => rej(e.target.error);
-  });
-}
+/* ════════════════════════════════════════════
+   CACHE MISS CHECKER
+   ════════════════════════════════════════════ */
+let _cmPanelOpen = false;
+let _cmAutoHideTimer = null;
 
-async function _idbDeleteKey(fullKey) {
-  try {
-    const db = await _idbOpen();
-    await new Promise((res, rej) => {
-      const req = db.transaction(_IDB_STORE, 'readwrite').objectStore(_IDB_STORE).delete(fullKey);
-      req.onsuccess = () => res();
-      req.onerror   = () => rej(req.error);
-    });
-  } catch(e) { console.warn('[cache] IDB delete failed:', e.message); }
-}
-
-async function _idbClearAll() {
-  try {
-    const db = await _idbOpen();
-    await new Promise((res, rej) => {
-      const req = db.transaction(_IDB_STORE, 'readwrite').objectStore(_IDB_STORE).clear();
-      req.onsuccess = () => res();
-      req.onerror   = () => rej(req.error);
-    });
-  } catch(e) { console.warn('[cache] IDB clearAll failed:', e.message); }
-}
-
-/* Sync shadow map from IDB after a refresh so getCacheAge/getCacheData stay accurate */
-async function _syncShadowFromIDB(dsKey) {
-  try {
-    const db  = await _idbOpen();
-    const rec = await new Promise((res, rej) => {
-      const req = db.transaction(_IDB_STORE, 'readonly').objectStore(_IDB_STORE).get('ap2_' + dsKey);
-      req.onsuccess = () => res(req.result || null);
-      req.onerror   = () => rej(req.error);
-    });
-    if (rec) {
-      window._AP2Shadow.age.set(dsKey,  rec.ts);
-      window._AP2Shadow.data.set(dsKey, rec.data);
-    } else {
-      window._AP2Shadow.age.delete(dsKey);
-      window._AP2Shadow.data.delete(dsKey);
-    }
-  } catch(e) { console.warn('[cache] shadow sync failed:', e.message); }
-}
-
-async function _syncAllShadowFromIDB() {
-  for (const key of Object.keys(DS_META)) {
-    await _syncShadowFromIDB(key);
+function toggleMissChecker() {
+  _cmPanelOpen = !_cmPanelOpen;
+  const p = document.getElementById('cm-panel');
+  if (_cmPanelOpen) {
+    p.classList.add('open');
+    cmScanAll();
+    p.removeEventListener('mouseleave', _onCmLeave);
+    p.removeEventListener('mouseenter', _onCmEnter);
+    p.addEventListener('mouseleave', _onCmLeave);
+    p.addEventListener('mouseenter', _onCmEnter);
+    _resetCmAutoHide();
+  } else {
+    closeMissPanel();
   }
 }
 
-/* ══ CACHE CHANGE WATCHER — keep shadow in sync with AP2Cache in-memory store ══ */
+function _onCmLeave()  { _resetCmAutoHide(); }
+function _onCmEnter()  { if (_cmAutoHideTimer) { clearTimeout(_cmAutoHideTimer); _cmAutoHideTimer = null; } }
+
+function closeMissPanel() {
+  _cmPanelOpen = false;
+  const p = document.getElementById('cm-panel');
+  p?.classList.remove('open');
+  p?.removeEventListener('mouseleave', _onCmLeave);
+  p?.removeEventListener('mouseenter', _onCmEnter);
+  if (_cmAutoHideTimer) { clearTimeout(_cmAutoHideTimer); _cmAutoHideTimer = null; }
+}
+
+function _resetCmAutoHide() {
+  if (_cmAutoHideTimer) clearTimeout(_cmAutoHideTimer);
+  _cmAutoHideTimer = setTimeout(closeMissPanel, 3000);
+}
+
+function cmScanAll() {
+  const body = document.getElementById('cm-body');
+  const summary = document.getElementById('cm-summary');
+  const lastScan = document.getElementById('cm-last-scan');
+  if (!body) return;
+
+  const now = new Date();
+  if (lastScan) lastScan.textContent = 'Scanned ' + now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+
+  const results = Object.entries(DS_META).map(([key, meta]) => {
+    const ageMs = getCacheAge(key);
+    const hasData = (() => { try { const d = getCacheData(key); return Array.isArray(d) ? d.length > 0 : d != null; } catch(_){ return false; } })();
+    const fresh = ageMs < meta.ttlMs;
+    const status = !hasData ? 'miss' : !fresh ? 'stale' : 'ok';
+    return { key, label: meta.label, status, meta, ageMs };
+  });
+
+  const misses = results.filter(r => r.status === 'miss').length;
+  const stales = results.filter(r => r.status === 'stale').length;
+  if (summary) {
+    if (misses === 0 && stales === 0) summary.textContent = 'All ' + results.length + ' healthy';
+    else summary.textContent = (misses ? misses + ' miss' : '') + (misses && stales ? ', ' : '') + (stales ? stales + ' stale' : '');
+  }
+
+  const missTotal = misses + stales;
+  const badge = document.getElementById('cache-miss-badge');
+  if (badge) {
+    badge.textContent = missTotal || '';
+    badge.classList.toggle('show', missTotal > 0);
+  }
+
+  // Only update visible rows when panel is open
+  if (!_cmPanelOpen) {
+    if (_cmPanelOpen) _resetCmAutoHide();
+    return;
+  }
+
+  body.innerHTML = results.map(r => {
+    const badgeCls = r.status === 'miss' ? 'miss' : r.status === 'stale' ? 'stale' : 'ok';
+    const badgeTxt = r.status === 'miss' ? 'MISS' : r.status === 'stale' ? 'STALE' : 'OK';
+    const ageStr = r.ageMs === Infinity ? 'Never loaded' : r.ageMs < 60000 ? Math.floor(r.ageMs/1000)+'s ago' : Math.floor(r.ageMs/60000)+'m ago';
+    return `<div class="cm-row ${r.status !== 'ok' ? r.status : ''}">
+      <span class="cm-row-name">${r.label}</span>
+      <span class="cm-row-info">${ageStr}</span>
+      <span class="cm-row-badge ${badgeCls}">${badgeTxt}</span>
+      <button class="cm-row-btn" id="cmbtn-${r.key}" onclick="cmRefresh('${r.key}',this)" title="Force refresh">
+        <i class="ti ti-refresh"></i>
+      </button>
+    </div>`;
+  }).join('');
+
+  if (_cmPanelOpen) _resetCmAutoHide();
+}
+
+async function cmRefresh(key, btn) {
+  btn.classList.add('spin');
+  btn.disabled = true;
+  _logEvent('refresh', 'Cache refresh triggered:', key);
+  try {
+    if (window.AdminPro && AdminPro.forceRefresh) {
+      await AdminPro.forceRefresh(key);
+    } else {
+      await AP2Cache.delete(key);
+    }
+    setTimeout(() => { cmScanAll(); renderCacheTable(); updateCacheHealthDot(); _notifyFrame(); }, 300);
+  } catch(e) {
+    _logEvent('miss', 'Refresh error:', key);
+  } finally {
+    btn.classList.remove('spin');
+    btn.disabled = false;
+  }
+}
+
+/* ══ CACHE CHANGE WATCHER ══ */
 (function _watchCache() {
   AP2Cache.onChange(async (key, op) => {
     if (op === 'set') {
@@ -1198,14 +1296,18 @@ async function _syncAllShadowFromIDB() {
         window._AP2Shadow.age.set(key, rec.ts);
         window._AP2Shadow.data.set(key, rec.data);
       }
+      _logEvent('cache', 'Cache updated:', key);
     } else if (op === 'delete') {
       window._AP2Shadow.age.delete(key);
       window._AP2Shadow.data.delete(key);
+      _logEvent('delete', 'Cache deleted:', key);
     } else if (op === 'clear') {
       window._AP2Shadow.age.clear();
       window._AP2Shadow.data.clear();
+      _logEvent('delete', 'ALL cache cleared', '');
     }
     updateCacheHealthDot();
+    if (_cmPanelOpen) cmScanAll();
   });
 })();
 
@@ -1280,17 +1382,13 @@ let sidebarVisible = true;
 let subHideTimer = null;
 
 /* ══ PERMISSIONS — show/hide nav buttons based on Permissions sheet ══
-   Called once on load (after Auth.getPermissions() is available) and
-   again if permissions are refreshed during the session.
+   Called once on load and again after fetchPermissions() resolves.
 
-   Logic:
-   • If getPermissions() returns null → perms not fetched yet → show ALL
-     sections optimistically so ibOpen can run immediately on page load.
-     Items will be re-filtered once real perms arrive via STEP 4.
-   • For each SECTIONS entry with a permKey, show/hide the matching
-     icon-bar button and topbar shortcut.
-   • Sections with permKey:null are always visible.
-   • If the first permitted section isn't 'ib-emp', auto-open it.         */
+   Rules (fail-closed — nothing visible until perms are explicitly confirmed):
+   • perms === null  → permissions not loaded yet → hide EVERYTHING
+   • sec.permKey     → show only if perms[permKey] === true
+   • sec.permKey null→ show only if at least one child item's permKey === true
+   • Topbar shortcuts follow the same rules                                   */
 function _applyPermissions() {
   const perms = window.Auth && window.Auth.getPermissions
     ? window.Auth.getPermissions()
@@ -1302,30 +1400,25 @@ function _applyPermissions() {
     const btn = document.getElementById(id);
     if (!btn) continue;
 
-    let allowed;
-    if (perms === null) {
-      // Perms not in session yet — fail-closed: hide all gated sections.
-      // They will be shown once _applyPermissions() is called again in STEP 4
-      // after fetchPermissions() resolves. Sections with permKey:null (e.g. ib-docs)
-      // are always hidden here too and re-evaluated once real perms arrive.
-      allowed = sec.permKey === null ? false : false;
-    } else if (sec.permKey === null) {
-      // Section has no own gate — check if at least one sub-item is permitted
-      const anyItemAllowed = sec.groups.some(g =>
-        g.items.some(item =>
-          !item.permKey || perms[item.permKey] === true
-        )
-      );
-      allowed = anyItemAllowed;
-    } else {
-      allowed = !sec.permKey || perms[sec.permKey] === true;
+    let allowed = false; // fail-closed default
+
+    if (perms !== null) {
+      if (sec.permKey === null) {
+        // No section-level gate — allowed if ANY sub-item is permitted
+        allowed = sec.groups.some(g =>
+          g.items.some(item => !item.permKey || perms[item.permKey] === true)
+        );
+      } else {
+        // Section-level gate — must be explicitly true
+        allowed = perms[sec.permKey] === true;
+      }
     }
 
     btn.style.display = allowed ? '' : 'none';
     if (allowed && !firstAllowed) firstAllowed = id;
   }
 
-  // Also show/hide topbar shortcuts (optimistic when perms null)
+  // Topbar shortcuts — fail-closed: hidden until perms loaded AND explicitly true
   const shortcutGates = [
     { sel: '.tb-sc.emp',  permKey: 'ap2_employee' },
     { sel: '.tb-sc.bike', permKey: 'ap2_bike'     },
@@ -1333,7 +1426,6 @@ function _applyPermissions() {
   ];
   for (const { sel, permKey } of shortcutGates) {
     document.querySelectorAll(sel).forEach(el => {
-      // Fail-closed: hide shortcut if perms not loaded yet, or if not explicitly true
       el.style.display = (perms && perms[permKey] === true) ? '' : 'none';
     });
   }
@@ -1381,8 +1473,9 @@ function ibOpen(id, btn) {
 
   const nav = document.getElementById('sb2-nav');
   nav.innerHTML = sec.groups.map(g => {
+    // Fail-closed: if perms not loaded, show nothing; otherwise only permitted items
     const visibleItems = g.items.filter(item =>
-      !item.permKey || perms === null || (perms && perms[item.permKey] === true)
+      perms !== null && (!item.permKey || perms[item.permKey] === true)
     );
     if (!visibleItems.length) return '';
     return `
@@ -1401,19 +1494,25 @@ function ibOpen(id, btn) {
   activeSection = id;
   startSubHideTimer();
 
-  // Auto-load the first item of the first group into the main frame
-  // This ensures data is visible immediately without a manual click
-  const firstGroup = sec.groups && sec.groups[0];
-  const firstItem  = firstGroup && firstGroup.items && firstGroup.items[0];
-  if (firstItem) {
+  // Auto-load the first PERMITTED item of the first group into the main frame
+  const firstPermittedItem = (() => {
+    for (const g of sec.groups) {
+      for (const item of g.items) {
+        if (perms !== null && (!item.permKey || perms[item.permKey] === true)) return item;
+      }
+    }
+    return null;
+  })();
+  if (firstPermittedItem) {
     const frame = document.getElementById('main-frame');
-    if (frame && !frame.src.endsWith(firstItem.file)) {
+    if (frame && !frame.src.endsWith(firstPermittedItem.file)) {
       // Mark first nav item as active
       setTimeout(() => {
         const firstNavEl = document.querySelector('#sb2-nav .sb2-item');
         if (firstNavEl) firstNavEl.classList.add('active');
       }, 0);
-      loadPage(firstItem.file, null, firstItem.label, firstItem.icon || sec.icon, firstItem.sub,
+      loadPage(firstPermittedItem.file, null, firstPermittedItem.label,
+               firstPermittedItem.icon || sec.icon, firstPermittedItem.sub,
                sec.pillBg, sec.pillColor);
     }
   }
@@ -1443,7 +1542,7 @@ function startSubHideTimer() {
       sb.classList.remove('subitems-hiding');
       subOpen = false;
     }, 450);
-  }, 5000);
+  }, 15000);
 }
 
 /* ── Page context ── */
@@ -1565,6 +1664,15 @@ function closeThemeDropdown() {
   document.getElementById('theme-dd-btn')?.classList.remove('open');
 }
 
+/* ── Clock — HH:MM only ── */
+(function tick() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const t = document.getElementById('tb-time');
+  if (t) t.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  setTimeout(tick, 5000); // update every 5s is enough for HH:MM
+})();
+
 /* ══ SESSION GUARD ══
    auth.js (loaded in <head>) already runs _boot() on DOMContentLoaded
    and redirects to login.html if the session is invalid or expired.
@@ -1664,27 +1772,27 @@ window.addEventListener('DOMContentLoaded', async () => {
       console.warn('[index] warmIfEmpty error (non-fatal):', e.message);
     }
     updateCacheHealthDot();
+    cmScanAll();
   }
 
-  // ── STEP 3: Attempt early open of first section (may show nothing if perms null) ──
-  // STEP 4 always re-applies perms and re-opens the correct first section.
-  // This step is intentionally a no-op when perms are null (fail-closed).
-  const firstVisible = Object.keys(SECTIONS).find(id => {
-    const btn = document.getElementById(id);
-    return btn && btn.style.display !== 'none';
-  });
-  if (firstVisible) {
-    ibOpen(firstVisible, document.getElementById(firstVisible));
-  }
+  // ── STEP 3: Open the first permitted section after perms applied ──
+  // _applyPermissions() already ran in STEP 1. Find the first visible button
+  // and open it so the sub-bar and iframe are populated immediately.
+  const _openFirstAllowed = () => {
+    const fv = Object.keys(SECTIONS).find(id => {
+      const btn = document.getElementById(id);
+      return btn && btn.style.display !== 'none';
+    });
+    if (fv) {
+      activeSection = null; // force fresh render even if same section
+      ibOpen(fv, document.getElementById(fv));
+    }
+  };
+  _openFirstAllowed();
 
-  // ── STEP 4: Apply permissions from session (always — ensures nav renders with real perms) ──
-  // Since permissions are bundled at login, getPermissions() returns them immediately.
-  // We call _applyPermissions() again here to cover any edge case where the session
-  // was written after DOMContentLoaded (rare but possible on slow devices).
+  // ── STEP 4: If permissions weren't in session yet, fetch then re-apply ──
   if (window.Auth && typeof window.Auth.getPermissions === 'function') {
-    const permsNow = window.Auth.getPermissions();
-    if (!permsNow) {
-      // Truly no perms yet — fetch from server then re-apply
+    if (!window.Auth.getPermissions()) {
       window.Auth.fetchPermissions().then(async perms => {
         if (perms) {
           _applyPermissions();
@@ -1692,39 +1800,12 @@ window.addEventListener('DOMContentLoaded', async () => {
           if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
             await AdminPro.warmIfEmpty().catch(() => {});
             updateCacheHealthDot();
+            cmScanAll();
           }
-          // Re-render the active section's nav now that real perms are known.
-          // Always do this — the optimistic render may have shown more items than allowed.
-          const fv = activeSection || Object.keys(SECTIONS).find(id => {
-            const btn = document.getElementById(id);
-            return btn && btn.style.display !== 'none';
-          });
-          if (fv) {
-            // Force nav re-render: clear activeSection so ibOpen doesn't early-return
-            const prevActive = activeSection;
-            activeSection = null;
-            ibOpen(fv, document.getElementById(fv));
-            // If the section was already open keep it open (cancel the fresh hide timer)
-            if (prevActive === fv && subOpen) {
-              // timer was restarted by ibOpen — that's fine, leave it
-            }
-          }
+          // Re-open first permitted section now that real perms are known
+          _openFirstAllowed();
         }
       }).catch(e => console.warn('[index] fetchPermissions failed:', e));
-    } else {
-      // Normal path — perms are already in session (bundled at login).
-      // Re-apply to ensure icon-bar and nav reflect the real permission set,
-      // then open the first permitted section.
-      _applyPermissions();
-      _buildDsMeta();
-      const fv = Object.keys(SECTIONS).find(id => {
-        const btn = document.getElementById(id);
-        return btn && btn.style.display !== 'none';
-      });
-      if (fv) {
-        activeSection = null; // force fresh nav render
-        ibOpen(fv, document.getElementById(fv));
-      }
     }
   }
 
@@ -1755,8 +1836,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   } catch(_) {}
 
-  // Periodic health dot update (every 60s)
+  // Periodic miss check (every 60s) — keeps badge updated even when panel is closed
   setInterval(() => {
+    cmScanAll();
     updateCacheHealthDot();
   }, 60000);
 });
@@ -1769,7 +1851,7 @@ let _cpOutsideHandler = null;
 
 function _resetCpAutoHide() {
   if (_cpAutoHideTimer) clearTimeout(_cpAutoHideTimer);
-  _cpAutoHideTimer = setTimeout(closeCachePanel, 5000);
+  _cpAutoHideTimer = setTimeout(closeCachePanel, 3000);
 }
 
 function toggleCachePanel(e) {
@@ -1781,15 +1863,14 @@ function toggleCachePanel(e) {
     panel.classList.add('open');
     btn.classList.add('active');
     renderCacheTable();
+    cmScanAll();
     // Tick every second so "remaining" counts down live
     cachePanelTimer = setInterval(renderCacheTable, 1000);
     // Autohide on leave, cancel on re-enter
     panel.removeEventListener('mouseleave', _onCpLeave);
     panel.removeEventListener('mouseenter', _onCpEnter);
-    panel.removeEventListener('mousemove', _onCpMove);
     panel.addEventListener('mouseleave', _onCpLeave);
     panel.addEventListener('mouseenter', _onCpEnter);
-    panel.addEventListener('mousemove', _onCpMove);
     // Start the inactivity countdown immediately
     _resetCpAutoHide();
     // Cancel any prior outside-click handler then register a new one
@@ -1803,7 +1884,6 @@ function toggleCachePanel(e) {
 
 function _onCpLeave()  { _resetCpAutoHide(); }
 function _onCpEnter()  { if (_cpAutoHideTimer) { clearTimeout(_cpAutoHideTimer); _cpAutoHideTimer = null; } }
-function _onCpMove()   { if (_cpAutoHideTimer) { clearTimeout(_cpAutoHideTimer); } _cpAutoHideTimer = setTimeout(closeCachePanel, 5000); }
 
 function closePanelOutside(e) {
   const panel = document.getElementById('cache-panel');
@@ -1819,7 +1899,6 @@ function closeCachePanel() {
   panel?.classList.remove('open');
   panel?.removeEventListener('mouseleave', _onCpLeave);
   panel?.removeEventListener('mouseenter', _onCpEnter);
-  panel?.removeEventListener('mousemove', _onCpMove);
   cachePanelOpen = false;
   if (cachePanelTimer) { clearInterval(cachePanelTimer); cachePanelTimer = null; }
   if (_cpAutoHideTimer) { clearTimeout(_cpAutoHideTimer); _cpAutoHideTimer = null; }
@@ -1840,7 +1919,7 @@ const DS_META_ICONS = {
 };
 
 /* DS_META getter — always derived from dataLayer’s active (permitted) datasets.
-   All cache panel functions (renderCacheTable, updateCacheHealthDot,
+   All cache panel functions (cmScanAll, renderCacheTable, updateCacheHealthDot,
    cacheWatchdog) read DS_META and automatically see only what the user can access.
    No hardcoded list here — permissions drive everything.                          */
 Object.defineProperty(window, 'DS_META', {
@@ -2000,121 +2079,59 @@ function getCacheData(key) {
 async function hardRefreshDataset(key, btn) {
   btn.classList.add('spin');
   btn.disabled = true;
+  _logEvent('refresh', 'Hard refresh triggered:', key);
   try {
-    if (!window.Auth || !window.Auth.getCredentials || !window.Auth.getCredentials()) {
-      console.warn('[cache] hardRefresh: no valid session — aborting');
-      return;
-    }
     if (window.AdminPro && AdminPro.forceRefresh) {
       await AdminPro.forceRefresh(key);
-      // Sync shadow from IDB so status display is accurate immediately
-      await _syncShadowFromIDB(key);
     }
-    renderCacheTable();
-    updateCacheHealthDot();
-    _notifyFrame();
+    setTimeout(() => { renderCacheTable(); updateCacheHealthDot(); cmScanAll(); _notifyFrame(); }, 300);
   } catch(e) {
-    console.warn('[cache] hardRefresh failed:', key, e);
+    console.warn('refresh failed', key, e);
+    _logEvent('miss', 'Refresh error:', key);
   } finally {
     btn.classList.remove('spin');
     btn.disabled = false;
   }
 }
 
-async function deleteCacheDataset(key, btn) {
-  if (!window.Auth || !window.Auth.getCredentials || !window.Auth.getCredentials()) {
-    console.warn('[cache] delete: no valid session — aborting');
-    return;
-  }
-
-  btn.classList.add('spin');
-  btn.disabled = true;
-
-  try {
-    // 1. Wipe from IDB (real persistence layer)
-    await _idbDeleteKey('ap2_' + key);
-
-    // 2. Wipe from in-memory shadow
+function deleteCacheDataset(key, btn) {
+  _logEvent('delete', 'Cache row deleted:', key);
+  AP2Cache.delete(key).then(() => {
     window._AP2Shadow.age.delete(key);
     window._AP2Shadow.data.delete(key);
-
-    // 3. Wipe from AdminPro in-memory shadow cache
-    if (window.AdminPro && AdminPro.cache) AdminPro.cache.clear(key);
-
     renderCacheTable();
     updateCacheHealthDot();
-
-    // 4. Re-fetch fresh data from server using valid session credentials
-    if (window.AdminPro && AdminPro.forceRefresh) {
-      await AdminPro.forceRefresh(key);
-      await _syncShadowFromIDB(key);
-    }
-
-    renderCacheTable();
-    updateCacheHealthDot();
-    _notifyFrame();
-  } catch(e) {
-    console.warn('[cache] deleteCacheDataset failed:', key, e);
-  } finally {
-    btn.classList.remove('spin');
-    btn.disabled = false;
-  }
+    setTimeout(() => { cmScanAll(); _notifyFrame(); }, 250);
+  }).catch(() => {});
 }
 
 async function refreshAllCache() {
   const btn = document.querySelector('.cp-action-btn');
-  if (!window.Auth || !window.Auth.getCredentials || !window.Auth.getCredentials()) {
-    console.warn('[cache] refreshAll: no valid session — aborting');
-    return;
-  }
+  _logEvent('refresh', 'Refresh all cache triggered', '');
   if (btn) { btn.innerHTML = '<i class="ti ti-refresh" style="animation:spin 1s linear infinite;display:inline-block;"></i> Refreshing…'; btn.disabled = true; }
   try {
-    if (window.AdminPro && AdminPro.forceRefresh) {
-      await AdminPro.forceRefresh(); // refresh all permitted datasets
+    if (window.AdminPro && AdminPro.warmCache) {
+      await AdminPro.warmCache();
     }
-    await _syncAllShadowFromIDB();
     renderCacheTable();
     updateCacheHealthDot();
+    cmScanAll();
     _notifyFrame();
-  } catch(e) {
-    console.warn('[cache] refreshAllCache failed:', e);
   } finally {
     if (btn) { btn.innerHTML = '<i class="ti ti-refresh"></i> Refresh All'; btn.disabled = false; }
   }
 }
 
-async function deleteAllCache() {
-  if (!confirm('Clear all cached data and reload fresh from server?')) return;
-  if (!window.Auth || !window.Auth.getCredentials || !window.Auth.getCredentials()) {
-    console.warn('[cache] deleteAll: no valid session — aborting');
-    return;
-  }
-
-  // 1. Wipe IDB store entirely
-  await _idbClearAll();
-
-  // 2. Wipe AdminPro in-memory cache
-  if (window.AdminPro && AdminPro.cache) AdminPro.cache.clearAll();
-
-  // 3. Wipe shadow maps
-  window._AP2Shadow.age.clear();
-  window._AP2Shadow.data.clear();
-
-  renderCacheTable();
-  updateCacheHealthDot();
-
-  // 4. Re-fetch ALL permitted datasets fresh from server with valid session
-  try {
-    if (window.AdminPro && AdminPro.forceRefresh) {
-      await AdminPro.forceRefresh(); // no key = refresh all
-      await _syncAllShadowFromIDB();
-    }
+function deleteAllCache() {
+  if (!confirm('Clear all data? It will need to be re-loaded.')) return;
+  _logEvent('delete', 'ALL cache cleared', '');
+  AP2Cache.clearAll().then(() => {
+    window._AP2Shadow.age.clear();
+    window._AP2Shadow.data.clear();
     renderCacheTable();
     updateCacheHealthDot();
-    _notifyFrame();
-  } catch(e) {
-    console.warn('[cache] deleteAllCache re-fetch failed:', e);
-  }
+    setTimeout(() => cmScanAll(), 250);
+  }).catch(() => {});
 }
 
 function updateCacheHealthDot() {
