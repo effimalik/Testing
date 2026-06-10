@@ -1005,7 +1005,7 @@ html,body{
       <button class="tb-cache-btn" id="cache-status-btn" onclick="toggleCachePanel(event)" title="Cache Status">
         <i class="ti ti-database"></i>
         <span class="cache-dot" id="cache-health-dot"></span>
-        <span class="cache-miss-badge" id="cache-miss-badge"></span>
+
       </button>
 
       <div class="tb-vsep"></div>
@@ -1113,9 +1113,6 @@ html,body{
       Cache Status
     </div>
     <div class="cp-actions">
-      <button class="cp-action-btn" onclick="toggleMissChecker()" title="Cache miss checker" style="color:var(--amber);">
-        <i class="ti ti-alert-triangle"></i> Checker
-      </button>
       <button class="cp-action-btn" onclick="refreshAllCache()" title="Hard refresh all datasets">
         <i class="ti ti-refresh"></i> Refresh All
       </button>
@@ -1150,144 +1147,75 @@ html,body{
     <span id="cp-last-check">—</span>
   </div>
 </div>
-<!-- ══ CACHE MISS CHECKER PANEL ══ -->
-<div class="cm-panel" id="cm-panel">
-  <div class="cm-header">
-    <div class="cm-title"><i class="ti ti-alert-triangle"></i>Cache Checker</div>
-    <span id="cm-last-scan" style="font-size:9.5px;color:var(--text3);margin-right:6px;"></span>
-    <button class="cm-close" onclick="closeMissPanel()" title="Close"><i class="ti ti-x"></i></button>
-  </div>
-  <div class="cm-body" id="cm-body">
-    <div style="text-align:center;color:var(--text3);padding:20px;font-size:11px;">Scanning…</div>
-  </div>
-  <div class="cm-footer-strip">
-    <span id="cm-summary">—</span>
-    <button onclick="cmScanAll()"><i class="ti ti-refresh"></i> Re-scan</button>
-  </div>
-</div>
+<!-- cache miss checker panel removed -->
 
 
 <script>
 
 
 /* ════════════════════════════════════════════
-   EVENT LOG — silent sink (monitor removed)
+   IDB HELPERS — direct IndexedDB operations
+   Used by delete/clear to wipe IDB AND shadow
    ════════════════════════════════════════════ */
-function _logEvent() {} // no-op; kept so cache functions compile without change
+const _IDB_NAME  = 'ap2_fleet_cache';
+const _IDB_STORE = 'datasets';
 
-/* ════════════════════════════════════════════
-   CACHE MISS CHECKER
-   ════════════════════════════════════════════ */
-let _cmPanelOpen = false;
-let _cmAutoHideTimer = null;
-
-function toggleMissChecker() {
-  _cmPanelOpen = !_cmPanelOpen;
-  const p = document.getElementById('cm-panel');
-  if (_cmPanelOpen) {
-    p.classList.add('open');
-    cmScanAll();
-    p.removeEventListener('mouseleave', _onCmLeave);
-    p.removeEventListener('mouseenter', _onCmEnter);
-    p.addEventListener('mouseleave', _onCmLeave);
-    p.addEventListener('mouseenter', _onCmEnter);
-    _resetCmAutoHide();
-  } else {
-    closeMissPanel();
-  }
-}
-
-function _onCmLeave()  { _resetCmAutoHide(); }
-function _onCmEnter()  { if (_cmAutoHideTimer) { clearTimeout(_cmAutoHideTimer); _cmAutoHideTimer = null; } }
-
-function closeMissPanel() {
-  _cmPanelOpen = false;
-  const p = document.getElementById('cm-panel');
-  p?.classList.remove('open');
-  p?.removeEventListener('mouseleave', _onCmLeave);
-  p?.removeEventListener('mouseenter', _onCmEnter);
-  if (_cmAutoHideTimer) { clearTimeout(_cmAutoHideTimer); _cmAutoHideTimer = null; }
-}
-
-function _resetCmAutoHide() {
-  if (_cmAutoHideTimer) clearTimeout(_cmAutoHideTimer);
-  _cmAutoHideTimer = setTimeout(closeMissPanel, 3000);
-}
-
-function cmScanAll() {
-  const body = document.getElementById('cm-body');
-  const summary = document.getElementById('cm-summary');
-  const lastScan = document.getElementById('cm-last-scan');
-  if (!body) return;
-
-  const now = new Date();
-  if (lastScan) lastScan.textContent = 'Scanned ' + now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-
-  const results = Object.entries(DS_META).map(([key, meta]) => {
-    const ageMs = getCacheAge(key);
-    const hasData = (() => { try { const d = getCacheData(key); return Array.isArray(d) ? d.length > 0 : d != null; } catch(_){ return false; } })();
-    const fresh = ageMs < meta.ttlMs;
-    const status = !hasData ? 'miss' : !fresh ? 'stale' : 'ok';
-    return { key, label: meta.label, status, meta, ageMs };
+function _idbOpen() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(_IDB_NAME, 1);
+    r.onsuccess = e => res(e.target.result);
+    r.onerror   = e => rej(e.target.error);
   });
-
-  const misses = results.filter(r => r.status === 'miss').length;
-  const stales = results.filter(r => r.status === 'stale').length;
-  if (summary) {
-    if (misses === 0 && stales === 0) summary.textContent = 'All ' + results.length + ' healthy';
-    else summary.textContent = (misses ? misses + ' miss' : '') + (misses && stales ? ', ' : '') + (stales ? stales + ' stale' : '');
-  }
-
-  const missTotal = misses + stales;
-  const badge = document.getElementById('cache-miss-badge');
-  if (badge) {
-    badge.textContent = missTotal || '';
-    badge.classList.toggle('show', missTotal > 0);
-  }
-
-  // Only update visible rows when panel is open
-  if (!_cmPanelOpen) {
-    if (_cmPanelOpen) _resetCmAutoHide();
-    return;
-  }
-
-  body.innerHTML = results.map(r => {
-    const badgeCls = r.status === 'miss' ? 'miss' : r.status === 'stale' ? 'stale' : 'ok';
-    const badgeTxt = r.status === 'miss' ? 'MISS' : r.status === 'stale' ? 'STALE' : 'OK';
-    const ageStr = r.ageMs === Infinity ? 'Never loaded' : r.ageMs < 60000 ? Math.floor(r.ageMs/1000)+'s ago' : Math.floor(r.ageMs/60000)+'m ago';
-    return `<div class="cm-row ${r.status !== 'ok' ? r.status : ''}">
-      <span class="cm-row-name">${r.label}</span>
-      <span class="cm-row-info">${ageStr}</span>
-      <span class="cm-row-badge ${badgeCls}">${badgeTxt}</span>
-      <button class="cm-row-btn" id="cmbtn-${r.key}" onclick="cmRefresh('${r.key}',this)" title="Force refresh">
-        <i class="ti ti-refresh"></i>
-      </button>
-    </div>`;
-  }).join('');
-
-  if (_cmPanelOpen) _resetCmAutoHide();
 }
 
-async function cmRefresh(key, btn) {
-  btn.classList.add('spin');
-  btn.disabled = true;
-  _logEvent('refresh', 'Cache refresh triggered:', key);
+async function _idbDeleteKey(fullKey) {
   try {
-    if (window.AdminPro && AdminPro.forceRefresh) {
-      await AdminPro.forceRefresh(key);
+    const db = await _idbOpen();
+    await new Promise((res, rej) => {
+      const req = db.transaction(_IDB_STORE, 'readwrite').objectStore(_IDB_STORE).delete(fullKey);
+      req.onsuccess = () => res();
+      req.onerror   = () => rej(req.error);
+    });
+  } catch(e) { console.warn('[cache] IDB delete failed:', e.message); }
+}
+
+async function _idbClearAll() {
+  try {
+    const db = await _idbOpen();
+    await new Promise((res, rej) => {
+      const req = db.transaction(_IDB_STORE, 'readwrite').objectStore(_IDB_STORE).clear();
+      req.onsuccess = () => res();
+      req.onerror   = () => rej(req.error);
+    });
+  } catch(e) { console.warn('[cache] IDB clearAll failed:', e.message); }
+}
+
+/* Sync shadow map from IDB after a refresh so getCacheAge/getCacheData stay accurate */
+async function _syncShadowFromIDB(dsKey) {
+  try {
+    const db  = await _idbOpen();
+    const rec = await new Promise((res, rej) => {
+      const req = db.transaction(_IDB_STORE, 'readonly').objectStore(_IDB_STORE).get('ap2_' + dsKey);
+      req.onsuccess = () => res(req.result || null);
+      req.onerror   = () => rej(req.error);
+    });
+    if (rec) {
+      window._AP2Shadow.age.set(dsKey,  rec.ts);
+      window._AP2Shadow.data.set(dsKey, rec.data);
     } else {
-      await AP2Cache.delete(key);
+      window._AP2Shadow.age.delete(dsKey);
+      window._AP2Shadow.data.delete(dsKey);
     }
-    setTimeout(() => { cmScanAll(); renderCacheTable(); updateCacheHealthDot(); _notifyFrame(); }, 300);
-  } catch(e) {
-    _logEvent('miss', 'Refresh error:', key);
-  } finally {
-    btn.classList.remove('spin');
-    btn.disabled = false;
+  } catch(e) { console.warn('[cache] shadow sync failed:', e.message); }
+}
+
+async function _syncAllShadowFromIDB() {
+  for (const key of Object.keys(DS_META)) {
+    await _syncShadowFromIDB(key);
   }
 }
 
-/* ══ CACHE CHANGE WATCHER ══ */
+/* ══ CACHE CHANGE WATCHER — keep shadow in sync with AP2Cache in-memory store ══ */
 (function _watchCache() {
   AP2Cache.onChange(async (key, op) => {
     if (op === 'set') {
@@ -1296,18 +1224,14 @@ async function cmRefresh(key, btn) {
         window._AP2Shadow.age.set(key, rec.ts);
         window._AP2Shadow.data.set(key, rec.data);
       }
-      _logEvent('cache', 'Cache updated:', key);
     } else if (op === 'delete') {
       window._AP2Shadow.age.delete(key);
       window._AP2Shadow.data.delete(key);
-      _logEvent('delete', 'Cache deleted:', key);
     } else if (op === 'clear') {
       window._AP2Shadow.age.clear();
       window._AP2Shadow.data.clear();
-      _logEvent('delete', 'ALL cache cleared', '');
     }
     updateCacheHealthDot();
-    if (_cmPanelOpen) cmScanAll();
   });
 })();
 
@@ -1767,7 +1691,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       console.warn('[index] warmIfEmpty error (non-fatal):', e.message);
     }
     updateCacheHealthDot();
-    cmScanAll();
   }
 
   // ── STEP 3: Open the first permitted section → loads first sub-page into frame ──
@@ -1789,7 +1712,6 @@ window.addEventListener('DOMContentLoaded', async () => {
           if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
             await AdminPro.warmIfEmpty().catch(() => {});
             updateCacheHealthDot();
-            cmScanAll();
           }
           // Re-open first visible section now that permissions are known
           const fv = Object.keys(SECTIONS).find(id => {
@@ -1829,9 +1751,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
   } catch(_) {}
 
-  // Periodic miss check (every 60s) — keeps badge updated even when panel is closed
+  // Periodic health dot update (every 60s)
   setInterval(() => {
-    cmScanAll();
     updateCacheHealthDot();
   }, 60000);
 });
@@ -1856,7 +1777,6 @@ function toggleCachePanel(e) {
     panel.classList.add('open');
     btn.classList.add('active');
     renderCacheTable();
-    cmScanAll();
     // Tick every second so "remaining" counts down live
     cachePanelTimer = setInterval(renderCacheTable, 1000);
     // Autohide on leave, cancel on re-enter
@@ -1912,7 +1832,7 @@ const DS_META_ICONS = {
 };
 
 /* DS_META getter — always derived from dataLayer’s active (permitted) datasets.
-   All cache panel functions (cmScanAll, renderCacheTable, updateCacheHealthDot,
+   All cache panel functions (renderCacheTable, updateCacheHealthDot,
    cacheWatchdog) read DS_META and automatically see only what the user can access.
    No hardcoded list here — permissions drive everything.                          */
 Object.defineProperty(window, 'DS_META', {
@@ -2072,59 +1992,121 @@ function getCacheData(key) {
 async function hardRefreshDataset(key, btn) {
   btn.classList.add('spin');
   btn.disabled = true;
-  _logEvent('refresh', 'Hard refresh triggered:', key);
   try {
+    if (!window.Auth || !window.Auth.getCredentials || !window.Auth.getCredentials()) {
+      console.warn('[cache] hardRefresh: no valid session — aborting');
+      return;
+    }
     if (window.AdminPro && AdminPro.forceRefresh) {
       await AdminPro.forceRefresh(key);
+      // Sync shadow from IDB so status display is accurate immediately
+      await _syncShadowFromIDB(key);
     }
-    setTimeout(() => { renderCacheTable(); updateCacheHealthDot(); cmScanAll(); _notifyFrame(); }, 300);
+    renderCacheTable();
+    updateCacheHealthDot();
+    _notifyFrame();
   } catch(e) {
-    console.warn('refresh failed', key, e);
-    _logEvent('miss', 'Refresh error:', key);
+    console.warn('[cache] hardRefresh failed:', key, e);
   } finally {
     btn.classList.remove('spin');
     btn.disabled = false;
   }
 }
 
-function deleteCacheDataset(key, btn) {
-  _logEvent('delete', 'Cache row deleted:', key);
-  AP2Cache.delete(key).then(() => {
+async function deleteCacheDataset(key, btn) {
+  if (!window.Auth || !window.Auth.getCredentials || !window.Auth.getCredentials()) {
+    console.warn('[cache] delete: no valid session — aborting');
+    return;
+  }
+
+  btn.classList.add('spin');
+  btn.disabled = true;
+
+  try {
+    // 1. Wipe from IDB (real persistence layer)
+    await _idbDeleteKey('ap2_' + key);
+
+    // 2. Wipe from in-memory shadow
     window._AP2Shadow.age.delete(key);
     window._AP2Shadow.data.delete(key);
+
+    // 3. Wipe from AdminPro in-memory shadow cache
+    if (window.AdminPro && AdminPro.cache) AdminPro.cache.clear(key);
+
     renderCacheTable();
     updateCacheHealthDot();
-    setTimeout(() => { cmScanAll(); _notifyFrame(); }, 250);
-  }).catch(() => {});
+
+    // 4. Re-fetch fresh data from server using valid session credentials
+    if (window.AdminPro && AdminPro.forceRefresh) {
+      await AdminPro.forceRefresh(key);
+      await _syncShadowFromIDB(key);
+    }
+
+    renderCacheTable();
+    updateCacheHealthDot();
+    _notifyFrame();
+  } catch(e) {
+    console.warn('[cache] deleteCacheDataset failed:', key, e);
+  } finally {
+    btn.classList.remove('spin');
+    btn.disabled = false;
+  }
 }
 
 async function refreshAllCache() {
   const btn = document.querySelector('.cp-action-btn');
-  _logEvent('refresh', 'Refresh all cache triggered', '');
+  if (!window.Auth || !window.Auth.getCredentials || !window.Auth.getCredentials()) {
+    console.warn('[cache] refreshAll: no valid session — aborting');
+    return;
+  }
   if (btn) { btn.innerHTML = '<i class="ti ti-refresh" style="animation:spin 1s linear infinite;display:inline-block;"></i> Refreshing…'; btn.disabled = true; }
   try {
-    if (window.AdminPro && AdminPro.warmCache) {
-      await AdminPro.warmCache();
+    if (window.AdminPro && AdminPro.forceRefresh) {
+      await AdminPro.forceRefresh(); // refresh all permitted datasets
     }
+    await _syncAllShadowFromIDB();
     renderCacheTable();
     updateCacheHealthDot();
-    cmScanAll();
     _notifyFrame();
+  } catch(e) {
+    console.warn('[cache] refreshAllCache failed:', e);
   } finally {
     if (btn) { btn.innerHTML = '<i class="ti ti-refresh"></i> Refresh All'; btn.disabled = false; }
   }
 }
 
-function deleteAllCache() {
-  if (!confirm('Clear all data? It will need to be re-loaded.')) return;
-  _logEvent('delete', 'ALL cache cleared', '');
-  AP2Cache.clearAll().then(() => {
-    window._AP2Shadow.age.clear();
-    window._AP2Shadow.data.clear();
+async function deleteAllCache() {
+  if (!confirm('Clear all cached data and reload fresh from server?')) return;
+  if (!window.Auth || !window.Auth.getCredentials || !window.Auth.getCredentials()) {
+    console.warn('[cache] deleteAll: no valid session — aborting');
+    return;
+  }
+
+  // 1. Wipe IDB store entirely
+  await _idbClearAll();
+
+  // 2. Wipe AdminPro in-memory cache
+  if (window.AdminPro && AdminPro.cache) AdminPro.cache.clearAll();
+
+  // 3. Wipe shadow maps
+  window._AP2Shadow.age.clear();
+  window._AP2Shadow.data.clear();
+
+  renderCacheTable();
+  updateCacheHealthDot();
+
+  // 4. Re-fetch ALL permitted datasets fresh from server with valid session
+  try {
+    if (window.AdminPro && AdminPro.forceRefresh) {
+      await AdminPro.forceRefresh(); // no key = refresh all
+      await _syncAllShadowFromIDB();
+    }
     renderCacheTable();
     updateCacheHealthDot();
-    setTimeout(() => cmScanAll(), 250);
-  }).catch(() => {});
+    _notifyFrame();
+  } catch(e) {
+    console.warn('[cache] deleteAllCache re-fetch failed:', e);
+  }
 }
 
 function updateCacheHealthDot() {
