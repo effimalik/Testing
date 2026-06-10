@@ -63,9 +63,37 @@ window.AP2Cache = {
     return Array.from(_store.keys());
   },
   async streamQuery(key, predicateFn) {
-    const rec = _store.get(key);
-    if (!rec || !Array.isArray(rec.data)) return [];
-    return rec.data.filter(predicateFn);
+    // Stream-Query: pull filtered rows from IDB without loading the whole table
+    // Falls back to in-memory store when IDB is unavailable (e.g. static data)
+    try {
+      const IDB_NAME = 'ap2_fleet_cache', IDB_STORE = 'datasets';
+      const db = await new Promise((res, rej) => {
+        const r = indexedDB.open(IDB_NAME, 1);
+        r.onsuccess = e => res(e.target.result);
+        r.onerror   = e => rej(e.target.error);
+      });
+      const fullKey = 'ap2_' + key;
+      return await new Promise((res, rej) => {
+        const req = db.transaction(IDB_STORE, 'readonly')
+                      .objectStore(IDB_STORE).get(fullKey);
+        req.onsuccess = () => {
+          const rec = req.result;
+          if (!rec || !Array.isArray(rec.data)) { res([]); return; }
+          // Iterate row-by-row — never clone the full array
+          const out = [];
+          for (let i = 0, len = rec.data.length; i < len; i++) {
+            try { if (predicateFn(rec.data[i])) out.push(rec.data[i]); } catch (_) {}
+          }
+          res(out);
+        };
+        req.onerror = () => rej(req.error);
+      });
+    } catch (_) {
+      // Fallback: in-memory static store
+      const rec = _store.get(key);
+      if (!rec || !Array.isArray(rec.data)) return [];
+      return rec.data.filter(row => { try { return predicateFn(row); } catch(_){ return false; } });
+    }
   },
   async slice(key, blockIndex = 0) {
     const rec = _store.get(key);
