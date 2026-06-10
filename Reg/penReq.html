@@ -554,8 +554,8 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
 <script>
 
 const GOOGLE_FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSfPkgYXjfSLC9HdQVHVQ1NEWpQ99LqST36ekWqh323kx_BrzQ/formResponse';
-const _AP2_CACHE_KEY = 'ap2_masterReq';
-const CACHE_TTL = 5 * 60 * 1000;
+const _AP2_CACHE_KEY = 'ap2_master';
+async function clearCache(){try{await _idbDel(_AP2_CACHE_KEY);}catch(e){}}
 
 // ── IndexedDB helpers ────────────────────────────────────────
 function _getDB(){
@@ -594,16 +594,7 @@ async function _idbDel(key){
   });
 }
 
-async function saveCache(data){try{await _idbSet(_AP2_CACHE_KEY,{ts:Date.now(),data});}catch(e){}}
-async function loadCache(){
-  try{
-    const entry=await _idbGet(_AP2_CACHE_KEY);
-    if(!entry||!entry.ts)return null;
-    if(Date.now()-entry.ts>CACHE_TTL)return null;
-    return{data:entry.data,age:Math.round((Date.now()-entry.ts)/1000)};
-  }catch(e){return null;}
-}
-async function clearCache(){try{await _idbDel(_AP2_CACHE_KEY);}catch(e){}}
+
 
 let allRequests=[],filteredList=[],currentPage=1,rowsPerPage=20;
 let selectedRefs=new Set(),pendingAcceptRef=null,detailRef=null;
@@ -688,20 +679,38 @@ function showToast(msg,type='ok'){
 }
 
 // LOAD DATA
+// Three-tier priority: __AP2_PRELOAD → AdminPro.streamQuery (IDB via dataLayer) → _idbGet fallback
 async function loadData(forceRefresh=false){
   setSyncLoading(true);
   allRequests=[];selectedRefs.clear();updateSelectionUI();
-  if(!forceRefresh){
-    const cached=await loadCache();
-    if(cached){processFetchedData(cached.data);setSyncLoading(false);updateCacheInfo(cached.age,false);return;}
-  } else {
-    await clearCache();
-  }
   try{
-    const res = await fetch(`${API_BASE}?type=master&t=${Date.now()}`,{ cache: 'no-store' });
+    let rows=null;
+    if(!forceRefresh){
+      // Tier 1: preload pushed by parent (zero IDB cost)
+      if(window.__AP2_PRELOAD&&Array.isArray(window.__AP2_PRELOAD['master'])){
+        rows=window.__AP2_PRELOAD['master'];
+      }
+      // Tier 2: IDB via dataLayer
+      if(!rows||!rows.length){
+        if(window.AdminPro&&typeof AdminPro.streamQuery==='function'){
+          try{rows=await AdminPro.streamQuery('master',()=>true);}catch(_){}
+        }
+      }
+      // Tier 3: direct IDB read as final fallback
+      if(!rows||!rows.length){
+        const entry=await _idbGet(_AP2_CACHE_KEY).catch(()=>null);
+        if(entry&&entry.data)rows=entry.data;
+      }
+    }
+    if(rows&&rows.length){
+      processFetchedData(rows);updateCacheInfo(0,false);setSyncLoading(false);return;
+    }
+    // No cached data — fetch from API
+    const res=await fetch(`${API_BASE}?type=master&t=${Date.now()}`,{cache:'no-store'});
     const data=await res.json();
-    const rows=Array.isArray(data)?data:(data.data||[]);
-    await saveCache(rows);processFetchedData(rows);updateCacheInfo(0,true);
+    rows=Array.isArray(data)?data:(data.data||[]);
+    await _idbSet(_AP2_CACHE_KEY,{ts:Date.now(),data:rows});
+    processFetchedData(rows);updateCacheInfo(0,true);
   }catch(err){
     console.error('[loadData]',err);
     showToast('Could not load data — check network','error');
@@ -1012,7 +1021,13 @@ async function syncSheets(){await clearCache();await loadData(true);showToast('S
 window.addEventListener('scroll',()=>{document.getElementById('scroll-top').classList.toggle('show',window.scrollY>300);});
 function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
 
-// THEME SYNC — parent frame attribute, no localStorage
+// THEME SYNC — parent frame attribute → sessionStorage fallback → 'dark'
+(function(){
+  let t='dark';
+  try{t=window.parent.document.documentElement.getAttribute('data-theme')||t;}catch(_){}
+  try{t=sessionStorage.getItem('__ui_theme')||t;}catch(_){}
+  document.documentElement.setAttribute('data-theme',t);
+})();
 function applyTheme(t){document.documentElement.setAttribute('data-theme',t||'dark');}
 function syncTheme(){
   const p=window.parent?.document?.documentElement;
@@ -1026,26 +1041,37 @@ try{
   }
 }catch(e){}
 
-// BACKGROUND WATCHER — IDB poll + ap-cache-updated event
+// BACKGROUND WATCHER — IDB poll every 30s + ap-cache-updated debounce
 (function _bgWatcher(){
   let _debounce=null;
   async function _applyFromIDB(){
-    const entry=await _idbGet(_AP2_CACHE_KEY).catch(()=>null);
-    if(!entry||!entry.ts||!entry.data)return;
-    processFetchedData(entry.data);
-    updateCacheInfo(Math.round((Date.now()-entry.ts)/1000),false);
+    let rows=null;
+    if(window.AdminPro&&typeof AdminPro.streamQuery==='function'){
+      try{rows=await AdminPro.streamQuery('master',()=>true);}catch(_){}
+    }
+    if(!rows||!rows.length){
+      const entry=await _idbGet(_AP2_CACHE_KEY).catch(()=>null);
+      if(entry&&entry.data)rows=entry.data;
+    }
+    if(rows&&rows.length){processFetchedData(rows);updateCacheInfo(0,false);}
   }
+  const _debouncedApply=()=>{clearTimeout(_debounce);_debounce=setTimeout(_applyFromIDB,200);};
   setInterval(_applyFromIDB,30000);
+  window.addEventListener('ap-cache-updated',_debouncedApply);
   window.addEventListener('message',e=>{
     if(!e.data)return;
+    // Change 4: ap-cache-preload — extract datasets.master, normalise, render immediately
     if(e.data.type==='ap-cache-preload'){
-      const rows=e.data.datasets&&e.data.datasets.masterReq;
+      window.__AP2_PRELOAD=e.data.datasets;
+      const rows=e.data.datasets&&e.data.datasets.master;
       if(rows){processFetchedData(rows);updateCacheInfo(0,true);}
       return;
     }
     if(e.data.type==='ap-cache-updated'&&e.data.key===_AP2_CACHE_KEY){
-      clearTimeout(_debounce);
-      _debounce=setTimeout(_applyFromIDB,200);
+      _debouncedApply();
+    }
+    if(e.data.type==='ap-theme'&&e.data.theme){
+      document.documentElement.setAttribute('data-theme',e.data.theme);
     }
   });
 })();
