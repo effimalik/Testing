@@ -370,7 +370,7 @@
     /**
      * Secure logout:
      *  1. Stop all timers immediately
-     *  2. Wipe client session
+     *  2. Wipe client session (sessionStorage, localStorage, IndexedDB)
      *  3. Tell server to destroy session (best-effort, non-blocking)
      *  4. Redirect to login
      */
@@ -381,16 +381,28 @@
       if (_idleTimer)        clearTimeout(_idleTimer);
       if (_serverCheckTimer) clearTimeout(_serverCheckTimer);
 
-      // Wipe client session immediately — do NOT wait for server
-      _clearSession();
-
-      // Stop dataLayer refresh timers and wipe localStorage cache on sign-out
+      // Stop dataLayer refresh timers before wiping storage
       try {
         if (window.DataLayer || window.AdminPro) {
           const dl = window.AdminPro || window.DataLayer;
           if (typeof dl.stopAllTimers === 'function') dl.stopAllTimers();
-          // Wipe all ap2_* cache entries — user should not leave data behind on shared devices
           if (dl.cache && typeof dl.cache.clearAll === 'function') dl.cache.clearAll();
+        }
+      } catch {}
+
+      // ── 1. sessionStorage ─────────────────────────────────────────
+      try { sessionStorage.clear(); } catch {}
+
+      // ── 2. localStorage ───────────────────────────────────────────
+      try { localStorage.clear(); } catch {}
+
+      // ── 3. IndexedDB — delete every database the browser reports ──
+      try {
+        const dbs = await indexedDB.databases?.();
+        if (Array.isArray(dbs)) {
+          dbs.forEach(({ name }) => {
+            try { if (name) indexedDB.deleteDatabase(name); } catch {}
+          });
         }
       } catch {}
 
