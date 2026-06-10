@@ -554,12 +554,56 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
 <script>
 
 const GOOGLE_FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSfPkgYXjfSLC9HdQVHVQ1NEWpQ99LqST36ekWqh323kx_BrzQ/formResponse';
-const CACHE_KEY = 'masterReq_cache_v3';
+const _AP2_CACHE_KEY = 'ap2_masterReq';
 const CACHE_TTL = 5 * 60 * 1000;
 
-function saveCache(data){try{localStorage.setItem(CACHE_KEY,JSON.stringify({ts:Date.now(),data}));}catch(e){}}
-function loadCache(){try{const r=localStorage.getItem(CACHE_KEY);if(!r)return null;const o=JSON.parse(r);if(Date.now()-o.ts>CACHE_TTL)return null;return{data:o.data,age:Math.round((Date.now()-o.ts)/1000)};}catch(e){return null;}}
-function clearCache(){try{localStorage.removeItem(CACHE_KEY);}catch(e){}}
+// ── IndexedDB helpers ────────────────────────────────────────
+function _getDB(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open('ap2_fleet_cache',1);
+    req.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('datasets'))db.createObjectStore('datasets');};
+    req.onsuccess=e=>res(e.target.result);
+    req.onerror=e=>rej(e.target.error);
+  });
+}
+async function _idbGet(key){
+  const db=await _getDB();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction('datasets','readonly');
+    const req=tx.objectStore('datasets').get(key);
+    req.onsuccess=e=>res(e.target.result??null);
+    req.onerror=e=>rej(e.target.error);
+  });
+}
+async function _idbSet(key,value){
+  const db=await _getDB();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction('datasets','readwrite');
+    const req=tx.objectStore('datasets').put(value,key);
+    req.onsuccess=()=>res();
+    req.onerror=e=>rej(e.target.error);
+  });
+}
+async function _idbDel(key){
+  const db=await _getDB();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction('datasets','readwrite');
+    const req=tx.objectStore('datasets').delete(key);
+    req.onsuccess=()=>res();
+    req.onerror=e=>rej(e.target.error);
+  });
+}
+
+async function saveCache(data){try{await _idbSet(_AP2_CACHE_KEY,{ts:Date.now(),data});}catch(e){}}
+async function loadCache(){
+  try{
+    const entry=await _idbGet(_AP2_CACHE_KEY);
+    if(!entry||!entry.ts)return null;
+    if(Date.now()-entry.ts>CACHE_TTL)return null;
+    return{data:entry.data,age:Math.round((Date.now()-entry.ts)/1000)};
+  }catch(e){return null;}
+}
+async function clearCache(){try{await _idbDel(_AP2_CACHE_KEY);}catch(e){}}
 
 let allRequests=[],filteredList=[],currentPage=1,rowsPerPage=20;
 let selectedRefs=new Set(),pendingAcceptRef=null,detailRef=null;
@@ -648,14 +692,16 @@ async function loadData(forceRefresh=false){
   setSyncLoading(true);
   allRequests=[];selectedRefs.clear();updateSelectionUI();
   if(!forceRefresh){
-    const cached=loadCache();
+    const cached=await loadCache();
     if(cached){processFetchedData(cached.data);setSyncLoading(false);updateCacheInfo(cached.age,false);return;}
+  } else {
+    await clearCache();
   }
   try{
     const res = await fetch(`${API_BASE}?type=master&t=${Date.now()}`,{ cache: 'no-store' });
     const data=await res.json();
     const rows=Array.isArray(data)?data:(data.data||[]);
-    saveCache(rows);processFetchedData(rows);updateCacheInfo(0,true);
+    await saveCache(rows);processFetchedData(rows);updateCacheInfo(0,true);
   }catch(err){
     console.error('[loadData]',err);
     showToast('Could not load data — check network','error');
@@ -960,13 +1006,13 @@ function setSyncLoading(on){
   btn.disabled=on;lbl.textContent=on?'Syncing…':'Sync Sheets';
   document.getElementById('sync-icon-wrap').style.animation=on?'pulse-spin .7s linear infinite':'none';
 }
-async function syncSheets(){clearCache();await loadData(true);showToast('Synced from Master Sheet','ok');}
+async function syncSheets(){await clearCache();await loadData(true);showToast('Synced from Master Sheet','ok');}
 
 // SCROLL TOP
 window.addEventListener('scroll',()=>{document.getElementById('scroll-top').classList.toggle('show',window.scrollY>300);});
 function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
 
-// THEME SYNC — instant via MutationObserver on parent, fallback to localStorage
+// THEME SYNC — parent frame attribute, no localStorage
 function applyTheme(t){document.documentElement.setAttribute('data-theme',t||'dark');}
 function syncTheme(){
   const p=window.parent?.document?.documentElement;
@@ -979,7 +1025,30 @@ try{
     new MutationObserver(()=>applyTheme(p.getAttribute('data-theme'))).observe(p,{attributes:true,attributeFilter:['data-theme']});
   }
 }catch(e){}
-try{const s=localStorage.getItem('penReq_theme');if(s)applyTheme(s);}catch(e){}
+
+// BACKGROUND WATCHER — IDB poll + ap-cache-updated event
+(function _bgWatcher(){
+  let _debounce=null;
+  async function _applyFromIDB(){
+    const entry=await _idbGet(_AP2_CACHE_KEY).catch(()=>null);
+    if(!entry||!entry.ts||!entry.data)return;
+    processFetchedData(entry.data);
+    updateCacheInfo(Math.round((Date.now()-entry.ts)/1000),false);
+  }
+  setInterval(_applyFromIDB,30000);
+  window.addEventListener('message',e=>{
+    if(!e.data)return;
+    if(e.data.type==='ap-cache-preload'){
+      const rows=e.data.datasets&&e.data.datasets.masterReq;
+      if(rows){processFetchedData(rows);updateCacheInfo(0,true);}
+      return;
+    }
+    if(e.data.type==='ap-cache-updated'&&e.data.key===_AP2_CACHE_KEY){
+      clearTimeout(_debounce);
+      _debounce=setTimeout(_applyFromIDB,200);
+    }
+  });
+})();
 
 (async()=>{await loadData();})();
 </script>

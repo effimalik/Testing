@@ -364,9 +364,45 @@ tr.overdue td:first-child{border-left:2px solid var(--red);}
 //  CONFIG
 // ══════════════════════════════════════
 const GAS_URL = API_BASE
-const CACHE_KEY   = 'recovery_data_v1';
-const CACHE_TS_KEY = 'recovery_data_ts_v1';
-const CACHE_TTL   = 6 * 60 * 60 * 1000; // 6 hours in ms
+const _AP2_CACHE_KEY = 'ap2_recovery';
+const CACHE_TTL      = 6 * 60 * 60 * 1000; // 6 hours in ms
+
+// ── IndexedDB helpers ────────────────────────────────────────
+function _getDB(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open('ap2_fleet_cache',1);
+    req.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('datasets'))db.createObjectStore('datasets');};
+    req.onsuccess=e=>res(e.target.result);
+    req.onerror=e=>rej(e.target.error);
+  });
+}
+async function _idbGet(key){
+  const db=await _getDB();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction('datasets','readonly');
+    const req=tx.objectStore('datasets').get(key);
+    req.onsuccess=e=>res(e.target.result??null);
+    req.onerror=e=>rej(e.target.error);
+  });
+}
+async function _idbSet(key,value){
+  const db=await _getDB();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction('datasets','readwrite');
+    const req=tx.objectStore('datasets').put(value,key);
+    req.onsuccess=()=>res();
+    req.onerror=e=>rej(e.target.error);
+  });
+}
+async function _idbDel(key){
+  const db=await _getDB();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction('datasets','readwrite');
+    const req=tx.objectStore('datasets').delete(key);
+    req.onsuccess=()=>res();
+    req.onerror=e=>rej(e.target.error);
+  });
+}
 
 const EMPLOYEES = [
   { empId:1, name:'Ahmed Al Mansoori', eid:'784199995170001' },
@@ -453,28 +489,23 @@ function updateCachePill(ts) {
 }
 
 // ══════════════════════════════════════
-//  LOCAL STORAGE CACHE (6 hours)
+//  INDEXEDDB CACHE (6 hours)
 // ══════════════════════════════════════
-function saveCache(data) {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-    localStorage.setItem(CACHE_TS_KEY, String(Date.now()));
-  } catch(e) { /* storage full — skip */ }
+async function saveCache(data) {
+  try { await _idbSet(_AP2_CACHE_KEY, { ts: Date.now(), data }); } catch(e) {}
 }
 
-function loadCache() {
+async function loadCache() {
   try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    const ts  = parseInt(localStorage.getItem(CACHE_TS_KEY) || '0');
-    if (!raw || !ts) return null;
-    if (Date.now() - ts > CACHE_TTL) return null; // expired
-    return { data: JSON.parse(raw), ts };
+    const entry = await _idbGet(_AP2_CACHE_KEY);
+    if (!entry || !entry.ts) return null;
+    if (Date.now() - entry.ts > CACHE_TTL) return null;
+    return { data: entry.data, ts: entry.ts };
   } catch(e) { return null; }
 }
 
-function clearCache() {
-  localStorage.removeItem(CACHE_KEY);
-  localStorage.removeItem(CACHE_TS_KEY);
+async function clearCache() {
+  try { await _idbDel(_AP2_CACHE_KEY); } catch(e) {}
 }
 
 // ══════════════════════════════════════
@@ -543,12 +574,12 @@ function buildRows(disbursedData) {
 }
 
 // ══════════════════════════════════════
-//  LOAD DATA (with cache)
+//  LOAD DATA (with IDB cache)
 // ══════════════════════════════════════
 async function loadData(forceRefresh = false) {
-  // Try cache first (unless force refresh)
+  // Try IDB cache first (unless force refresh)
   if (!forceRefresh) {
-    const cached = loadCache();
+    const cached = await loadCache();
     if (cached) {
       setLoading(true, 'Reading cache…', 'Last updated ' + formatTimeAgo(cached.ts));
       await new Promise(r => setTimeout(r, 150)); // micro-delay for UX
@@ -558,25 +589,30 @@ async function loadData(forceRefresh = false) {
       return;
     }
   } else {
-    clearCache();
+    await clearCache();
   }
 
   setLoading(true, 'Fetching from server…', 'Connecting to Google Sheets…');
   try {
     const disbursedData = await gasCall('getDisbursedRequests');
-    saveCache(disbursedData);
+    await saveCache(disbursedData);
     updateCachePill(Date.now());
     allRows = buildRows(disbursedData);
     finishLoad(false);
   } catch (err) {
     console.error(err);
-    // Try stale cache as fallback
+    // Try stale IDB entry as fallback
     try {
-      const raw = localStorage.getItem(CACHE_KEY);
-      const ts  = parseInt(localStorage.getItem(CACHE_TS_KEY) || '0');
-      if (raw && ts) {
-        allRows = buildRows(JSON.parse(raw));
-        updateCachePill(ts);
+      const db  = await _getDB();
+      const raw = await new Promise((res,rej)=>{
+        const tx=db.transaction('datasets','readonly');
+        const req=tx.objectStore('datasets').get(_AP2_CACHE_KEY);
+        req.onsuccess=e=>res(e.target.result??null);
+        req.onerror=e=>rej(e.target.error);
+      });
+      if (raw && raw.data && raw.ts) {
+        allRows = buildRows(raw.data);
+        updateCachePill(raw.ts);
         showInfo('Using stale cache — could not reach server: ' + err.message);
         showToast('Loaded from stale cache', 'ti-database', 'warn');
         finishLoad(true);
@@ -1010,18 +1046,47 @@ function downloadCSV(rows, filename) {
 }
 
 // ══════════════════════════════════════
+//  BACKGROUND WATCHER (IDB poll + preload)
+// ══════════════════════════════════════
+(function _bgWatcher(){
+  let _debounce=null;
+  async function _applyFromIDB(){
+    const entry=await _idbGet(_AP2_CACHE_KEY).catch(()=>null);
+    if(!entry||!entry.ts||!entry.data)return;
+    allRows=buildRows(entry.data);
+    updateCachePill(entry.ts);
+    populateFilters();updateStats();applyFilters();
+  }
+  // Poll every 30 s
+  setInterval(_applyFromIDB,30000);
+  // React to parent cache-updated event (debounced 200 ms)
+  window.addEventListener('message',e=>{
+    if(!e.data)return;
+    if(e.data.type==='ap-cache-preload'){
+      const rows=e.data.datasets&&e.data.datasets.recovery;
+      if(rows){allRows=buildRows(rows);populateFilters();updateStats();applyFilters();}
+      return;
+    }
+    if(e.data.type==='ap-cache-updated'&&e.data.key===_AP2_CACHE_KEY){
+      clearTimeout(_debounce);
+      _debounce=setTimeout(_applyFromIDB,200);
+    }
+  });
+})();
+
+// ══════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════
 (async () => {
-  // Show stale cache indicator immediately
-  const ts = parseInt(localStorage.getItem(CACHE_TS_KEY) || '0');
-  if (ts) updateCachePill(ts);
+  // Show stale IDB indicator immediately
+  const entry = await _idbGet(_AP2_CACHE_KEY).catch(()=>null);
+  if (entry && entry.ts) updateCachePill(entry.ts);
   await loadData(false);
 
   // Refresh cache pill every minute
-  setInterval(() => {
-    const t = parseInt(localStorage.getItem(CACHE_TS_KEY) || '0');
-    if (t) updateCachePill(t);
+  setInterval(async () => {
+    const e = await _idbGet(_AP2_CACHE_KEY).catch(()=>null);
+    if (e && e.ts) updateCachePill(e.ts);
   }, 60000);
 })();
 </script>

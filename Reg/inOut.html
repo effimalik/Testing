@@ -1173,9 +1173,47 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
 // CONFIG & STATE
 // ─────────────────────────────────────────────────────────────────
 const CFG_KEY='ram_config_v1';
-const CACHE_KEY='ram_cache_v1';
 const CACHE_TTL=5*60*1000;
 const API_BASE = 'https://script.google.com/macros/s/AKfycbx9O_58jlTsohkp8bNYA1rO2EQm9M9FeXoe1FT3E0n8yJ91jseidhKiM0Ss7meNkl7Elg/exec';
+
+// ── IndexedDB helpers ────────────────────────────────────────
+function _getDB(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open('ap2_fleet_cache',1);
+    req.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('datasets'))db.createObjectStore('datasets');};
+    req.onsuccess=e=>res(e.target.result);
+    req.onerror=e=>rej(e.target.error);
+  });
+}
+async function _idbGet(key){
+  const db=await _getDB();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction('datasets','readonly');
+    const req=tx.objectStore('datasets').get(key);
+    req.onsuccess=e=>res(e.target.result??null);
+    req.onerror=e=>rej(e.target.error);
+  });
+}
+async function _idbSet(key,value){
+  const db=await _getDB();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction('datasets','readwrite');
+    const req=tx.objectStore('datasets').put(value,key);
+    req.onsuccess=()=>res();
+    req.onerror=e=>rej(e.target.error);
+  });
+}
+async function _idbDel(key){
+  const db=await _getDB();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction('datasets','readwrite');
+    const req=tx.objectStore('datasets').delete(key);
+    req.onsuccess=()=>res();
+    req.onerror=e=>rej(e.target.error);
+  });
+}
+// Per-dataset IDB cache keys
+const IDB_KEYS={cio:'ap2_cioLog',bikes:'ap2_bike',emp:'ap2_employee',sims:'ap2_sim'};
 
 let config={
   checkinoutUrl:'',
@@ -1201,7 +1239,7 @@ let empFiltered=[],empPage=1,empRpp=25;
 const today=new Date().toISOString().slice(0,10);
 
 // ─────────────────────────────────────────────────────────────────
-// CONFIG PERSISTENCE
+// CONFIG PERSISTENCE (localStorage kept — it's UI config, not data cache)
 // ─────────────────────────────────────────────────────────────────
 function loadConfig(){
   // Config is now hardcoded — no UI inputs needed
@@ -1215,13 +1253,22 @@ function saveConfig(){
 }
 
 // ─────────────────────────────────────────────────────────────────
-// CACHE
+// CACHE — IndexedDB (IDB_KEYS defined in header)
 // ─────────────────────────────────────────────────────────────────
-function getCache(key){
-  try{const r=sessionStorage.getItem(key);if(!r)return null;const o=JSON.parse(r);if(Date.now()-o.ts>CACHE_TTL)return null;return o.data;}catch(e){return null;}
+async function getCache(idbKey){
+  try{
+    const entry=await _idbGet(idbKey);
+    if(!entry||!entry.ts)return null;
+    if(Date.now()-entry.ts>CACHE_TTL)return null;
+    return entry.data;
+  }catch(e){return null;}
 }
-function setCache(key,data){try{sessionStorage.setItem(key,JSON.stringify({ts:Date.now(),data}));}catch(e){}}
-function clearAllCache(){try{[CACHE_KEY+'_cio',CACHE_KEY+'_bikes',CACHE_KEY+'_emp'].forEach(k=>sessionStorage.removeItem(k));}catch(e){}}
+async function setCache(idbKey,data){
+  try{await _idbSet(idbKey,{ts:Date.now(),data});}catch(e){}
+}
+async function clearAllCache(){
+  await Promise.allSettled(Object.values(IDB_KEYS).map(k=>_idbDel(k)));
+}
 
 // ─────────────────────────────────────────────────────────────────
 // SYNC
@@ -1362,6 +1409,9 @@ async function apiFetch(type){
 
 async function loadEmployees(){
   try{
+    // Try IDB cache first
+    const cached=await getCache(IDB_KEYS.emp);
+    if(cached){state.employees=cached;return;}
     const raw=await apiFetch('employee');
     const rows=toRows(raw);
     let parsed=[];
@@ -1396,11 +1446,14 @@ async function loadEmployees(){
       seen.add(id);return true;
     });
     state.employees=parsed;
+    await setCache(IDB_KEYS.emp,parsed);
   }catch(e){ console.error('[loadEmployees]',e); showToast('Failed to load employees','error'); }
 }
 
 async function loadBikes(){
   try{
+    const cached=await getCache(IDB_KEYS.bikes);
+    if(cached){state.bikes=cached;return;}
     const raw=await apiFetch('bike');
     const rows=toRows(raw);
     let parsed=[];
@@ -1423,11 +1476,14 @@ async function loadBikes(){
     const seen=new Set();
     parsed=parsed.filter(b=>{ if(seen.has(b.BikeID))return false; seen.add(b.BikeID); return true; });
     state.bikes=parsed;
+    await setCache(IDB_KEYS.bikes,parsed);
   }catch(e){ console.error('[loadBikes]',e); showToast('Failed to load bikes','error'); }
 }
 
 async function loadSims(){
   try{
+    const cached=await getCache(IDB_KEYS.sims);
+    if(cached){state.sims=cached;return;}
     const raw=await apiFetch('sim');
     const rows=toRows(raw);
     let parsed=[];
@@ -1448,12 +1504,26 @@ async function loadSims(){
     const seen=new Set();
     parsed=parsed.filter(s=>{ if(seen.has(s.SimID))return false; seen.add(s.SimID); return true; });
     state.sims=parsed;
+    await setCache(IDB_KEYS.sims,parsed);
   }catch(e){ console.error('[loadSims]',e); showToast('Failed to load SIMs','error'); }
 }
 
 // Load full check-in/out history from the dedicated cioLog endpoint
 async function loadCioHistory(){
   try{
+    const cached=await getCache(IDB_KEYS.cio);
+    if(cached){
+      state.checkinout=cached;
+      state.log=cached.map(r=>{
+        const action=(r.Action||'').toLowerCase();
+        const type=action.includes('out')?'out':action.includes('swap')?'swap':'in';
+        const msg=(action.includes('out')?'Check Out: ':action.includes('swap')?'Swap: ':'Check In: ')+
+          (r.AssetType||'')+(r.AssetID?' '+r.AssetID:'')+
+          (r.RiderName||r.EmpID?' \u2014 '+(r.RiderName||r.EmpID):'');
+        return {type,msg,time:r.Timestamp||'',rec:r};
+      });
+      return;
+    }
     const res=await fetch(CIO_LOG_URL+'&t='+Date.now(),{cache:'no-store'});
     const raw=await res.json();
     const rows=toRows(raw);
@@ -1476,6 +1546,7 @@ async function loadCioHistory(){
         (r.RiderName||r.EmpID?' \u2014 '+(r.RiderName||r.EmpID):'');
       return {type,msg,time:r.Timestamp||'',rec:r};
     });
+    await setCache(IDB_KEYS.cio,deduped);
   }catch(e){ console.error('[loadCioHistory]',e); showToast('Failed to load check-in/out log','error'); }
 }
 
@@ -2957,7 +3028,8 @@ function toggleTheme(){
   const cur=document.documentElement.getAttribute('data-theme')||'dark';
   const next=cur==='dark'?'light':'dark';
   applyTheme(next);
-  try{localStorage.setItem('ram_theme',next);}catch(e){}
+  // Persist to sessionStorage only (not localStorage)
+  try{sessionStorage.setItem('__ui_theme',next);}catch(e){}
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -2970,13 +3042,10 @@ function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
 // INIT
 // ─────────────────────────────────────────────────────────────────
 (function init(){
-  // Theme
-  try{const t=localStorage.getItem('ram_theme');if(t)applyTheme(t);}catch(e){}
+  // Theme — parent frame first, then sessionStorage fallback
+  try{const p=window.parent?.document?.documentElement;if(p){applyTheme(p.getAttribute('data-theme')||'dark');new MutationObserver(()=>applyTheme(p.getAttribute('data-theme')||'dark')).observe(p,{attributes:true,attributeFilter:['data-theme']});}else{try{const t=sessionStorage.getItem('__ui_theme');if(t)applyTheme(t);}catch(e){}}}catch(e){}
   // Config
   loadConfig();
-  // Sync parent theme
-  try{const p=window.parent?.document?.documentElement;if(p){applyTheme(p.getAttribute('data-theme')||'dark');new MutationObserver(()=>applyTheme(p.getAttribute('data-theme')||'dark')).observe(p,{attributes:true,attributeFilter:['data-theme']});}}catch(e){}
-  // Initial render
   switchTab('checkinout');
   switchView('main');
   // Highlight default history button
