@@ -1284,8 +1284,9 @@ let subHideTimer = null;
    again if permissions are refreshed during the session.
 
    Logic:
-   • If getPermissions() returns null → no perms fetched yet → hide ALL
-     permKey sections with a "loading…" state until perms arrive.
+   • If getPermissions() returns null → perms not fetched yet → show ALL
+     sections optimistically so ibOpen can run immediately on page load.
+     Items will be re-filtered once real perms arrive via STEP 4.
    • For each SECTIONS entry with a permKey, show/hide the matching
      icon-bar button and topbar shortcut.
    • Sections with permKey:null are always visible.
@@ -1302,23 +1303,27 @@ function _applyPermissions() {
     if (!btn) continue;
 
     let allowed;
-    if (sec.permKey === null) {
+    if (perms === null) {
+      // Perms not loaded yet — show everything optimistically so the
+      // sub-bar populates immediately; real filtering happens once perms arrive.
+      allowed = true;
+    } else if (sec.permKey === null) {
       // Section has no own gate — check if at least one sub-item is permitted
       const anyItemAllowed = sec.groups.some(g =>
         g.items.some(item =>
-          !item.permKey || (perms && perms[item.permKey] === true)
+          !item.permKey || perms[item.permKey] === true
         )
       );
       allowed = anyItemAllowed;
     } else {
-      allowed = !sec.permKey || (perms && perms[sec.permKey] === true);
+      allowed = !sec.permKey || perms[sec.permKey] === true;
     }
 
     btn.style.display = allowed ? '' : 'none';
     if (allowed && !firstAllowed) firstAllowed = id;
   }
 
-  // Also hide topbar shortcuts that are permission-gated
+  // Also show/hide topbar shortcuts (optimistic when perms null)
   const shortcutGates = [
     { sel: '.tb-sc.emp',  permKey: 'ap2_employee' },
     { sel: '.tb-sc.bike', permKey: 'ap2_bike'     },
@@ -1678,12 +1683,22 @@ window.addEventListener('DOMContentLoaded', async () => {
             await AdminPro.warmIfEmpty().catch(() => {});
             updateCacheHealthDot();
           }
-          // Re-open first visible section now that permissions are known
-          const fv = Object.keys(SECTIONS).find(id => {
+          // Re-render the active section's nav now that real perms are known.
+          // Always do this — the optimistic render may have shown more items than allowed.
+          const fv = activeSection || Object.keys(SECTIONS).find(id => {
             const btn = document.getElementById(id);
             return btn && btn.style.display !== 'none';
           });
-          if (fv && !activeSection) ibOpen(fv, document.getElementById(fv));
+          if (fv) {
+            // Force nav re-render: clear activeSection so ibOpen doesn't early-return
+            const prevActive = activeSection;
+            activeSection = null;
+            ibOpen(fv, document.getElementById(fv));
+            // If the section was already open keep it open (cancel the fresh hide timer)
+            if (prevActive === fv && subOpen) {
+              // timer was restarted by ibOpen — that's fine, leave it
+            }
+          }
         }
       }).catch(e => console.warn('[index] fetchPermissions failed:', e));
     }
