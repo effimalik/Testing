@@ -1304,9 +1304,11 @@ function _applyPermissions() {
 
     let allowed;
     if (perms === null) {
-      // Perms not loaded yet — show everything optimistically so the
-      // sub-bar populates immediately; real filtering happens once perms arrive.
-      allowed = true;
+      // Perms not in session yet — fail-closed: hide all gated sections.
+      // They will be shown once _applyPermissions() is called again in STEP 4
+      // after fetchPermissions() resolves. Sections with permKey:null (e.g. ib-docs)
+      // are always hidden here too and re-evaluated once real perms arrive.
+      allowed = sec.permKey === null ? false : false;
     } else if (sec.permKey === null) {
       // Section has no own gate — check if at least one sub-item is permitted
       const anyItemAllowed = sec.groups.some(g =>
@@ -1331,7 +1333,8 @@ function _applyPermissions() {
   ];
   for (const { sel, permKey } of shortcutGates) {
     document.querySelectorAll(sel).forEach(el => {
-      el.style.display = (!perms || perms[permKey] === true) ? '' : 'none';
+      // Fail-closed: hide shortcut if perms not loaded yet, or if not explicitly true
+      el.style.display = (perms && perms[permKey] === true) ? '' : 'none';
     });
   }
 
@@ -1663,7 +1666,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     updateCacheHealthDot();
   }
 
-  // ── STEP 3: Open the first permitted section → loads first sub-page into frame ──
+  // ── STEP 3: Attempt early open of first section (may show nothing if perms null) ──
+  // STEP 4 always re-applies perms and re-opens the correct first section.
+  // This step is intentionally a no-op when perms are null (fail-closed).
   const firstVisible = Object.keys(SECTIONS).find(id => {
     const btn = document.getElementById(id);
     return btn && btn.style.display !== 'none';
@@ -1672,9 +1677,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     ibOpen(firstVisible, document.getElementById(firstVisible));
   }
 
-  // ── STEP 4: If permissions weren't in session (edge case), fetch then re-apply ──
+  // ── STEP 4: Apply permissions from session (always — ensures nav renders with real perms) ──
+  // Since permissions are bundled at login, getPermissions() returns them immediately.
+  // We call _applyPermissions() again here to cover any edge case where the session
+  // was written after DOMContentLoaded (rare but possible on slow devices).
   if (window.Auth && typeof window.Auth.getPermissions === 'function') {
-    if (!window.Auth.getPermissions()) {
+    const permsNow = window.Auth.getPermissions();
+    if (!permsNow) {
+      // Truly no perms yet — fetch from server then re-apply
       window.Auth.fetchPermissions().then(async perms => {
         if (perms) {
           _applyPermissions();
@@ -1701,6 +1711,20 @@ window.addEventListener('DOMContentLoaded', async () => {
           }
         }
       }).catch(e => console.warn('[index] fetchPermissions failed:', e));
+    } else {
+      // Normal path — perms are already in session (bundled at login).
+      // Re-apply to ensure icon-bar and nav reflect the real permission set,
+      // then open the first permitted section.
+      _applyPermissions();
+      _buildDsMeta();
+      const fv = Object.keys(SECTIONS).find(id => {
+        const btn = document.getElementById(id);
+        return btn && btn.style.display !== 'none';
+      });
+      if (fv) {
+        activeSection = null; // force fresh nav render
+        ibOpen(fv, document.getElementById(fv));
+      }
     }
   }
 
