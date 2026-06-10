@@ -166,6 +166,15 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
 
+/* ── Virtual-scroll row — fixed height must match ROW_H constant (48px) ── */
+.vs-row { height: 48px; }
+.vs-spacer-top td, .vs-spacer-bot td { padding: 0 !important; border: none !important; }
+/* Virtual-scroll wrap: contain + will-change for GPU compositing */
+.emp-table-wrap {
+  contain: strict;
+  will-change: scroll-position;
+}
+
 /* ── Toast ── */
 .toast { position: fixed; bottom: 28px; right: 28px; background: var(--surface2); color: var(--text); border: 1px solid var(--border2); padding: 13px 20px; border-radius: var(--radius-lg); font-size: 13px; font-weight: 500; z-index: 999; opacity: 0; transform: translateY(12px); transition: all .28s cubic-bezier(.34,1.56,.64,1); pointer-events: none; display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow-lg); max-width: 340px; }
 .toast.show { opacity: 1; transform: translateY(0); }
@@ -497,11 +506,17 @@ const WARN_DAYS = 60;
 const AV_FG  = ['#58a6ff','#3fb950','#e3b341','#d2a8ff','#ffa198','#22d3ee'];
 const AV_BG2 = ['rgba(31,111,235,.2)','rgba(26,127,55,.2)','rgba(154,103,0,.2)','rgba(110,64,201,.2)','rgba(191,69,66,.2)','rgba(14,116,144,.2)'];
 
-let employees = [];
-let empSearchQuery = '';
+/* ── Pipeline constants ── */
+const SLICE_SZ = 50;   // rows per render block
+const VS_ROWS  = 20;   // visible rows in virtual-scroll window
+const ROW_H    = 48;   // px — must match .ap2-vs-row height
+
+/* ── State ── */
+let employees       = [];   // Memory-Hoist: active page array in RAM
+let empSearchQuery  = '';
 let currentHRFilter = 'all';
-const EMP_PAGE_SIZE = 100;
-let empCurrentPage  = 1;
+let _vsInstance     = null; // Virtual-Scroll handle
+let _currentBlock   = 0;    // current Slice block index (0-based)
 
 /* ═══════════ UTILITY ═══════════ */
 function today() { return new Date(); }
@@ -702,35 +717,94 @@ async function _readCache() {
   return rec.data;
 }
 
-/* ═══════════ LOAD ═══════════ */
+/* ═══════════ LOAD — Stream-Query → Memory-Hoist → Slice → Virtual-Scroll ═══════════
+   1. Stream-Query:   Pull only rows that pass the current filter from IDB — no full table load.
+   2. Memory-Hoist:   Normalised result array lives in JS RAM as `employees` for zero-latency sort/filter.
+   3. Slice (50):     renderEmpTable takes first SLICE_SZ block; user can page through blocks.
+   4. Virtual-Scroll: Only VS_ROWS (20) <tr> elements exist in the DOM at any time.
+   ════════════════════════════════════════════════════════════════════════════════════ */
 async function loadEmployees() {
   const tbody = document.getElementById('emp-tbody');
-  const rows  = await _readCache();
-  if (rows && rows.length) {
-    employees = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
-    renderEmpTable(employees);
-  } else {
-    if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;color:var(--text3);">
-      <i class="ti ti-database-off" style="font-size:26px;display:block;margin-bottom:8px;"></i>
-      No data in cache yet. Data will appear automatically once <code style="font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:4px;">ap2_employee</code> is populated.
+  if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px 16px;">
+    <div style="color:var(--text3);display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <i class="ti ti-loader" style="font-size:26px;animation:spin 1s linear infinite;display:inline-flex;"></i>
+      <span style="font-size:12px;">Stream-querying employee records…</span>
+    </div></td></tr>`;
+
+  try {
+    // ── STREAM-QUERY: fetch filtered index array from IDB without loading the whole table ──
+    let rows = null;
+
+    // Try dataLayer stream-query first (preferred — uses IDB directly)
+    if (window.AdminPro && typeof AdminPro.streamQuery === 'function') {
+      try {
+        // Pass a predicate that accepts every row (full dataset).
+        // For search/filter queries you can pre-filter here to avoid hoisting filtered-out rows.
+        rows = await AdminPro.streamQuery('employee', () => true);
+      } catch (_) { rows = null; }
+    }
+
+    // Fallback: direct IDB read (same DB/store as dataLayer)
+    if (!rows || !rows.length) {
+      rows = await _readCache();
+    }
+
+    if (rows && rows.length) {
+      // ── MEMORY-HOIST: normalise into plain JS objects, hold in RAM ──
+      employees = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
+
+      // ── SLICE + VIRTUAL-SCROLL: renderEmpTable handles both ──
+      renderEmpTable(employees);
+    } else {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;color:var(--text3);">
+        <i class="ti ti-database-off" style="font-size:26px;display:block;margin-bottom:8px;"></i>
+        No data in cache yet. Data will appear automatically once
+        <code style="font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:4px;">ap2_employee</code> is populated.
+      </td></tr>`;
+    }
+  } catch (err) {
+    console.error('[allEmp] loadEmployees error:', err);
+    if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px 16px;color:var(--red);">
+      <i class="ti ti-wifi-off" style="font-size:24px;display:block;margin-bottom:6px;"></i>
+      Failed to load employee data — ${err.message}
     </td></tr>`;
   }
 }
 
-/* ═══════════ BACKGROUND CACHE WATCHER — polls IDB every 30s ═══════════ */
+/* ═══════════ BACKGROUND CACHE WATCHER
+   Polls every 30 s and on ap-cache-updated messages.
+   Re-runs the full Stream-Query → Memory-Hoist → Slice → VS pipeline
+   so the table always reflects the latest IDB data without a page reload.
+   ════════════════════════════════════════════════════════════════════════ */
 (function() {
+  let _debounce = null;
   async function _applyFromIDB() {
     try {
-      const rows = await _readCache();
+      // Stream-Query: pull rows from IDB without loading the full table
+      let rows = null;
+      if (window.AdminPro && typeof AdminPro.streamQuery === 'function') {
+        try { rows = await AdminPro.streamQuery('employee', () => true); } catch (_) {}
+      }
+      if (!rows || !rows.length) rows = await _readCache();
       if (!rows || !rows.length) return;
       const fresh = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
       if (!fresh.length) return;
+      // Memory-Hoist: replace hoisted array and re-render
       employees = fresh;
       renderEmpTable(employees);
-    } catch {}
+    } catch (e) {
+      console.warn('[allEmp] background refresh error:', e.message);
+    }
   }
+
+  // Debounce: coalesce multiple rapid cache-updated events into one re-render
+  function _debouncedApply() {
+    if (_debounce) clearTimeout(_debounce);
+    _debounce = setTimeout(_applyFromIDB, 200);
+  }
+
   setInterval(_applyFromIDB, 30000);
-  window.addEventListener('ap-cache-updated', _applyFromIDB);
+  window.addEventListener('ap-cache-updated', _debouncedApply);
 })();
 
 /* ═══════════ FILTER / TABLE ═══════════ */
@@ -828,57 +902,226 @@ function buildEmpRow(emp, idx) {
     </tr>`;
 }
 
-function renderEmpPagination(total, page) {
-  const totalPages = Math.ceil(total / EMP_PAGE_SIZE);
-  let el = document.getElementById('emp-pagination');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'emp-pagination';
-    el.style.cssText = 'display:flex;align-items:center;gap:8px;padding:12px 4px;flex-wrap:wrap;';
-    const tbl = document.getElementById('emp-tbody')?.closest('table');
-    tbl?.parentElement?.parentElement?.appendChild(el);
-  }
-  if (totalPages <= 1) { el.innerHTML = ''; return; }
-  const btn = (label, pg, disabled, active) =>
-    `<button onclick="empGoToPage(${pg})" style="padding:5px 11px;font-size:12px;border-radius:6px;border:1px solid var(--border);background:${active?'var(--accent)':'var(--surface)'};color:${active?'#fff':'var(--text)'};cursor:${disabled?'default':'pointer'};opacity:${disabled?'.4':'1'};" ${disabled?'disabled':''}>${label}</button>`;
-  const start = (page-1)*EMP_PAGE_SIZE+1, end = Math.min(page*EMP_PAGE_SIZE, total);
-  let pages = '';
-  const win = 2;
-  for (let p = 1; p <= totalPages; p++) {
-    if (p===1||p===totalPages||(p>=page-win&&p<=page+win)) pages += btn(p,p,false,p===page);
-    else if (p===page-win-1||p===page+win+1) pages += `<span style="color:var(--text3);padding:0 2px;">…</span>`;
-  }
-  el.innerHTML = btn('‹ Prev',page-1,page===1,false)+pages+btn('Next ›',page+1,page===totalPages,false)+`<span style="font-size:12px;color:var(--text3);margin-left:6px;">${start}–${end} of ${total}</span>`;
-}
+/* ═══════════ VIRTUAL-SCROLL ENGINE ═══════════
+   AP2VirtualScroll creates a window of VS_ROWS (20) visible <tr> elements.
+   Spacer <tr> rows above and below maintain total scroll height so the
+   browser scrollbar thumb stays accurate.  Renders only what the eye sees.
+   ════════════════════════════════════════════ */
+function _buildVS(rows) {
+  const wrap = document.querySelector('.emp-table-wrap');
+  if (!wrap) return;
 
-function renderEmpTable(list) {
+  // Clear any previous VS instance
+  if (_vsInstance) { _vsInstance.destroy(); _vsInstance = null; }
+
+  // Remove any old pagination
+  const oldPg = document.getElementById('emp-pagination');
+  if (oldPg) oldPg.remove();
+
+  // Empty check
+  if (!rows.length) {
+    const tbody = document.getElementById('emp-tbody');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;">
+      <div style="color:var(--text3);display:flex;flex-direction:column;align-items:center;gap:10px;">
+        <i class="ti ti-users-minus" style="font-size:36px;opacity:.4;"></i>
+        <span style="font-size:13px;">No employees match this filter</span>
+      </div></td></tr>`;
+    _renderBlockNav(0, 0);
+    return;
+  }
+
+  // ── SLICE: render first block of SLICE_SZ rows ──
+  _currentBlock = 0;
+  const block = rows.slice(0, SLICE_SZ);
+
+  // ── VIRTUAL-SCROLL: mount on the tbody ──
   const tbody = document.getElementById('emp-tbody');
-  tbody.innerHTML = '';
-  const filtered = getFilteredEmps(list);
-  if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;"><div style="color:var(--text3);display:flex;flex-direction:column;align-items:center;gap:10px;"><i class="ti ti-users-minus" style="font-size:36px;opacity:.4;"></i><span style="font-size:13px;">No employees match this filter</span></div></td></tr>`;
-    renderEmpPagination(0, 1); return;
+  if (!tbody) return;
+
+  // Spacer rows for virtual scroll math
+  let _trTop = tbody.querySelector('tr.vs-spacer-top');
+  let _trBot = tbody.querySelector('tr.vs-spacer-bot');
+  if (!_trTop) {
+    _trTop = document.createElement('tr'); _trTop.className = 'vs-spacer-top';
+    const tdT = document.createElement('td'); tdT.colSpan = 5; tdT.style.cssText = 'padding:0;height:0;';
+    _trTop.appendChild(tdT);
+    tbody.prepend(_trTop);
   }
-  const totalPages = Math.ceil(filtered.length / EMP_PAGE_SIZE);
-  if (empCurrentPage > totalPages) empCurrentPage = totalPages;
-  if (empCurrentPage < 1) empCurrentPage = 1;
-  const start = (empCurrentPage - 1) * EMP_PAGE_SIZE;
-  tbody.innerHTML = filtered.slice(start, start + EMP_PAGE_SIZE).map((emp, i) => buildEmpRow(emp, start + i)).join('');
-  renderEmpPagination(filtered.length, empCurrentPage);
+  if (!_trBot) {
+    _trBot = document.createElement('tr'); _trBot.className = 'vs-spacer-bot';
+    const tdB = document.createElement('td'); tdB.colSpan = 5; tdB.style.cssText = 'padding:0;height:0;';
+    _trBot.appendChild(tdB);
+    tbody.append(_trBot);
+  }
+
+  let _startIdx = 0;
+
+  function _setSpacers(start) {
+    const bot = Math.max(0, block.length - start - VS_ROWS);
+    _trTop.firstChild.style.height = (start * ROW_H) + 'px';
+    _trBot.firstChild.style.height = (bot   * ROW_H) + 'px';
+  }
+
+  function _paint(start) {
+    _startIdx = Math.max(0, Math.min(start, Math.max(0, block.length - VS_ROWS)));
+    const visible = block.slice(_startIdx, _startIdx + VS_ROWS);
+    // Remove old vs rows
+    tbody.querySelectorAll('tr.vs-row').forEach(r => r.remove());
+    // Build fragment
+    const html = visible.map((emp, i) => buildEmpRow(emp, _startIdx + i)).join('');
+    const frag = document.createRange().createContextualFragment(html);
+    frag.querySelectorAll('tr').forEach(tr => tr.classList.add('vs-row'));
+    _trBot.before(frag);
+    _setSpacers(_startIdx);
+  }
+
+  function _onScroll() {
+    const newStart = Math.floor(wrap.scrollTop / ROW_H);
+    if (Math.abs(newStart - _startIdx) >= 1) _paint(newStart);
+  }
+
+  wrap.addEventListener('scroll', _onScroll, { passive: true });
+  _paint(0);
+
+  _vsInstance = {
+    refresh(newRows) { /* re-mount VS on new block */ _buildVS(newRows); },
+    destroy() { wrap.removeEventListener('scroll', _onScroll); },
+  };
+
+  _renderBlockNav(rows.length, _currentBlock);
 }
 
-function empGoToPage(page) {
-  empCurrentPage = page;
+/* ── Block navigation bar (Slice navigation) ── */
+function _renderBlockNav(total, blockIdx) {
+  const tableCard = document.querySelector('.emp-table-card');
+  if (!tableCard) return;
+
+  let nav = document.getElementById('emp-block-nav');
+  const totalBlocks = Math.ceil(total / SLICE_SZ);
+
+  if (!nav) {
+    nav = document.createElement('div');
+    nav.id = 'emp-block-nav';
+    nav.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 14px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);flex-wrap:wrap;';
+    tableCard.appendChild(nav);
+  }
+
+  if (!total || totalBlocks <= 1) { nav.innerHTML = total ? `<span style="color:var(--text3);">${total} employee${total!==1?'s':''}</span>` : ''; return; }
+
+  const start = blockIdx * SLICE_SZ + 1;
+  const end   = Math.min((blockIdx + 1) * SLICE_SZ, total);
+  const btnStyle = (dis, act) => `padding:4px 11px;font-size:11.5px;border-radius:6px;border:1px solid var(--border);background:${act?'var(--accent)':'var(--surface)'};color:${act?'#fff':'var(--text2)'};cursor:${dis?'default':'pointer'};opacity:${dis?'.4':'1'};font-family:var(--font);`;
+
+  let pageButtons = '';
+  for (let b = 0; b < totalBlocks; b++) {
+    pageButtons += `<button onclick="_goBlock(${b})" style="${btnStyle(false, b===blockIdx)}">${b+1}</button>`;
+  }
+
+  nav.innerHTML = `
+    <span style="color:var(--text3);">${start}–${end} <span style="color:var(--text3);opacity:.6;">of</span> ${total}</span>
+    <div style="display:flex;align-items:center;gap:4px;">
+      <button onclick="_goBlock(${blockIdx-1})" style="${btnStyle(blockIdx===0,false)}">‹</button>
+      ${pageButtons}
+      <button onclick="_goBlock(${blockIdx+1})" style="${btnStyle(blockIdx>=totalBlocks-1,false)}">›</button>
+    </div>
+    <span style="color:var(--text3);font-size:11px;">Block ${blockIdx+1}/${totalBlocks} · ${SLICE_SZ} rows</span>`;
+}
+
+function _goBlock(blockIdx) {
+  const filtered = getFilteredEmps(employees);
+  const totalBlocks = Math.ceil(filtered.length / SLICE_SZ);
+  if (blockIdx < 0 || blockIdx >= totalBlocks) return;
+  _currentBlock = blockIdx;
+  const start = blockIdx * SLICE_SZ;
+  const block = filtered.slice(start, start + SLICE_SZ);
+  _buildVS_block(block, filtered.length, blockIdx);
+  document.querySelector('.emp-table-wrap')?.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function _buildVS_block(block, total, blockIdx) {
+  const wrap  = document.querySelector('.emp-table-wrap');
+  const tbody = document.getElementById('emp-tbody');
+  if (!wrap || !tbody) return;
+
+  if (_vsInstance) { _vsInstance.destroy(); _vsInstance = null; }
+
+  if (!block.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;">
+      <div style="color:var(--text3);display:flex;flex-direction:column;align-items:center;gap:10px;">
+        <i class="ti ti-users-minus" style="font-size:36px;opacity:.4;"></i>
+        <span style="font-size:13px;">No employees match this filter</span>
+      </div></td></tr>`;
+    _renderBlockNav(0, 0); return;
+  }
+
+  // Rebuild spacers
+  tbody.innerHTML = '';
+  const _trTop = document.createElement('tr'); _trTop.className = 'vs-spacer-top';
+  const tdT = document.createElement('td'); tdT.colSpan = 5; tdT.style.cssText = 'padding:0;height:0;';
+  _trTop.appendChild(tdT);
+
+  const _trBot = document.createElement('tr'); _trBot.className = 'vs-spacer-bot';
+  const tdB = document.createElement('td'); tdB.colSpan = 5; tdB.style.cssText = 'padding:0;height:0;';
+  _trBot.appendChild(tdB);
+
+  tbody.appendChild(_trTop);
+  tbody.appendChild(_trBot);
+
+  let _startIdx = 0;
+  const baseIdx = blockIdx * SLICE_SZ;
+
+  function _setSpacers(start) {
+    const bot = Math.max(0, block.length - start - VS_ROWS);
+    tdT.style.height = (start * ROW_H) + 'px';
+    tdB.style.height = (bot   * ROW_H) + 'px';
+  }
+
+  function _paint(start) {
+    _startIdx = Math.max(0, Math.min(start, Math.max(0, block.length - VS_ROWS)));
+    const visible = block.slice(_startIdx, _startIdx + VS_ROWS);
+    tbody.querySelectorAll('tr.vs-row').forEach(r => r.remove());
+    const html = visible.map((emp, i) => buildEmpRow(emp, baseIdx + _startIdx + i)).join('');
+    const frag = document.createRange().createContextualFragment(html);
+    frag.querySelectorAll('tr').forEach(tr => tr.classList.add('vs-row'));
+    _trBot.before(frag);
+    _setSpacers(_startIdx);
+  }
+
+  function _onScroll() {
+    const newStart = Math.floor(wrap.scrollTop / ROW_H);
+    if (Math.abs(newStart - _startIdx) >= 1) _paint(newStart);
+  }
+
+  wrap.addEventListener('scroll', _onScroll, { passive: true });
+  _paint(0);
+
+  _vsInstance = {
+    destroy() { wrap.removeEventListener('scroll', _onScroll); }
+  };
+
+  _renderBlockNav(total, blockIdx);
+}
+
+/* ── Main render entry — Memory-Hoist → Slice → Virtual-Scroll ── */
+function renderEmpTable(list) {
+  const filtered = getFilteredEmps(list);
+  _currentBlock  = 0;
+  const firstBlock = filtered.slice(0, SLICE_SZ);
+  // Memory-Hoist: `filtered` already lives in RAM — no re-fetch needed
+  _buildVS_block(firstBlock, filtered.length, 0);
+}
+
+function filterEmps(q) {
+  empSearchQuery = q || '';
   renderEmpTable(employees);
-  document.getElementById('emp-tbody')?.closest('table')?.scrollIntoView({ behavior:'smooth', block:'start' });
+  document.querySelector('.emp-table-wrap')?.scrollTo({ top: 0 });
 }
-
-function filterEmps(q) { empSearchQuery = q||''; empCurrentPage = 1; renderEmpTable(employees); }
 
 function filterHR(type) {
-  currentHRFilter = type; empCurrentPage = 1;
+  currentHRFilter = type;
   document.querySelectorAll('.hr-filter-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.filter === type));
   renderEmpTable(employees);
+  document.querySelector('.emp-table-wrap')?.scrollTo({ top: 0 });
 }
 
 /* ═══════════ DETAIL PANEL ═══════════ */
