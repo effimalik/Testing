@@ -7,8 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <script src="https://unpkg.com/@tabler/icons@3.31.0/icons-react/dist/index.umd.min.js"></script>
-<script src="https://effimalik.github.io/FleetManagement/shared/auth.js"></script>
-<script src="https://effimalik.github.io/FleetManagement/shared/dataLayer.js"></script>
+
 
   
 
@@ -271,7 +270,7 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
         </h2>
         <div class="section-desc">
           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-          Live data from MASTER API · All statuses
+          Live data from IndexedDB cache · Pending requests
         </div>
       </div>
       <div class="section-actions">
@@ -678,37 +677,52 @@ function showToast(msg,type='ok'){
   toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
 }
 
-// LOAD DATA — IDB only (no API fetch)
-// Priority: __AP2_PRELOAD → AdminPro.streamQuery → _idbGet
-async function loadData(forceRefresh=false){
+// LOAD DATA — IndexedDB only (ap2_fleet_cache → ap2_master)
+async function loadData(){
   setSyncLoading(true);
   allRequests=[];selectedRefs.clear();updateSelectionUI();
   try{
-    let rows=null;
-    if(!forceRefresh){
-      // Tier 1: preload pushed by parent (zero IDB cost)
-      if(window.__AP2_PRELOAD&&Array.isArray(window.__AP2_PRELOAD['master'])){
-        rows=window.__AP2_PRELOAD['master'];
-      }
-      // Tier 2: IDB via dataLayer
-      if(!rows||!rows.length){
-        if(window.AdminPro&&typeof AdminPro.streamQuery==='function'){
-          try{rows=await AdminPro.streamQuery('master',()=>true);}catch(_){}
-        }
-      }
-      // Tier 3: direct IDB read
-      if(!rows||!rows.length){
-        const entry=await _idbGet(_AP2_CACHE_KEY).catch(()=>null);
-        if(entry&&entry.data)rows=entry.data;
-      }
-    }
-    if(rows&&rows.length){
-      processFetchedData(rows);updateCacheInfo(0,false);
+    const entry=await _idbGet(_AP2_CACHE_KEY).catch(()=>null);
+    // Diagnose what is actually stored so issues are visible in console
+    console.group('[loadData] IDB diagnostic — key:',_AP2_CACHE_KEY);
+    console.log('raw entry:',entry);
+    if(entry===null||entry===undefined){
+      console.warn('→ Key not found in ap2_fleet_cache / datasets store.');
+    }else if(Array.isArray(entry)){
+      console.log('→ Entry is a plain array, length:',entry.length);
+    }else if(entry&&typeof entry==='object'){
+      console.log('→ Entry is an object. Keys:',Object.keys(entry));
+      if(entry.data)console.log('  entry.data length:',Array.isArray(entry.data)?entry.data.length:'not an array');
+      if(entry.rows)console.log('  entry.rows length:',Array.isArray(entry.rows)?entry.rows.length:'not an array');
     }else{
-      document.getElementById('pending-tbody').innerHTML=`<tr><td colspan="9"><div class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 10px;display:block;opacity:.3;"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg><p>No data in cache yet</p><small>Waiting for parent to push data</small></div></td></tr>`;
+      console.warn('→ Entry is unexpected type:',typeof entry,entry);
+    }
+    console.groupEnd();
+
+    // Resolve rows — handle: plain array, {data:[...]}, {rows:[...]}, or any other wrapper
+    let rows=null;
+    if(Array.isArray(entry)){
+      rows=entry;
+    }else if(entry&&Array.isArray(entry.data)){
+      rows=entry.data;
+    }else if(entry&&Array.isArray(entry.rows)){
+      rows=entry.rows;
+    }
+
+    if(rows&&rows.length){
+      processFetchedData(rows);
+      updateCacheInfo(0,false);
+    }else{
+      const reason=entry===null
+        ?'Key <code>ap2_master</code> not found in <code>ap2_fleet_cache</code>'
+        :entry&&!Array.isArray(entry)&&!entry.data&&!entry.rows
+          ?'Key exists but data array not found — check console for stored shape'
+          :'Cache is empty (0 rows)';
+      document.getElementById('pending-tbody').innerHTML=`<tr><td colspan="9"><div class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 10px;display:block;opacity:.3;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><p>No data available</p><small>${reason}</small></div></td></tr>`;
+      showToast('Cache empty — check console','warn');
     }
   }catch(err){
-    console.error('[loadData]',err);
+    console.error('[loadData] error:',err);
     showToast('Could not read cache','error');
   }
   setSyncLoading(false);
@@ -1010,7 +1024,7 @@ function setSyncLoading(on){
   btn.disabled=on;lbl.textContent=on?'Syncing…':'Sync Sheets';
   document.getElementById('sync-icon-wrap').style.animation=on?'pulse-spin .7s linear infinite':'none';
 }
-async function syncSheets(){await loadData();showToast('Refreshed from cache','ok');}
+async function syncSheets(){await loadData();showToast('Refreshed from IDB cache','ok');}
 
 // SCROLL TOP
 window.addEventListener('scroll',()=>{document.getElementById('scroll-top').classList.toggle('show',window.scrollY>300);});
@@ -1036,18 +1050,15 @@ try{
   }
 }catch(e){}
 
-// BACKGROUND WATCHER — IDB poll every 30s + ap-cache-updated debounce
+// BACKGROUND WATCHER — polls IDB every 30s + reacts to ap-cache-updated event
 (function _bgWatcher(){
   let _debounce=null;
   async function _applyFromIDB(){
+    const entry=await _idbGet(_AP2_CACHE_KEY).catch(()=>null);
     let rows=null;
-    if(window.AdminPro&&typeof AdminPro.streamQuery==='function'){
-      try{rows=await AdminPro.streamQuery('master',()=>true);}catch(_){}
-    }
-    if(!rows||!rows.length){
-      const entry=await _idbGet(_AP2_CACHE_KEY).catch(()=>null);
-      if(entry&&entry.data)rows=entry.data;
-    }
+    if(Array.isArray(entry))rows=entry;
+    else if(entry&&Array.isArray(entry.data))rows=entry.data;
+    else if(entry&&Array.isArray(entry.rows))rows=entry.rows;
     if(rows&&rows.length){processFetchedData(rows);updateCacheInfo(0,false);}
   }
   const _debouncedApply=()=>{clearTimeout(_debounce);_debounce=setTimeout(_applyFromIDB,200);};
@@ -1055,13 +1066,6 @@ try{
   window.addEventListener('ap-cache-updated',_debouncedApply);
   window.addEventListener('message',e=>{
     if(!e.data)return;
-    // Change 4: ap-cache-preload — extract datasets.master, normalise, render immediately
-    if(e.data.type==='ap-cache-preload'){
-      window.__AP2_PRELOAD=e.data.datasets;
-      const rows=e.data.datasets&&e.data.datasets.master;
-      if(rows){processFetchedData(rows);updateCacheInfo(0,true);}
-      return;
-    }
     if(e.data.type==='ap-cache-updated'&&e.data.key===_AP2_CACHE_KEY){
       _debouncedApply();
     }
