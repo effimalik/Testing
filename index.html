@@ -11,222 +11,65 @@
 <script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
 
 <!-- ═══════════════════════════════════════════════════════════════
-     AP2 Static Data Store — in-memory data, no caching/storage
+     AP2 IDB Bridge — all data served from IndexedDB via AdminPro
      ═══════════════════════════════════════════════════════════════ -->
 <script>
-(function(){
 'use strict';
 
-/* ── constants ── */
-const SLICE_SZ = 50;
-const VS_ROWS  = 20;
-const ROW_H    = 36;
+/* ── Constants used by child pages ── */
+window.AP2_SLICE_SZ = 50;
+window.AP2_VS_ROWS  = 20;
 
-/* ── Static in-memory data store ── */
-const _store = new Map();
-const _changeListeners = [];
-
-function _notifyChange(key, op) {
-  _changeListeners.forEach(fn => { try { fn(key, op); } catch(_){} });
-}
-
-/* ══ Public Cache API (window.AP2Cache) — in-memory only ══ */
+/* ══ AP2Cache — thin IDB-backed API (wraps AdminPro._cache) ══
+   All reads/writes go through IndexedDB via dataLayer.js.
+   No in-memory store, no static data, no shadow Maps.          */
 window.AP2Cache = {
   async set(key, data) {
-    _store.set(key, { data, ts: Date.now() });
-    _notifyChange(key, 'set');
+    if (window.AdminPro) AdminPro.cache.set(key, data);
   },
   async get(key) {
-    return _store.get(key) || null;
-  },
-  async getTs(key) {
-    const rec = _store.get(key);
-    return rec ? rec.ts : null;
-  },
-  async getAge(key) {
-    const rec = _store.get(key);
-    return rec ? Date.now() - rec.ts : Infinity;
+    return window.AdminPro ? AdminPro.cache.get(key) : null;
   },
   async getData(key) {
-    const rec = _store.get(key);
-    return rec ? rec.data : null;
+    const e = window.AdminPro ? AdminPro.cache.get(key) : null;
+    return e ? e.data : null;
+  },
+  async getTs(key) {
+    const e = window.AdminPro ? AdminPro.cache.get(key) : null;
+    return e ? e.ts : null;
+  },
+  async getAge(key) {
+    const e = window.AdminPro ? AdminPro.cache.get(key) : null;
+    return e ? Date.now() - e.ts : Infinity;
   },
   async delete(key) {
-    _store.delete(key);
-    _notifyChange(key, 'delete');
+    if (window.AdminPro) AdminPro.cache.clear(key);
   },
   async clearAll() {
-    _store.clear();
-    _notifyChange('*', 'clear');
+    if (window.AdminPro) AdminPro.cache.clearAll();
   },
   async keys() {
-    return Array.from(_store.keys());
+    return window.AdminPro ? Object.keys(AdminPro.getActiveDatasets()) : [];
   },
+  /* Stream-query directly from IDB — row-by-row filter, no full clone */
   async streamQuery(key, predicateFn) {
-    // Stream-Query: pull filtered rows from IDB without loading the whole table
-    // Falls back to in-memory store when IDB is unavailable (e.g. static data)
-    try {
-      const IDB_NAME = 'ap2_fleet_cache', IDB_STORE = 'datasets';
-      const db = await new Promise((res, rej) => {
-        const r = indexedDB.open(IDB_NAME, 1);
-        r.onsuccess = e => res(e.target.result);
-        r.onerror   = e => rej(e.target.error);
-      });
-      const fullKey = 'ap2_' + key;
-      return await new Promise((res, rej) => {
-        const req = db.transaction(IDB_STORE, 'readonly')
-                      .objectStore(IDB_STORE).get(fullKey);
-        req.onsuccess = () => {
-          const rec = req.result;
-          if (!rec || !Array.isArray(rec.data)) { res([]); return; }
-          // Iterate row-by-row — never clone the full array
-          const out = [];
-          for (let i = 0, len = rec.data.length; i < len; i++) {
-            try { if (predicateFn(rec.data[i])) out.push(rec.data[i]); } catch (_) {}
-          }
-          res(out);
-        };
-        req.onerror = () => rej(req.error);
-      });
-    } catch (_) {
-      // Fallback: in-memory static store
-      const rec = _store.get(key);
-      if (!rec || !Array.isArray(rec.data)) return [];
-      return rec.data.filter(row => { try { return predicateFn(row); } catch(_){ return false; } });
-    }
+    if (window.AdminPro) return AdminPro.streamQuery(key, predicateFn);
+    return [];
   },
   async slice(key, blockIndex = 0) {
-    const rec = _store.get(key);
-    if (!rec || !Array.isArray(rec.data)) return [];
-    const start = blockIndex * SLICE_SZ;
-    return rec.data.slice(start, start + SLICE_SZ);
+    const e = window.AdminPro ? AdminPro.cache.get(key) : null;
+    if (!e || !Array.isArray(e.data)) return [];
+    const start = blockIndex * window.AP2_SLICE_SZ;
+    return e.data.slice(start, start + window.AP2_SLICE_SZ);
   },
   async count(key) {
-    const rec = _store.get(key);
-    return rec && Array.isArray(rec.data) ? rec.data.length : 0;
+    const e = window.AdminPro ? AdminPro.cache.get(key) : null;
+    return e && Array.isArray(e.data) ? e.data.length : 0;
   },
-};
-window.AP2Cache.onChange = fn => _changeListeners.push(fn);
-
-/* ══ Memory-Hoist layer (window.AP2Hoist) ══ */
-window.AP2Hoist = (() => {
-  let _key  = null;
-  let _rows = [];
-  return {
-    async load(key) {
-      const rec = _store.get(key);
-      _key  = key;
-      _rows = (rec && Array.isArray(rec.data)) ? rec.data : [];
-      return _rows;
-    },
-    get key() { return _key; },
-    get rows() { return _rows; },
-    get count() { return _rows.length; },
-    sort(colIdx, asc = true) {
-      _rows.sort((a, b) => {
-        const av = a[colIdx] ?? '', bv = b[colIdx] ?? '';
-        return asc ? (av < bv ? -1 : av > bv ? 1 : 0)
-                   : (av > bv ? -1 : av < bv ? 1 : 0);
-      });
-    },
-    filter(predicate) { return _rows.filter(predicate); },
-    slice(blockIndex = 0) {
-      const start = blockIndex * SLICE_SZ;
-      return _rows.slice(start, start + SLICE_SZ);
-    },
-    get blockCount() { return Math.ceil(_rows.length / SLICE_SZ); },
-  };
-})();
-
-/* ══ Virtual-Scroll factory (window.AP2VirtualScroll) ══ */
-window.AP2VirtualScroll = {
-  create({ container, rows, renderRow }) {
-    if (!container) return null;
-    let _rows = rows || [];
-    let _startIdx = 0;
-    const _viewport = container;
-    _viewport.style.overflowY = 'auto';
-    _viewport.style.position  = 'relative';
-    let _tbody = _viewport.querySelector('tbody');
-    if (!_tbody) {
-      const t = document.createElement('table');
-      t.style.cssText = 'width:100%;border-collapse:collapse;table-layout:fixed;';
-      _tbody = document.createElement('tbody');
-      t.appendChild(_tbody);
-      _viewport.appendChild(t);
-    }
-    const _trTop = document.createElement('tr');
-    const _trBot = document.createElement('tr');
-    const _tdTop = document.createElement('td'); _tdTop.colSpan = 99;
-    const _tdBot = document.createElement('td'); _tdBot.colSpan = 99;
-    _trTop.appendChild(_tdTop);
-    _trBot.appendChild(_tdBot);
-    _tbody.insertBefore(_trTop, _tbody.firstChild);
-    _tbody.appendChild(_trBot);
-    function _setSpacers(start) {
-      const bot = Math.max(0, _rows.length - start - VS_ROWS);
-      _tdTop.style.height = (start * ROW_H) + 'px';
-      _tdBot.style.height = (bot   * ROW_H) + 'px';
-      _tdTop.style.padding = _tdBot.style.padding = '0';
-    }
-    function _paint(start) {
-      _startIdx = Math.max(0, Math.min(start, Math.max(0, _rows.length - VS_ROWS)));
-      const visible = _rows.slice(_startIdx, _startIdx + VS_ROWS);
-      const existing = Array.from(_tbody.querySelectorAll('tr.ap2-vs-row'));
-      const html = visible.map((r, i) => renderRow(r, _startIdx + i)).join('');
-      existing.forEach(r => _tbody.removeChild(r));
-      const frag = document.createRange().createContextualFragment(html);
-      frag.querySelectorAll('tr').forEach(tr => tr.classList.add('ap2-vs-row'));
-      _tbody.insertBefore(frag, _trBot);
-      _setSpacers(_startIdx);
-    }
-    function _onScroll() {
-      const newStart = Math.floor(_viewport.scrollTop / ROW_H);
-      if (Math.abs(newStart - _startIdx) >= 1) _paint(newStart);
-    }
-    _viewport.addEventListener('scroll', _onScroll, { passive: true });
-    _paint(0);
-    return {
-      refresh(newRows) { _rows = newRows || []; _paint(_startIdx); },
-      scrollTo(idx) { _viewport.scrollTop = idx * ROW_H; },
-      destroy() { _viewport.removeEventListener('scroll', _onScroll); },
-      get startIdx() { return _startIdx; },
-      get totalRows() { return _rows.length; },
-    };
-  },
+  onChange(_fn) { /* no-op — IDB writes are observed via AdminPro */ },
 };
 
-/* ── Static dataset: bike records ── */
-const STATIC_DATA = {
-  bike: [
-    ["2026-05-13T20:29:47.819Z", "b id2", "p no2", "Chasis No", "Make", "Model", "Dubai", "2026-05-13T20:00:00.000Z", "2026-05-13T20:00:00.000Z", "2026-05-13T20:00:00.000Z", "Active"],
-    ["2026-05-13T21:04:06.865Z", "b id", "p no", "ch no", "mk", "mod", "Sharjah", "2026-05-13T20:00:00.000Z", "2026-05-13T20:00:00.000Z", "2026-05-13T20:00:00.000Z", "Active"],
-    ["2026-05-13T21:09:54.381Z", "BIKE-2026-0005", 12, 12, 12, 12, "Dubai", "2028-01-01T20:00:00.000Z", "2028-01-01T20:00:00.000Z", "2028-02-01T20:00:00.000Z", "Active"],
-    ["2026-05-13T21:26:31.248Z", "BIKE-2026-0005", "sd", "sd", "sd", "ds", "Abu Dhabi", "2026-05-13T20:00:00.000Z", "2026-05-13T20:00:00.000Z", "2026-05-13T20:00:00.000Z", "Active"]
-  ]
-};
-
-/* Seed the in-memory store with static data */
-for (const [key, data] of Object.entries(STATIC_DATA)) {
-  _store.set(key, { data, ts: Date.now() });
-}
-
-/* ── In-memory shadow maps ── */
-window._AP2Shadow = {
-  age  : new Map(),
-  data : new Map(),
-};
-for (const [key, rec] of _store.entries()) {
-  window._AP2Shadow.age.set(key, rec.ts);
-  window._AP2Shadow.data.set(key, rec.data);
-}
-
-/* ── Expose constants ── */
-window.AP2_SLICE_SZ = SLICE_SZ;
-window.AP2_VS_ROWS  = VS_ROWS;
-
-console.log('[AP2] Static data store ready — datasets:', Object.keys(STATIC_DATA).join(', '));
-})();
+console.log('[AP2] IDB bridge ready — all data served from IndexedDB via AdminPro');
 </script>
 
 <style>
@@ -2055,18 +1898,17 @@ function renderCacheTable() {
   if (footer) footer.textContent = 'Updated ' + new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
 }
 
-/* ══ Shadow-map helpers ══
-   _AP2Shadow.age and _AP2Shadow.data are the single source of truth for
-   sync reads (getCacheAge / getCacheData). Pre-populated from static data. */
+/* ══ Cache read helpers — source of truth is IndexedDB via AdminPro shadow ══ */
 
-/* Sync getters used throughout the cache panel UI */
 function getCacheAge(key) {
-  const ts = window._AP2Shadow.age.get(key);
-  return ts == null ? Infinity : Date.now() - ts;
+  if (!window.AdminPro) return Infinity;
+  return AdminPro.cache.age(key);
 }
 
 function getCacheData(key) {
-  return window._AP2Shadow.data.get(key) ?? null;
+  if (!window.AdminPro) return null;
+  const e = AdminPro.cache.get(key);
+  return e ? e.data : null;
 }
 
 async function hardRefreshDataset(key, btn) {
