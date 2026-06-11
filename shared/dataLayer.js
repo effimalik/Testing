@@ -159,12 +159,12 @@
      No dataset is fetched, cached, timed, or shown in the cache panel
      unless the user's session permissions include its permKey === true. */
   const DATASETS_ALL = {
-    bike:          { label:'Bikes',            apiType:'bikes',            ttlMs: 15*60*1000,    permKey:'ap2_bike'     },
-    employee:      { label:'Employees',        apiType:'employees',        ttlMs: 10*60*1000,    permKey:'ap2_employee' },
-    master:        { label:'Master Sheet',     apiType:'getMasterSheet',   ttlMs:  5*60*1000,    permKey:'ap2_master'   },
-    cioLog:        { label:'Check-In/Out Log', apiType:'getCioLog',        ttlMs:  5*60*1000,    permKey:'ap2_bike'     },
-    approvedSheet: { label:'Approved Sheet',   apiType:'getApprovedSheet', ttlMs:  3*60*1000,    permKey:'ap2_master'   },
-    recovery:      { label:'Recovery',         apiType:'getRecovery',      ttlMs:  6*60*60*1000, permKey:'ap2_master'   },
+    bike:          { label:'Bikes',            apiType:'bike',                  ttlMs: 15*60*1000,    permKey:'ap2_bike'     },
+    employee:      { label:'Employees',        apiType:'employee',              ttlMs: 10*60*1000,    permKey:'ap2_employee' },
+    master:        { label:'Master Sheet',     apiType:'master',                ttlMs:  5*60*1000,    permKey:'ap2_master'   },
+    cioLog:        { label:'Check-In/Out Log', apiType:'cioLog',                ttlMs:  5*60*1000,    permKey:'ap2_bike'     },
+    approvedSheet: { label:'Approved Sheet',   apiType:'getApprovedRequests',   ttlMs:  3*60*1000,    permKey:'ap2_master',  paramKey:'action' },
+    recovery:      { label:'Recovery',         apiType:'recovery',              ttlMs:  6*60*60*1000, permKey:'ap2_master'   },
   };
 
   /* ── Active datasets — permission-filtered at runtime.
@@ -447,34 +447,40 @@
     }
 
     const promise = (async () => {
+      // ── PRE-REQUEST PERMISSION GATE (re-verified fresh every time) ──────────
+      // Rebuild permitted dataset map from the live session before every fetch.
+      // This catches: permission changes, session expiry, cross-user cache re-use.
       _buildDatasets();
 
       const ds = DATASETS[dsKey];
       if (!ds) {
+        // Dataset not in the allowed list — notify user and abort cleanly
         _notifyNotAuthorized(dsKey);
         throw new Error(`[DataLayer] "${dsKey}" not permitted — access denied`);
       }
+      // ────────────────────────────────────────────────────────────────────────
 
-      // Get credentials — optional: if unavailable, attempt a plain GET (public endpoints)
+      // Get credentials — abort if session invalid
       const creds = window.Auth && window.Auth.getCredentials
         ? window.Auth.getCredentials()
         : null;
 
-      const hasSession = creds && creds.sessionId && creds.token;
-
-      let url = `${API_BASE}?type=${encodeURIComponent(ds.apiType)}&_t=${Date.now()}`;
-      if (hasSession) {
-        url += `&sessionId=${encodeURIComponent(creds.sessionId)}`
-             + `&token=${encodeURIComponent(creds.token)}`;
-      } else {
-        console.warn(`[DataLayer] ${dsKey}: no session credentials — attempting unauthenticated fetch`);
+      if (!creds || !creds.sessionId || !creds.token) {
+        throw new Error(`[DataLayer] ${dsKey}: no valid session — aborting fetch`);
       }
 
-      console.log(`[DataLayer] ${dsKey}: fetching from server…`);
-      const t0 = performance.now();
+      // Some endpoints use ?action= instead of ?type= (e.g. approvedSheet → action=getApprovedRequests)
+      const paramKey = ds.paramKey || 'type';
+      const url = `${API_BASE}?${paramKey}=${encodeURIComponent(ds.apiType)}`
+        + `&sessionId=${encodeURIComponent(creds.sessionId)}`
+        + `&token=${encodeURIComponent(creds.token)}`
+        + `&_t=${Date.now()}`;
+
+      console.log(`[DataLayer] ${dsKey}: fetching → ${paramKey}=${ds.apiType}`);
+      const t0  = performance.now();
 
       const controller = new AbortController();
-      const timeoutId  = setTimeout(() => controller.abort(), 30000);
+      const timeoutId  = setTimeout(() => controller.abort(), 30000); // 30 s timeout
 
       let res;
       try {
@@ -487,36 +493,27 @@
 
       const json = await res.json();
 
-      // ── RESPONSE VALIDATION ─────────────────────────────────────────────────
-      // Guard against caching API error objects (e.g. { success:false, error:'...' }).
-      // If the server returns a non-array top-level response with success:false, throw
-      // so the error is surfaced in the console and nothing bad is stored in IDB.
-      if (json && typeof json === 'object' && !Array.isArray(json)) {
-        if (json.success === false) {
-          const msg = json.error || json.message || 'Unknown server error';
-          console.error(`[DataLayer] ${dsKey}: API returned error — "${msg}"`);
-          console.error(`[DataLayer] ${dsKey}: request URL was →`, url);
-          throw new Error(`[DataLayer] ${dsKey} API error: ${msg}`);
-        }
-        // Also guard: if it's an object but has no recognisable data shape, warn loudly
-        if (!json.data && !Array.isArray(json)) {
-          console.warn(`[DataLayer] ${dsKey}: unexpected response shape — not an array and no .data field:`, json);
-        }
+      // ── GUARD: never cache an API error response ─────────────────────────────
+      // GAS returns { success: false, error: '...' } for bad requests.
+      // Throw here so the error surfaces in the console and nothing is stored in IDB.
+      if (json && typeof json === 'object' && !Array.isArray(json) && json.success === false) {
+        const msg = json.error || json.message || 'Unknown server error';
+        console.error(`[DataLayer] ${dsKey}: API rejected request — "${msg}" | URL: ${url}`);
+        throw new Error(`[DataLayer] ${dsKey} API error: ${msg}`);
       }
-      // ────────────────────────────────────────────────────────────────────────
+      // ─────────────────────────────────────────────────────────────────────────
 
-      // Normalise to Array<Array> — all cells values-preserved, consistent format
+      // Normalise to Array<Array> — consistent format for all consumers
       const data = _normaliseRows(json);
 
-      // Final guard: only cache if we actually got rows
       if (!Array.isArray(data) || data.length === 0) {
-        console.warn(`[DataLayer] ${dsKey}: response normalised to empty/non-array — not caching:`, data);
+        console.warn(`[DataLayer] ${dsKey}: empty response — not caching`);
         throw new Error(`[DataLayer] ${dsKey}: empty or invalid data received`);
       }
 
       _cache.set(dsKey, data);
       const elapsed = Math.round(performance.now() - t0);
-      console.log(`[DataLayer] ${dsKey}: stored ${data.length} rows in cache (${elapsed} ms)`);
+      console.log(`[DataLayer] ${dsKey}: cached ${data.length} rows (${elapsed} ms)`);
       return data;
     })();
 
