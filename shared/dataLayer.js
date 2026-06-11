@@ -159,12 +159,12 @@
      No dataset is fetched, cached, timed, or shown in the cache panel
      unless the user's session permissions include its permKey === true. */
   const DATASETS_ALL = {
-    bike:          { label:'Bikes',            apiType:'bike',                  ttlMs: 15*60*1000,    permKey:'ap2_bike'     },
-    employee:      { label:'Employees',        apiType:'employee',              ttlMs: 10*60*1000,    permKey:'ap2_employee' },
-    master:        { label:'Master Sheet',     apiType:'master',                ttlMs:  5*60*1000,    permKey:'ap2_master'   },
-    cioLog:        { label:'Check-In/Out Log', apiType:'cioLog',                ttlMs:  5*60*1000,    permKey:'ap2_bike'     },
-    approvedSheet: { label:'Approved Sheet',   apiType:'getApprovedRequests',   ttlMs:  3*60*1000,    permKey:'ap2_master',  paramKey:'action' },
-    recovery:      { label:'Recovery',         apiType:'recovery',              ttlMs:  6*60*60*1000, permKey:'ap2_master'   },
+    bike:          { label:'Bikes',            apiType:'bike',                ttlMs: 15*60*1000,    permKey:'ap2_bike'     },
+    employee:      { label:'Employees',        apiType:'employee',            ttlMs: 10*60*1000,    permKey:'ap2_employee' },
+    master:        { label:'Master Sheet',     apiType:'master',              ttlMs:  5*60*1000,    permKey:'ap2_master'   },
+    cioLog:        { label:'Check-In/Out Log', apiType:'cioLog',              ttlMs:  5*60*1000,    permKey:'ap2_bike'     },
+    approvedSheet: { label:'Approved Sheet',   apiType:'getApprovedRequests', ttlMs:  3*60*1000,    permKey:'ap2_master',  paramKey:'action' },
+    recovery:      { label:'Recovery',         apiType:'recovery',            ttlMs:  6*60*60*1000, permKey:'ap2_master'   },
   };
 
   /* ── Active datasets — permission-filtered at runtime.
@@ -198,7 +198,7 @@
      DB: 'ap2_fleet_cache'  Store: 'datasets'  keyPath: 'key'
   ───────────────────────────────────────── */
   const IDB_NAME  = 'ap2_fleet_cache';
-  const IDB_VER   = 1;
+  const IDB_VER   = 2;
   const IDB_STORE = 'datasets';
 
   let _dbPromise = null;
@@ -208,9 +208,12 @@
       const req = indexedDB.open(IDB_NAME, IDB_VER);
       req.onupgradeneeded = e => {
         const db = e.target.result;
-        if (!db.objectStoreNames.contains(IDB_STORE)) {
-          db.createObjectStore(IDB_STORE, { keyPath: 'key' });
+        // v1 used keyPath:'key' which conflicts with out-of-line key reads in child pages.
+        // v2: delete old store and recreate without keyPath (out-of-line keys).
+        if (db.objectStoreNames.contains(IDB_STORE)) {
+          db.deleteObjectStore(IDB_STORE);
         }
+        db.createObjectStore(IDB_STORE);
       };
       req.onsuccess = e => resolve(e.target.result);
       req.onerror   = e => reject(e.target.error);
@@ -232,15 +235,14 @@
   async function _idbSet(fullKey, value) {
     const db = await _openDB();
     return new Promise((res, rej) => {
-      // Explicit record shape — never spread complex objects at the IDB root
+      // Out-of-line key: .put(record, key) — store has no keyPath
       const record = {
-        key:         fullKey,
         ts:          value.ts,
-        data:        value.data,        // Array<Array> — structured-clone handles this
+        data:        value.data,
         fingerprint: value.fingerprint || null,
       };
       const tx  = db.transaction(IDB_STORE, 'readwrite');
-      const req = tx.objectStore(IDB_STORE).put(record);
+      const req = tx.objectStore(IDB_STORE).put(record, fullKey);
       req.onsuccess = () => res(true);
       req.onerror   = () => {
         console.error('[DataLayer] IDB put error for', fullKey, req.error);
@@ -290,11 +292,26 @@
   ───────────────────────────────────────── */
   const _shadow = new Map();   // fullKey → { ts, data, fingerprint }
 
-  // Eager load from IDB into shadow on startup
-  _openDB().then(() => _idbGetAll()).then(records => {
-    for (const rec of records) {
-      if (rec.key && rec.key.startsWith(CACHE_PREFIX)) {
-        _shadow.set(rec.key, { ts: rec.ts, data: rec.data, fingerprint: rec.fingerprint || null });
+  // Eager load from IDB into shadow on startup.
+  // Records use out-of-line keys so we pair getAllKeys() + getAll() to get key+value together.
+  _openDB().then(async db => {
+    const [keys, records] = await Promise.all([
+      new Promise((res, rej) => {
+        const r = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).getAllKeys();
+        r.onsuccess = () => res(r.result || []);
+        r.onerror   = () => rej(r.error);
+      }),
+      new Promise((res, rej) => {
+        const r = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).getAll();
+        r.onsuccess = () => res(r.result || []);
+        r.onerror   = () => rej(r.error);
+      }),
+    ]);
+    for (let i = 0; i < keys.length; i++) {
+      const k   = keys[i];
+      const rec = records[i];
+      if (typeof k === 'string' && k.startsWith(CACHE_PREFIX) && rec) {
+        _shadow.set(k, { ts: rec.ts, data: rec.data, fingerprint: rec.fingerprint || null });
       }
     }
     console.log('[DataLayer] IDB shadow loaded —', _shadow.size, 'entries');
@@ -469,7 +486,7 @@
         throw new Error(`[DataLayer] ${dsKey}: no valid session — aborting fetch`);
       }
 
-      // Some endpoints use ?action= instead of ?type= (e.g. approvedSheet → action=getApprovedRequests)
+      // Some endpoints use ?action= instead of ?type= (e.g. approvedSheet)
       const paramKey = ds.paramKey || 'type';
       const url = `${API_BASE}?${paramKey}=${encodeURIComponent(ds.apiType)}`
         + `&sessionId=${encodeURIComponent(creds.sessionId)}`
@@ -493,15 +510,12 @@
 
       const json = await res.json();
 
-      // ── GUARD: never cache an API error response ─────────────────────────────
-      // GAS returns { success: false, error: '...' } for bad requests.
-      // Throw here so the error surfaces in the console and nothing is stored in IDB.
+      // GUARD: never cache an API error — throw so IDB stays clean
       if (json && typeof json === 'object' && !Array.isArray(json) && json.success === false) {
         const msg = json.error || json.message || 'Unknown server error';
-        console.error(`[DataLayer] ${dsKey}: API rejected request — "${msg}" | URL: ${url}`);
+        console.error(`[DataLayer] ${dsKey}: API rejected — "${msg}" | ${url}`);
         throw new Error(`[DataLayer] ${dsKey} API error: ${msg}`);
       }
-      // ─────────────────────────────────────────────────────────────────────────
 
       // Normalise to Array<Array> — consistent format for all consumers
       const data = _normaliseRows(json);
