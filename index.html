@@ -1737,7 +1737,19 @@ window.addEventListener('DOMContentLoaded', () => {
   // When it resolves it notifies the child frame via _notifyFrame().
   if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
     AdminPro.warmIfEmpty()
-      .then(() => { updateCacheHealthDot(); cmScanAll(); _notifyFrame(); })
+      .then(() => {
+        // Sync _AP2Shadow with what AdminPro just wrote to IDB, then push to child frame
+        if (window.AdminPro && AdminPro.getActiveDatasets) {
+          for (const key of Object.keys(AdminPro.getActiveDatasets())) {
+            const entry = AdminPro.cache.get(key);
+            if (entry && entry.data) {
+              window._AP2Shadow.age.set(key, entry.ts);
+              window._AP2Shadow.data.set(key, entry.data);
+            }
+          }
+        }
+        updateCacheHealthDot(); cmScanAll(); _notifyFrame();
+      })
       .catch(e => console.warn('[index] warmIfEmpty error (non-fatal):', e.message));
   }
 
@@ -1760,7 +1772,18 @@ window.addEventListener('DOMContentLoaded', () => {
           _buildDsMeta();
           if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
             AdminPro.warmIfEmpty()
-              .then(() => { updateCacheHealthDot(); cmScanAll(); _notifyFrame(); })
+              .then(() => {
+                if (window.AdminPro && AdminPro.getActiveDatasets) {
+                  for (const key of Object.keys(AdminPro.getActiveDatasets())) {
+                    const entry = AdminPro.cache.get(key);
+                    if (entry && entry.data) {
+                      window._AP2Shadow.age.set(key, entry.ts);
+                      window._AP2Shadow.data.set(key, entry.data);
+                    }
+                  }
+                }
+                updateCacheHealthDot(); cmScanAll(); _notifyFrame();
+              })
               .catch(() => {});
           }
           _openFirstAllowed();
