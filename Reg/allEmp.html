@@ -1117,7 +1117,7 @@ async function viewEmployee(empId) {
   const emp = employees.find(e => String(e.id) === String(empId));
   if (!emp) return;
   _panelType = 'emp'; _panelId = empId;
-  _ensurePanel();
+  _ensurePanel(); // MUST come before any getElementById on panel elements
   const idx      = employees.indexOf(emp);
   const avBg     = AV_BG2[idx % AV_BG2.length];
   const avFg     = AV_FG [idx % AV_FG.length];
