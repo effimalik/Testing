@@ -651,19 +651,13 @@ function normaliseRow(r, i) {
 const _AP2_CACHE_KEY = 'ap2_employee';
 
 const _IDB_NAME  = 'ap2_fleet_cache';
-const _IDB_VER   = 1;
 const _IDB_STORE = 'datasets';
 
 let _idbConn = null;
 function _getDB() {
   if (_idbConn) return Promise.resolve(_idbConn);
   return new Promise((res, rej) => {
-    const req = indexedDB.open(_IDB_NAME, _IDB_VER);
-    req.onupgradeneeded = e => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(_IDB_STORE))
-        db.createObjectStore(_IDB_STORE, { keyPath: 'key' });
-    };
+    const req = indexedDB.open(_IDB_NAME);
     req.onsuccess = e => { _idbConn = e.target.result; res(_idbConn); };
     req.onerror   = e => rej(e.target.error);
   });
