@@ -7,10 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
-<!-- <script src="https://effimalik.github.io/Testing/shared/auth.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/auth.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/code.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
-<script src="https://effimalik.github.io/Testing/shared/devPre.js"></script> -->
+<script src="https://effimalik.github.io/Testing/shared/devPre.js"></script>
 
 <style>
 /* ── Reset ── */
@@ -804,11 +804,11 @@ function buildEmpRow(emp, idx) {
     </button>`;
   } else if (overall === 'expired' && (hasHROverride || hasCOOverride)) {
     const overrideLabel = hasHROverride ? `HR: ${emp.hrStatus}` : `CO: ${emp.checkoutException}`;
-    advBtn = `<button class="row-btn row-btn-adv" title="Override active — ${overrideLabel}" onclick="openAdvModal(${JSON.stringify(emp.id)})" style="border-style:dashed;">
+    advBtn = `<button class="row-btn row-btn-adv" title="Override active — ${overrideLabel}" data-action="adv" data-emp-id="${emp.id}" style="border-style:dashed;">
       <i class="ti ti-cash"></i><span>Advance</span>
     </button>`;
   } else {
-    advBtn = `<button class="row-btn row-btn-adv" title="Advance request" onclick="openAdvModal(${JSON.stringify(emp.id)})">
+    advBtn = `<button class="row-btn row-btn-adv" title="Advance request" data-action="adv" data-emp-id="${emp.id}">
       <i class="ti ti-cash"></i><span>Advance</span>
     </button>`;
   }
@@ -833,9 +833,9 @@ function buildEmpRow(emp, idx) {
       <td>${coExc}</td>
       <td style="white-space:nowrap;padding:8px 12px;">
         <div style="display:flex;gap:5px;align-items:center;flex-wrap:nowrap;">
-          <button class="row-btn row-btn-view" title="View details" onclick="viewEmployee(${JSON.stringify(emp.id)})"><i class="ti ti-eye"></i><span>View</span></button>
+          <button class="row-btn row-btn-view" title="View details" data-action="view" data-emp-id="${emp.id}"><i class="ti ti-eye"></i><span>View</span></button>
           ${advBtn}
-          <button class="row-btn row-btn-hist" title="Work history" onclick="openHistoryModal(${JSON.stringify(emp.id)})"><i class="ti ti-history"></i><span>History</span></button>
+          <button class="row-btn row-btn-hist" title="Work history" data-action="hist" data-emp-id="${emp.id}"><i class="ti ti-history"></i><span>History</span></button>
         </div>
       </td>
     </tr>`;
@@ -1583,6 +1583,21 @@ function toast(msg, type='success') {
 /* ═══════════ INIT ═══════════ */
 document.addEventListener('DOMContentLoaded', () => {
   loadEmployees();
+
+  /* ── Event delegation for row action buttons ──
+     Handles view / advance / history regardless of virtual-scroll repaint.
+     Avoids inline onclick with JSON.stringify(emp.id) which breaks when
+     emp.id is a string containing quotes or special characters. */
+  document.querySelector('.emp-table-wrap')?.addEventListener('click', e => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn || btn.disabled) return;
+    const action = btn.dataset.action;
+    const empId  = btn.dataset.empId;
+    if (!empId) return;
+    if (action === 'view') viewEmployee(empId);
+    else if (action === 'adv')  openAdvModal(empId);
+    else if (action === 'hist') openHistoryModal(empId);
+  });
 });
 
 /* Listen for messages from parent index.html */
