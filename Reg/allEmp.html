@@ -647,38 +647,8 @@ function normaliseRow(r, i) {
 
   
 
-function parseRows(raw) {
-
-  // NEW CACHE FORMAT
-  if (raw?.employees?.data && Array.isArray(raw.employees.data)) {
-    return raw.employees.data;
-  }
-
-  // OLD FORMATS
-  if (Array.isArray(raw)) {
-    return raw;
-  }
-
-  if (Array.isArray(raw?.data)) {
-    return raw.data;
-  }
-
-  if (Array.isArray(raw?.values)) {
-    return raw.values;
-  }
-
-  if (Array.isArray(raw?.rows)) {
-    return raw.rows;
-  }
-
-  return [];
-}
-
-
-
 /* ═══════════ CACHE — IndexedDB only ═══════════ */
 const _AP2_CACHE_KEY = 'ap2_employee';
-const API_BASE = ''; // stub — no network calls used
 
 const _IDB_NAME  = 'ap2_fleet_cache';
 const _IDB_VER   = 1;
@@ -722,26 +692,12 @@ async function loadEmployees() {
   if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px 16px;">
     <div style="color:var(--text3);display:flex;flex-direction:column;align-items:center;gap:8px;">
       <i class="ti ti-loader" style="font-size:26px;animation:spin 1s linear infinite;display:inline-flex;"></i>
-      <span style="font-size:12px;">Stream-querying employee records…</span>
+      <span style="font-size:12px;">Reading ap2_employee cache…</span>
     </div></td></tr>`;
 
   try {
-    // ── STREAM-QUERY: fetch filtered index array from IDB without loading the whole table ──
-    let rows = null;
-
-    // Try dataLayer stream-query first (preferred — uses IDB directly)
-    if (window.AdminPro && typeof AdminPro.streamQuery === 'function') {
-      try {
-        // Pass a predicate that accepts every row (full dataset).
-        // For search/filter queries you can pre-filter here to avoid hoisting filtered-out rows.
-        rows = await AdminPro.streamQuery('employee', () => true);
-      } catch (_) { rows = null; }
-    }
-
-    // Fallback: direct IDB read (same DB/store as dataLayer)
-    if (!rows || !rows.length) {
-      rows = await _readCache();
-    }
+    // ── SINGLE SOURCE: ap2_employee key in ap2_fleet_cache IndexedDB ──
+    const rows = await _readCache();
 
     if (rows && rows.length) {
       // ── MEMORY-HOIST: normalise into plain JS objects, hold in RAM ──
@@ -767,19 +723,14 @@ async function loadEmployees() {
 
 /* ═══════════ BACKGROUND CACHE WATCHER
    Polls every 30 s and on ap-cache-updated messages.
-   Re-runs the full Stream-Query → Memory-Hoist → Slice → VS pipeline
-   so the table always reflects the latest IDB data without a page reload.
+   Reads ap2_employee from IndexedDB and re-renders the table.
    ════════════════════════════════════════════════════════════════════════ */
 (function() {
   let _debounce = null;
   async function _applyFromIDB() {
     try {
-      // Stream-Query: pull rows from IDB without loading the full table
-      let rows = null;
-      if (window.AdminPro && typeof AdminPro.streamQuery === 'function') {
-        try { rows = await AdminPro.streamQuery('employee', () => true); } catch (_) {}
-      }
-      if (!rows || !rows.length) rows = await _readCache();
+      // Single source: ap2_employee in ap2_fleet_cache IndexedDB
+      const rows = await _readCache();
       if (!rows || !rows.length) return;
       const fresh = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
       if (!fresh.length) return;
@@ -869,7 +820,7 @@ function buildEmpRow(emp, idx) {
   }
 
   return `
-    <tr ${rowStyle} data-emp-id="${emp.id}">
+    <tr class="vs-row" ${rowStyle} data-emp-id="${emp.id}">
       <td style="padding:10px 14px;">
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="width:36px;height:36px;border-radius:50%;flex-shrink:0;background:${avBg};color:${avFg};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;position:relative;">
@@ -961,15 +912,9 @@ function _buildVS(rows) {
     const visible = block.slice(_startIdx, _startIdx + VS_ROWS);
     // Remove old vs rows
     tbody.querySelectorAll('tr.vs-row').forEach(r => r.remove());
-    // Build fragment
+    // Insert rows directly before the bottom spacer — preserves onclick handlers
     const html = visible.map((emp, i) => buildEmpRow(emp, _startIdx + i)).join('');
-    const tbl2 = document.createElement('table');
-    const tb2  = document.createElement('tbody');
-    tbl2.appendChild(tb2);
-    tb2.innerHTML = html;
-    const frag = document.createDocumentFragment();
-    Array.from(tb2.rows).forEach(tr => { tr.classList.add('vs-row'); frag.appendChild(tr); });
-    _trBot.before(frag);
+    _trBot.insertAdjacentHTML('beforebegin', html);
     _setSpacers(_startIdx);
   }
 
@@ -1079,14 +1024,8 @@ function _buildVS_block(block, total, blockIdx) {
     const visible = block.slice(_startIdx, _startIdx + VS_ROWS);
     tbody.querySelectorAll('tr.vs-row').forEach(r => r.remove());
     const html = visible.map((emp, i) => buildEmpRow(emp, baseIdx + _startIdx + i)).join('');
-    // Parse in a real table context so <td> structure is preserved by the HTML parser
-    const tbl = document.createElement('table');
-    const tb  = document.createElement('tbody');
-    tbl.appendChild(tb);
-    tb.innerHTML = html;
-    const frag = document.createDocumentFragment();
-    Array.from(tb.rows).forEach(tr => { tr.classList.add('vs-row'); frag.appendChild(tr); });
-    _trBot.before(frag);
+    // Insert directly before bottom spacer — preserves onclick handlers in live DOM
+    _trBot.insertAdjacentHTML('beforebegin', html);
     _setSpacers(_startIdx);
   }
 
