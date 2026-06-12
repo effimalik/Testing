@@ -163,7 +163,7 @@
     employee:      { label:'Employees',        apiType:'employee',            ttlMs: 10*60*1000,    permKey:'ap2_employee' },
     master:        { label:'Master Sheet',     apiType:'master',              ttlMs:  5*60*1000,    permKey:'ap2_master'   },
     cioLog:        { label:'Check-In/Out Log', apiType:'cioLog',              ttlMs:  5*60*1000,    permKey:'ap2_bike'     },
-    approvedSheet: { label:'Approved Sheet',   apiType:'getApprovedRequests', ttlMs:  3*60*1000,    permKey:'ap2_master',  paramKey:'action' },
+    // approvedSheet: { label:'Approved Sheet',   apiType:'getApprovedRequests', ttlMs:  3*60*1000,    permKey:'ap2_master',  paramKey:'action' },
     recovery:      { label:'Recovery',         apiType:'recovery',            ttlMs:  6*60*60*1000, permKey:'ap2_master'   },
   };
 
