@@ -362,9 +362,8 @@ body::after{
    CONFIG — single source of truth
    Keep in sync with auth.js and Code.gs CFG block
 ═══════════════════════════════════════════════════ */
-const API_BASE = window.API_BASE;
 const CONFIG = {
-  API_BASE     : API_BASE,
+  get API_BASE()   { return window.API_BASE; },
   GOOGLE_CLIENT_ID : '743775120253-lr54jgst59jqr5s61vc3i4o3rnfn596a.apps.googleusercontent.com',
 };
 
