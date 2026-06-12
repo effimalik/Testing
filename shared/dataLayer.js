@@ -1,3 +1,4 @@
+<script src="mainApi.js"></script>
 /* ═══════════════════════════════════════════════════════════════
    dataLayer.js — AdminPro UAE  v2.1
    Cache-first data layer · IndexedDB persistence · session-auth
