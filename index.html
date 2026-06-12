@@ -893,9 +893,15 @@ html,body{
       <button class="ib-btn active" id="ib-emp" onclick="ibOpen('ib-emp',this)" title="Employees">
         <i class="ti ti-users"></i><span class="ib-tip">Employees</span>
       </button>
-      <button class="ib-btn" id="ib-bike" onclick="ibOpen('ib-bike',this)" title="Bike Fleet">
-        <i class="ti ti-motorbike"></i><span class="ib-tip">Bike Fleet</span>
+	
+	<button class="ib-btn" id="ib-sim" onclick="ibOpen('ib-sim',this)" title="SIM Cards">
+	  <i class="ti ti-sim-card"></i><span class="ib-tip">SIM Cards</span>
+	</button>
+      
+		<button class="ib-btn" id="ib-sim" onclick="ibOpen('ib-sim',this)" title="Sim Info">
+        <i class="ti ti-sim"></i><span class="ib-tip">Sim</span>
       </button>
+		
       <button class="ib-btn" id="ib-adv" onclick="ibOpen('ib-adv',this)" title="Advance Salary">
         <i class="ti ti-cash"></i><span class="ib-tip">Advance Salary</span>
       </button>
@@ -1168,6 +1174,28 @@ const SECTIONS = {
       ]},
     ],
   },
+
+	
+	
+'ib-sim': {
+  icon:'ti-sim-card', label:'SIM Cards',
+  pageLabel:'SIM Cards', pageSub:'SIM registry',
+  pillBg:'var(--purple-dim)', pillColor:'var(--purple)', pillIcon:'ti-sim-card',
+  permKey: 'ap2_sim',
+  groups:[
+    { label:'SIM', items:[
+      { label:'SIM List',      file:'Sim/allSim.html',  icon:'ti-list', sub:'All registered SIMs'  },
+      { label:'Register SIM',  file:'Sim/addSim.html',  icon:'ti-plus', sub:'Add new SIM card'     },
+      { label:'Assign SIM',    file:'Sim/assignSim.html', icon:'ti-arrows-horizontal', sub:'Assign / Unassign SIM' },
+    ]},
+    { label:'Documents', items:[
+      { label:'Expiring SIMs', file:'Sim/simExp.html',  icon:'ti-file-x', sub:'Expiring contracts', badge:true },
+    ]},
+  ],
+},
+	
+
+	
   'ib-adv': {
     icon:'ti-cash', label:'Advance Salary',
     pageLabel:'Advance Salary', pageSub:'Salary advances',
