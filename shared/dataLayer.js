@@ -33,7 +33,8 @@
   /* ─────────────────────────────────────────
      CONFIG
   ───────────────────────────────────────── */
-  const API_BASE     = 'https://script.google.com/macros/s/AKfycbx9O_58jlTsohkp8bNYA1rO2EQm9M9FeXoe1FT3E0n8yJ91jseidhKiM0Ss7meNkl7Elg/exec';
+  // https://script.google.com/macros/s/AKfycbx9O_58jlTsohkp8bNYA1rO2EQm9M9FeXoe1FT3E0n8yJ91jseidhKiM0Ss7meNkl7Elg/exec
+   const API_BASE     = 'https://script.google.com/macros/s/AKfycbzRCgS_JPir4uPmwW89vmYnG982G33u5CNWJZlVmghI31jhpLUECIYf9oVDaTQY8GtyQA/exec';
   const CACHE_PREFIX = 'ap2_';
 
   /* ─────────────────────────────────────────
