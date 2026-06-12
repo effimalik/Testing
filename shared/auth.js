@@ -1,4 +1,4 @@
-<script src="mainApi.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/mainApi.js"></script>
 /* ═══════════════════════════════════════════════════════════════
    auth.js — AdminPro UAE  v3.0
    Server-validated sessions · absolute + inactivity expiry · secure logout
