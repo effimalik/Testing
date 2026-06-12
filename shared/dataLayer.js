@@ -1,4 +1,3 @@
-<script src="https://effimalik.github.io/Testing/shared/mainApi.js"></script>
    
 /* ═══════════════════════════════════════════════════════════════
    dataLayer.js — AdminPro UAE  v2.1
