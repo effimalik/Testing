@@ -487,11 +487,11 @@
       }
 
       // // Some endpoints use ?action= instead of ?type= (e.g. approvedSheet)
-      // const paramKey = ds.paramKey || 'type';
-      // const url = `${API_BASE}?${paramKey}=${encodeURIComponent(ds.apiType)}`
-      //   + `&sessionId=${encodeURIComponent(creds.sessionId)}`
-      //   + `&token=${encodeURIComponent(creds.token)}`
-      //   + `&_t=${Date.now()}`;
+      const paramKey = ds.paramKey || 'type';
+      const url = `${API_BASE}?${paramKey}=${encodeURIComponent(ds.apiType)}`
+        + `&sessionId=${encodeURIComponent(creds.sessionId)}`
+        + `&token=${encodeURIComponent(creds.token)}`
+        + `&_t=${Date.now()}`;
 
       console.log(`[DataLayer] ${dsKey}: fetching → ${paramKey}=${ds.apiType}`);
       const t0  = performance.now();
