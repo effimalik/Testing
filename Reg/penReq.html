@@ -274,12 +274,6 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
         </div>
       </div>
       <div class="section-actions">
-        <button class="tb-btn" id="btn-sync" onclick="syncSheets()">
-          <span id="sync-icon-wrap" class="ico">
-            <svg id="sync-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          </span>
-          <span id="sync-label">Sync Sheets</span>
-        </button>
         <button class="tb-btn success" id="btn-accept-sel" onclick="acceptSelected()" disabled>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           Accept <span id="sel-count">0</span>
@@ -679,7 +673,6 @@ function showToast(msg,type='ok'){
 
 // LOAD DATA — IndexedDB only (ap2_fleet_cache → ap2_master)
 async function loadData(){
-  setSyncLoading(true);
   allRequests=[];selectedRefs.clear();updateSelectionUI();
   try{
     const entry=await _idbGet(_AP2_CACHE_KEY).catch(()=>null);
@@ -725,7 +718,6 @@ async function loadData(){
     console.error('[loadData] error:',err);
     showToast('Could not read cache','error');
   }
-  setSyncLoading(false);
 }
 
 function processFetchedData(rows){
@@ -1017,14 +1009,6 @@ function submitDecisionToGoogleForm(ref,empId,empName,verdict,appAmount,appInsta
   body.append('entry.1835619254',retMonthsList);body.append('entry.338921058',empName);
   fetch(GOOGLE_FORM_ACTION,{method:'POST',mode:'no-cors',body});
 }
-
-// SYNC
-function setSyncLoading(on){
-  const btn=document.getElementById('btn-sync'),lbl=document.getElementById('sync-label');
-  btn.disabled=on;lbl.textContent=on?'Syncing…':'Sync Sheets';
-  document.getElementById('sync-icon-wrap').style.animation=on?'pulse-spin .7s linear infinite':'none';
-}
-async function syncSheets(){await loadData();showToast('Refreshed from IDB cache','ok');}
 
 // SCROLL TOP
 window.addEventListener('scroll',()=>{document.getElementById('scroll-top').classList.toggle('show',window.scrollY>300);});
