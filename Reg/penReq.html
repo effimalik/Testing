@@ -617,15 +617,15 @@ const SVG={
   activity:`<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
 };
 
-// ROW MAPPING (sheet header order)
-// [0]REF ID [1]EmpID [2]EID No [3]EmpName [4]ReqAmount [5]ReqInstallments
+// ROW MAPPING (sheet header order — verified against live data)
+// [0]REF ID [1]EmpName [2]EmpID [3]EID No [4]ReqAmount [5]ReqInstallments
 // [6]RetReqMonths [7]ReqForMonth [8]ReqReason [9]Timestamp [10]AppAmount
 // [11]AppInstallments [12]RetAppMonths [13]ReqStatus [14]Amount [15]DissDate
 function rowToRequest(r){
   const ref=String(r[0]||'').trim();
-  const empId=parseInt(r[1])||0;
-  const eidNo=String(r[2]||'').trim();
-  const empName=String(r[3]||'').trim();
+  const empName=String(r[1]||'').trim();
+  const empId=parseInt(r[2])||0;
+  const eidNo=String(r[3]||'').trim();
   const reqAmount=parseFloat(r[4])||0;
   const reqInstallments=parseInt(r[5])||0;
   const retReqMonths=String(r[6]||'').trim();
@@ -643,6 +643,8 @@ function rowToRequest(r){
   let status='pending';
   if(sl==='approved'||sl==='approve')status='approved';
   else if(sl==='rejected'||sl==='reject')status='rejected';
+  else if(sl==='pending'||sl==='')status='pending';
+  else status='pending'; // any other/blank-equivalent value treated as pending
   const reqIsLumpSum=reqInstallments===0;
   const months=reqIsLumpSum?1:reqInstallments;
   const repayLabel=reqIsLumpSum?'Lump-Sum':months===1?'Next Month':months+' Installments';
