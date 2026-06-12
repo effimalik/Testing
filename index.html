@@ -1295,6 +1295,13 @@ let subOpen = true;
 let sidebarVisible = true;
 let subHideTimer = null;
 
+/* The Permissions sheet/session stores each granted dataset as an info
+   object (e.g. { label, apiKey, paramKey, ttlMs }), not a boolean — a key
+   is "permitted" simply by being present (and not explicitly disabled). */
+function _hasPerm(perms, key) {
+  return !!(perms && perms[key]);
+}
+
 /* ══ PERMISSIONS — show/hide nav buttons based on Permissions sheet ══
    Called once on load (after Auth.getPermissions() is available) and
    again if permissions are refreshed during the session.
@@ -1322,12 +1329,9 @@ function _applyPermissions() {
       // Section has no own gate — check if at least one sub-item is permitted
       const anyItemAllowed = sec.groups.some(g =>
         g.items.some(item =>
-          !item.permKey || (perms && perms[item.permKey] === true)
-        )
-      );
-      allowed = anyItemAllowed;
+          !item.permKey || _hasPerm(perms, item.permKey)
     } else {
-      allowed = !sec.permKey || (perms && perms[sec.permKey] === true);
+      allowed = !sec.permKey || _hasPerm(perms, sec.permKey);
     }
 
     btn.style.display = allowed ? '' : 'none';
@@ -1342,7 +1346,7 @@ function _applyPermissions() {
   ];
   for (const { sel, permKey } of shortcutGates) {
     document.querySelectorAll(sel).forEach(el => {
-      el.style.display = (!perms || perms[permKey] === true) ? '' : 'none';
+      el.style.display = (!perms || _hasPerm(perms, permKey)) ? '' : 'none';
     });
   }
 
@@ -1390,7 +1394,7 @@ function ibOpen(id, btn) {
   const nav = document.getElementById('sb2-nav');
   nav.innerHTML = sec.groups.map(g => {
     const visibleItems = g.items.filter(item =>
-      !item.permKey || (perms && perms[item.permKey] === true)
+      !item.permKey || _hasPerm(perms, item.permKey)
     );
     if (!visibleItems.length) return '';
     return `
