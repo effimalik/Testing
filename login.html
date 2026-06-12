@@ -292,6 +292,7 @@ body::after{
 
     <div class="divider"></div>
 
+    
     <div class="info-box">
       <i class="ti ti-info-circle"></i>
       <p>Only <strong>pre-approved Google accounts</strong> can access this system. Your email is verified against the access database automatically after sign-in.</p>
@@ -361,11 +362,13 @@ body::after{
    CONFIG — single source of truth
    Keep in sync with auth.js and Code.gs CFG block
 ═══════════════════════════════════════════════════ */
+const API_BASE = window.API_BASE;
 const CONFIG = {
-  // ← Your deployed Apps Script web app URL
-  const API_BASE = window.API_BASE;
+  API_BASE     : API_BASE,
   GOOGLE_CLIENT_ID : '743775120253-lr54jgst59jqr5s61vc3i4o3rnfn596a.apps.googleusercontent.com',
 };
+
+  
 const ALLOWED_ORIGIN = 'https://effimalik.github.io/Testing/';
 const DEFAULT_PAGE   = ALLOWED_ORIGIN + 'index.html';
 
