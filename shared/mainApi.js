@@ -1,2 +1,2 @@
 // mainApi.js — single source of truth for the API endpoint
-window.API_BASE = 'https://script.google.com/macros/s/AKfycbzqGTt4s8CfWEhGO46nwVLE-dr3faP91HIbQSgpGOxZV6itqGQT4qbVWiOr78GiER-o5A/exec';
+window.API_BASE = 'https://script.google.com/macros/s/AKfycbw-w0_LhjobJLXhxRvCTLcepO4N8S_KM8PoyIVq6YSAICQJzhSZ8Eu4conqtnvlSfAnSg/exec';
