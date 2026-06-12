@@ -1,3 +1,4 @@
+<script src="mainApi.js"></script>
 /* ═══════════════════════════════════════════════════════════════
    auth.js — AdminPro UAE  v3.0
    Server-validated sessions · absolute + inactivity expiry · secure logout
