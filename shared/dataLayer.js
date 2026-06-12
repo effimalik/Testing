@@ -159,10 +159,10 @@
      No dataset is fetched, cached, timed, or shown in the cache panel
      unless the user's session permissions include its permKey === true. */
   const DATASETS_ALL = {
-    bike:          { label:'Bikes',            apiType:'bike',                ttlMs: 15*60*1000,    permKey:'ap2_bike'     },
-    employee:      { label:'Employees',        apiType:'employee',            ttlMs: 10*60*1000,    permKey:'ap2_employee' },
-    master:        { label:'Master Sheet',     apiType:'master',              ttlMs:  5*60*1000,    permKey:'ap2_master'   },
-    cioLog:        { label:'Check-In/Out Log', apiType:'cioLog',              ttlMs:  5*60*1000,    permKey:'ap2_bike'     },
+    bike:          { label:'Bikes',            apiType:'bike',                ttlMs: 1*60*1000,    permKey:'ap2_bike'     },
+    employee:      { label:'Employees',        apiType:'employee',            ttlMs: 1*60*1000,    permKey:'ap2_employee' },
+    master:        { label:'Master Sheet',     apiType:'master',              ttlMs:  1*60*1000,    permKey:'ap2_master'   },
+    cioLog:        { label:'Check-In/Out Log', apiType:'cioLog',              ttlMs:  1*60*1000,    permKey:'ap2_bike'     },
     // approvedSheet: { label:'Approved Sheet',   apiType:'getApprovedRequests', ttlMs:  3*60*1000,    permKey:'ap2_master',  paramKey:'action' },
     recovery:      { label:'Recovery',         apiType:'recovery',            ttlMs:  6*60*60*1000, permKey:'ap2_master'   },
   };
