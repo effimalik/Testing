@@ -69,6 +69,76 @@ window.AP2Cache = {
   onChange(_fn) { /* no-op — IDB writes are observed via AdminPro */ },
 };
 
+/* ══ _AP2Shadow — thin Map-like proxy over AdminPro.cache ══
+   Lets legacy call sites keep using .age.get/.set/.delete/.clear/.entries()
+   and .data.get/.set/.delete/.clear/.entries() without maintaining a
+   separate in-memory copy. Reads always reflect AdminPro.cache (IDB-backed);
+   writes/deletes are routed back into AdminPro.cache so both "maps" stay
+   in sync automatically. */
+(function () {
+  function activeEntries(pick) {
+    if (!window.AdminPro || typeof AdminPro.getActiveDatasets !== 'function') return [];
+    const out = [];
+    for (const key of Object.keys(AdminPro.getActiveDatasets())) {
+      const e = AdminPro.cache.get(key);
+      if (e) out.push([key, pick(e)]);
+    }
+    return out;
+  }
+
+  const dataShadow = {
+    get(key) {
+      const e = window.AdminPro ? AdminPro.cache.get(key) : null;
+      return e ? e.data : undefined;
+    },
+    set(_key, _value) { /* no-op — AdminPro.cache is already the source of truth */ },
+    has(key) {
+      const e = window.AdminPro ? AdminPro.cache.get(key) : null;
+      return !!(e && e.data !== undefined && e.data !== null);
+    },
+    delete(key) {
+      if (window.AdminPro) AdminPro.cache.clear(key);
+      return true;
+    },
+    clear() {
+      if (window.AdminPro) AdminPro.cache.clearAll();
+    },
+    entries() {
+      return activeEntries(e => e.data).filter(([, d]) => d != null)[Symbol.iterator]();
+    },
+    keys() {
+      return activeEntries(e => e.data).filter(([, d]) => d != null).map(([k]) => k)[Symbol.iterator]();
+    },
+  };
+
+  const ageShadow = {
+    get(key) {
+      const e = window.AdminPro ? AdminPro.cache.get(key) : null;
+      return e ? e.ts : undefined;
+    },
+    set(_key, _ts) { /* no-op — AdminPro.cache is already the source of truth */ },
+    has(key) {
+      const e = window.AdminPro ? AdminPro.cache.get(key) : null;
+      return !!e;
+    },
+    delete(key) {
+      if (window.AdminPro) AdminPro.cache.clear(key);
+      return true;
+    },
+    clear() {
+      if (window.AdminPro) AdminPro.cache.clearAll();
+    },
+    entries() {
+      return activeEntries(e => e.ts)[Symbol.iterator]();
+    },
+    keys() {
+      return activeEntries(e => e.ts).map(([k]) => k)[Symbol.iterator]();
+    },
+  };
+
+  window._AP2Shadow = { data: dataShadow, age: ageShadow };
+})();
+
 console.log('[AP2] IDB bridge ready — all data served from IndexedDB via AdminPro');
 </script>
 
