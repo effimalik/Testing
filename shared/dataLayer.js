@@ -1,35 +1,47 @@
 /* ═══════════════════════════════════════════════════════════════
-   dataLayer.js — AdminPro UAE  v2.1
+   dataLayer.js — AdminPro UAE  v3.0
    Cache-first data layer · IndexedDB persistence · session-auth
-   Permission-driven: only permitted datasets are fetched or cached.
+   FULLY DYNAMIC: dataset registry (label, apiUrl, paramType, ttlMs)
+   comes entirely from the server's login response (Code.gs v4.0).
+   No dataset names, URLs, TTLs, or permission keys are hardcoded.
 
    ARCHITECTURE:
    ─ window.AdminPro  → public API (warmIfEmpty, get*, forceRefresh, etc.)
    ─ window.DataLayer → alias for window.AdminPro (backwards compat)
    ─ Cache layer      → IndexedDB with prefix 'ap2_' + key (same names as before)
    ─ Auth gate        → every fetch checks window.Auth.getCredentials()
-   ─ Permission gate  → DATASETS built from Auth.getPermissions() at runtime
+   ─ Dataset registry → DATASETS comes from window.Auth.getDatasets(),
+                         which mirrors the `datasets` object returned by
+                         the login endpoint:
+                           {
+                             bike:     { label, apiUrl, paramType, ttlMs },
+                             employee: { label, apiUrl, paramType, ttlMs },
+                             ...                ← only datasets this user
+                                                   has a Permissions row for
+                           }
+                         A dataset key being PRESENT in this object IS the
+                         permission grant — there is no separate permKey
+                         check anymore.
 
-   DATASETS_ALL (full registry — permission-filtered at runtime):
-     bike          | Bikes list            | 15 min TTL | permKey: ap2_bike
-     employee      | Employees list        | 10 min TTL | permKey: ap2_employee
-     master        | Master Sheet          |  5 min TTL | permKey: ap2_master
-     cioLog        | Check-In/Out Log      |  5 min TTL | permKey: ap2_bike
-     approvedSheet | Approved Sheet        |  3 min TTL | permKey: ap2_master
-     recovery      | Recovery data         |  6 hr  TTL | permKey: ap2_master
+   PER-DATASET FETCH:
+     Each dataset may live on a different Apps Script deployment
+     (ds.apiUrl) and may use either ?type= or ?action= (ds.paramType).
+     The value sent for that param is the dataset key itself, e.g.:
+       ${ds.apiUrl}?${ds.paramType}=${dsKey}&sessionId=...&token=...
 
    FLOW:
-     login.html → Auth.createSession({ permissions }) ✓
-               → AdminPro.init()      ← builds DATASETS from permissions
-               → AdminPro.warmIfEmpty() ← parallel fetch permitted datasets only
+     login.html → server returns { ..., datasets: {...} }
+               → Auth.createSession({ ..., datasets }) stores it
+               → AdminPro.init()       ← builds DATASETS from Auth.getDatasets()
+               → AdminPro.warmIfEmpty() ← parallel fetch all granted datasets
                → redirect to index
 
-     anyPage.js → AdminPro.getEmployees() / AdminPro.getBikes() / …
+     anyPage.js → AdminPro.getEmployees() / AdminPro.getBikes() / AdminPro.get('salary') / …
                → cache HIT  → returns instantly, zero network
                → cache MISS → fetch → store → return
 
    LOAD ORDER:
-     1. auth.js      (session guard + permissions)
+     1. auth.js      (session guard + datasets)
      2. dataLayer.js (this file)
      3. page JS
 ═══════════════════════════════════════════════════════════════ */
@@ -38,10 +50,8 @@
 (function () {
 
   /* ─────────────────────────────────────────
-     CONFIG — must match auth.js API_BASE
+     CONFIG
   ───────────────────────────────────────── */
-  const API_BASE = 'https://script.google.com/macros/s/AKfycbx9O_58jlTsohkp8bNYA1rO2EQm9M9FeXoe1FT3E0n8yJ91jseidhKiM0Ss7meNkl7Elg/exec';
-
   const CACHE_PREFIX = 'ap2_';
 
   /* ─────────────────────────────────────────
@@ -49,7 +59,7 @@
      Wipes every trace of user data on sign-out:
        • IndexedDB store (all ap2_ entries)
        • sessionStorage (entire namespace)
-       • localStorage   (ap2_ prefixed keys only — leave 3rd-party keys intact)
+       • localStorage   (ap2_ / ap_ prefixed keys only — leave 3rd-party keys intact)
      Called automatically when Auth fires a 'ap:signout' event, and exposed
      as AdminPro.clearAllStorage() for manual call from logout buttons.
   ───────────────────────────────────────── */
@@ -76,7 +86,7 @@
       console.warn('[DataLayer] logout: sessionStorage clear failed —', e.message);
     }
 
-    // 3. Clear only ap2_ keys from localStorage (leave unrelated keys intact)
+    // 3. Clear only ap2_/ap_ keys from localStorage (leave unrelated keys intact)
     try {
       const lsKeys = Object.keys(localStorage).filter(k => k.startsWith(CACHE_PREFIX) || k.startsWith('ap_') || k.startsWith('ap2_'));
       lsKeys.forEach(k => localStorage.removeItem(k));
@@ -94,11 +104,11 @@
   });
 
   /* ─────────────────────────────────────────
-     PERMISSION NOTIFICATION HELPER
-     Shows a toast/alert when a dataset access is denied.
+     PERMISSION / ACCESS NOTIFICATION HELPER
+     Shows a toast/alert when a dataset access is denied or unknown.
   ───────────────────────────────────────── */
   function _notifyNotAuthorized(dsKey) {
-    const label = (DATASETS_ALL[dsKey] && DATASETS_ALL[dsKey].label) || dsKey;
+    const label = (DATASETS[dsKey] && DATASETS[dsKey].label) || dsKey;
     const msg   = `⛔ Not authorized to access: ${label}`;
     console.warn('[DataLayer]', msg);
 
@@ -127,11 +137,11 @@
 
   /* ─────────────────────────────────────────
      DATA NORMALISER
-     Converts any server response into Array<Array<string>>
-     (all cell values stringified for speed & consistency).
-     • Bare Array<Array>  → stringify each cell
-     • { data: [...] }   → unwrap then stringify
-     • Bare Array<Object>→ values() of each object row
+     Converts any server response into Array<Array<string|number>>
+     (cell types preserved where possible — consistent for all consumers).
+     • Bare Array<Array>  → returned as-is
+     • { data: [...] }    → unwrap then normalise
+     • Bare Array<Object> → values() of each object row
   ───────────────────────────────────────── */
   function _normaliseRows(raw) {
     // Unwrap { data: [...] } envelope if present
@@ -154,40 +164,45 @@
     });
   }
 
-  /* ── Full registry — all possible datasets.
-     permKey: must match the column name in the Permissions sheet.
-     No dataset is fetched, cached, timed, or shown in the cache panel
-     unless the user's session permissions include its permKey === true. */
-  const DATASETS_ALL = {
-    bike:          { label:'Bikes',            apiType:'bike',                ttlMs: 1*60*1000,    permKey:'ap2_bike'     },
-    employee:      { label:'Employees',        apiType:'employee',            ttlMs: 1*60*1000,    permKey:'ap2_employee' },
-    master:        { label:'Master Sheet',     apiType:'master',              ttlMs:  1*60*1000,    permKey:'ap2_master'   },
-    cioLog:        { label:'Check-In/Out Log', apiType:'cioLog',              ttlMs:  1*60*1000,    permKey:'ap2_bike'     },
-    // approvedSheet: { label:'Approved Sheet',   apiType:'getApprovedRequests', ttlMs:  3*60*1000,    permKey:'ap2_master',  paramKey:'action' },
-    recovery:      { label:'Recovery',         apiType:'recovery',            ttlMs:  6*60*60*1000, permKey:'ap2_master'   },
-  };
+  /* ─────────────────────────────────────────
+     DATASET REGISTRY — fully dynamic
+     Built from window.Auth.getDatasets(), which mirrors the `datasets`
+     object the server returned at login:
+       {
+         <dsKey>: { label, apiUrl, paramType, ttlMs },
+         ...
+       }
 
-  /* ── Active datasets — permission-filtered at runtime.
-     All internal functions use DATASETS (this), never DATASETS_ALL.
-     Rebuilt by _buildDatasets() after permissions are available.    */
+     A dataset key being present here IS the permission grant — nothing
+     to check beyond that. If a dataset isn't in this map, the user
+     either doesn't have a Permissions row for it, or it doesn't exist
+     in DataConfig (fail-closed on the server).
+  ───────────────────────────────────────── */
   let DATASETS = {};
 
   function _buildDatasets() {
-    const perms = window.Auth && window.Auth.getPermissions
-      ? window.Auth.getPermissions()
-      : null;
+    let serverDatasets = null;
 
-    const result = {};
-    for (const [key, ds] of Object.entries(DATASETS_ALL)) {
-      // SECURITY: every dataset MUST have a permKey — no permKey = no access.
-      // Only include if the session permissions explicitly grant it (=== true).
-      // This ensures denied portals are never fetched, cached, or visible.
-      if (ds.permKey && perms && perms[ds.permKey] === true) {
-        result[key] = ds;
-      }
+    // Preferred: Auth exposes the datasets map directly
+    if (window.Auth && typeof window.Auth.getDatasets === 'function') {
+      serverDatasets = window.Auth.getDatasets();
     }
-    DATASETS = result;
-    console.log('[DataLayer] permitted datasets:', Object.keys(DATASETS));
+
+    // Fallback: read straight out of the stored session blob, in case
+    // auth.js hasn't been updated yet to expose getDatasets().
+    if (!serverDatasets) {
+      try {
+        const raw = sessionStorage.getItem('ap_session');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          serverDatasets = parsed.datasets || null;
+        }
+      } catch {}
+    }
+
+    DATASETS = (serverDatasets && typeof serverDatasets === 'object') ? { ...serverDatasets } : {};
+
+    console.log('[DataLayer] active datasets:', Object.keys(DATASETS));
     return DATASETS;
   }
 
@@ -319,7 +334,9 @@
 
   /* ─────────────────────────────────────────
      CACHE PURGE ON LOGIN
-     Same logic as before — now reads from IDB shadow instead of IDB directly.
+     Removes any IDB entries for datasets that are no longer in DATASETS
+     (denied / removed by admin), or that belong to a different session
+     fingerprint (different user / re-login).
   ───────────────────────────────────────── */
   function _purgeUnauthorisedCache() {
     try {
@@ -363,7 +380,7 @@
     }
   }
 
-  /* Build immediately — permissions may already be in session (post-login). */
+  /* Build immediately — datasets may already be in session (post-login). */
   _buildDatasets();
 
   /* ─────────────────────────────────────────
@@ -454,6 +471,10 @@
   /* ─────────────────────────────────────────
      CORE FETCH
      Attaches session credentials to every request.
+     Uses ds.apiUrl + ds.paramType from the per-user dataset registry —
+     each dataset can live on its own Apps Script deployment and use
+     either ?type= or ?action=. The value sent is the dataset key itself
+     (must match the Dataset column in DataConfig / Permissions sheets).
      Returns parsed data array/object, or throws.
   ───────────────────────────────────────── */
   async function _fetchFromServer(dsKey) {
@@ -465,13 +486,13 @@
 
     const promise = (async () => {
       // ── PRE-REQUEST PERMISSION GATE (re-verified fresh every time) ──────────
-      // Rebuild permitted dataset map from the live session before every fetch.
+      // Rebuild dataset map from the live session before every fetch.
       // This catches: permission changes, session expiry, cross-user cache re-use.
       _buildDatasets();
 
       const ds = DATASETS[dsKey];
-      if (!ds) {
-        // Dataset not in the allowed list — notify user and abort cleanly
+      if (!ds || !ds.apiUrl) {
+        // Dataset not granted (or missing config) — notify user and abort cleanly
         _notifyNotAuthorized(dsKey);
         throw new Error(`[DataLayer] "${dsKey}" not permitted — access denied`);
       }
@@ -486,14 +507,14 @@
         throw new Error(`[DataLayer] ${dsKey}: no valid session — aborting fetch`);
       }
 
-      // // Some endpoints use ?action= instead of ?type= (e.g. approvedSheet)
-      const paramKey = ds.paramKey || 'type';
-      const url = `${API_BASE}?${paramKey}=${encodeURIComponent(ds.apiType)}`
+      // Per-dataset URL + param style — both come from the server-supplied registry.
+      const paramKey = ds.paramType || 'type';
+      const url = `${ds.apiUrl}?${paramKey}=${encodeURIComponent(dsKey)}`
         + `&sessionId=${encodeURIComponent(creds.sessionId)}`
         + `&token=${encodeURIComponent(creds.token)}`
         + `&_t=${Date.now()}`;
 
-      console.log(`[DataLayer] ${dsKey}: fetching → ${paramKey}=${ds.apiType}`);
+      console.log(`[DataLayer] ${dsKey}: fetching → ${paramKey}=${dsKey} @ ${ds.apiUrl}`);
       const t0  = performance.now();
 
       const controller = new AbortController();
@@ -542,9 +563,10 @@
 
   /* ─────────────────────────────────────────
      GET — cache-first, fetch-on-miss/stale
+     ds.ttlMs comes from the server (per-user TTL_Minutes in Permissions).
   ───────────────────────────────────────── */
   async function _get(dsKey, force) {
-    // Re-verify permission on every call (not just fetch — blocks stale cache returns too)
+    // Re-verify access on every call (not just fetch — blocks stale cache returns too)
     _buildDatasets();
     const ds = DATASETS[dsKey];
     if (!ds) {
@@ -574,17 +596,17 @@
 
   /* ─────────────────────────────────────────
      WARM-IF-EMPTY
-     Called after login. Rebuilds DATASETS from permissions first,
-     then fires all permitted fetches in parallel.
+     Called after login. Rebuilds DATASETS from the server-supplied
+     registry first, then fires all granted fetches in parallel.
   ───────────────────────────────────────── */
   async function warmIfEmpty() {
-    // Always rebuild from permissions before warming, then purge any denied/stale cache
+    // Always rebuild from session before warming, then purge any denied/stale cache
     _buildDatasets();
     _purgeUnauthorisedCache();
 
     const allowedKeys = Object.keys(DATASETS);
     if (!allowedKeys.length) {
-      console.warn('[DataLayer] warmIfEmpty: no permitted datasets — nothing to fetch');
+      console.warn('[DataLayer] warmIfEmpty: no granted datasets — nothing to fetch');
       return;
     }
 
@@ -607,7 +629,7 @@
       toFetch.map(key => _fetchFromServer(key))
     );
 
-    // Schedule refresh timers for all permitted datasets
+    // Schedule refresh timers for all granted datasets
     _startAllTimers();
 
     console.log('[DataLayer] warmIfEmpty: all done');
@@ -615,7 +637,7 @@
 
   /* ─────────────────────────────────────────
      BACKGROUND REFRESH TIMERS
-     Each permitted dataset auto-refreshes 30s before its TTL expires.
+     Each granted dataset auto-refreshes 30s before its (per-user) TTL expires.
   ───────────────────────────────────────── */
   const _timers = {};
 
@@ -652,7 +674,7 @@
   }
 
   function _startAllTimers() {
-    // Only start timers for permitted datasets
+    // Only start timers for granted datasets
     Object.keys(DATASETS).forEach(_scheduleRefresh);
   }
 
@@ -661,23 +683,23 @@
   ───────────────────────────────────────── */
   window.AdminPro = {
 
-    VERSION: '2.1',  // bump when deploying — use ?v=2.1 on the <script> tag to bust GitHub Pages cache
+    VERSION: '3.0',  // bump when deploying — use ?v=3.0 on the <script> tag to bust GitHub Pages cache
 
-    /* ── INIT — rebuild permitted DATASETS + purge stale cache + start timers.
+    /* ── INIT — rebuild DATASETS from server-supplied registry + purge stale cache + start timers.
        Call this once after Auth.createSession() on login.
        Security guarantee:
-         1. DATASETS is rebuilt strictly from server-granted permissions.
-         2. Any IndexedDB cache for non-permitted datasets is deleted immediately.
+         1. DATASETS is rebuilt strictly from the server's login response.
+         2. Any IndexedDB cache for non-granted datasets is deleted immediately.
          3. Any cache entries written by a different user are deleted immediately.
        Only then are timers started so background refresh never touches denied data. */
     init() {
-      _buildDatasets();            // step 1: filter to permitted datasets only
+      _buildDatasets();            // step 1: pull granted datasets from session
       _purgeUnauthorisedCache();   // step 2: evict stale/denied/cross-user cache
-      _startAllTimers();           // step 3: schedule refresh for permitted sets only
-      console.log('[DataLayer] init: ready with', Object.keys(DATASETS).length, 'permitted datasets');
+      _startAllTimers();           // step 3: schedule refresh for granted sets only
+      console.log('[DataLayer] init: ready with', Object.keys(DATASETS).length, 'granted datasets');
     },
 
-    /* ── WARMUP — rebuild permissions then parallel-fetch all permitted ── */
+    /* ── WARMUP — rebuild registry then parallel-fetch all granted ── */
     warmIfEmpty,
 
     /* ── STREAM-QUERY
@@ -718,7 +740,11 @@
       }
     },
 
-    /* ── GETTERS  — cache-first, auto-fetch on miss/stale ── */
+    /* ── GETTERS — cache-first, auto-fetch on miss/stale.
+       These are thin convenience aliases over the generic get(dsKey).
+       They only resolve to data if the corresponding key exists in
+       DataConfig/Permissions for the logged-in user — otherwise _get()
+       throws and shows the "not authorized" notice, same as any other key. */
     getEmployees      (force) { return _get('employee',      force); },
     getBikes          (force) { return _get('bike',          force); },
     getMasterSheet    (force) { return _get('master',        force); },
@@ -726,7 +752,8 @@
     getApprovedSheet  (force) { return _get('approvedSheet', force); },
     getRecovery       (force) { return _get('recovery',      force); },
 
-    /** Generic getter by dataset key */
+    /** Generic getter by dataset key — use this for any dataset added
+        dynamically via DataConfig/Permissions (e.g. 'salary', 'sim', ...) */
     get(dsKey, force) { return _get(dsKey, force); },
 
     /* ── FORCE REFRESH  — clears cache + re-fetches immediately ── */
@@ -740,7 +767,7 @@
         _scheduleRefresh(dsKey);
         return data;
       }
-      // No key = refresh ALL permitted
+      // No key = refresh ALL granted
       await Promise.allSettled(Object.keys(DATASETS).map(k => _get(k, true)));
       _startAllTimers();
     },
@@ -761,7 +788,7 @@
     },
 
     /* ── getCacheStatus()
-       Returns ONLY permitted datasets — what the cache panel shows.
+       Returns ONLY granted datasets — what the cache panel shows.
        [{ key, label, ageMs, ageLabel, fresh, hasData, lastSync, ttl }]
     ── */
     getCacheStatus() {
@@ -794,7 +821,7 @@
       });
     },
 
-    /* ── getActiveDatasets — exposes permitted keys to index.html ── */
+    /* ── getActiveDatasets — exposes granted dataset registry to index.html ── */
     getActiveDatasets() {
       return { ...DATASETS };
     },
@@ -817,20 +844,31 @@
     /* ── clearAllStorage — alias for manual calls ── */
     clearAllStorage: _clearAllStorageOnLogout,
 
-    /* ── getDatasetNames — returns the names of ALL permitted datasets dynamically.
+    /* ── refreshDatasets — re-pull the dataset registry from Auth without
+       a full init() (e.g. after a session re-validation that returns
+       refreshed per-user TTLs/permissions). Re-schedules timers. ── */
+    refreshDatasets() {
+      _buildDatasets();
+      _purgeUnauthorisedCache();
+      _startAllTimers();
+      return { ...DATASETS };
+    },
+
+    /* ── getDatasetNames — returns the names of ALL granted datasets dynamically.
        Never hardcode table names — always use this to know what's available. ── */
     getDatasetNames() {
       return Object.keys(DATASETS);
     },
 
-    /* ── getDatasetMeta — full permitted dataset config (keys, labels, ttl, apiType) ── */
+    /* ── getDatasetMeta — full granted dataset config (key, label, apiUrl,
+       paramType, ttlMs) — straight from the server's login response. ── */
     getDatasetMeta() {
       return Object.entries(DATASETS).map(([key, ds]) => ({
         key,
-        label:   ds.label,
-        apiType: ds.apiType,
-        ttlMs:   ds.ttlMs,
-        permKey: ds.permKey,
+        label:     ds.label,
+        apiUrl:    ds.apiUrl,
+        paramType: ds.paramType,
+        ttlMs:     ds.ttlMs,
       }));
     },
 
@@ -841,7 +879,7 @@
 
   /* ─────────────────────────────────────────
      AUTO-INIT
-     On non-login pages: build permitted datasets + start timers.
+     On non-login pages: build granted datasets + start timers.
   ───────────────────────────────────────── */
   (function _autoInit() {
     const isLoginPage = window.location.pathname.endsWith('login.html')
@@ -849,12 +887,12 @@
 
     if (isLoginPage) return;
 
-    // On index.html (and any protected page): rebuild permitted datasets from session,
+    // On index.html (and any protected page): rebuild granted datasets from session,
     // then warm any missing/stale entries. This handles returning from another portal tab
     // where IndexedDB cache may have been partially or fully cleared.
     function _initAndWarm() {
       _buildDatasets();
-      _purgeUnauthorisedCache(); // evict any non-permitted or cross-user cache on every page load
+      _purgeUnauthorisedCache(); // evict any non-granted or cross-user cache on every page load
       _startAllTimers();
       // Non-blocking background warm — fills in any missing/stale cache entries
       warmIfEmpty().catch(e => console.warn('[DataLayer] autoInit warmIfEmpty error:', e.message));
@@ -886,7 +924,7 @@
       // are out of scope (stale cached script / cross-frame race), bail cleanly
       // instead of throwing a ReferenceError that breaks the page.
       try {
-        _buildDatasets(); // re-read permissions (session might have been refreshed)
+        _buildDatasets(); // re-read dataset registry (session might have been refreshed)
       } catch (e) {
         console.warn('[DataLayer] visibilityWatcher: _buildDatasets unavailable —', e.message);
         return;
@@ -909,6 +947,6 @@
     });
   })();
 
-  console.log('[DataLayer] v2.1 loaded — IndexedDB cache — window.AdminPro ready');
+  console.log('[DataLayer] v3.0 loaded — IndexedDB cache — window.AdminPro ready');
 
 })();
