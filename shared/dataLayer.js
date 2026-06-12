@@ -735,7 +735,7 @@
 
     async function _initAndWarm() {
       try {
-        const cfg = await _waitForConfig(10000);
+        const cfg = await _waitForConfig(100000);
 
         // Fingerprint must pass BEFORE we build datasets or touch the network
         const fpOk = await _verifyFingerprint();
