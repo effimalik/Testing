@@ -1,31 +1,31 @@
-   
-/* ═══════════════════════════════════════════════════════════════
-   dataLayer.js — AdminPro UAE  v2.1
+/* ═══════════════════════════════════════════════════════════════════════
+   dataLayer.js — AdminPro UAE  v2.2
    Cache-first data layer · IndexedDB persistence · session-auth
    Permission-driven: only permitted datasets are fetched or cached.
 
    ARCHITECTURE:
    ─ window.AdminPro  → public API (warmIfEmpty, get*, forceRefresh, etc.)
    ─ window.DataLayer → alias for window.AdminPro (backwards compat)
-   ─ Cache layer      → IndexedDB with prefix 'ap2_' + key (same names as before)
+   ─ Cache layer      → IndexedDB with prefix 'ap2_' + datasetKey
    ─ Auth gate        → every fetch checks window.Auth.getCredentials()
-   ─ Permission gate  → DATASETS built from Auth.getPermissions() at runtime
+   ─ Permission gate  → DATASETS built entirely from Auth.getPermissions()
+                        at runtime — NO hardcoded metadata in this file.
 
-   DATASETS_ALL (full registry — permission-filtered at runtime):
-     bike          | Bikes list            | 15 min TTL | permKey: ap2_bike
-     employee      | Employees list        | 10 min TTL | permKey: ap2_employee
-     master        | Master Sheet          |  5 min TTL | permKey: ap2_master
-     cioLog        | Check-In/Out Log      |  5 min TTL | permKey: ap2_bike
-     approvedSheet | Approved Sheet        |  3 min TTL | permKey: ap2_master
-     recovery      | Recovery data         |  6 hr  TTL | permKey: ap2_master
+   PERMISSION SHAPE (from server login response):
+   {
+     "ap2_employee": { label:"Employees", apiKey:"employee", paramKey:"type", ttlMs:60000  },
+     "ap2_bike":     { label:"Bikes",     apiKey:"bike",     paramKey:"type", ttlMs:900000 }
+   }
+   Each key becomes a dataset key. All config (label, API param, TTL) comes
+   from the server — change them in the Permissions sheet, not in this file.
 
    FLOW:
      login.html → Auth.createSession({ permissions }) ✓
-               → AdminPro.init()      ← builds DATASETS from permissions
+               → AdminPro.init()       ← builds DATASETS from permissions
                → AdminPro.warmIfEmpty() ← parallel fetch permitted datasets only
                → redirect to index
 
-     anyPage.js → AdminPro.getEmployees() / AdminPro.getBikes() / …
+     anyPage.js → AdminPro.get('ap2_employee') / AdminPro.get('ap2_bike') / …
                → cache HIT  → returns instantly, zero network
                → cache MISS → fetch → store → return
 
@@ -33,7 +33,7 @@
      1. auth.js      (session guard + permissions)
      2. dataLayer.js (this file)
      3. page JS
-═══════════════════════════════════════════════════════════════ */
+═══════════════════════════════════════════════════════════════════════ */
 'use strict';
 
 (function () {
@@ -41,7 +41,7 @@
   /* ─────────────────────────────────────────
      CONFIG — must match auth.js API_BASE
   ───────────────────────────────────────── */
-const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2JN1yfG_TJ6cneI_hZ0n-uZDN6Wk2jgYKkmoDxtdUWuvbOP6g/exec';
+  const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2JN1yfG_TJ6cneI_hZ0n-uZDN6Wk2jgYKkmoDxtdUWuvbOP6g/exec';
 
   const CACHE_PREFIX = 'ap2_';
 
@@ -99,17 +99,15 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
      Shows a toast/alert when a dataset access is denied.
   ───────────────────────────────────────── */
   function _notifyNotAuthorized(dsKey) {
-    const label = (DATASETS_ALL[dsKey] && DATASETS_ALL[dsKey].label) || dsKey;
+    const label = (DATASETS[dsKey] && DATASETS[dsKey].label) || dsKey;
     const msg   = `⛔ Not authorized to access: ${label}`;
     console.warn('[DataLayer]', msg);
 
-    // Use a toast if the app has one (AdminPro.showToast), else fall back to a brief banner
     if (window.AdminPro && typeof window.AdminPro.showToast === 'function') {
       window.AdminPro.showToast(msg, 'error');
     } else if (typeof window.showNotification === 'function') {
       window.showNotification(msg, 'error');
     } else {
-      // Lightweight fallback banner — auto-removes after 4 s
       const existing = document.getElementById('_ap2_auth_banner');
       if (existing) existing.remove();
       const banner = document.createElement('div');
@@ -128,65 +126,91 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
 
   /* ─────────────────────────────────────────
      DATA NORMALISER
-     Converts any server response into Array<Array<string>>
-     (all cell values stringified for speed & consistency).
-     • Bare Array<Array>  → stringify each cell
-     • { data: [...] }   → unwrap then stringify
+     Converts any server response into Array<Array>
+     (all cell values kept as-is for speed & consistency).
+     • Bare Array<Array>  → returned as-is
+     • { data: [...] }   → unwrap then return
      • Bare Array<Object>→ values() of each object row
   ───────────────────────────────────────── */
   function _normaliseRows(raw) {
-    // Unwrap { data: [...] } envelope if present
     const arr = Array.isArray(raw) ? raw
       : (raw && Array.isArray(raw.data)) ? raw.data
       : raw;
 
-    if (!Array.isArray(arr)) return arr; // non-array payload — return as-is
+    if (!Array.isArray(arr)) return arr;
 
     return arr.map(row => {
-      if (Array.isArray(row)) {
-        // Already Array row — keep values exactly as-is (numbers stay numbers)
-        return row;
-      }
-      if (row && typeof row === 'object') {
-        // Object row → values array, types preserved
-        return Object.values(row);
-      }
+      if (Array.isArray(row))                    return row;
+      if (row && typeof row === 'object') return Object.values(row);
       return [row];
     });
   }
 
-  /* ── Full registry — all possible datasets.
-     permKey: must match the column name in the Permissions sheet.
-     No dataset is fetched, cached, timed, or shown in the cache panel
-     unless the user's session permissions include its permKey === true. */
-  const DATASETS_ALL = {
-    bike:          { label:'Bikes',            apiType:'bike',                ttlMs: 1*60*1000,    permKey:'ap2_bike'     },
-    employee:      { label:'Employees',        apiType:'employee',            ttlMs: 1*60*1000,    permKey:'ap2_employee' },
-    master:        { label:'Master Sheet',     apiType:'master',              ttlMs:  1*60*1000,    permKey:'ap2_master'   },
-    cioLog:        { label:'Check-In/Out Log', apiType:'cioLog',              ttlMs:  1*60*1000,    permKey:'ap2_bike'     },
-    // approvedSheet: { label:'Approved Sheet',   apiType:'getApprovedRequests', ttlMs:  3*60*1000,    permKey:'ap2_master',  paramKey:'action' },
-    recovery:      { label:'Recovery',         apiType:'recovery',            ttlMs:  6*60*60*1000, permKey:'ap2_master'   },
-  };
+  /* ─────────────────────────────────────────
+     DATASETS  — built entirely from server permissions at runtime.
 
-  /* ── Active datasets — permission-filtered at runtime.
-     All internal functions use DATASETS (this), never DATASETS_ALL.
-     Rebuilt by _buildDatasets() after permissions are available.    */
+     Shape of each entry (mirrors server Permissions sheet columns):
+       label    — human-readable name for UI / cache panel
+       apiKey   — value sent as the API type/action parameter
+       paramKey — query-string key ('type' or 'action')
+       ttlMs    — cache TTL in milliseconds
+
+     DATASETS_ALL is gone. Nothing is hardcoded here.
+     Change labels/TTLs in the Google Sheet — no redeploy needed.
+  ───────────────────────────────────────── */
+
+  /** Active datasets — permission-filtered at runtime. */
   let DATASETS = {};
 
+  /**
+   * Reads Auth.getPermissions() and maps each entry to a normalised
+   * dataset config. Only datasets explicitly granted are included.
+   *
+   * Auth.getPermissions() must return the rich server shape:
+   *   { "ap2_employee": { label, apiKey, paramKey, ttlMs }, … }
+   *
+   * Backwards-compat: if a value is `true` (old boolean shape) the
+   * dataset key is included but with minimal defaults so the system
+   * degrades gracefully rather than breaking entirely.
+   */
   function _buildDatasets() {
     const perms = window.Auth && window.Auth.getPermissions
       ? window.Auth.getPermissions()
       : null;
 
+    if (!perms || typeof perms !== 'object') {
+      DATASETS = {};
+      console.log('[DataLayer] no permissions available — DATASETS empty');
+      return DATASETS;
+    }
+
     const result = {};
-    for (const [key, ds] of Object.entries(DATASETS_ALL)) {
-      // SECURITY: every dataset MUST have a permKey — no permKey = no access.
-      // Only include if the session permissions explicitly grant it (=== true).
-      // This ensures denied portals are never fetched, cached, or visible.
-      if (ds.permKey && perms && perms[ds.permKey] === true) {
-        result[key] = ds;
+    for (const [key, val] of Object.entries(perms)) {
+      if (!val) continue; // skip explicit false / null
+
+      if (val === true) {
+        // Legacy boolean-only permission — include with minimal defaults
+        // so pages don't crash, but log a warning so the sheet can be updated.
+        console.warn(`[DataLayer] "${key}" has boolean permission — update Permissions sheet to include Label/ApiKey/ParamKey/TTL(ms)`);
+        result[key] = {
+          label    : key,
+          apiKey   : key.replace(/^ap2_/, ''),  // best-effort fallback
+          paramKey : 'type',
+          ttlMs    : 5 * 60 * 1000,             // 5-minute default
+        };
+      } else if (typeof val === 'object' && val.apiKey) {
+        // Rich shape from server — use as-is with safe defaults for any missing fields
+        result[key] = {
+          label    : String(val.label    || key),
+          apiKey   : String(val.apiKey),
+          paramKey : String(val.paramKey || 'type'),
+          ttlMs    : Number(val.ttlMs)   || 5 * 60 * 1000,
+        };
+      } else {
+        console.warn(`[DataLayer] "${key}" has unrecognised permission shape — skipping`, val);
       }
     }
+
     DATASETS = result;
     console.log('[DataLayer] permitted datasets:', Object.keys(DATASETS));
     return DATASETS;
@@ -194,9 +218,9 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
 
   /* ─────────────────────────────────────────
      INDEXEDDB ENGINE
-     Same key names as before: 'ap2_' + datasetName
-     Same entry shape: { ts, data, fingerprint }
-     DB: 'ap2_fleet_cache'  Store: 'datasets'  keyPath: 'key'
+     Key names: 'ap2_' + datasetKey
+     Entry shape: { ts, data, fingerprint }
+     DB: 'ap2_fleet_cache'  Store: 'datasets'  keyPath: none (out-of-line)
   ───────────────────────────────────────── */
   const IDB_NAME  = 'ap2_fleet_cache';
   const IDB_VER   = 2;
@@ -209,8 +233,6 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
       const req = indexedDB.open(IDB_NAME, IDB_VER);
       req.onupgradeneeded = e => {
         const db = e.target.result;
-        // v1 used keyPath:'key' which conflicts with out-of-line key reads in child pages.
-        // v2: delete old store and recreate without keyPath (out-of-line keys).
         if (db.objectStoreNames.contains(IDB_STORE)) {
           db.deleteObjectStore(IDB_STORE);
         }
@@ -222,12 +244,10 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
     return _dbPromise;
   }
 
-  /* Low-level IDB helpers — all async */
   async function _idbGet(fullKey) {
     const db = await _openDB();
     return new Promise((res, rej) => {
-      const req = db.transaction(IDB_STORE, 'readonly')
-                    .objectStore(IDB_STORE).get(fullKey);
+      const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(fullKey);
       req.onsuccess = () => res(req.result || null);
       req.onerror   = () => rej(req.error);
     });
@@ -236,31 +256,19 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
   async function _idbSet(fullKey, value) {
     const db = await _openDB();
     return new Promise((res, rej) => {
-      // Out-of-line key: .put(record, key) — store has no keyPath
-      const record = {
-        ts:          value.ts,
-        data:        value.data,
-        fingerprint: value.fingerprint || null,
-      };
+      const record = { ts: value.ts, data: value.data, fingerprint: value.fingerprint || null };
       const tx  = db.transaction(IDB_STORE, 'readwrite');
       const req = tx.objectStore(IDB_STORE).put(record, fullKey);
       req.onsuccess = () => res(true);
-      req.onerror   = () => {
-        console.error('[DataLayer] IDB put error for', fullKey, req.error);
-        rej(req.error);
-      };
-      tx.onerror = () => {
-        console.error('[DataLayer] IDB tx error for', fullKey, tx.error);
-        rej(tx.error);
-      };
+      req.onerror   = () => { console.error('[DataLayer] IDB put error for', fullKey, req.error); rej(req.error); };
+      tx.onerror    = () => { console.error('[DataLayer] IDB tx error for',  fullKey, tx.error);  rej(tx.error);  };
     });
   }
 
   async function _idbDelete(fullKey) {
     const db = await _openDB();
     return new Promise((res, rej) => {
-      const req = db.transaction(IDB_STORE, 'readwrite')
-                    .objectStore(IDB_STORE).delete(fullKey);
+      const req = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).delete(fullKey);
       req.onsuccess = () => res(true);
       req.onerror   = () => rej(req.error);
     });
@@ -269,8 +277,7 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
   async function _idbAllKeys() {
     const db = await _openDB();
     return new Promise((res, rej) => {
-      const req = db.transaction(IDB_STORE, 'readonly')
-                    .objectStore(IDB_STORE).getAllKeys();
+      const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).getAllKeys();
       req.onsuccess = () => res(req.result || []);
       req.onerror   = () => rej(req.error);
     });
@@ -279,8 +286,7 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
   async function _idbGetAll() {
     const db = await _openDB();
     return new Promise((res, rej) => {
-      const req = db.transaction(IDB_STORE, 'readonly')
-                    .objectStore(IDB_STORE).getAll();
+      const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).getAll();
       req.onsuccess = () => res(req.result || []);
       req.onerror   = () => rej(req.error);
     });
@@ -289,12 +295,9 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
   /* ─────────────────────────────────────────
      IN-MEMORY SHADOW  (sync reads for timers / status checks)
      Mirrors IDB so _cache.get() / .status() / .age() stay synchronous.
-     Populated eagerly on load, kept live by _cache.set/clear/clearAll.
   ───────────────────────────────────────── */
-  const _shadow = new Map();   // fullKey → { ts, data, fingerprint }
+  const _shadow = new Map();
 
-  // Eager load from IDB into shadow on startup.
-  // Records use out-of-line keys so we pair getAllKeys() + getAll() to get key+value together.
   _openDB().then(async db => {
     const [keys, records] = await Promise.all([
       new Promise((res, rej) => {
@@ -320,7 +323,6 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
 
   /* ─────────────────────────────────────────
      CACHE PURGE ON LOGIN
-     Same logic as before — now reads from IDB shadow instead of IDB directly.
   ───────────────────────────────────────── */
   function _purgeUnauthorisedCache() {
     try {
@@ -338,12 +340,10 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
 
       for (const [fullKey, entry] of _shadow.entries()) {
         if (!fullKey.startsWith(CACHE_PREFIX)) continue;
-
         if (!permittedFullKeys.has(fullKey)) {
           keysToDelete.push(fullKey);
           continue;
         }
-
         if (currentFingerprint && entry.fingerprint && entry.fingerprint !== currentFingerprint) {
           keysToDelete.push(fullKey);
         }
@@ -369,19 +369,16 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
 
   /* ─────────────────────────────────────────
      CACHE  — IndexedDB wrappers
-     Entry shape (same as before): { ts, data, fingerprint }
-     Keys (same as before): 'ap2_' + datasetName
-     Reads are sync via _shadow; writes are async to IDB.
+     Entry shape: { ts, data, fingerprint }
+     Keys: 'ap2_' + datasetKey
   ───────────────────────────────────────── */
   const _cache = {
     _key(name) { return CACHE_PREFIX + name; },
 
-    /** Sync read from shadow map — same shape as before: { ts, data, fingerprint } */
     get(name) {
       return _shadow.get(this._key(name)) || null;
     },
 
-    /** Async write to IDB + instant shadow update */
     set(name, data) {
       let fingerprint = null;
       try {
@@ -389,13 +386,11 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
         if (raw) fingerprint = JSON.parse(raw).sessionFingerprint || null;
       } catch {}
 
-      const entry = { ts: Date.now(), data, fingerprint };
+      const entry   = { ts: Date.now(), data, fingerprint };
       const fullKey = this._key(name);
 
-      // Update shadow immediately so sync callers see fresh data right away
       _shadow.set(fullKey, entry);
 
-      // Persist to IDB asynchronously — log errors loudly so they are visible
       _idbSet(fullKey, entry).then(() => {
         console.log('[DataLayer] IDB write OK:', fullKey, '| rows:', Array.isArray(entry.data) ? entry.data.length : typeof entry.data);
       }).catch(e => {
@@ -448,37 +443,29 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
 
   /* ─────────────────────────────────────────
      IN-FLIGHT DEDUP
-     Prevents concurrent fetches for the same key
   ───────────────────────────────────────── */
-  const _inflight = {};   // key → Promise<data>
+  const _inflight = {};
 
   /* ─────────────────────────────────────────
      CORE FETCH
      Attaches session credentials to every request.
-     Returns parsed data array/object, or throws.
+     Reads apiKey and paramKey from DATASETS (server-supplied) — no hardcoding.
   ───────────────────────────────────────── */
   async function _fetchFromServer(dsKey) {
-    // Dedup: if a fetch for this key is already in flight, piggyback on it
     if (_inflight[dsKey]) {
       console.log(`[DataLayer] ${dsKey}: piggyback on in-flight fetch`);
       return _inflight[dsKey];
     }
 
     const promise = (async () => {
-      // ── PRE-REQUEST PERMISSION GATE (re-verified fresh every time) ──────────
-      // Rebuild permitted dataset map from the live session before every fetch.
-      // This catches: permission changes, session expiry, cross-user cache re-use.
       _buildDatasets();
 
       const ds = DATASETS[dsKey];
       if (!ds) {
-        // Dataset not in the allowed list — notify user and abort cleanly
         _notifyNotAuthorized(dsKey);
         throw new Error(`[DataLayer] "${dsKey}" not permitted — access denied`);
       }
-      // ────────────────────────────────────────────────────────────────────────
 
-      // Get credentials — abort if session invalid
       const creds = window.Auth && window.Auth.getCredentials
         ? window.Auth.getCredentials()
         : null;
@@ -487,18 +474,18 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
         throw new Error(`[DataLayer] ${dsKey}: no valid session — aborting fetch`);
       }
 
-      // // Some endpoints use ?action= instead of ?type= (e.g. approvedSheet)
+      // paramKey and apiKey come from the server-supplied permissions, not hardcode
       const paramKey = ds.paramKey || 'type';
-      const url = `${API_BASE}?${paramKey}=${encodeURIComponent(ds.apiType)}`
+      const url = `${API_BASE}?${paramKey}=${encodeURIComponent(ds.apiKey)}`
         + `&sessionId=${encodeURIComponent(creds.sessionId)}`
         + `&token=${encodeURIComponent(creds.token)}`
         + `&_t=${Date.now()}`;
 
-      console.log(`[DataLayer] ${dsKey}: fetching → ${paramKey}=${ds.apiType}`);
-      const t0  = performance.now();
+      console.log(`[DataLayer] ${dsKey}: fetching → ${paramKey}=${ds.apiKey}`);
+      const t0 = performance.now();
 
       const controller = new AbortController();
-      const timeoutId  = setTimeout(() => controller.abort(), 30000); // 30 s timeout
+      const timeoutId  = setTimeout(() => controller.abort(), 30000);
 
       let res;
       try {
@@ -511,14 +498,12 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
 
       const json = await res.json();
 
-      // GUARD: never cache an API error — throw so IDB stays clean
       if (json && typeof json === 'object' && !Array.isArray(json) && json.success === false) {
         const msg = json.error || json.message || 'Unknown server error';
         console.error(`[DataLayer] ${dsKey}: API rejected — "${msg}" | ${url}`);
         throw new Error(`[DataLayer] ${dsKey} API error: ${msg}`);
       }
 
-      // Normalise to Array<Array> — consistent format for all consumers
       const data = _normaliseRows(json);
 
       if (!Array.isArray(data) || data.length === 0) {
@@ -545,7 +530,6 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
      GET — cache-first, fetch-on-miss/stale
   ───────────────────────────────────────── */
   async function _get(dsKey, force) {
-    // Re-verify permission on every call (not just fetch — blocks stale cache returns too)
     _buildDatasets();
     const ds = DATASETS[dsKey];
     if (!ds) {
@@ -575,11 +559,8 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
 
   /* ─────────────────────────────────────────
      WARM-IF-EMPTY
-     Called after login. Rebuilds DATASETS from permissions first,
-     then fires all permitted fetches in parallel.
   ───────────────────────────────────────── */
   async function warmIfEmpty() {
-    // Always rebuild from permissions before warming, then purge any denied/stale cache
     _buildDatasets();
     _purgeUnauthorisedCache();
 
@@ -589,11 +570,9 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
       return;
     }
 
-    // Only fetch datasets that are missing or stale — skip fresh ones
-    // This is the correct behaviour for "warm if empty": don't re-fetch what we already have
     const toFetch = allowedKeys.filter(key => {
       const status = _cache.status(key);
-      return status !== 'fresh'; // null (missing) or 'stale' → fetch; 'fresh' → skip
+      return status !== 'fresh';
     });
 
     if (!toFetch.length) {
@@ -608,15 +587,14 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
       toFetch.map(key => _fetchFromServer(key))
     );
 
-    // Schedule refresh timers for all permitted datasets
     _startAllTimers();
-
     console.log('[DataLayer] warmIfEmpty: all done');
   }
 
   /* ─────────────────────────────────────────
      BACKGROUND REFRESH TIMERS
      Each permitted dataset auto-refreshes 30s before its TTL expires.
+     TTL is read from ds.ttlMs which comes from the server — no hardcoding.
   ───────────────────────────────────────── */
   const _timers = {};
 
@@ -627,24 +605,23 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
     if (_timers[dsKey]) { clearTimeout(_timers[dsKey]); delete _timers[dsKey]; }
 
     const entry = _cache.get(dsKey);
-    if (!entry) return;   // nothing cached yet — no timer needed
+    if (!entry) return;
 
     const age       = Date.now() - entry.ts;
     const remaining = ds.ttlMs - age;
-    const delay     = Math.max(0, remaining - 30000);  // 30 s before expiry
+    const delay     = Math.max(0, remaining - 30000);
 
     _timers[dsKey] = setTimeout(async () => {
       if (document.visibilityState === 'hidden') {
-        _scheduleRefresh(dsKey);   // check again when visible
+        _scheduleRefresh(dsKey);
         return;
       }
       console.log(`[DataLayer] background refresh: ${dsKey}`);
       try {
         await _fetchFromServer(dsKey);
-        _scheduleRefresh(dsKey);   // reschedule after refresh
+        _scheduleRefresh(dsKey);
       } catch (e) {
         console.warn(`[DataLayer] background refresh failed: ${dsKey}`, e.message);
-        // Retry in 2 min on failure
         _timers[dsKey] = setTimeout(() => _scheduleRefresh(dsKey), 2 * 60 * 1000);
       }
     }, delay);
@@ -653,7 +630,6 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
   }
 
   function _startAllTimers() {
-    // Only start timers for permitted datasets
     Object.keys(DATASETS).forEach(_scheduleRefresh);
   }
 
@@ -662,31 +638,20 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
   ───────────────────────────────────────── */
   window.AdminPro = {
 
-    VERSION: '2.1',  // bump when deploying — use ?v=2.1 on the <script> tag to bust GitHub Pages cache
+    VERSION: '2.2',
 
-    /* ── INIT — rebuild permitted DATASETS + purge stale cache + start timers.
-       Call this once after Auth.createSession() on login.
-       Security guarantee:
-         1. DATASETS is rebuilt strictly from server-granted permissions.
-         2. Any IndexedDB cache for non-permitted datasets is deleted immediately.
-         3. Any cache entries written by a different user are deleted immediately.
-       Only then are timers started so background refresh never touches denied data. */
+    /* ── INIT — rebuild permitted DATASETS + purge stale cache + start timers. ── */
     init() {
-      _buildDatasets();            // step 1: filter to permitted datasets only
-      _purgeUnauthorisedCache();   // step 2: evict stale/denied/cross-user cache
-      _startAllTimers();           // step 3: schedule refresh for permitted sets only
+      _buildDatasets();
+      _purgeUnauthorisedCache();
+      _startAllTimers();
       console.log('[DataLayer] init: ready with', Object.keys(DATASETS).length, 'permitted datasets');
     },
 
-    /* ── WARMUP — rebuild permissions then parallel-fetch all permitted ── */
+    /* ── WARMUP ── */
     warmIfEmpty,
 
-    /* ── STREAM-QUERY
-       Fetches filtered index arrays directly from IDB via cursor —
-       never loads the whole table into JS RAM at once.
-       predicateFn(row) → true/false  (row = raw Array or Object from IDB)
-       Returns Promise<Array> of matching rows only.
-       Falls back to shadow-map read if IDB is unavailable.               */
+    /* ── STREAM-QUERY ── */
     async streamQuery(dsKey, predicateFn) {
       _buildDatasets();
       const ds = DATASETS[dsKey];
@@ -697,12 +662,10 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
       try {
         const db = await _openDB();
         return await new Promise((resolve, reject) => {
-          const req = db.transaction(IDB_STORE, 'readonly')
-                        .objectStore(IDB_STORE).get(fullKey);
+          const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(fullKey);
           req.onsuccess = () => {
             const rec = req.result;
             if (!rec || !Array.isArray(rec.data)) { resolve([]); return; }
-            // Stream iterate: never clone the whole array — filter row by row
             const results = [];
             for (let i = 0, len = rec.data.length; i < len; i++) {
               try { if (predicateFn(rec.data[i])) results.push(rec.data[i]); } catch (_) {}
@@ -719,18 +682,21 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
       }
     },
 
-    /* ── GETTERS  — cache-first, auto-fetch on miss/stale ── */
-    getEmployees      (force) { return _get('employee',      force); },
-    getBikes          (force) { return _get('bike',          force); },
-    getMasterSheet    (force) { return _get('master',        force); },
-    getCioLog         (force) { return _get('cioLog',        force); },
-    getApprovedSheet  (force) { return _get('approvedSheet', force); },
-    getRecovery       (force) { return _get('recovery',      force); },
-
-    /** Generic getter by dataset key */
+    /* ── GENERIC GETTER — preferred interface; dsKey = permission key e.g. 'ap2_employee' ── */
     get(dsKey, force) { return _get(dsKey, force); },
 
-    /* ── FORCE REFRESH  — clears cache + re-fetches immediately ── */
+    /* ── NAMED GETTERS (backwards compat) — resolve through permission keys ──────────────
+       These call _get() with the canonical permission key. If the user doesn't have
+       permission for that dataset, the permission gate inside _get() will reject it.
+       Pages that switched to AdminPro.get('ap2_employee') don't need these at all.
+    ── */
+    getEmployees  (force) { return _get('ap2_employee', force); },
+    getBikes      (force) { return _get('ap2_bike',     force); },
+    getMasterSheet(force) { return _get('ap2_master',   force); },
+    getCioLog     (force) { return _get('ap2_cioLog',   force); },
+    getRecovery   (force) { return _get('ap2_recovery', force); },
+
+    /* ── FORCE REFRESH ── */
     async forceRefresh(dsKey) {
       if (dsKey) {
         if (!DATASETS[dsKey]) {
@@ -741,12 +707,11 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
         _scheduleRefresh(dsKey);
         return data;
       }
-      // No key = refresh ALL permitted
       await Promise.allSettled(Object.keys(DATASETS).map(k => _get(k, true)));
       _startAllTimers();
     },
 
-    /* ── WARM CACHE (alias for refresh all — used by index.html) ── */
+    /* ── WARM CACHE ── */
     async warmCache() {
       await this.forceRefresh();
     },
@@ -761,10 +726,7 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
       age      : (name)        => _cache.age(name),
     },
 
-    /* ── getCacheStatus()
-       Returns ONLY permitted datasets — what the cache panel shows.
-       [{ key, label, ageMs, ageLabel, fresh, hasData, lastSync, ttl }]
-    ── */
+    /* ── getCacheStatus — returns only permitted datasets for cache panel ── */
     getCacheStatus() {
       return Object.entries(DATASETS).map(([key, ds]) => {
         const entry   = _cache.get(key);
@@ -795,19 +757,17 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
       });
     },
 
-    /* ── getActiveDatasets — exposes permitted keys to index.html ── */
+    /* ── getActiveDatasets — exposes permitted dataset configs ── */
     getActiveDatasets() {
       return { ...DATASETS };
     },
 
-    /* ── stopAllTimers  — called by Auth.signOut() ── */
+    /* ── stopAllTimers ── */
     stopAllTimers() {
       Object.keys(_timers).forEach(k => { clearTimeout(_timers[k]); delete _timers[k]; });
     },
 
-    /* ── signOut  — full cleanup: timers + all storage + reset DATASETS ──
-       Call this from your logout button / auth.js signOut flow.
-       Also fires automatically when the 'ap:signout' window event is dispatched. */
+    /* ── signOut ── */
     async signOut() {
       this.stopAllTimers();
       DATASETS = {};
@@ -815,23 +775,22 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
       console.log('[DataLayer] signOut: all storage cleared, DATASETS reset');
     },
 
-    /* ── clearAllStorage — alias for manual calls ── */
+    /* ── clearAllStorage ── */
     clearAllStorage: _clearAllStorageOnLogout,
 
-    /* ── getDatasetNames — returns the names of ALL permitted datasets dynamically.
-       Never hardcode table names — always use this to know what's available. ── */
+    /* ── getDatasetNames — keys of all permitted datasets ── */
     getDatasetNames() {
       return Object.keys(DATASETS);
     },
 
-    /* ── getDatasetMeta — full permitted dataset config (keys, labels, ttl, apiType) ── */
+    /* ── getDatasetMeta — full permitted dataset config ── */
     getDatasetMeta() {
       return Object.entries(DATASETS).map(([key, ds]) => ({
         key,
-        label:   ds.label,
-        apiType: ds.apiType,
-        ttlMs:   ds.ttlMs,
-        permKey: ds.permKey,
+        label    : ds.label,
+        apiKey   : ds.apiKey,
+        paramKey : ds.paramKey,
+        ttlMs    : ds.ttlMs,
       }));
     },
 
@@ -842,7 +801,6 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
 
   /* ─────────────────────────────────────────
      AUTO-INIT
-     On non-login pages: build permitted datasets + start timers.
   ───────────────────────────────────────── */
   (function _autoInit() {
     const isLoginPage = window.location.pathname.endsWith('login.html')
@@ -850,14 +808,10 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
 
     if (isLoginPage) return;
 
-    // On index.html (and any protected page): rebuild permitted datasets from session,
-    // then warm any missing/stale entries. This handles returning from another portal tab
-    // where IndexedDB cache may have been partially or fully cleared.
     function _initAndWarm() {
       _buildDatasets();
-      _purgeUnauthorisedCache(); // evict any non-permitted or cross-user cache on every page load
+      _purgeUnauthorisedCache();
       _startAllTimers();
-      // Non-blocking background warm — fills in any missing/stale cache entries
       warmIfEmpty().catch(e => console.warn('[DataLayer] autoInit warmIfEmpty error:', e.message));
     }
 
@@ -870,9 +824,6 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
 
   /* ─────────────────────────────────────────
      VISIBILITY CHANGE WATCHER
-     When user returns to this tab (from another portal or browser tab),
-     re-warm any datasets that went stale while the tab was hidden.
-     NOTE: must stay INSIDE the main IIFE so private functions are in scope.
   ───────────────────────────────────────── */
   (function _visibilityWatcher() {
     const isLoginPage = window.location.pathname.endsWith('login.html')
@@ -882,12 +833,8 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'visible') return;
 
-      // Guard: _buildDatasets, _cache, _fetchFromServer and _startAllTimers are
-      // private to this IIFE. If this handler somehow fires in a context where they
-      // are out of scope (stale cached script / cross-frame race), bail cleanly
-      // instead of throwing a ReferenceError that breaks the page.
       try {
-        _buildDatasets(); // re-read permissions (session might have been refreshed)
+        _buildDatasets();
       } catch (e) {
         console.warn('[DataLayer] visibilityWatcher: _buildDatasets unavailable —', e.message);
         return;
@@ -910,6 +857,6 @@ const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2J
     });
   })();
 
-  console.log('[DataLayer] v2.1 loaded — IndexedDB cache — window.AdminPro ready');
+  console.log('[DataLayer] v2.2 loaded — IndexedDB cache — window.AdminPro ready');
 
 })();
