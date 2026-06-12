@@ -292,28 +292,17 @@ html,body{
 .tb-app-name{font-size:12.5px;font-weight:700;color:var(--text);letter-spacing:-.015em;line-height:1.2;white-space:nowrap;}
 .tb-app-sub{font-size:9.5px;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;margin-top:2px;white-space:nowrap;}
 
-/* ── Day/Night toggle pill ── */
-.tb-daynight{
+tb-daynight.tb-daynight{
   margin-left:auto;flex-shrink:0;
-  height:24px;padding:0 8px;
-  /* border-radius:20px; */
-  /* border:1.5px solid var(--border2);
-  background:var(--bg3); */
-  display:flex;align-items:center;gap:5px;
+  height:24px;width:24px;padding:0;
+  border:none;background:transparent;
+  display:flex;align-items:center;justify-content:center;
   cursor:pointer;transition:all .2s;
-  /* color:var(--text2);font-size:12px; */
   font-family:var(--font);font-weight:600;
-  white-space:nowrap;
 }
-.tb-daynight i{font-size:13px;transition:color .2s,transform .3s;}
-.tb-daynight:hover{background:var(--surface2);border-color:var(--accent);color:var(--text);}
+.tb-daynight i{font-size:15px;transition:color .2s,transform .3s;}
+.tb-daynight:hover{background:transparent;color:var(--text);}
 .tb-daynight:hover i{transform:rotate(20deg);}
-[data-theme="light"] .tb-daynight i{color:var(--amber);}
-[data-theme="dark"]  .tb-daynight i{color:#a0b4d0;}
-[data-theme="purple"] .tb-daynight i{color:var(--purple);}
-[data-theme="ocean"]  .tb-daynight i{color:var(--accent);}
-[data-theme="slate"]  .tb-daynight i{color:var(--accent);}
-
 /* ── Main strip ── */
 .tb-strip{
   flex:1;display:flex;align-items:center;
