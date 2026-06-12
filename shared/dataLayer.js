@@ -41,7 +41,7 @@
   /* ─────────────────────────────────────────
      CONFIG — must match auth.js API_BASE
   ───────────────────────────────────────── */
-  const API_BASE = 'https://script.google.com/macros/s/AKfycbz2JR-pzV1olU_P3Hv4fW7Np16AH4rAsbTxuEtU9l2CdT1dkdCqyBMQrd_2lDt-6XNd/exec';
+  const API_BASE = 'https://script.google.com/macros/s/AKfycbwnPUkpqvUdNey7SoEzd2JN1yfG_TJ6cneI_hZ0n-uZDN6Wk2jgYKkmoDxtdUWuvbOP6g/exec';
 
   const CACHE_PREFIX = 'ap2_';
 
@@ -373,7 +373,9 @@
      Keys: 'ap2_' + datasetKey
   ───────────────────────────────────────── */
   const _cache = {
-    _key(name) { return CACHE_PREFIX + name; },
+    // Dataset keys from the server already include the 'ap2_' prefix (e.g. 'ap2_bike').
+    // Do NOT prepend CACHE_PREFIX again — just use the key as-is.
+    _key(name) { return name.startsWith(CACHE_PREFIX) ? name : CACHE_PREFIX + name; },
 
     get(name) {
       return _shadow.get(this._key(name)) || null;
@@ -657,7 +659,7 @@
       const ds = DATASETS[dsKey];
       if (!ds) { _notifyNotAuthorized(dsKey); throw new Error(`[DataLayer] "${dsKey}" not permitted`); }
 
-      const fullKey = CACHE_PREFIX + dsKey;
+      const fullKey = dsKey.startsWith(CACHE_PREFIX) ? dsKey : CACHE_PREFIX + dsKey;
 
       try {
         const db = await _openDB();
