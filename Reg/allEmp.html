@@ -552,92 +552,58 @@ function normaliseRow(r, i) {
   }
 
   /* ── Array format from ap2_employees cache / Apps Script API ──
-   *  Column layout (0-based):
-   *  [0]  Timestamp
-   *  [1]  Emp ID
-   *  [2]  Name
-   *  [3]  EID Number
-   *  [4]  Date of Birth  (may be missing / shifted in older rows)
-   *  [5]  UAE Mobile No
-   *  [6]  Emergency Mobile No
-   *  [7]  Reference / Visa type / HR dept
-   *  [8]  EID Expiry
-   *  [9]  License Expiry
-   *  [10] Labour Expiry
-   *  [11] Insurance Expiry
-   *  [12] Checkout_Exception / HR_Status / Probation tag
-   *  [13] Status (Active / Inactive)
+   *  Column layout (0-based) — matches sheet header row exactly:
+   *  [0]  Emp ID
+   *  [1]  Name
+   *  [2]  EID Number
+   *  [3]  Date of Birth
+   *  [4]  UAE Mobile No
+   *  [5]  Emergency Mobile No
+   *  [6]  Reference
+   *  [7]  Timestamp
+   *  [8]  HR_Status
+   *  [9]  Checkout_Exception
+   *  [10] EID Expiry
+   *  [11] License Expiry
+   *  [12] Laboure Expiry
+   *  [13] Insurance Expiry
    * ─────────────────────────────────────────────────────────── */
   if (Array.isArray(r)) {
     const _str = v => (v !== null && v !== undefined && v !== '') ? String(v).trim() : '';
 
-    /* Detect whether col[4] looks like a date (DOB present) or a phone number */
-    const col4 = _str(r[4]);
-    // A date looks like ISO string or YYYY-MM-DD; a phone starts with + or is all digits/spaces
-    const col4IsDate = col4 && (
-      /^\d{4}-\d{2}/.test(col4) ||   // YYYY-MM-DD...
-      col4.includes('T')              // ISO datetime
-    );
-    let dob, mobile, emergency, reference, eidExp, licExp, labExp, insExp, coExc;
+    // Skip the header row (first element is literally "Emp ID")
+    if (_str(r[0]) === 'Emp ID') return null;
 
-    /* The sheet always has 14 columns. col[4] is DOB (date) or mobile (phone).
-       When DOB is missing the phone number shifts into col[4], but col[13]
-       is ALWAYS the Status column regardless. */
-    if (col4IsDate) {
-      /* col[4] = DOB — standard 14-column layout */
-      dob       = col4;
-      mobile    = _str(r[5]);
-      emergency = _str(r[6]);
-      reference = _str(r[7]);
-      eidExp    = _str(r[8]);
-      licExp    = _str(r[9]);
-      labExp    = _str(r[10]);
-      insExp    = _str(r[11]);
-      coExc     = _str(r[12]);
-    } else {
-      /* col[4] = mobile (DOB missing/empty) — still 14 columns, shift back one */
-      dob       = '';
-      mobile    = _str(r[4]);
-      emergency = _str(r[5]);
-      reference = _str(r[6]);
-      eidExp    = _str(r[7]);
-      licExp    = _str(r[8]);
-      labExp    = _str(r[9]);
-      insExp    = _str(r[10]);
-      coExc     = _str(r[11]);
-    }
-
-    const rawId   = r[1];
+    const rawId   = r[0];
     const empId   = (rawId !== null && rawId !== undefined && rawId !== '') ? rawId : (i + 1);
-    const empName = _str(r[2]);
+    const empName = _str(r[1]);
     if (!empName) return null; // skip blank rows
 
-    /* Status is always col[13] — the last column in the 14-col sheet.
-       Fall back to col[12] only for genuinely short (legacy) rows. */
-    const statusRaw = r.length >= 14 ? _str(r[13]) : _str(r[12]);
-    // col[12]: tag field — "Checkout_Exception" goes to checkout badge,
-    //          anything else (e.g. "Probation") goes to HR status badge
+    const coExc     = _str(r[9]);
     const isCoExc   = coExc.toLowerCase().replace(/[^a-z]/g,'').includes('checkout');
     const hrTag     = isCoExc ? '' : coExc;
     const coExcTag  = isCoExc ? coExc : '';
 
+    // HR_Status is col[8]; fall back to hrTag if empty
+    const hrStatusRaw = _str(r[8]) || hrTag;
+
     return {
       id:                empId,
       name:              empName,
-      eid:               _str(r[3]),
-      dob:               dob,
-      mobile:            mobile,
-      emergency:         emergency,
-      reference:         reference,
-      timestamp:         _str(r[0]),
-      status:            statusRaw || 'Active',
-      hrStatus:          hrTag,
+      eid:               _str(r[2]),
+      dob:               _str(r[3]),
+      mobile:            _str(r[4]),
+      emergency:         _str(r[5]),
+      reference:         _str(r[6]),
+      timestamp:         _str(r[7]),
+      status:            hrStatusRaw || 'Active',
+      hrStatus:          hrStatusRaw,
       checkoutException: coExcTag,
       expiry: {
-        eid:       computeExpiry(eidExp),
-        license:   computeExpiry(licExp),
-        labour:    computeExpiry(labExp),
-        insurance: computeExpiry(insExp),
+        eid:       computeExpiry(_str(r[10])),
+        license:   computeExpiry(_str(r[11])),
+        labour:    computeExpiry(_str(r[12])),
+        insurance: computeExpiry(_str(r[13])),
       }
     };
   }
