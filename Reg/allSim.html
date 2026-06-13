@@ -559,6 +559,13 @@ function _buildVS_block(block, total, blockIdx) {
     _renderBlockNav(0, 0); return;
   }
 
+  /* ── Small block: render all rows directly, no virtual scroll needed ── */
+  if (block.length <= VS_ROWS) {
+    tbody.innerHTML = block.map((s, i) => buildSimRow(s, blockIdx * SLICE_SZ + i)).join('');
+    _renderBlockNav(total, blockIdx);
+    return;
+  }
+
   tbody.innerHTML = '';
   const _trTop = document.createElement('tr'); _trTop.className = 'vs-spacer-top';
   const tdT = document.createElement('td'); tdT.colSpan = 5; tdT.style.cssText = 'padding:0;height:0;';
