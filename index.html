@@ -2111,6 +2111,7 @@ function _notifyFrame() {
     frame.contentWindow.postMessage({ type: 'ap-cache-preload', datasets: preload }, '*');
   } catch(_) {}
   frame.contentWindow.postMessage({ type: 'ap-cache-updated' }, '*');
+  if (window.AP2CioView) AP2CioView.buildIfStale().catch(() => {});
 }
 </script>
 </body>
