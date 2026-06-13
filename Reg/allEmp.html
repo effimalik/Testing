@@ -1488,7 +1488,7 @@ function switchHistTab(type) {
   _loadHistoryTab(type, _histEmpId);
 }
 
-/* ── Load & render a tab — reads pre-built ap2_cioView via AP2CioView ── */
+/* ── Load & render a tab — reads ap2_cioView, builds on-the-spot if missing ── */
 async function _loadHistoryTab(type, empId) {
   const cacheKey = type + '_' + empId;
   const content  = document.getElementById('hist-content');
@@ -1502,7 +1502,9 @@ async function _loadHistoryTab(type, empId) {
   content.innerHTML = `<div class="hist-loading"><i class="ti ti-loader" style="font-size:24px;animation:spin 1s linear infinite;display:inline-flex;"></i><span>Reading history…</span></div>`;
 
   try {
-    const all   = await AP2CioView.read();
+    // buildIfStale() returns instantly from IDB if view is fresh,
+    // or builds it now from ap2_cioLog if view is missing / stale.
+    const all    = await AP2CioView.buildIfStale();
     const empStr = String(empId);
     const pairs  = all.filter(r => String(r.empId) === empStr && r.itemType === meta.itemKey);
     _histTabCache[cacheKey] = pairs;
