@@ -911,10 +911,52 @@ function onRppChange(){rowsPerPage=parseInt(document.getElementById('rpp-select'
 
 // SELECTION
 function updateSelectionUI(){const n=selectedRefs.size;document.getElementById('sel-count').textContent=n;document.getElementById('btn-accept-sel').disabled=n===0;document.getElementById('btn-reject-sel').disabled=n===0;}
-function toggleAllPending(checked){selectedRefs.clear();const start=(currentPage-1)*rowsPerPage,end=Math.min(start+rowsPerPage,filteredList.length),page=filteredList.slice(start,end);if(checked)page.filter(r=>r.status==='pending').forEach(r=>selectedRefs.add(r.ref));document.querySelectorAll('.pending-chk').forEach(cb=>{cb.checked=checked;});updateSelectionUI();}
+function toggleAllPending(checked){selectedRefs.clear();if(checked)filteredList.filter(r=>r.status==='pending').forEach(r=>selectedRefs.add(r.ref));document.querySelectorAll('.pending-chk').forEach(cb=>{cb.checked=checked;});updateSelectionUI();}
 function togglePendingRow(ref,checked){if(checked)selectedRefs.add(ref);else selectedRefs.delete(ref);updateSelectionUI();}
-function acceptSelected(){if(!selectedRefs.size)return;const n=selectedRefs.size;selectedRefs.forEach(ref=>decide(ref,'approved',true));selectedRefs.clear();updateSelectionUI();document.getElementById('chk-all-pending').checked=false;showToast(n+' request(s) accepted','ok');}
-function rejectSelected(){if(!selectedRefs.size)return;const n=selectedRefs.size;selectedRefs.forEach(ref=>decide(ref,'rejected',true));selectedRefs.clear();updateSelectionUI();document.getElementById('chk-all-pending').checked=false;showToast(n+' request(s) rejected','warn');}
+async function acceptSelected(){
+  if(!selectedRefs.size)return;
+  // Snapshot all selected refs from filteredList (includes non-rendered pages)
+  const refs=filteredList.filter(r=>r.status==='pending'&&selectedRefs.has(r.ref)).map(r=>r.ref);
+  if(!refs.length)return;
+  const n=refs.length;
+  selectedRefs.clear();updateSelectionUI();
+  document.getElementById('chk-all-pending').checked=false;
+  document.getElementById('btn-accept-sel').disabled=true;
+  document.getElementById('btn-reject-sel').disabled=true;
+  showToast('Processing '+n+' request(s)...','ok');
+  for(let i=0;i<refs.length;i++){
+    const ref=refs[i];
+    const req=allRequests.find(r=>r.ref===ref);if(!req)continue;
+    submitDecisionToGoogleForm(req.ref,req.empId,req.empName,'Approved',req.reqAmount,req.months,buildReturnMonths(req.months));
+    req.status='approved'; // update in memory, no re-render mid-loop
+    showToast('Accepted '+(i+1)+'/'+n+': '+ref,'ok');
+    if(i<refs.length-1)await new Promise(r=>setTimeout(r,2));
+  }
+  clearCache();applyFilters();
+  showToast(n+' request(s) accepted','ok');
+}
+async function rejectSelected(){
+  if(!selectedRefs.size)return;
+  // Snapshot all selected refs from filteredList (includes non-rendered pages)
+  const refs=filteredList.filter(r=>r.status==='pending'&&selectedRefs.has(r.ref)).map(r=>r.ref);
+  if(!refs.length)return;
+  const n=refs.length;
+  selectedRefs.clear();updateSelectionUI();
+  document.getElementById('chk-all-pending').checked=false;
+  document.getElementById('btn-accept-sel').disabled=true;
+  document.getElementById('btn-reject-sel').disabled=true;
+  showToast('Processing '+n+' request(s)...','warn');
+  for(let i=0;i<refs.length;i++){
+    const ref=refs[i];
+    const req=allRequests.find(r=>r.ref===ref);if(!req)continue;
+    submitDecisionToGoogleForm(req.ref,req.empId,req.empName,'Rejected',0,0,'0');
+    req.status='rejected'; // update in memory, no re-render mid-loop
+    showToast('Rejected '+(i+1)+'/'+n+': '+ref,'warn');
+    if(i<refs.length-1)await new Promise(r=>setTimeout(r,2));
+  }
+  clearCache();applyFilters();
+  showToast(n+' request(s) rejected','warn');
+}
 
 // DECIDE
 function decide(ref,verdict,skipForm){
