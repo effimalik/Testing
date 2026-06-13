@@ -953,7 +953,9 @@ html,body{
         <i class="ti ti-motorbike"></i><span class="ib-tip">Bike Fleet</span>
       </button>
       <button class="ib-btn" id="ib-sim" onclick="ibOpen('ib-sim',this)" title="SIM Cards">
-        <i class="ti ti-sim-card"></i><span class="ib-tip">SIM Cards</span>
+       <i class="ti ti-device-sim"></i><span class="ib-tip">SIM Cards</span>
+		
+
       </button>
       <button class="ib-btn" id="ib-adv" onclick="ibOpen('ib-adv',this)" title="Advance Salary">
         <i class="ti ti-cash"></i><span class="ib-tip">Advance Salary</span>
@@ -1228,9 +1230,9 @@ const SECTIONS = {
     ],
   },	
 'ib-sim': {
-  icon:'ti-sim-card', label:'SIM Cards',
+  icon:'ti-device-sim', label:'SIM Cards',
   pageLabel:'SIM Cards', pageSub:'SIM registry',
-  pillBg:'var(--purple-dim)', pillColor:'var(--purple)', pillIcon:'ti-sim-card',
+  pillBg:'var(--purple-dim)', pillColor:'var(--purple)', pillIcon:'ti-device-sim',
   permKey: 'ap2_sim',
   groups:[
     { label:'SIM', items:[
