@@ -11,6 +11,7 @@
 <script src="https://effimalik.github.io/Testing/shared/code.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/devPre.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/cioView.js"></script>
 
 <style>
 /* ── Reset ── */
@@ -280,7 +281,7 @@ select option { background: var(--surface2); color: var(--text); }
 .hist-tab.active-bike  { background: var(--teal-dim);   color: var(--teal);   border-color: var(--teal); box-shadow: 0 0 0 2px var(--teal); }
 .hist-tab.active-sim   { background: var(--purple-dim); color: var(--purple); border-color: var(--purple); box-shadow: 0 0 0 2px var(--purple); }
 .hist-tab.active-rider { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
-.hist-table-wrap { overflow-x: hidden; overflow-y: auto; max-height: 320px; border: 1px solid var(--border); border-radius: var(--radius); }
+.hist-table-wrap { overflow-x: hidden; overflow-y: auto; max-height: 380px; border: 1px solid var(--border); border-radius: var(--radius); }
 .hist-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: clamp(11px, 1.2vw, 13px); }
 .hist-table thead th { position: sticky; top: 0; background: var(--bg3); font-size: clamp(9px,1vw,10.5px); font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; padding: 8px 12px; border-bottom: 2px solid var(--border); overflow: hidden; text-overflow: ellipsis; }
 .hist-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; word-break: break-word; }
@@ -462,7 +463,7 @@ select option { background: var(--surface2); color: var(--text); }
 
 <!-- History Modal -->
 <div class="modal-backdrop" id="modal-history">
-  <div class="modal" style="max-width:min(700px,96vw);">
+  <div class="modal" style="max-width:min(760px,96vw);">
     <div class="modal-header">
       <h2><i class="ti ti-history"></i> <span id="hist-title">Work History</span></h2>
       <button class="tb-btn icon-only" onclick="closeModal('modal-history')"><i class="ti ti-x"></i></button>
@@ -476,8 +477,8 @@ select option { background: var(--surface2); color: var(--text); }
         </div>
       </div>
       <div class="hist-tabs">
-        <button class="hist-tab active-rider" id="htab-rider" onclick="switchHistTab('RiderHistory')"><i class="ti ti-motorbike"></i> Rider History</button>
-        <button class="hist-tab" id="htab-bike" onclick="switchHistTab('BikeHistory')"><i class="ti ti-bike"></i> Bike History</button>
+        <button class="hist-tab active-rider" id="htab-rider" onclick="switchHistTab('RiderHistory')"><i class="ti ti-building"></i> Company / Route</button>
+        <button class="hist-tab" id="htab-bike" onclick="switchHistTab('BikeHistory')"><i class="ti ti-motorbike"></i> Bike History</button>
         <button class="hist-tab" id="htab-sim"  onclick="switchHistTab('SimHistory')"><i class="ti ti-sim-card"></i> SIM History</button>
       </div>
       <div id="hist-content">
@@ -1397,25 +1398,62 @@ function advSubmitRequest() {
 }
 
 
-/* ═══════════ HISTORY MODAL ═══════════ */
-const HIST_BASE_URL = 'https://script.google.com/macros/s/AKfycbwzZ5YA9aJ_nwOPLL0uP8GlonjZ29ASKoBuXNDeIhtPg8D9Rw6jYE4RX5Zg6ky_yR24qg/exec';
-let _histEmpId = null;
-let _histTab   = 'RiderHistory';
-const _histCache = {};
+/* ═══════════ HISTORY MODAL — IDB-powered cioLog view ═══════════
+ *
+ *  DATA SOURCE: ap2_cioLog in ap2_fleet_cache IndexedDB
+ *
+ *  cioLog row format (array, 0-based):
+ *    [0]  Timestamp    — DDMMYYYYHHmmss string  (event time)
+ *    [1]  Emp ID
+ *    [2]  Bike No      (empty for SIM/Company events)
+ *    [3]  SIM No       (empty for Bike/Company events)
+ *    [4]  Company      (empty for Bike/SIM events)
+ *    [5]  Action       — "Check Out" | "Check In"
+ *
+ *  VIEW BUILD (_buildCioView):
+ *    For a given empId + item-type, we:
+ *    1. Read all rows for that emp from IDB.
+ *    2. Parse & sort by Timestamp ascending.
+ *    3. Group by item identifier (BikeNo / SimNo / Company).
+ *    4. Within each group, pair events in order:
+ *         1st Check-Out → 1st Check-In → 2nd Check-Out → 2nd Check-In …
+ *       Each pair becomes one display row: { item, seq, checkOut, checkIn }
+ *    5. Any un-paired Check-Out (still active) shows Check-In as "Active".
+ *
+ *  TABS:
+ *    Rider/Company → filter col[4] (Company) non-empty
+ *    Bike          → filter col[2] (Bike No) non-empty
+ *    SIM           → filter col[3] (SIM No) non-empty
+ * ════════════════════════════════════════════════════════════════ */
+
+let _histEmpId    = null;
+let _histTab      = 'RiderHistory';
+let _histTabCache = {};   // per-modal-open cache; cleared in openHistoryModal
 
 const HIST_TAB_META = {
-  RiderHistory: { id:'htab-rider', cls:'active-rider', label:'Rider History', icon:'ti-motorbike', col2:'Company / Route' },
-  BikeHistory:  { id:'htab-bike',  cls:'active-bike',  label:'Bike History',  icon:'ti-bike',     col2:'Bike No / Plate' },
-  SimHistory:   { id:'htab-sim',   cls:'active-sim',   label:'SIM History',   icon:'ti-sim-card', col2:'SIM No / Number' },
+  RiderHistory: { id:'htab-rider', cls:'active-rider', label:'Company / Route History', icon:'ti-building', col2:'Company / Route',  itemKey:'company' },
+  BikeHistory:  { id:'htab-bike',  cls:'active-bike',  label:'Bike History',            icon:'ti-motorbike', col2:'Bike No',         itemKey:'bike'    },
+  SimHistory:   { id:'htab-sim',   cls:'active-sim',   label:'SIM History',             icon:'ti-sim-card', col2:'SIM Number',       itemKey:'sim'     },
 };
 
+/* ── Format ISO date string → "DD Mon YYYY  HH:mm" ── */
+function _fmtCioDate(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d)) return null;
+  const pad = n => String(n).padStart(2,'0');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${pad(d.getDate())} ${months[d.getMonth()]} ${d.getFullYear()}  ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/* ── Open the history modal ── */
 function openHistoryModal(empId) {
   const emp = employees.find(e => String(e.id) === String(empId));
   if (!emp) return;
-  _histEmpId = empId;
-  _histTab   = 'RiderHistory';
+  _histEmpId   = empId;
+  _histTab     = 'RiderHistory';
+  _histTabCache = {};      // clear per-open cache so data is fresh
 
-  // Set header info
   const idx = employees.indexOf(emp);
   const avBg = AV_BG2[idx % AV_BG2.length];
   const avFg = AV_FG [idx % AV_FG.length];
@@ -1427,7 +1465,6 @@ function openHistoryModal(empId) {
   document.getElementById('hist-emp-id').textContent   = `EMP #${emp.id}`;
   document.getElementById('hist-title').textContent    = 'Work History';
 
-  // Reset tabs
   Object.values(HIST_TAB_META).forEach(m => {
     const el = document.getElementById(m.id);
     if (el) el.className = 'hist-tab';
@@ -1435,9 +1472,10 @@ function openHistoryModal(empId) {
   document.getElementById('htab-rider').className = 'hist-tab active-rider';
 
   openModal('modal-history');
-  _loadHistoryTab('RiderHistory', empId, true);
+  _loadHistoryTab('RiderHistory', empId);
 }
 
+/* ── Switch tab ── */
 function switchHistTab(type) {
   if (_histTab === type) return;
   _histTab = type;
@@ -1447,89 +1485,125 @@ function switchHistTab(type) {
   });
   const meta = HIST_TAB_META[type];
   if (meta) document.getElementById(meta.id).className = 'hist-tab ' + meta.cls;
-  _loadHistoryTab(type, _histEmpId, false);
+  _loadHistoryTab(type, _histEmpId);
 }
 
-async function _loadHistoryTab(type, empId, forceRefresh) {
+/* ── Load & render a tab — reads pre-built ap2_cioView via AP2CioView ── */
+async function _loadHistoryTab(type, empId) {
   const cacheKey = type + '_' + empId;
   const content  = document.getElementById('hist-content');
   const meta     = HIST_TAB_META[type];
 
-  if (!forceRefresh && _histCache[cacheKey]) {
-    _renderHistoryTable(meta, _histCache[cacheKey]);
+  if (_histTabCache[cacheKey]) {
+    _renderHistoryTable(meta, _histTabCache[cacheKey]);
     return;
   }
 
-  content.innerHTML = `<div class="hist-loading"><i class="ti ti-loader" style="font-size:24px;animation:spin 1s linear infinite;display:inline-flex;"></i><span>Loading ${meta.label}…</span></div>`;
+  content.innerHTML = `<div class="hist-loading"><i class="ti ti-loader" style="font-size:24px;animation:spin 1s linear infinite;display:inline-flex;"></i><span>Reading history…</span></div>`;
 
   try {
-    const url = HIST_BASE_URL + '?type=' + encodeURIComponent(type) + '&empId=' + encodeURIComponent(empId) + '&nocache=' + Date.now();
-    const res  = await fetch(url);
-    const raw  = await res.json();
-    // Normalise — accept array of arrays or array of objects
-    let rows = Array.isArray(raw) ? raw : (Array.isArray(raw.data) ? raw.data : []);
-    _histCache[cacheKey] = rows;
-    _renderHistoryTable(meta, rows);
+    const all   = await AP2CioView.read();
+    const empStr = String(empId);
+    const pairs  = all.filter(r => String(r.empId) === empStr && r.itemType === meta.itemKey);
+    _histTabCache[cacheKey] = pairs;
+    _renderHistoryTable(meta, pairs);
   } catch(err) {
-    content.innerHTML = `<div class="hist-loading" style="color:var(--red);"><i class="ti ti-wifi-off" style="font-size:24px;display:inline-flex;"></i><span>Failed to load — check connection.</span></div>`;
+    content.innerHTML = `<div class="hist-loading" style="color:var(--red);"><i class="ti ti-database-off" style="font-size:24px;display:inline-flex;"></i><span>Failed to read history — ${err.message}</span></div>`;
   }
 }
 
-function _renderHistoryTable(meta, rows) {
+/* ── Render the paired table ── */
+function _renderHistoryTable(meta, pairs) {
   const content = document.getElementById('hist-content');
-  if (!rows || !rows.length) {
-    content.innerHTML = `<div class="hist-loading"><i class="ti ti-database-off" style="font-size:28px;opacity:.4;display:inline-flex;"></i><span>No records found.</span></div>`;
+
+  if (!pairs || !pairs.length) {
+    content.innerHTML = `<div class="hist-loading"><i class="ti ti-database-off" style="font-size:28px;opacity:.4;display:inline-flex;"></i><span>No ${meta.label.toLowerCase()} records found.</span></div>`;
     return;
   }
-  function fmtCell(v) {
-    if (!v && v !== 0) return '<span style="color:var(--text3);">—</span>';
-    return String(v);
-  }
-  function fmtDate(v) {
-    if (!v) return '<span style="color:var(--text3);">—</span>';
-    try {
-      const d = new Date(v);
-      if (isNaN(d)) return v;
-      return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
-    } catch { return v; }
-  }
-  // Detect format: array of arrays vs array of objects
-  const isArr = Array.isArray(rows[0]);
-  const getVal = (row, keys) => {
-    if (isArr) return row[keys[0]] ?? '';
-    for (const k of keys) if (row[k] !== undefined) return row[k];
-    return '';
-  };
 
-  const tableRows = rows.map(row => {
-    const empId   = fmtCell(getVal(row, [0, 'EmpID', 'empId', 'emp_id', 'EmployeeID']));
-    const col2    = fmtCell(getVal(row, [1, 'BikeNo', 'SimNo', 'Company', 'AssetNo', 'bikeNo', 'simNo', 'company']));
-    const checkOut = fmtDate(getVal(row, [2, 'CheckOut', 'checkout', 'CheckoutDate', 'Checkout']));
-    const checkIn  = fmtDate(getVal(row, [3, 'CheckIn',  'checkin',  'CheckinDate',  'Checkin']));
-    const inColor  = checkIn.includes('—') ? 'var(--amber)' : 'var(--teal)';
-    return `<tr>
-      <td style="font-family:var(--mono);font-size:11.5px;color:var(--accent);">${empId}</td>
-      <td style="font-weight:600;">${col2}</td>
-      <td style="font-family:var(--mono);font-size:11.5px;color:var(--text2);">${checkOut}</td>
-      <td style="font-family:var(--mono);font-size:11.5px;color:${inColor};">${checkIn}</td>
+  /* Track item changes for visual grouping (shaded bands per item) */
+  let lastItem = null;
+  let bandIdx  = -1;
+  const bandColors = ['transparent', 'rgba(88,166,255,.03)'];
+
+  const tableRows = pairs.map((p, i) => {
+    if (p.item !== lastItem) { lastItem = p.item; bandIdx++; }
+    const band = bandColors[bandIdx % 2];
+
+    /* Item cell — only show label on first row of each item group */
+    const showItem = (i === 0 || pairs[i-1].item !== p.item);
+    const rowsInGroup = pairs.filter(x => x.item === p.item).length;
+
+    const itemCell = showItem
+      ? `<td rowspan="${rowsInGroup}" style="font-weight:700;font-size:12px;color:var(--text);background:${band};vertical-align:top;padding-top:11px;border-right:1px solid var(--border);">${p.item}</td>`
+      : '';
+
+    /* Sequence badge */
+    const seqBadge = `<span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--accent-dim);color:var(--accent);font-size:10px;font-weight:700;flex-shrink:0;">${p.seq}</span>`;
+
+    /* Check-Out cell */
+    const coStr = p.checkOutDate ? _fmtCioDate(p.checkOutDate) : null;
+    const coCell = coStr
+      ? `<div style="font-family:var(--mono);font-size:11.5px;color:var(--amber);">${coStr.split('  ')[0]}</div><div style="font-family:var(--mono);font-size:10.5px;color:var(--text3);">${coStr.split('  ')[1]||''}</div>`
+      : `<span style="color:var(--text3);font-size:11px;">—</span>`;
+
+    /* Check-In cell */
+    const ciStr  = p.checkInDate ? _fmtCioDate(p.checkInDate) : null;
+    const ciCell = ciStr
+      ? `<div style="font-family:var(--mono);font-size:11.5px;color:var(--teal);">${ciStr.split('  ')[0]}</div><div style="font-family:var(--mono);font-size:10.5px;color:var(--text3);">${ciStr.split('  ')[1]||''}</div>`
+      : `<span class="badge" style="background:rgba(227,179,65,.18);color:var(--amber);border:1px solid rgba(227,179,65,.3);font-size:10px;padding:2px 8px;">Active</span>`;
+
+    /* Only show item cell on first row; hide on subsequent rows of same group */
+    if (!showItem) {
+      return `<tr style="background:${band};">
+        <td style="padding:9px 12px;">${seqBadge}</td>
+        <td style="padding:9px 12px;">${coCell}</td>
+        <td style="padding:9px 12px;">${ciCell}</td>
+      </tr>`;
+    }
+    return `<tr style="background:${band};">
+      ${itemCell}
+      <td style="padding:9px 12px;">${seqBadge}</td>
+      <td style="padding:9px 12px;">${coCell}</td>
+      <td style="padding:9px 12px;">${ciCell}</td>
     </tr>`;
   }).join('');
 
+  const total   = pairs.length;
+  const active  = pairs.filter(p => !p.checkInDate).length;
+  const itemCnt = new Set(pairs.map(p => p.item)).size;
+
   content.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:11.5px;color:var(--text2);">
+        <span style="font-weight:700;color:var(--text);font-family:var(--mono);">${itemCnt}</span> unique item${itemCnt!==1?'s':''}
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:11.5px;color:var(--text2);">
+        <span style="font-weight:700;color:var(--text);font-family:var(--mono);">${total}</span> assignment${total!==1?'s':''}
+      </div>
+      ${active ? `<div style="background:rgba(227,179,65,.12);border:1px solid rgba(227,179,65,.3);border-radius:8px;padding:7px 14px;font-size:11.5px;color:var(--amber);">
+        <span style="font-weight:700;font-family:var(--mono);">${active}</span> currently active
+      </div>` : ''}
+    </div>
     <div class="hist-table-wrap">
-      <table class="hist-table">
+      <table class="hist-table" style="table-layout:fixed;">
+        <colgroup>
+          <col style="width:24%;">
+          <col style="width:8%;">
+          <col style="width:34%;">
+          <col style="width:34%;">
+        </colgroup>
         <thead>
           <tr>
-            <th>Emp ID</th>
             <th>${meta.col2}</th>
-            <th>Check-Out</th>
-            <th>Check-In</th>
+            <th>#</th>
+            <th style="color:var(--amber);">⬆ Check-Out</th>
+            <th style="color:var(--teal);">⬇ Check-In</th>
           </tr>
         </thead>
         <tbody>${tableRows}</tbody>
       </table>
-    </div>
-    <div style="margin-top:8px;font-size:11px;color:var(--text3);text-align:right;">${rows.length} record${rows.length!==1?'s':''}</div>`;
+    </div>`;
 }
 
 /* ═══════════ MODAL HELPERS ═══════════ */
