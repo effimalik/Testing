@@ -22,12 +22,12 @@
  *    ap2_cioView  — built view (written by this script)
  *
  *  RAW ap2_cioLog ROW FORMAT (array, 0-based columns):
- *    [0]  Timestamp           DDMMYYYYHHmmss
- *    [1]  Emp ID
- *    [2]  Bike No             (empty when not a bike event)
- *    [3]  SIM No              (empty when not a SIM event)
- *    [4]  Company / Route     (empty when not a company event)
- *    [5]  Action              "Check Out" | "Check In"
+ *    [0]  Timestamp           ISO 8601 string
+ *    [1]  Ref ID              ignored
+ *    [2]  Emp ID
+ *    [3]  Action              "Check Out" | "Check In"
+ *    [4]  Item Type           "Bike" | "SIM" | "Sim" | "Company" | "Inventory"
+ *    [5]  Item value          bike id / SIM number / company name
  *
  *  OUTPUT ap2_cioView RECORD (saved to IDB):
  *  {
@@ -111,48 +111,48 @@
     });
   }
 
-  /* ── Parse DDMMYYYYHHmmss → ISO string (null on failure) ── */
+  /* ── Validate/normalise an ISO timestamp string → canonical ISO (null on failure) ── */
   function _tsToISO(raw) {
     if (!raw) return null;
-    const s = String(raw).trim().replace(/\D/g, '');
-    if (s.length < 14) return null;
-    const dd = s.slice(0, 2), mo = s.slice(2, 4), yr = s.slice(4, 8);
-    const hh = s.slice(8, 10), mi = s.slice(10, 12), ss = s.slice(12, 14);
-    const iso = `${yr}-${mo}-${dd}T${hh}:${mi}:${ss}`;
-    const d = new Date(iso);
-    return isNaN(d.getTime()) ? null : iso;
+    const d = new Date(String(raw).trim());
+    return isNaN(d.getTime()) ? null : d.toISOString();
   }
 
   /* ── Normalise one raw cioLog row ──
-   *  Returns null for header rows or rows missing required fields.
+   *  Column format:
+   *    [0] Timestamp  — ISO string
+   *    [1] Ref ID     — ignored
+   *    [2] Emp ID
+   *    [3] Action     — "Check Out" | "Check In"
+   *    [4] Item Type  — "Bike" | "SIM" | "Sim" | "Company" | "Inventory"
+   *    [5] Item value — bike id / sim number / company name
+   *
+   *  Returns null for rows missing required fields.
    *  Accepts both array rows and object rows.
    */
   function _normaliseRow(r) {
     const _s = v => (v !== null && v !== undefined) ? String(v).trim() : '';
 
-    let tsRaw, empId, bike, sim, co, action;
+    let tsRaw, empId, action, rawItemType, item;
 
     if (Array.isArray(r)) {
-      tsRaw  = _s(r[0]);
-      empId  = _s(r[1]);
-      bike   = _s(r[2]);
-      sim    = _s(r[3]);
-      co     = _s(r[4]);
-      action = _s(r[5]);
-      // Skip header row
-      if (tsRaw === 'Timestamp' || empId === 'Emp ID') return null;
+      tsRaw       = _s(r[0]);
+      // r[1] = Ref ID — ignored
+      empId       = _s(r[2]);
+      action      = _s(r[3]);
+      rawItemType = _s(r[4]);
+      item        = _s(r[5]);
     } else {
-      tsRaw  = _s(r['Timestamp']    || r['timestamp']     || '');
-      empId  = _s(r['Emp ID']       || r['EmpID']         || r['empId'] || '');
-      bike   = _s(r['Bike No']      || r['BikeNo']        || r['bike']  || '');
-      sim    = _s(r['SIM No']       || r['SimNo']         || r['sim']   || '');
-      co     = _s(r['Company']      || r['company']       || '');
-      action = _s(r['Action']       || r['action']        || '');
+      tsRaw       = _s(r['Timestamp']  || r['timestamp'] || '');
+      empId       = _s(r['Emp ID']     || r['EmpID']     || r['empId'] || '');
+      action      = _s(r['Action']     || r['action']    || '');
+      rawItemType = _s(r['Item Type']  || r['itemType']  || '');
+      item        = _s(r['Item']       || r['item']      || '');
     }
 
     if (!empId || !tsRaw) return null;
 
-    const isoTs  = _tsToISO(tsRaw);
+    const isoTs = _tsToISO(tsRaw);
     if (!isoTs) return null;
 
     const actLower = action.toLowerCase();
@@ -160,14 +160,16 @@
     const isIn     = actLower.includes('in') && !actLower.includes('out');
     if (!isOut && !isIn) return null;
 
-    // Determine item type (prefer first non-empty)
-    let itemType = null;
-    let item     = '';
-    if (bike)       { itemType = 'bike';    item = bike; }
-    else if (sim)   { itemType = 'sim';     item = sim;  }
-    else if (co)    { itemType = 'company'; item = co;   }
-    // If none set, the row has no item — skip
-    if (!itemType) return null;
+    if (!item) return null;
+
+    // Normalise itemType to lowercase canonical form
+    const itLower = rawItemType.toLowerCase();
+    let itemType;
+    if      (itLower === 'bike')      itemType = 'bike';
+    else if (itLower === 'sim')       itemType = 'sim';
+    else if (itLower === 'company')   itemType = 'company';
+    else if (itLower === 'inventory') itemType = 'inventory';
+    else return null; // unknown type — skip
 
     return { tsRaw, isoTs, empId, itemType, item, isOut };
   }
