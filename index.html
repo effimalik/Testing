@@ -1311,14 +1311,21 @@ function _applyPermissions() {
     if (!btn) continue;
 
     let allowed;
+
+
     if (sec.permKey === null) {
       // Section has no own gate — check if at least one sub-item is permitted
-      const anyItemAllowed = sec.groups.some(g =>
+      allowed = sec.groups.some(g =>
         g.items.some(item =>
           !item.permKey || _hasPerm(perms, item.permKey)
+        )
+      );
     } else {
       allowed = !sec.permKey || _hasPerm(perms, sec.permKey);
     }
+
+
+	  
 
     btn.style.display = allowed ? '' : 'none';
     if (allowed && !firstAllowed) firstAllowed = id;
