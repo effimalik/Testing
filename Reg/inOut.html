@@ -1126,8 +1126,7 @@ let _idbConn = null;
 function _getDB(){
   if (_idbConn) return Promise.resolve(_idbConn);
   return new Promise((res,rej)=>{
-    const req=indexedDB.open('ap2_fleet_cache',1);
-    req.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('datasets'))db.createObjectStore('datasets');};
+    const req=indexedDB.open('ap2_fleet_cache');
     req.onsuccess=e=>{_idbConn=e.target.result;res(_idbConn);};
     req.onerror=e=>rej(e.target.error);
   });
@@ -1210,7 +1209,7 @@ const today=new Date().toISOString().slice(0,10);
 async function _readIDB(idbKey){
   try{
     const rec=await _idbGet(idbKey);
-    if(!rec||!rec.data) return null;
+    if(!rec||!Array.isArray(rec.data)||!rec.data.length) return null;
     return rec.data;
   }catch(e){return null;}
 }
@@ -1227,7 +1226,9 @@ function s(v){ return String(v||'').trim(); }
 
 // Raw array → object mappers for each endpoint
 function parseEmployee(arr){
-  // Apps Script getEmployees() returns:
+  // Skip header row (first element is literally "Emp ID")
+  if(String(arr[0]||'').trim()==='Emp ID') return null;
+  // Column layout (0-based):
   // [0]=Emp ID, [1]=Name, [2]=EID Number, [3]=DOB, [4]=UAE Mobile,
   // [5]=Emergency Mobile, [6]=Reference, [7]=Timestamp,
   // [8]=HR_Status, [9]=Checkout_Exception,
@@ -1354,6 +1355,8 @@ async function syncAll(){
     if(e.data.type==='ap-cache-updated') _debouncedApply();
     if(e.data.type==='ap-theme'&&e.data.theme) document.documentElement.setAttribute('data-theme',e.data.theme);
   });
+  // Poll every 30 s as fallback (matches allEmp.html pattern)
+  setInterval(_applyFromIDB, 30000);
 })();
 
 // ─── LOAD HELPERS ───────────────────────────────────────────────
@@ -1367,7 +1370,7 @@ async function loadEmployees(){
       parsed=rows.filter(arr=>{
         const st=s(arr[8]);
         return st==='Active'||st==='ExpActive';
-      }).map(parseEmployee);
+      }).map(parseEmployee).filter(Boolean);
     }else{
       parsed=rows.map(r=>({
         EmpID:s(r['Emp ID']||r.EmpID||r.empId||r.ID||''),
