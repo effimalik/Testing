@@ -6,11 +6,7 @@
 <title>Rider Asset Management</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<script src="https://effimalik.github.io/Testing/shared/auth.js"></script>
-<script src="https://effimalik.github.io/Testing/shared/code.js"></script>
-<script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
-<script src="https://effimalik.github.io/Testing/shared/devPre.js"></script>
-<script src="https://effimalik.github.io/Testing/shared/cioView.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/dataLayer.js" defer></script>
 
   
 <style>
@@ -201,6 +197,12 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
 #scroll-top{position:fixed;bottom:70px;right:22px;width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--border2);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;box-shadow:var(--shadow-md);z-index:100;}
 #scroll-top.show{opacity:1;pointer-events:auto;}
 #scroll-top:hover{background:var(--surface2);}
+
+/* ITEM-TYPE FILTER PILLS (matching allEmp style) */
+.hr-filter-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;border:1.5px solid var(--border2);background:var(--surface);color:var(--text2);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;transition:all .18s;white-space:nowrap;}
+.hr-filter-btn:hover{background:var(--surface2);color:var(--text);}
+.hr-filter-btn.active{background:var(--surface2);color:var(--text);border-color:var(--border2);box-shadow:0 0 0 2px var(--accent);}
+.hr-filter-btn svg{flex-shrink:0;line-height:1;}
 
 /* ANIMATIONS */
 @keyframes pulse-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
@@ -588,9 +590,30 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
 
     <!-- CHECK IN/OUT TAB -->
     <div id="tab-panel-checkinout">
-      <!-- hidden selects kept for filter logic compatibility -->
+      <!-- hidden select kept for action filter logic compatibility -->
       <select id="cio-action" style="display:none;" onchange="applyCheckinFilter()"><option value=""></option></select>
-      <select id="cio-type" style="display:none;" onchange="applyCheckinFilter()"><option value=""></option></select>
+
+      <!-- Item-type filter pills — filter ap2_cioLog by AssetType -->
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+        <span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;">Filter:</span>
+        <button id="cio-item-all"       class="hr-filter-btn active"    onclick="setCioItemFilter('all')">All Items</button>
+        <button id="cio-item-bike"      class="hr-filter-btn"           onclick="setCioItemFilter('bike')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 0 0-1 1v6h-6l-3.5-5H4"/></svg>
+          Bike
+        </button>
+        <button id="cio-item-sim"       class="hr-filter-btn"           onclick="setCioItemFilter('sim')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          SIM
+        </button>
+        <button id="cio-item-company"   class="hr-filter-btn"           onclick="setCioItemFilter('company')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          Company
+        </button>
+        <button id="cio-item-inventory" class="hr-filter-btn"           onclick="setCioItemFilter('inventory')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          Inventory
+        </button>
+      </div>
 
       <div class="data-table-card">
         <div class="data-table-header">
@@ -1167,6 +1190,9 @@ let ciFiltered=[],ciPage=1,ciRpp=25;
 let bikeFiltered=[],bikePage=1,bikeRpp=25;
 let empFiltered=[],empPage=1,empRpp=25;
 
+// Item-type filter for CIO table (ap2_cioLog) — 'all'|'bike'|'sim'|'company'|'inventory'
+let _cioItemFilter='all';
+
 // Virtual-scroll threshold: when a filtered set is at or below this size,
 // render every row directly in one page (no pagination needed). Larger
 // sets fall back to the normal renderPagination()-driven paging.
@@ -1292,16 +1318,14 @@ function parseCioRow(row){
 function toRows(raw){ return Array.isArray(raw)?raw:(raw&&raw.data?raw.data:raw&&raw.values?raw.values:[]); }
 
 // ─── MAIN SYNC ──────────────────────────────────────────────────
-// syncAll() reads from IDB and re-renders. API/background sync is
-// handled externally by dataLayer.js. This function must never call
-// the API directly — it is the rendering-only side of the pipeline.
+// syncAll() reads from IDB and re-renders. No API calls — dataLayer.js handles sync.
 async function syncAll(){
   try{
     await Promise.allSettled([
       loadEmployees(),
       loadBikes(),
       loadSims(),
-      loadCioViewFromIDB()   // primary: ap2_cioView
+      loadCioLogFromIDB()   // primary: ap2_cioLog
     ]);
     applyEmployeeSimAssignments();
     await loadMasterAssignments();
@@ -1332,9 +1356,10 @@ async function syncAll(){
   });
 })();
 
-// ─── PARSE HELPERS ──────────────────────────────────────────────
+// ─── LOAD HELPERS ───────────────────────────────────────────────
+async function loadEmployees(){
   try{
-    // ── SINGLE SOURCE: ap2_employee in ap2_fleet_cache IDB (written by dataLayer.js) ──
+    // Single source: ap2_employee in ap2_fleet_cache IDB
     const rows=await _readIDB(IDB_KEYS.emp);
     if(!rows||!rows.length){ console.info('[inOut] ap2_employee cache empty — awaiting sync'); return; }
     let parsed=[];
@@ -1418,15 +1443,13 @@ async function loadSims(){
   }catch(e){ console.error('[loadSims]',e); }
 }
 
-// ─── PRIMARY: Read check-in/out data from ap2_cioView in IDB ────
-// ap2_cioView contains the full mapped dataset (Bike / SIM / Company)
-// and is the authoritative source for the CIO table, master assignments,
-// and summary cards. No API call is made; this is a pure IDB read.
-async function loadCioViewFromIDB(){
+// ─── PRIMARY: Read CIO data from ap2_cioLog ─────────────────────
+// ap2_cioLog is the full check-in/out log written by dataLayer.js.
+// Item-type filtering (Bike/SIM/Company/Inventory) is done in applyCheckinFilter().
+async function loadCioLogFromIDB(){
   try{
-    const rows=await _readIDB(IDB_KEYS.cioView);
-    if(!rows||!rows.length){ console.info('[inOut] ap2_cioView cache empty — awaiting sync'); return; }
-    // ap2_cioView already contains fully mapped objects — parse to normalised shape
+    const rows=await _readIDB(IDB_KEYS.cio);
+    if(!rows||!rows.length){ console.info('[inOut] ap2_cioLog cache empty — awaiting sync'); return; }
     const allRows=toRows(rows).map(parseCioRow).filter(r=>r.RefID||r.EmpID);
     // Deduplicate by RefID
     const seen=new Set();
@@ -1444,7 +1467,6 @@ async function loadCioViewFromIDB(){
       }
     });
     state.checkinout=deduped;
-    // Sync Activity Log
     state.log=deduped.map(r=>{
       const action=(r.Action||'').toLowerCase();
       const type=action.includes('out')?'out':action.includes('swap')?'swap':'in';
@@ -1453,15 +1475,13 @@ async function loadCioViewFromIDB(){
         (r.RiderName||r.EmpID?' \u2014 '+(r.RiderName||r.EmpID):'');
       return {type,msg,time:r.Timestamp||'',rec:r};
     });
-  }catch(e){ console.error('[loadCioViewFromIDB]',e); }
+  }catch(e){ console.error('[loadCioLogFromIDB]',e); }
 }
 
-// Derive current bike & SIM assignments per rider from ap2_cioView
-// ap2_cioView is already the fully-mapped source — no cioMaster API call needed.
+// Derive current bike & SIM assignments per rider from ap2_cioLog
 async function loadMasterAssignments(){
   try{
-    // Read ap2_cioView from IDB (same dataset used by loadCioViewFromIDB)
-    const rows=await _readIDB(IDB_KEYS.cioView);
+    const rows=await _readIDB(IDB_KEYS.cio);
     if(!rows||!rows.length){
       // View not ready yet — fall back to deriving from in-memory checkinout
       _deriveMasterFromLog();
@@ -1595,7 +1615,6 @@ function updateSummaryCards(){
 function applyCheckinFilter(){
   const search=(document.getElementById('cio-search').value||'').toLowerCase().trim();
   const action=(document.getElementById('cio-action').value||'').toLowerCase();
-  const type=(document.getElementById('cio-type').value||'').toLowerCase();
   const from=document.getElementById('cio-from').value;
   const to=document.getElementById('cio-to').value;
 
@@ -1604,9 +1623,9 @@ function applyCheckinFilter(){
     if(from&&ts&&ts<from)return false;
     if(to&&ts&&ts>to)return false;
     if(action&&!(r.Action||'').toLowerCase().includes(action))return false;
-    if(type&&!(r.AssetType||'').toLowerCase().includes(type))return false;
+    // Item-type filter from toolbar pill buttons
+    if(_cioItemFilter!=='all'&&(r.AssetType||'').toLowerCase()!==_cioItemFilter)return false;
     if(search){
-      // Entity search across bike number, employee (name/EID), SIM number, ref, company, notes
       let extra='';
       const assetType=(r.AssetType||'').toLowerCase();
       if(assetType==='bike'){
@@ -1618,7 +1637,7 @@ function applyCheckinFilter(){
       }
       const hay=[
         r.RiderName||r.Name||'', r.EID||r.EmpID||'', r.AssetID||'',
-        r.RefID||'', r.Notes||'', r.Company||'', extra
+        r.RefID||'', r.Notes||'', r.Company||'', r.AssetType||'', extra
       ].join(' ').toLowerCase();
       if(!hay.includes(search))return false;
     }
@@ -1628,11 +1647,20 @@ function applyCheckinFilter(){
   renderCheckinTable();
 }
 
+function setCioItemFilter(type){
+  _cioItemFilter=type;
+  // Update pill button active states
+  ['all','bike','sim','company','inventory'].forEach(t=>{
+    const btn=document.getElementById('cio-item-'+t);
+    if(btn) btn.classList.toggle('active',t===type);
+  });
+  applyCheckinFilter();
+}
+
 function clearCheckinFilter(){
   ['cio-search','cio-from','cio-to'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('cio-action').value='';
-  document.getElementById('cio-type').value='';
-  applyCheckinFilter();
+  setCioItemFilter('all');
 }
 
 function cioRppChange(){
@@ -1995,14 +2023,16 @@ async function loadHistoryType(type){
   const loadingEl=document.getElementById('hist-loading');
   if(loadingEl) loadingEl.style.display='';
   try{
-    // Both history types are served from IDB — UI never calls the API directly.
-    const idbKey=type==='log'?IDB_KEYS.cio:IDB_KEYS.cioView;
-    const idbRows=await _readIDB(idbKey);
+    // Both modes read ap2_cioLog; 'cioView' mode filters to Bike/SIM/Company/Inventory only
+    const idbRows=await _readIDB(IDB_KEYS.cio);
     let rows=[];
     if(idbRows&&idbRows.length){
       rows=toRows(idbRows).map(parseCioRow).filter(r=>r.RefID||r.EmpID);
+      if(type==='cioView'){
+        // Filter to asset-related records only (exclude bare employee CIO entries)
+        rows=rows.filter(r=>['bike','sim','company','inventory'].includes((r.AssetType||'').toLowerCase()));
+      }
     }else{
-      // View not yet populated — fall back to in-memory state
       rows=[...(state.checkinout||[])];
     }
     const seen=new Set();
@@ -2029,10 +2059,10 @@ async function loadHistoryType(type){
       return {type:logType,msg,time:r.Timestamp||'',rec:r};
     });
     processAll();
-    showToast('Loaded '+deduped.length+' records ('+(type==='log'?'CIO Log':'Bike/SIM/Company History')+')','ok');
+    showToast('Loaded '+deduped.length+' records ('+(type==='log'?'All CIO Log':'Bike/SIM/Company History')+')','ok');
   }catch(e){
     console.error('[loadHistoryType]',e);
-    showToast('Failed to load '+type+' history','error');
+    showToast('Failed to load history','error');
   }
   if(loadingEl) loadingEl.style.display='none';
 }
@@ -2897,9 +2927,12 @@ function switchView(view){
 // ─────────────────────────────────────────────────────────────────
 // MODALS
 // ─────────────────────────────────────────────────────────────────
-function closeModal(id){document.getElementById(id).classList.remove('open');}
-['modal-cio','modal-detail','modal-add-bike'].forEach(id=>{
-  document.getElementById(id).addEventListener('click',e=>{if(e.target===document.getElementById(id))closeModal(id);});
+function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('open');}
+document.addEventListener('DOMContentLoaded',function(){
+  ['modal-cio','modal-detail','modal-add-bike'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.addEventListener('click',e=>{if(e.target===el)closeModal(id);});
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────
