@@ -606,7 +606,7 @@ function _buildVS_block(block, total, blockIdx) {
   const onScroll = () => {
     const scrollTop = wrap.scrollTop;
     const newStart  = Math.floor(scrollTop / ROW_H);
-    if (Math.abs(newStart - _startIdx) >= 3) _paint(newStart);
+    if (Math.abs(newStart - _startIdx) >= 1) _paint(newStart);
   };
 
   wrap.addEventListener('scroll', onScroll, { passive: true });
