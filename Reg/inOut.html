@@ -6,8 +6,12 @@
 <title>Rider Asset Management</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://effimalik.github.io/Testing/shared/auth.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/code.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/devPre.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/cioView.js"></script>
+
   
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -434,94 +438,33 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
     <div class="section-sep"></div>
   </div>
 
-  <!-- CONFIG VIEW -->
+  <!-- CONFIG VIEW — Data is served from IndexedDB (ap2_fleet_cache), populated by dataLayer.js -->
   <div id="view-config" style="display:none;">
     <div class="config-card">
       <h3>
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-        API Configuration — FleetManagement
+        Cache Status — ap2_fleet_cache
       </h3>
       <div class="config-tip" style="margin-bottom:16px;">
-        <strong>Connected API:</strong> <code>AKfycbxLizuKCu3X…</code> (Google Apps Script)<br>
-        All data endpoints are auto-configured. The following types are fetched automatically:
+        All data is served from <strong>IndexedDB</strong> (<code>ap2_fleet_cache</code>) populated by <code>dataLayer.js</code>.<br>
+        No API configuration is required here. The following datasets are used:
         <br><br>
-        <code>?type=cioLog</code> — Full check-in/out history (All)<br>
-        <code>?type=cioView</code> — Combined Bike / SIM / Company check-in/out history (primary source)<br>
-        <code>?type=cioMaster</code> — (Legacy) Most recent record per rider — replaced by ap2_cioView<br>
-        <code>?type=sim</code> — Available SIM inventory<br>
-        <code>?type=bike</code> — Active bike fleet<br>
-        <code>?type=employee</code> — Active rider/employee list
+        <code>ap2_cioLog</code> — Full check-in/out history<br>
+        <code>ap2_cioView</code> — Combined Bike / SIM / Company history (primary source)<br>
+        <code>ap2_master</code> — Master sheet / most-recent record per rider<br>
+        <code>ap2_bike</code> — Active bike fleet<br>
+        <code>ap2_employee</code> — Active rider/employee list<br>
+        <code>ap2_sim</code> — SIM inventory
       </div>
       <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
         <button class="tb-btn primary" onclick="syncAll();switchView('main');">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          Sync All Now
+          Re-render from Cache
         </button>
         <button class="tb-btn" onclick="switchView('main');">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
           Back to Dashboard
         </button>
-      </div>
-    </div>
-
-    <!-- Google Sheet Template -->
-    <div class="config-card">
-      <h3>
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-        Recommended Google Sheet Template
-      </h3>
-      <p style="font-size:12.5px;color:var(--text2);margin-bottom:16px;">Set up your Google Sheet with these 3 tabs and exact column headers for seamless sync.</p>
-
-      <!-- Tab 1: CheckInOut -->
-      <div style="margin-bottom:18px;">
-        <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px;font-family:var(--mono);">Tab 1: CheckInOut</div>
-        <div class="data-table-wrap" style="border:1px solid var(--border);border-radius:var(--radius);">
-          <table class="data-table">
-            <thead><tr>
-              <th>A: Timestamp</th><th>B: Ref ID</th><th>C: Rider Name</th><th>D: EID</th>
-              <th>E: Asset Type</th><th>F: Asset ID</th><th>G: Action</th>
-              <th>H: Condition</th><th>I: Notes</th><th>J: Checked By</th>
-            </tr></thead>
-            <tbody>
-              <tr><td class="cs-sub">2025-01-15 09:30</td><td class="cs-sub">CHK-20250115-001</td><td>Ahmed Al Rashidi</td><td>EID001</td><td>Bike</td><td>BIKE-301</td><td><span class="badge green">Check Out</span></td><td>Good</td><td>New assignment</td><td>Admin</td></tr>
-              <tr><td class="cs-sub">2025-01-20 14:00</td><td class="cs-sub">CHK-20250120-002</td><td>Ahmed Al Rashidi</td><td>EID001</td><td>Bike</td><td>BIKE-301</td><td><span class="badge red">Check In</span></td><td>Good</td><td>Rider left company</td><td>Admin</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Tab 2: Bikes -->
-      <div style="margin-bottom:18px;">
-        <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:8px;font-family:var(--mono);">Tab 2: Bikes</div>
-        <div class="data-table-wrap" style="border:1px solid var(--border);border-radius:var(--radius);">
-          <table class="data-table">
-            <thead><tr>
-              <th>A: Bike ID</th><th>B: Model</th><th>C: Plate No</th><th>D: Year</th>
-              <th>E: Color</th><th>F: Status</th><th>G: Assigned To (EID)</th><th>H: Notes</th>
-            </tr></thead>
-            <tbody>
-              <tr><td class="mono cs-main">BIKE-301</td><td>Yamaha NMAX 155</td><td>RAK 12345</td><td>2023</td><td>Blue</td><td><span class="badge green">Available</span></td><td>—</td><td></td></tr>
-              <tr><td class="mono cs-main">BIKE-302</td><td>Honda PCX 160</td><td>RAK 67890</td><td>2024</td><td>White</td><td><span class="badge amber">Assigned</span></td><td>EID002</td><td></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Tab 3: Employees -->
-      <div>
-        <div style="font-size:12px;font-weight:700;color:var(--orange);margin-bottom:8px;font-family:var(--mono);">Tab 3: Employees</div>
-        <div class="data-table-wrap" style="border:1px solid var(--border);border-radius:var(--radius);">
-          <table class="data-table">
-            <thead><tr>
-              <th>A: EID</th><th>B: Full Name</th><th>C: Phone</th><th>D: Company</th>
-              <th>E: Join Date</th><th>F: Status</th><th>G: Nationality</th><th>H: Notes</th>
-            </tr></thead>
-            <tbody>
-              <tr><td class="mono cs-main">EID001</td><td>Ahmed Al Rashidi</td><td>+971 50 123 4567</td><td>FoodFly</td><td>2024-01-10</td><td><span class="badge green">Active</span></td><td>Emirati</td><td></td></tr>
-              <tr><td class="mono cs-main">EID002</td><td>Mohammed Salim</td><td>+971 55 987 6543</td><td>SwiftDash</td><td>2024-03-05</td><td><span class="badge green">Active</span></td><td>Pakistani</td><td></td></tr>
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
   </div>
@@ -1151,12 +1094,11 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
 
 <script>
 // ─────────────────────────────────────────────────────────────────
-// CONFIG & STATE
+// STATE
 // ─────────────────────────────────────────────────────────────────
-const CFG_KEY='ram_config_v1';
-const API_BASE = 'https://script.google.com/macros/s/AKfycbx9O_58jlTsohkp8bNYA1rO2EQm9M9FeXoe1FT3E0n8yJ91jseidhKiM0Ss7meNkl7Elg/exec';
 
-// ── IndexedDB helpers ────────────────────────────────────────
+// ── IndexedDB helpers (ap2_fleet_cache) ─────────────────────────
+// Shared with allEmp.html — same DB name, store, and helper pattern.
 let _idbConn = null;
 function _getDB(){
   if (_idbConn) return Promise.resolve(_idbConn);
@@ -1193,17 +1135,23 @@ async function _idbDel(key){
     req.onerror=e=>rej(e.target.error);
   });
 }
-// Per-dataset IDB cache keys
-// ap2_cioView is the primary source for check-in/out history and current assignment state.
-// It is populated by the background sync layer (dataLayer.js) and must not be written here.
-const IDB_KEYS={cio:'ap2_cioLog',cioView:'ap2_cioView',bikes:'ap2_bike',emp:'ap2_employee',sims:'ap2_sim'};
 
-let config={
-  checkinoutUrl:'',
-  bikesUrl:'',
-  employeesUrl:'',
-  writeUrl:''
+// Per-dataset IDB cache keys — all populated by dataLayer.js, read-only here.
+// ap2_cioView  : primary source for CIO history and current assignments
+// ap2_cioLog   : full raw check-in/out log
+// ap2_master   : master sheet (most-recent record per rider, legacy fallback)
+// ap2_bike     : active bike fleet
+// ap2_employee : active rider/employee list
+// ap2_sim      : SIM inventory
+const IDB_KEYS={
+  cio:     'ap2_cioLog',
+  cioView: 'ap2_cioView',
+  master:  'ap2_master',
+  bikes:   'ap2_bike',
+  emp:     'ap2_employee',
+  sims:    'ap2_sim'
 };
+
 
 let state={
   checkinout:[],   // all records from CheckInOut sheet
@@ -1226,19 +1174,7 @@ const VS_ROWS=200;
 
 const today=new Date().toISOString().slice(0,10);
 
-// ─────────────────────────────────────────────────────────────────
-// CONFIG PERSISTENCE (localStorage kept — it's UI config, not data cache)
-// ─────────────────────────────────────────────────────────────────
-function loadConfig(){
-  // Config is now hardcoded — no UI inputs needed
-  try{const s=localStorage.getItem(CFG_KEY);if(s)config=JSON.parse(s);}catch(e){}
-}
-function saveConfig(){
-  try{localStorage.setItem(CFG_KEY,JSON.stringify(config));}catch(e){}
-  showToast('Configuration saved!','ok');
-  switchView('main');
-  syncAll();
-}
+
 
 // ─────────────────────────────────────────────────────────────────
 // CACHE — IndexedDB read-only helpers
@@ -1252,10 +1188,6 @@ async function _readIDB(idbKey){
     return rec.data;
   }catch(e){return null;}
 }
-// Kept for bikes/sims/emp which this page still populates via API fallback
-async function setCache(idbKey,data){
-  try{await _idbSet(idbKey,{ts:Date.now(),data});}catch(e){}
-}
 async function clearAllCache(){
   await Promise.allSettled(Object.values(IDB_KEYS).map(k=>_idbDel(k)));
 }
@@ -1264,9 +1196,7 @@ async function clearAllCache(){
 // SYNC
 // ─────────────────────────────────────────────────────────────────
 
-function apiUrl(type){ return API_BASE+'?type='+type+'&t='+Date.now(); }
 
-// ─── PARSE HELPERS ──────────────────────────────────────────────
 function s(v){ return String(v||'').trim(); }
 
 // Raw array → object mappers for each endpoint
@@ -1402,12 +1332,7 @@ async function syncAll(){
   });
 })();
 
-async function apiFetch(type){
-  const res=await fetch(apiUrl(type),{cache:'no-store'});
-  return res.json();
-}
-
-async function loadEmployees(){
+// ─── PARSE HELPERS ──────────────────────────────────────────────
   try{
     // ── SINGLE SOURCE: ap2_employee in ap2_fleet_cache IDB (written by dataLayer.js) ──
     const rows=await _readIDB(IDB_KEYS.emp);
@@ -2581,7 +2506,6 @@ async function confirmCheckinItem(){
   state.checkinout.unshift(rec);
   addLog('in','Check In: '+_checkinPending.type+' '+_checkinPending.id+' ← '+(rider?rider.Name:eid),rec);
   submitToGoogleForm(buildGFormPayload(rec));
-  await postRecord(rec);
   processAll();
   showToast('Checked in: '+_checkinPending.id,'ok');
   _checkinPending=null;
@@ -2701,7 +2625,6 @@ async function submitCheckin(){
       state.checkinout.unshift(rec);
       addLog('out','Check Out: '+it.type+' '+it.id+' → '+(rider?rider.Name:riderEid),rec);
       submitToGoogleForm(buildGFormPayload(rec));
-      await postRecord(rec);
       records.push(rec);
     }
     processAll();closeModal('modal-cio');
@@ -2754,13 +2677,11 @@ async function submitCheckin(){
     // Check In first — wait for it to save before Check Out
     state.checkinout.unshift(recIn);
     submitToGoogleForm(buildGFormPayload(recIn), 'cio-form-target');
-    await postRecord(recIn);
     await new Promise(r=>setTimeout(r,1500));
     // Check Out second
     state.checkinout.unshift(recOut);
     addLog('swap','Swap: '+oldId+' ↔ '+newId+' for '+(rider?rider.Name:riderEid),recIn);
     submitToGoogleForm(buildGFormPayload(recOut), 'cio-form-target2');
-    await postRecord(recOut);
 
     processAll();closeModal('modal-cio');
     showToast('Swap done: '+oldId+' returned ↔ '+newId+' issued','ok');
@@ -2768,11 +2689,6 @@ async function submitCheckin(){
   }
 }
 
-async function postRecord(rec){
-  try{
-    await fetch(API_BASE,{method:'POST',body:JSON.stringify(rec),headers:{'Content-Type':'application/json'}});
-  }catch(e){console.warn('Write failed (CORS expected):',e);}
-}
 
 // Legacy stubs (no longer used but kept to avoid reference errors)
 function autoFillCurrentAsset(){}
@@ -3036,8 +2952,6 @@ function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
 (function init(){
   // Theme — parent frame first, then sessionStorage fallback
   try{const p=window.parent?.document?.documentElement;if(p){applyTheme(p.getAttribute('data-theme')||'dark');new MutationObserver(()=>applyTheme(p.getAttribute('data-theme')||'dark')).observe(p,{attributes:true,attributeFilter:['data-theme']});}else{try{const t=sessionStorage.getItem('__ui_theme');if(t)applyTheme(t);}catch(e){}}}catch(e){}
-  // Config
-  loadConfig();
   switchTab('checkinout');
   switchView('main');
   // Highlight default history button
