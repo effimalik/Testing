@@ -429,12 +429,6 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           New CIO
         </button>
-        <button class="tb-btn" id="btn-sync" onclick="syncAll()">
-          <span id="sync-icon-wrap" class="ico">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          </span>
-          <span id="sync-label">Sync</span>
-        </button>
       </div>
     </div>
     <div class="section-sep"></div>
@@ -451,10 +445,9 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
         <strong>Connected API:</strong> <code>AKfycbxLizuKCu3X…</code> (Google Apps Script)<br>
         All data endpoints are auto-configured. The following types are fetched automatically:
         <br><br>
-        <code>?type=cioSim</code> — SIM check-in/out history<br>
-        <code>?type=cioBike</code> — Bike check-in/out history<br>
-        <code>?type=cioCompany</code> — Company rider assignment history<br>
-        <code>?type=cioMaster</code> — Most recent record per rider (used for current assignment state)<br>
+        <code>?type=cioLog</code> — Full check-in/out history (All)<br>
+        <code>?type=cioView</code> — Combined Bike / SIM / Company check-in/out history (primary source)<br>
+        <code>?type=cioMaster</code> — (Legacy) Most recent record per rider — replaced by ap2_cioView<br>
         <code>?type=sim</code> — Available SIM inventory<br>
         <code>?type=bike</code> — Active bike fleet<br>
         <code>?type=employee</code> — Active rider/employee list
@@ -617,21 +610,9 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
         <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg>
         All
       </button>
-      <button class="hist-btn2" id="hist-btn-cioSim" onclick="loadHistoryType('cioSim')" title="SIM History">
-        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-        SIM
-      </button>
-      <button class="hist-btn2" id="hist-btn-cioBike" onclick="loadHistoryType('cioBike')" title="Bike History">
-        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 0 0-1 1v6H8l-3.5-5H4a1 1 0 0 0 0 2h.5l3.5 5H14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/></svg>
-        Bike
-      </button>
-      <button class="hist-btn2" id="hist-btn-cioCompany" onclick="loadHistoryType('cioCompany')" title="Company History">
-        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-        Co.
-      </button>
-      <button class="hist-btn2" id="hist-btn-cioMaster" onclick="loadHistoryType('cioMaster')" title="Master (current assignments)">
-        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Master
+      <button class="hist-btn2" id="hist-btn-cioView" onclick="loadHistoryType('cioView')" title="Bike, SIM &amp; Company History">
+        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Bike / SIM / Co.
       </button>
       <span id="hist-loading" style="display:none;font-size:11px;color:var(--text3);flex-shrink:0;">
         <span class="pulse"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span>
@@ -644,7 +625,7 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
       <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0;">
         <div class="search-wrap">
           <svg class="search-ico" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="search-input" id="cio-search" type="text" placeholder="EID, Bike No, Rider…" oninput="applyCheckinFilter()" style="width:160px;height:30px;"/>
+          <input class="search-input" id="cio-search" type="text" placeholder="Bike No, Employee, SIM…" oninput="applyCheckinFilter()" style="width:160px;height:30px;"/>
         </div>
         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text3);flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <input type="date" class="filter-input" id="cio-from" onchange="applyCheckinFilter()" title="From Date" style="width:110px;height:30px;"/>
@@ -914,7 +895,7 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
       <div class="rider-info-panel" id="rider-info-panel">
         <div style="font-size:10.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.07em;display:flex;align-items:center;gap:5px;">
           <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          Rider Details — cioMaster
+          Rider Details — ap2_cioView
         </div>
         <div class="rider-info-grid">
           <div class="ri-cell"><span class="ri-label">Emp ID</span><span class="ri-value" id="ri-rider-id">—</span></div>
@@ -1173,23 +1154,23 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
 // CONFIG & STATE
 // ─────────────────────────────────────────────────────────────────
 const CFG_KEY='ram_config_v1';
-const CACHE_TTL=5*60*1000;
 const API_BASE = 'https://script.google.com/macros/s/AKfycbx9O_58jlTsohkp8bNYA1rO2EQm9M9FeXoe1FT3E0n8yJ91jseidhKiM0Ss7meNkl7Elg/exec';
 
 // ── IndexedDB helpers ────────────────────────────────────────
+let _idbConn = null;
 function _getDB(){
+  if (_idbConn) return Promise.resolve(_idbConn);
   return new Promise((res,rej)=>{
     const req=indexedDB.open('ap2_fleet_cache',1);
     req.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('datasets'))db.createObjectStore('datasets');};
-    req.onsuccess=e=>res(e.target.result);
+    req.onsuccess=e=>{_idbConn=e.target.result;res(_idbConn);};
     req.onerror=e=>rej(e.target.error);
   });
 }
 async function _idbGet(key){
   const db=await _getDB();
   return new Promise((res,rej)=>{
-    const tx=db.transaction('datasets','readonly');
-    const req=tx.objectStore('datasets').get(key);
+    const req=db.transaction('datasets','readonly').objectStore('datasets').get(key);
     req.onsuccess=e=>res(e.target.result??null);
     req.onerror=e=>rej(e.target.error);
   });
@@ -1213,7 +1194,9 @@ async function _idbDel(key){
   });
 }
 // Per-dataset IDB cache keys
-const IDB_KEYS={cio:'ap2_cioLog',bikes:'ap2_bike',emp:'ap2_employee',sims:'ap2_sim'};
+// ap2_cioView is the primary source for check-in/out history and current assignment state.
+// It is populated by the background sync layer (dataLayer.js) and must not be written here.
+const IDB_KEYS={cio:'ap2_cioLog',cioView:'ap2_cioView',bikes:'ap2_bike',emp:'ap2_employee',sims:'ap2_sim'};
 
 let config={
   checkinoutUrl:'',
@@ -1228,13 +1211,18 @@ let state={
   employees:[],    // all employees/riders
   sims:[],         // all SIMs
   log:[],          // local activity log
-  masterMap:{}     // empId → {bike,sim,company,inventory,status} from cioMaster
+  masterMap:{}     // empId → {bike,sim,company,inventory,status} from ap2_cioView
 };
 
 // Filtered/paginated
 let ciFiltered=[],ciPage=1,ciRpp=25;
 let bikeFiltered=[],bikePage=1,bikeRpp=25;
 let empFiltered=[],empPage=1,empRpp=25;
+
+// Virtual-scroll threshold: when a filtered set is at or below this size,
+// render every row directly in one page (no pagination needed). Larger
+// sets fall back to the normal renderPagination()-driven paging.
+const VS_ROWS=200;
 
 const today=new Date().toISOString().slice(0,10);
 
@@ -1253,16 +1241,18 @@ function saveConfig(){
 }
 
 // ─────────────────────────────────────────────────────────────────
-// CACHE — IndexedDB (IDB_KEYS defined in header)
+// CACHE — IndexedDB read-only helpers
+// ap2_cioView (and other ap2_* keys) are written by the background
+// sync layer (dataLayer.js). This page only READS them — never writes.
 // ─────────────────────────────────────────────────────────────────
-async function getCache(idbKey){
+async function _readIDB(idbKey){
   try{
-    const entry=await _idbGet(idbKey);
-    if(!entry||!entry.ts)return null;
-    if(Date.now()-entry.ts>CACHE_TTL)return null;
-    return entry.data;
+    const rec=await _idbGet(idbKey);
+    if(!rec||!rec.data) return null;
+    return rec.data;
   }catch(e){return null;}
 }
+// Kept for bikes/sims/emp which this page still populates via API fallback
 async function setCache(idbKey,data){
   try{await _idbSet(idbKey,{ts:Date.now(),data});}catch(e){}
 }
@@ -1273,17 +1263,6 @@ async function clearAllCache(){
 // ─────────────────────────────────────────────────────────────────
 // SYNC
 // ─────────────────────────────────────────────────────────────────
-function setSyncLoading(on){
-  const btn=document.getElementById('btn-sync'),lbl=document.getElementById('sync-label');
-  const ico=document.getElementById('sync-icon-wrap');
-  btn.disabled=on;
-  lbl.textContent=on?'Syncing…':'Sync Sheets';
-  ico.style.animation=on?'pulse-spin .7s linear infinite':'none';
-}
-
-// ─── NEW API BASE ───────────────────────────────────────────────
-API_BASE + '?type=employee';
-  const CIO_LOG_URL= API_BASE + '?type=cioLog';
 
 function apiUrl(type){ return API_BASE+'?type='+type+'&t='+Date.now(); }
 
@@ -1312,7 +1291,7 @@ function parseEmployee(arr){
     LicenseExpiry: s(arr[11]),
     LabourExpiry: s(arr[12]),
     InsuranceExpiry: s(arr[13]),
-    // cioMaster assignment data — populated after loadMasterAssignments()
+    // ap2_cioView assignment data — populated after loadMasterAssignments()
     _hasBike: false, _hasSim: false, _hasCompany: false, _hasInventory: false,
     _raw: arr
   };
@@ -1383,24 +1362,45 @@ function parseCioRow(row){
 function toRows(raw){ return Array.isArray(raw)?raw:(raw&&raw.data?raw.data:raw&&raw.values?raw.values:[]); }
 
 // ─── MAIN SYNC ──────────────────────────────────────────────────
-async function syncAll(force=true){
-  setSyncLoading(true);
+// syncAll() reads from IDB and re-renders. API/background sync is
+// handled externally by dataLayer.js. This function must never call
+// the API directly — it is the rendering-only side of the pipeline.
+async function syncAll(){
   try{
     await Promise.allSettled([
       loadEmployees(),
       loadBikes(),
       loadSims(),
-      loadCioHistory()
+      loadCioViewFromIDB()   // primary: ap2_cioView
     ]);
-    // After employees loaded, derive SIM assignments from employee SIM column
     applyEmployeeSimAssignments();
-    // Derive bike assignments from cioMaster
     await loadMasterAssignments();
   }catch(e){ console.warn('syncAll error:',e); }
   processAll();
-  setSyncLoading(false);
   document.getElementById('cio-cache-info').innerHTML='<span class="cache-dot"></span>Synced just now';
 }
+
+// ── Background cache watcher — mirrors allEmp.html pattern ──────
+// Debounce coalesces rapid ap-cache-updated events into one render.
+(function(){
+  let _debounce=null;
+  async function _applyFromIDB(){
+    try{
+      await syncAll();
+    }catch(e){ console.warn('[inOut] background refresh error:',e.message); }
+  }
+  function _debouncedApply(){
+    if(_debounce) clearTimeout(_debounce);
+    _debounce=setTimeout(_applyFromIDB,200);
+  }
+  // Listen for cache-updated from parent frame (dataLayer.js broadcasts this)
+  window.addEventListener('ap-cache-updated',_debouncedApply);
+  window.addEventListener('message',function(e){
+    if(!e.data) return;
+    if(e.data.type==='ap-cache-updated') _debouncedApply();
+    if(e.data.type==='ap-theme'&&e.data.theme) document.documentElement.setAttribute('data-theme',e.data.theme);
+  });
+})();
 
 async function apiFetch(type){
   const res=await fetch(apiUrl(type),{cache:'no-store'});
@@ -1409,14 +1409,11 @@ async function apiFetch(type){
 
 async function loadEmployees(){
   try{
-    // Try IDB cache first
-    const cached=await getCache(IDB_KEYS.emp);
-    if(cached){state.employees=cached;return;}
-    const raw=await apiFetch('employee');
-    const rows=toRows(raw);
+    // ── SINGLE SOURCE: ap2_employee in ap2_fleet_cache IDB (written by dataLayer.js) ──
+    const rows=await _readIDB(IDB_KEYS.emp);
+    if(!rows||!rows.length){ console.info('[inOut] ap2_employee cache empty — awaiting sync'); return; }
     let parsed=[];
     if(rows.length&&Array.isArray(rows[0])){
-      // array-of-arrays from Apps Script
       parsed=rows.filter(arr=>{
         const st=s(arr[8]);
         return st==='Active'||st==='ExpActive';
@@ -1438,7 +1435,6 @@ async function loadEmployees(){
         _raw:r
       })).filter(e=>e.Status==='Active');
     }
-    // Deduplicate by EmpID (keep first occurrence per ID)
     const seen=new Set();
     parsed=parsed.filter(e=>{
       const id=e.EmpID||e.EID;
@@ -1446,19 +1442,15 @@ async function loadEmployees(){
       seen.add(id);return true;
     });
     state.employees=parsed;
-    await setCache(IDB_KEYS.emp,parsed);
-  }catch(e){ console.error('[loadEmployees]',e); showToast('Failed to load employees','error'); }
+  }catch(e){ console.error('[loadEmployees]',e); }
 }
 
 async function loadBikes(){
   try{
-    const cached=await getCache(IDB_KEYS.bikes);
-    if(cached){state.bikes=cached;return;}
-    const raw=await apiFetch('bike');
-    const rows=toRows(raw);
+    const rows=await _readIDB(IDB_KEYS.bikes);
+    if(!rows||!rows.length){ console.info('[inOut] ap2_bike cache empty — awaiting sync'); return; }
     let parsed=[];
     if(rows.length&&Array.isArray(rows[0])){
-      // Filter to Active bikes only (col[10] = Status)
       parsed=rows.filter(arr=>{ const st=s(arr[10]); return st==='Active'||st==='ExpActive'; }).map(parseBike);
     }else{
       parsed=rows.map(r=>({
@@ -1472,23 +1464,18 @@ async function loadBikes(){
         _raw:r
       })).filter(b=>b.BikeID);
     }
-    // Deduplicate by BikeID (keep first occurrence)
     const seen=new Set();
     parsed=parsed.filter(b=>{ if(seen.has(b.BikeID))return false; seen.add(b.BikeID); return true; });
     state.bikes=parsed;
-    await setCache(IDB_KEYS.bikes,parsed);
-  }catch(e){ console.error('[loadBikes]',e); showToast('Failed to load bikes','error'); }
+  }catch(e){ console.error('[loadBikes]',e); }
 }
 
 async function loadSims(){
   try{
-    const cached=await getCache(IDB_KEYS.sims);
-    if(cached){state.sims=cached;return;}
-    const raw=await apiFetch('sim');
-    const rows=toRows(raw);
+    const rows=await _readIDB(IDB_KEYS.sims);
+    if(!rows||!rows.length){ console.info('[inOut] ap2_sim cache empty — awaiting sync'); return; }
     let parsed=[];
     if(rows.length&&Array.isArray(rows[0])){
-      // Filter to Active SIMs only (col[4] = Status)
       parsed=rows.filter(arr=>{ const st=s(arr[4]); return st==='Active'; }).map(parseSim);
     }else{
       parsed=rows.map(r=>({
@@ -1500,34 +1487,22 @@ async function loadSims(){
         AssignedTo:'', _raw:r
       })).filter(s=>s.SimID&&(s.Status==='Active'||!s.Status));
     }
-    // Deduplicate by SimID
     const seen=new Set();
     parsed=parsed.filter(s=>{ if(seen.has(s.SimID))return false; seen.add(s.SimID); return true; });
     state.sims=parsed;
-    await setCache(IDB_KEYS.sims,parsed);
-  }catch(e){ console.error('[loadSims]',e); showToast('Failed to load SIMs','error'); }
+  }catch(e){ console.error('[loadSims]',e); }
 }
 
-// Load full check-in/out history from the dedicated cioLog endpoint
-async function loadCioHistory(){
+// ─── PRIMARY: Read check-in/out data from ap2_cioView in IDB ────
+// ap2_cioView contains the full mapped dataset (Bike / SIM / Company)
+// and is the authoritative source for the CIO table, master assignments,
+// and summary cards. No API call is made; this is a pure IDB read.
+async function loadCioViewFromIDB(){
   try{
-    const cached=await getCache(IDB_KEYS.cio);
-    if(cached){
-      state.checkinout=cached;
-      state.log=cached.map(r=>{
-        const action=(r.Action||'').toLowerCase();
-        const type=action.includes('out')?'out':action.includes('swap')?'swap':'in';
-        const msg=(action.includes('out')?'Check Out: ':action.includes('swap')?'Swap: ':'Check In: ')+
-          (r.AssetType||'')+(r.AssetID?' '+r.AssetID:'')+
-          (r.RiderName||r.EmpID?' \u2014 '+(r.RiderName||r.EmpID):'');
-        return {type,msg,time:r.Timestamp||'',rec:r};
-      });
-      return;
-    }
-    const res=await fetch(CIO_LOG_URL+'&t='+Date.now(),{cache:'no-store'});
-    const raw=await res.json();
-    const rows=toRows(raw);
-    const allRows=rows.map(parseCioRow).filter(r=>r.RefID||r.EmpID);
+    const rows=await _readIDB(IDB_KEYS.cioView);
+    if(!rows||!rows.length){ console.info('[inOut] ap2_cioView cache empty — awaiting sync'); return; }
+    // ap2_cioView already contains fully mapped objects — parse to normalised shape
+    const allRows=toRows(rows).map(parseCioRow).filter(r=>r.RefID||r.EmpID);
     // Deduplicate by RefID
     const seen=new Set();
     const deduped=allRows.filter(r=>{
@@ -1536,8 +1511,15 @@ async function loadCioHistory(){
       seen.add(r.RefID); return true;
     });
     deduped.sort((a,b)=>(b.Timestamp||'').localeCompare(a.Timestamp||''));
+    // Enrich with rider names from employees
+    deduped.forEach(r=>{
+      if(!r.RiderName&&r.EmpID){
+        const emp=(state.employees||[]).find(e=>(e.EmpID||e.EID)===r.EmpID);
+        if(emp) r.RiderName=emp.Name||r.EmpID;
+      }
+    });
     state.checkinout=deduped;
-    // Populate Activity Log from API cioLog data so the Log tab shows real records
+    // Sync Activity Log
     state.log=deduped.map(r=>{
       const action=(r.Action||'').toLowerCase();
       const type=action.includes('out')?'out':action.includes('swap')?'swap':'in';
@@ -1546,103 +1528,96 @@ async function loadCioHistory(){
         (r.RiderName||r.EmpID?' \u2014 '+(r.RiderName||r.EmpID):'');
       return {type,msg,time:r.Timestamp||'',rec:r};
     });
-    await setCache(IDB_KEYS.cio,deduped);
-  }catch(e){ console.error('[loadCioHistory]',e); showToast('Failed to load check-in/out log','error'); }
+  }catch(e){ console.error('[loadCioViewFromIDB]',e); }
 }
 
-// Load cioMaster to derive current bike & SIM assignments per rider
+// Derive current bike & SIM assignments per rider from ap2_cioView
+// ap2_cioView is already the fully-mapped source — no cioMaster API call needed.
 async function loadMasterAssignments(){
   try{
-    const raw=await apiFetch('cioMaster');
-    const rows=toRows(raw);
-    // cioMaster columns: [0]=EmpID, [1]=BikeID, [2]=SimID, [3]=CompanyID, [4]=Inventory, [5]=Status
-    const hasMasterData=rows.length>0;
-
-    if(hasMasterData){
-      // cioMaster has data — use it as the authoritative source for current assignments
-      const bikeMap={};  // bikeID → empID
-      const simMap={};   // simID → empID
-      const empAssignMap={}; // empID → {bike,sim,company,inventory}
-
-      rows.forEach(row=>{
-        let empId, bikeId, simId, companyId, inventory, status;
-        if(Array.isArray(row)){
-          // [EmpID, BikeID, SimID, CompanyID, Inventory, Status]
-          empId=s(row[0]); bikeId=s(row[1]); simId=s(row[2]);
-          companyId=s(row[3]); inventory=s(row[4]); status=s(row[5]);
-        }else{
-          empId=s(row.EmpID||row.empId||'');
-          bikeId=s(row.BikeID||row.bikeId||'');
-          simId=s(row.SimID||row.simId||'');
-          companyId=s(row.CompanyID||row.companyId||'');
-          inventory=s(row.Inventroy||row.Inventory||row.inventory||'');
-          status=s(row.Status||row.status||'');
-        }
-        if(!empId) return;
-        empAssignMap[empId]={bike:bikeId,sim:simId,company:companyId,inventory,status};
-        if(bikeId) bikeMap[bikeId]=empId;
-        if(simId) simMap[simId]=empId;
-      });
-      // Save masterMap for rider detail panel
-      state.masterMap=empAssignMap;
-
-      // Apply to bike state
-      (state.bikes||[]).forEach(b=>{
-        b.AssignedTo=bikeMap[b.BikeID]||'';
-        b.Status=b.AssignedTo?'Assigned':'Available';
-      });
-      // Apply to SIM state
-      (state.sims||[]).forEach(sm=>{
-        sm.AssignedTo=simMap[sm.SimID||sm.ID]||sm.AssignedTo||'';
-      });
-      // Apply to employee assignment flags
-      (state.employees||[]).forEach(emp=>{
-        const eid=emp.EmpID||emp.EID;
-        const a=empAssignMap[eid]||{};
-        emp._hasBike=!!(a.bike&&a.bike.trim());
-        emp._hasSim=!!(a.sim&&a.sim.trim());
-        emp._hasCompany=!!(a.company&&a.company.trim());
-        emp._hasInventory=!!(a.inventory&&a.inventory.trim()&&a.inventory.toLowerCase()!=='no'&&a.inventory!=='0');
-      });
-    }else{
-      // cioMaster is empty — fall back to deriving from cioLog (Check Out minus Check In)
-      const parsedRows=(state.checkinout||[]);
-      const bikeMap={};
-      const simMap={};
-      parsedRows.forEach(r=>{
-        const eid=r.EmpID; const action=(r.Action||'').toLowerCase();
-        const assetType=(r.AssetType||'').toLowerCase(); const assetId=r.AssetID;
-        if(!assetId) return;
-        const isOut=action.includes('out');
-        if(assetType==='bike'){ if(isOut) bikeMap[assetId]=eid; else delete bikeMap[assetId]; }
-        else if(assetType==='sim'){ if(isOut) simMap[assetId]=eid; else delete simMap[assetId]; }
-      });
-      (state.bikes||[]).forEach(b=>{
-        b.AssignedTo=bikeMap[b.BikeID]||'';
-        b.Status=b.AssignedTo?'Assigned':'Available';
-      });
-      (state.sims||[]).forEach(sm=>{ sm.AssignedTo=simMap[sm.SimID||sm.ID]||sm.AssignedTo||''; });
-      // Flag employees based on what's assigned to them
-      (state.employees||[]).forEach(emp=>{
-        const eid=emp.EmpID||emp.EID;
-        emp._hasBike=!!(state.bikes||[]).find(b=>b.AssignedTo===eid);
-        emp._hasSim=!!(state.sims||[]).find(sm=>sm.AssignedTo===eid);
-        emp._hasCompany=false; emp._hasInventory=false;
-      });
+    // Read ap2_cioView from IDB (same dataset used by loadCioViewFromIDB)
+    const rows=await _readIDB(IDB_KEYS.cioView);
+    if(!rows||!rows.length){
+      // View not ready yet — fall back to deriving from in-memory checkinout
+      _deriveMasterFromLog();
+      return;
     }
+    // ap2_cioView has the most recent record per rider per asset type.
+    // Treat any "Check Out" record without a corresponding "Check In" as currently assigned.
+    const parsed=toRows(rows).map(parseCioRow).filter(r=>r.EmpID);
+    // Build assignment maps from parsed view
+    const bikeMap={};   // bikeID → empID
+    const simMap={};    // simID → empID
+    const empAssignMap={}; // empID → {bike,sim,company,inventory,status}
 
-    // Merge cioMaster rows into checkinout log if they're object form
-    if(hasMasterData){
-      const parsedMasterRows=rows.map(r=>{
-        if(Array.isArray(r)) return null; // array form has no log shape
-        return parseCioRow(r);
-      }).filter(Boolean).filter(r=>r.EmpID);
-      const existingRefs=new Set((state.checkinout||[]).map(r=>r.RefID).filter(Boolean));
-      const newRows=parsedMasterRows.filter(r=>!r.RefID||!existingRefs.has(r.RefID));
-      state.checkinout=[...state.checkinout,...newRows];
-      state.checkinout.sort((a,b)=>(b.Timestamp||'').localeCompare(a.Timestamp||''));
-    }
+    // Group by empId to find latest state per asset type
+    const byEmp={};
+    parsed.forEach(r=>{
+      const eid=r.EmpID;
+      if(!eid) return;
+      if(!byEmp[eid]) byEmp[eid]={};
+      const at=(r.AssetType||'').toLowerCase();
+      const isOut=(r.Action||'').toLowerCase().includes('out');
+      const ts=r.Timestamp||'';
+      // Track latest record per asset type (sorted desc so first seen is latest)
+      if(!byEmp[eid][at]||ts>(byEmp[eid][at].ts||'')){
+        byEmp[eid][at]={assetId:r.AssetID,isOut,ts};
+      }
+    });
+
+    Object.entries(byEmp).forEach(([eid,types])=>{
+      const bike=(types['bike']&&types['bike'].isOut)?types['bike'].assetId:'';
+      const sim=(types['sim']&&types['sim'].isOut)?types['sim'].assetId:'';
+      const company=(types['company']&&types['company'].isOut)?types['company'].assetId:'';
+      const inventory=(types['inventory']&&types['inventory'].isOut)?types['inventory'].assetId:'';
+      empAssignMap[eid]={bike,sim,company,inventory,status:''};
+      if(bike) bikeMap[bike]=eid;
+      if(sim) simMap[sim]=eid;
+    });
+
+    state.masterMap=empAssignMap;
+
+    (state.bikes||[]).forEach(b=>{
+      b.AssignedTo=bikeMap[b.BikeID]||'';
+      b.Status=b.AssignedTo?'Assigned':'Available';
+    });
+    (state.sims||[]).forEach(sm=>{
+      sm.AssignedTo=simMap[sm.SimID||sm.ID]||sm.AssignedTo||'';
+    });
+    (state.employees||[]).forEach(emp=>{
+      const eid=emp.EmpID||emp.EID;
+      const a=empAssignMap[eid]||{};
+      emp._hasBike=!!(a.bike&&a.bike.trim());
+      emp._hasSim=!!(a.sim&&a.sim.trim());
+      emp._hasCompany=!!(a.company&&a.company.trim());
+      emp._hasInventory=!!(a.inventory&&a.inventory.trim()&&a.inventory.toLowerCase()!=='no'&&a.inventory!=='0');
+    });
   }catch(e){ console.error('[loadMasterAssignments]',e); }
+}
+
+// Fallback: derive current assignment state from in-memory checkinout log
+function _deriveMasterFromLog(){
+  const bikeMap={};
+  const simMap={};
+  (state.checkinout||[]).forEach(r=>{
+    const eid=r.EmpID; const action=(r.Action||'').toLowerCase();
+    const assetType=(r.AssetType||'').toLowerCase(); const assetId=r.AssetID;
+    if(!assetId) return;
+    const isOut=action.includes('out');
+    if(assetType==='bike'){ if(isOut) bikeMap[assetId]=eid; else delete bikeMap[assetId]; }
+    else if(assetType==='sim'){ if(isOut) simMap[assetId]=eid; else delete simMap[assetId]; }
+  });
+  (state.bikes||[]).forEach(b=>{
+    b.AssignedTo=bikeMap[b.BikeID]||'';
+    b.Status=b.AssignedTo?'Assigned':'Available';
+  });
+  (state.sims||[]).forEach(sm=>{ sm.AssignedTo=simMap[sm.SimID||sm.ID]||sm.AssignedTo||''; });
+  (state.employees||[]).forEach(emp=>{
+    const eid=emp.EmpID||emp.EID;
+    emp._hasBike=!!(state.bikes||[]).find(b=>b.AssignedTo===eid);
+    emp._hasSim=!!(state.sims||[]).find(sm=>sm.AssignedTo===eid);
+    emp._hasCompany=false; emp._hasInventory=false;
+  });
 }
 
 // Derive SIM assignments from the SIM column in each employee row
@@ -1706,7 +1681,20 @@ function applyCheckinFilter(){
     if(action&&!(r.Action||'').toLowerCase().includes(action))return false;
     if(type&&!(r.AssetType||'').toLowerCase().includes(type))return false;
     if(search){
-      const hay=((r.RiderName||r.Name||'')+(r.EID||'')+(r.AssetID||'')+(r.RefID||'')+(r.Notes||'')).toLowerCase();
+      // Entity search across bike number, employee (name/EID), SIM number, ref, company, notes
+      let extra='';
+      const assetType=(r.AssetType||'').toLowerCase();
+      if(assetType==='bike'){
+        const bike=(state.bikes||[]).find(b=>b.BikeID===r.AssetID);
+        if(bike) extra+=' '+(bike.PlateNo||'')+' '+(bike.ChassisNo||'');
+      }else if(assetType==='sim'){
+        const sim=(state.sims||[]).find(si=>(si.SimID||si.ID)===r.AssetID);
+        if(sim) extra+=' '+(sim.Number||'');
+      }
+      const hay=[
+        r.RiderName||r.Name||'', r.EID||r.EmpID||'', r.AssetID||'',
+        r.RefID||'', r.Notes||'', r.Company||'', extra
+      ].join(' ').toLowerCase();
       if(!hay.includes(search))return false;
     }
     return true;
@@ -1739,8 +1727,12 @@ function renderCheckinTable(){
     renderPagination('cio-page-ctrl','cio-page-info',ciFiltered.length,ciPage,ciRpp,'ciGoToPage');
     return;
   }
-  const start=(ciPage-1)*ciRpp;
-  const page=ciFiltered.slice(start,start+ciRpp);
+  // When the filtered set is small enough, show every row directly on a
+  // single "page" (no real pagination); larger sets use ciRpp paging.
+  // renderPagination() is called either way for a consistent info/controls UI.
+  const effectiveRpp=ciFiltered.length<=VS_ROWS?ciFiltered.length:ciRpp;
+  const start=(ciPage-1)*effectiveRpp;
+  const page=ciFiltered.slice(start,start+effectiveRpp);
 
   tbody.innerHTML=page.map(r=>{
     const action=r.Action||'';
@@ -1770,7 +1762,7 @@ function renderCheckinTable(){
       </td>
     </tr>`;
   }).join('');
-  renderPagination('cio-page-ctrl','cio-page-info',ciFiltered.length,ciPage,ciRpp,'ciGoToPage');
+  renderPagination('cio-page-ctrl','cio-page-info',ciFiltered.length,ciPage,effectiveRpp,'ciGoToPage');
 }
 
 function ciGoToPage(p){ciPage=p;renderCheckinTable();document.getElementById('main-page').scrollIntoView({behavior:'smooth',block:'start'});}
@@ -2064,28 +2056,29 @@ function buildGFormPayload(rec){
 }
 
 // ─────────────────────────────────────────────────────────────────
-// LOAD HISTORY BY TYPE (button-driven)
+// LOAD HISTORY BY TYPE (toolbar button-driven)
+// Both paths read from IDB — no direct API calls.
 // ─────────────────────────────────────────────────────────────────
 let _activeHistType='log';
 async function loadHistoryType(type){
   _activeHistType=type;
   // Highlight active button
-  ['log','cioSim','cioBike','cioCompany','cioMaster'].forEach(t=>{
+  ['log','cioView'].forEach(t=>{
     const btn=document.getElementById('hist-btn-'+t);
     if(btn) btn.classList.toggle('primary',t===type);
   });
   const loadingEl=document.getElementById('hist-loading');
   if(loadingEl) loadingEl.style.display='';
   try{
+    // Both history types are served from IDB — UI never calls the API directly.
+    const idbKey=type==='log'?IDB_KEYS.cio:IDB_KEYS.cioView;
+    const idbRows=await _readIDB(idbKey);
     let rows=[];
-    if(type==='log'){
-      // Dedicated cioLog endpoint
-      const res=await fetch(CIO_LOG_URL+'&t='+Date.now(),{cache:'no-store'});
-      const raw=await res.json();
-      rows=toRows(raw).map(parseCioRow).filter(r=>r.RefID||r.EmpID);
+    if(idbRows&&idbRows.length){
+      rows=toRows(idbRows).map(parseCioRow).filter(r=>r.RefID||r.EmpID);
     }else{
-      const raw=await apiFetch(type);
-      rows=toRows(raw).map(parseCioRow).filter(r=>r.RefID||r.EmpID);
+      // View not yet populated — fall back to in-memory state
+      rows=[...(state.checkinout||[])];
     }
     const seen=new Set();
     const deduped=rows.filter(r=>{
@@ -2094,7 +2087,7 @@ async function loadHistoryType(type){
       seen.add(r.RefID); return true;
     });
     deduped.sort((a,b)=>(b.Timestamp||'').localeCompare(a.Timestamp||''));
-    // Enrich with rider names from employees
+    // Enrich with rider names
     deduped.forEach(r=>{
       if(!r.RiderName&&r.EmpID){
         const emp=(state.employees||[]).find(e=>(e.EmpID||e.EID)===r.EmpID);
@@ -2102,17 +2095,16 @@ async function loadHistoryType(type){
       }
     });
     state.checkinout=deduped;
-    // Keep Activity Log in sync with loaded history data
     state.log=deduped.map(r=>{
       const action=(r.Action||'').toLowerCase();
-      const type=action.includes('out')?'out':action.includes('swap')?'swap':'in';
+      const logType=action.includes('out')?'out':action.includes('swap')?'swap':'in';
       const msg=(action.includes('out')?'Check Out: ':action.includes('swap')?'Swap: ':'Check In: ')+
         (r.AssetType||'')+(r.AssetID?' '+r.AssetID:'')+
         (r.RiderName||r.EmpID?' \u2014 '+(r.RiderName||r.EmpID):'');
-      return {type,msg,time:r.Timestamp||'',rec:r};
+      return {type:logType,msg,time:r.Timestamp||'',rec:r};
     });
     processAll();
-    showToast('Loaded '+deduped.length+' records ('+(type==='log'?'CIO Log':type)+')','ok');
+    showToast('Loaded '+deduped.length+' records ('+(type==='log'?'CIO Log':'Bike/SIM/Company History')+')','ok');
   }catch(e){
     console.error('[loadHistoryType]',e);
     showToast('Failed to load '+type+' history','error');
@@ -2264,7 +2256,7 @@ function onRiderSelected(){
   const emp=(state.employees||[]).find(e=>(e.EmpID||e.EID)===eid);
   if(!emp){panel.classList.remove('visible');return;}
 
-  // Pull from cioMaster masterMap (authoritative current assignments)
+  // Pull from masterMap (derived from ap2_cioView — authoritative current assignments)
   const master=(state.masterMap||{})[eid]||{};
   const bike=getAssignedBike(eid);
   const sim=getAssignedSim(eid);
@@ -2297,7 +2289,7 @@ function onRiderSelected(){
   invEl.textContent=hasInv?invVal:'None';
   invEl.className='ri-value '+(hasInv?'has-asset':'no-asset');
 
-  // Status (from cioMaster)
+  // Status (from ap2_cioView)
   const stEl=document.getElementById('ri-master-status');
   const stVal=master.status||emp.HR_Status||'—';
   stEl.textContent=stVal;
@@ -2368,13 +2360,13 @@ function selectCoType(type){
 }
 
 function renderCoSection(eid){
-  // Use cioMaster masterMap as authoritative source for current assignments
+  // Use masterMap (derived from ap2_cioView) as authoritative source for current assignments
   const master=(state.masterMap||{})[eid]||{};
   const emp=eid?(state.employees||[]).find(e=>(e.EmpID||e.EID)===eid):null;
   const assignedBike=eid?getAssignedBike(eid):null;
   const assignedSim=eid?getAssignedSim(eid):null;
 
-  // Disable button if cioMaster has a value for that column OR live state shows assignment
+  // Disable button if ap2_cioView data shows assignment OR live state confirms it
   const hasBike=!!(master.bike&&master.bike.trim())||(assignedBike!=null)||(emp&&emp._hasBike);
   const hasSim=!!(master.sim&&master.sim.trim())||(assignedSim!=null)||(emp&&emp._hasSim);
   const hasCompany=!!(master.company&&master.company.trim())||(emp&&emp._hasCompany);
@@ -2509,7 +2501,7 @@ function renderCiSection(eid){
   const list=document.getElementById('checkin-items-list');
   document.getElementById('checkin-confirm-box').style.display='none';
   _checkinPending=null;
-  // Get all items assigned to this rider — use cioMaster as authoritative source
+  // Get all items assigned to this rider — use masterMap (from ap2_cioView) as authoritative source
   const master=(state.masterMap||{})[eid]||{};
   const bike=getAssignedBike(eid);
   const sim=getAssignedSim(eid);
@@ -3051,8 +3043,9 @@ function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
   // Highlight default history button
   const defBtn=document.getElementById('hist-btn-log');
   if(defBtn) defBtn.classList.add('primary');
-  // Auto-sync real API data
-  syncAll(true).catch(e=>console.warn('Auto-sync error:',e));
+  // syncAll reads all data from IDB and renders — no direct API calls.
+  // Background API sync is handled by dataLayer.js which broadcasts ap-cache-updated.
+  syncAll().catch(e=>console.warn('Init sync error:',e));
 })();
 </script>
 </body>
