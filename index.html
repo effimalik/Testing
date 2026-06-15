@@ -18,7 +18,6 @@
 'use strict';
 
 /* ── Constants used by child pages ── */
-window.AP2_SLICE_SZ = 50;
 window.AP2_VS_ROWS  = 20;
 
 /* ══ AP2Cache — thin IDB-backed API (wraps AdminPro._cache) ══
@@ -56,12 +55,6 @@ window.AP2Cache = {
   async streamQuery(key, predicateFn) {
     if (window.AdminPro) return AdminPro.streamQuery(key, predicateFn);
     return [];
-  },
-  async slice(key, blockIndex = 0) {
-    const e = window.AdminPro ? AdminPro.cache.get(key) : null;
-    if (!e || !Array.isArray(e.data)) return [];
-    const start = blockIndex * window.AP2_SLICE_SZ;
-    return e.data.slice(start, start + window.AP2_SLICE_SZ);
   },
   async count(key) {
     const e = window.AdminPro ? AdminPro.cache.get(key) : null;
