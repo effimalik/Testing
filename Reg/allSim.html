@@ -345,7 +345,7 @@ let _idbConn = null;
 function _getDB() {
   if (_idbConn) return Promise.resolve(_idbConn);
   return new Promise((res, rej) => {
-    const req = indexedDB.open(_IDB_NAME);
+    const req = indexedDB.open(_IDB_NAME, 2);
     req.onsuccess = e => { _idbConn = e.target.result; res(_idbConn); };
     req.onerror   = e => rej(e.target.error);
   });
