@@ -590,7 +590,7 @@ function _buildVS(rows) {
     _startIdx = Math.max(0, Math.min(start, Math.max(0, rows.length - VS_ROWS)));
     const visible = rows.slice(_startIdx, _startIdx + VS_ROWS);
     tbody.querySelectorAll('tr.vs-row').forEach(r => r.remove());
-    tdB.insertAdjacentHTML('beforebegin', visible.map((s, i) => buildSimRow(s, _startIdx + i)).join(''));
+    _trBot.insertAdjacentHTML('beforebegin', visible.map((s, i) => buildSimRow(s, _startIdx + i)).join(''));
     _setSpacers(_startIdx);
   }
 
