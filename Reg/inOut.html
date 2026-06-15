@@ -534,18 +534,15 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         CIO
       </button>
-      <button class="tab-btn2" id="tab-bikes" onclick="switchTab('bikes')" title="Bikes">
-        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 0 0-1 1v6h-6l-3.5-5H4a1 1 0 0 0 0 2h.5l3.5 5H14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/></svg>
-        Bikes
+      <button class="tab-btn2" id="tab-bikes" onclick="switchTab('bikes')" title="Assets">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        Assets
       </button>
       <button class="tab-btn2" id="tab-employees" onclick="switchTab('employees')" title="Employees">
         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Riders
       </button>
-      <button class="tab-btn2" id="tab-log" onclick="switchTab('log')" title="Activity Log">
-        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Log
-      </button>
+
 
       <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0;">
         <div class="search-wrap">
@@ -602,22 +599,16 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
             Check In / Out Log
             <span class="badge blue" id="cio-count-badge">0 records</span>
           </div>
-          <div class="data-table-toolbar">
-            <!-- rpp moved to search-filter-row above -->
-            <select id="cio-rpp2" class="rpp-select" onchange="cioRppChange()" style="display:none;"></select>
-          </div>
+          <!-- rpp in toolbar row above -->
         </div>
         <div class="data-table-wrap">
           <table class="data-table">
             <thead>
               <tr>
-                <th class="w120">Ref ID</th>
-                <th class="w80">EID</th>
-                <th class="w140">Rider</th>
-                <th class="w80">Asset Type</th>
-                <th class="w100">Asset ID</th>
-                <th class="w80">Action</th>
-                <th class="w120">Date / Time</th>
+                <th class="w160">Emp ID / Name</th>
+                <th class="w160">Item Name / Item ID</th>
+                <th class="w140">Check Out Date / Time</th>
+                <th class="w140">Check In Date / Time</th>
                 <th class="w60">Details</th>
               </tr>
             </thead>
@@ -629,67 +620,168 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
           <div class="pagination-controls" id="cio-page-ctrl"></div>
           <div class="pagination-right">
             <span class="rpp-label">Rows:</span>
-            <select class="rpp-select" id="cio-rpp2" onchange="cioRppChange()">
-              <option value="15">15</option>
-              <option value="25" selected>25</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
+            <select class="rpp-select" id="cio-rpp2-dup" onchange="cioRppChange()" style="display:none;"></select>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- BIKES TAB -->
+    <!-- ASSETS TAB (Bikes + SIM + Inventory) -->
     <div id="tab-panel-bikes" style="display:none;">
-      <div class="filter-panel">
-        <div class="filter-field">
-          <div class="search-wrap">
-            <svg class="search-ico" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="search-input" id="bike-search" type="text" placeholder="Bike ID, plate, chassis…" oninput="applyBikeFilter()"/>
-          </div>
-        </div>
-        <div class="filter-divider"></div>
-        <select class="filter-select" id="bike-status" onchange="applyBikeFilter()" title="Status">
-          <option value="">All Status</option>
-          <option value="Available">Available</option>
-          <option value="Assigned">Assigned</option>
-          <option value="Maintenance">Maintenance</option>
-        </select>
-        <button class="tb-btn sm icon-only" onclick="clearBikeFilter()" title="Clear filters">
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <!-- Asset sub-type pills -->
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+        <span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;">View:</span>
+        <button id="asset-sub-bike" class="hr-filter-btn active" onclick="setAssetSubTab('bike')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 0 0-1 1v6H8l-3.5-5H4a1 1 0 0 0 0 2h.5l3.5 5H14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/></svg>
+          Bikes
+        </button>
+        <button id="asset-sub-sim" class="hr-filter-btn" onclick="setAssetSubTab('sim')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          SIM
+        </button>
+        <button id="asset-sub-inventory" class="hr-filter-btn" onclick="setAssetSubTab('inventory')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          Inventory
         </button>
       </div>
 
-      <div class="data-table-card">
-        <div class="data-table-header">
-          <div class="data-table-title">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 0 0-1 1v6H8l-3.5-5H4a1 1 0 0 0 0 2h.5l3.5 5H14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/><path d="M16 4.5l4 2.5-4 2.5V4.5z"/></svg>
-            Bike Fleet
-            <span class="badge orange" id="bike-count-badge">0 bikes</span>
+      <!-- BIKES SUB-PANEL -->
+      <div id="asset-panel-bike">
+        <div class="filter-panel">
+          <div class="filter-field">
+            <div class="search-wrap">
+              <svg class="search-ico" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="search-input" id="bike-search" type="text" placeholder="Bike ID, plate, chassis…" oninput="applyBikeFilter()"/>
+            </div>
+          </div>
+          <div class="filter-divider"></div>
+          <select class="filter-select" id="bike-status" onchange="applyBikeFilter()" title="Status">
+            <option value="">All Status</option>
+            <option value="Available">Available</option>
+            <option value="Assigned">Assigned</option>
+            <option value="Maintenance">Maintenance</option>
+          </select>
+          <button class="tb-btn sm icon-only" onclick="clearBikeFilter()" title="Clear filters">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="data-table-card">
+          <div class="data-table-header">
+            <div class="data-table-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 0 0-1 1v6H8l-3.5-5H4a1 1 0 0 0 0 2h.5l3.5 5H14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/></svg>
+              Bike Fleet
+              <span class="badge orange" id="bike-count-badge">0 bikes</span>
+            </div>
+          </div>
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Emp ID / Name</th>
+                  <th>Item Name / Item ID</th>
+                  <th>Check Out Date / Time</th>
+                  <th>Check In Date / Time</th>
+                  <th class="w60">View</th>
+                </tr>
+              </thead>
+              <tbody id="bike-tbody"></tbody>
+            </table>
+          </div>
+          <div class="pagination-bar">
+            <div class="pagination-info" id="bike-page-info">— bikes</div>
+            <div class="pagination-controls" id="bike-page-ctrl"></div>
           </div>
         </div>
-        <div class="data-table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th class="w80">Bike ID</th>
-                <th class="w100">Plate No</th>
-                <th class="w100">Chassis No</th>
-                <th class="w80">Make</th>
-                <th class="w120">Model</th>
-                <th class="w80">Emirate</th>
-                <th class="w100">Status</th>
-                <th class="w140">Assigned To</th>
-                <th class="w60">View</th>
-              </tr>
-            </thead>
-            <tbody id="bike-tbody"></tbody>
-          </table>
+      </div>
+
+      <!-- SIM SUB-PANEL -->
+      <div id="asset-panel-sim" style="display:none;">
+        <div class="filter-panel">
+          <div class="filter-field">
+            <div class="search-wrap">
+              <svg class="search-ico" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="search-input" id="sim-search" type="text" placeholder="SIM ID, number, network…" oninput="applySimFilter()"/>
+            </div>
+          </div>
+          <div class="filter-divider"></div>
+          <select class="filter-select" id="sim-status-filter" onchange="applySimFilter()" title="Status">
+            <option value="">All Status</option>
+            <option value="assigned">Assigned</option>
+            <option value="available">Available</option>
+          </select>
+          <button class="tb-btn sm icon-only" onclick="clearSimFilter()" title="Clear filters">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
-        <div class="pagination-bar">
-          <div class="pagination-info" id="bike-page-info">— bikes</div>
-          <div class="pagination-controls" id="bike-page-ctrl"></div>
+        <div class="data-table-card">
+          <div class="data-table-header">
+            <div class="data-table-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+              SIM Inventory
+              <span class="badge purple" id="sim-count-badge">0 SIMs</span>
+            </div>
+          </div>
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Emp ID / Name</th>
+                  <th>Item Name / Item ID</th>
+                  <th>Check Out Date / Time</th>
+                  <th>Check In Date / Time</th>
+                  <th class="w60">View</th>
+                </tr>
+              </thead>
+              <tbody id="sim-tbody"></tbody>
+            </table>
+          </div>
+          <div class="pagination-bar">
+            <div class="pagination-info" id="sim-page-info">— SIMs</div>
+            <div class="pagination-controls" id="sim-page-ctrl"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INVENTORY SUB-PANEL -->
+      <div id="asset-panel-inventory" style="display:none;">
+        <div class="filter-panel">
+          <div class="filter-field">
+            <div class="search-wrap">
+              <svg class="search-ico" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="search-input" id="inv-search" type="text" placeholder="Rider, item ID…" oninput="applyInvFilter()"/>
+            </div>
+          </div>
+          <div class="filter-divider"></div>
+          <button class="tb-btn sm icon-only" onclick="clearInvFilter()" title="Clear filters">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="data-table-card">
+          <div class="data-table-header">
+            <div class="data-table-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              Inventory
+              <span class="badge green" id="inv-count-badge">0 items</span>
+            </div>
+          </div>
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Emp ID / Name</th>
+                  <th>Item Name / Item ID</th>
+                  <th>Check Out Date / Time</th>
+                  <th>Check In Date / Time</th>
+                  <th class="w60">View</th>
+                </tr>
+              </thead>
+              <tbody id="inv-tbody"></tbody>
+            </table>
+          </div>
+          <div class="pagination-bar">
+            <div class="pagination-info" id="inv-page-info">— items</div>
+            <div class="pagination-controls" id="inv-page-ctrl"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -745,49 +837,7 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
       </div>
     </div>
 
-    <!-- LOG TAB -->
-    <div id="tab-panel-log" style="display:none;">
-      <!-- Log filter panel -->
-      <div class="filter-panel" style="margin-bottom:14px;">
-        <div class="filter-field">
-          <div class="search-wrap">
-            <svg class="search-ico" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="search-input" id="log-search" type="text" placeholder="Rider, EID, Bike, SIM…" oninput="applyLogFilter()" style="width:160px;"/>
-          </div>
-        </div>
-        <div class="filter-divider"></div>
-        <select class="filter-select" id="log-type-filter" onchange="applyLogFilter()" title="Asset Type">
-          <option value="">All Types</option>
-          <option value="Bike">Bike</option>
-          <option value="SIM">SIM</option>
-          <option value="Phone">Phone</option>
-          <option value="Other">Other</option>
-        </select>
-        <select class="filter-select" id="log-action-filter" onchange="applyLogFilter()" title="Action">
-          <option value="">All Actions</option>
-          <option value="out">Check Out</option>
-          <option value="in">Check In</option>
-          <option value="swap">Swap</option>
-        </select>
-        <button class="tb-btn sm icon-only" onclick="clearLogFilter()" title="Clear filters">
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <div class="data-table-card">
-        <div class="data-table-header">
-          <div class="data-table-title">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            Activity Log
-            <span class="badge blue" id="log-count-badge">0 entries</span>
-          </div>
-          <button class="tb-btn sm danger" onclick="clearLog()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-            Clear Log
-          </button>
-        </div>
-        <div style="padding:16px;" id="log-list"></div>
-      </div>
-    </div>
+
 
   </div><!-- /view-main -->
 
@@ -1565,7 +1615,8 @@ function processAll(){
   applyCheckinFilter();
   applyBikeFilter();
   applyEmpFilter();
-  renderLog();
+  applySimFilter();
+  applyInvFilter();
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -1648,10 +1699,8 @@ function clearCheckinFilter(){
 
 function cioRppChange(){
   const v1=document.getElementById('cio-rpp').value;
-  const v2=document.getElementById('cio-rpp2').value;
-  ciRpp=parseInt(v1!==ciRpp.toString()?v1:v2);
+  ciRpp=parseInt(v1)||25;
   document.getElementById('cio-rpp').value=ciRpp;
-  document.getElementById('cio-rpp2').value=ciRpp;
   ciPage=1;renderCheckinTable();
 }
 
@@ -1659,46 +1708,82 @@ function renderCheckinTable(){
   const tbody=document.getElementById('cio-tbody');
   document.getElementById('cio-count-badge').textContent=ciFiltered.length+' records';
   if(!ciFiltered.length){
-    tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto;display:block;opacity:.3;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>No records found</p><small>${state.checkinout.length?'Adjust filters or sync sheets.':'No data yet. Sync sheets or load demo data.'}</small></div></td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="5"><div class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto;display:block;opacity:.3;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>No records found</p><small>${state.checkinout.length?'Adjust filters or sync sheets.':'No data yet. Sync sheets or load demo data.'}</small></div></td></tr>`;
     renderPagination('cio-page-ctrl','cio-page-info',ciFiltered.length,ciPage,ciRpp,'ciGoToPage');
     return;
   }
-  // When the filtered set is small enough, show every row directly on a
-  // single "page" (no real pagination); larger sets use ciRpp paging.
-  // renderPagination() is called either way for a consistent info/controls UI.
-  const effectiveRpp=ciFiltered.length<=VS_ROWS?ciFiltered.length:ciRpp;
-  const start=(ciPage-1)*effectiveRpp;
-  const page=ciFiltered.slice(start,start+effectiveRpp);
 
-  tbody.innerHTML=page.map(r=>{
-    const action=r.Action||'';
-    const isOut=action.includes('Out');
-    const actionBadge=isOut
-      ?`<span class="badge green">↗ Out</span>`
-      :`<span class="badge red">↙ In</span>`;
-    const ts=(r.Timestamp||'').slice(0,16);
+  // Group records: pair each Check Out with its matching Check In
+  // Key: empId + assetType + assetId — ordered by checkout time desc
+  const groups=[];
+  const usedRefs=new Set();
+
+  // Sort desc by timestamp so we process newest first
+  const sorted=[...ciFiltered].sort((a,b)=>(b.Timestamp||'').localeCompare(a.Timestamp||''));
+
+  // Build paired rows: for each Check Out find its corresponding Check In
+  sorted.forEach(r=>{
+    if(usedRefs.has(r.RefID)) return;
+    const action=(r.Action||'').toLowerCase();
+    if(action.includes('out')){
+      usedRefs.add(r.RefID);
+      // Find matching Check In: same emp + same assetType + same assetId, after this checkout
+      const matchIn=sorted.find(r2=>{
+        if(usedRefs.has(r2.RefID)) return false;
+        const a2=(r2.Action||'').toLowerCase();
+        return a2.includes('in')&&!a2.includes('out')
+          &&(r2.EmpID||r2.EID)===(r.EmpID||r.EID)
+          &&(r2.AssetType||'').toLowerCase()===(r.AssetType||'').toLowerCase()
+          &&(r2.AssetID||'')===(r.AssetID||'')
+          &&(r2.Timestamp||'')>(r.Timestamp||'');
+      });
+      if(matchIn) usedRefs.add(matchIn.RefID);
+      groups.push({out:r, in:matchIn||null});
+    } else if(!action.includes('swap')){
+      // Orphan check-in (no matching checkout visible)
+      usedRefs.add(r.RefID);
+      groups.push({out:null, in:r});
+    }
+  });
+
+  const effectiveRpp=groups.length<=VS_ROWS?groups.length:ciRpp;
+  const start=(ciPage-1)*effectiveRpp;
+  const page=groups.slice(start,start+effectiveRpp);
+
+  tbody.innerHTML=page.map(g=>{
+    const r=g.out||g.in;
     const riderName=r.RiderName||r.Name||'';
+    const eid=r.EID||r.EmpID||'—';
+    const assetType=r.AssetType||'—';
+    const assetId=r.AssetID||'—';
+    const outTs=g.out?(g.out.Timestamp||'').slice(0,16):'—';
+    const inTs=g.in?(g.in.Timestamp||'').slice(0,16):'—';
+    const refRec=g.out||g.in;
     return `<tr class="fade-in">
-      <td><span class="mono cs-main" style="font-size:11px;">${esc(r.RefID||'—')}</span></td>
-      <td><span class="mono cs-sub">${esc(r.EID||r.EmpID||'—')}</span></td>
       <td>
         <div style="display:flex;align-items:center;gap:7px;">
           ${riderName?`<div class="avatar-sm" style="background:${strColor(riderName)}">${initials(riderName)}</div>`:''}
-          <span style="font-size:12px;font-weight:600;">${esc(riderName||'—')}</span>
+          <div class="cs">
+            <span class="cs-main" style="font-size:12px;">${esc(riderName||'—')}</span>
+            <span class="cs-sub">${esc(eid)}</span>
+          </div>
         </div>
       </td>
-      <td><span class="badge gray">${esc(r.AssetType||'—')}</span></td>
-      <td><span class="mono cs-main">${esc(r.AssetID||'—')}</span></td>
-      <td>${actionBadge}</td>
-      <td><span class="cs-sub">${ts||'—'}</span></td>
       <td>
-        <button class="tb-btn icon-only sm" onclick='openCioDetail(${JSON.stringify(JSON.stringify(r))})' title="View details">
+        <div class="cs">
+          <span class="cs-main"><span class="badge gray" style="margin-right:4px;">${esc(assetType)}</span>${esc(assetId)}</span>
+        </div>
+      </td>
+      <td>${g.out?`<span class="badge green" style="font-size:10px;margin-right:4px;">↗ Out</span><span class="mono cs-sub">${outTs}</span>`:'<span style="color:var(--text3);">—</span>'}</td>
+      <td>${g.in?`<span class="badge red" style="font-size:10px;margin-right:4px;">↙ In</span><span class="mono cs-sub">${inTs}</span>`:'<span class="badge amber" style="font-size:10px;">Still Out</span>'}</td>
+      <td>
+        <button class="tb-btn icon-only sm" onclick='openCioDetail(${JSON.stringify(JSON.stringify(refRec))})' title="View details">
           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
       </td>
     </tr>`;
   }).join('');
-  renderPagination('cio-page-ctrl','cio-page-info',ciFiltered.length,ciPage,effectiveRpp,'ciGoToPage');
+  renderPagination('cio-page-ctrl','cio-page-info',groups.length,ciPage,effectiveRpp,'ciGoToPage');
 }
 
 function ciGoToPage(p){ciPage=p;renderCheckinTable();document.getElementById('main-page').scrollIntoView({behavior:'smooth',block:'start'});}
@@ -1741,39 +1826,160 @@ function applyBikeFilter(){
 }
 function clearBikeFilter(){document.getElementById('bike-search').value='';document.getElementById('bike-status').value='';applyBikeFilter();}
 
-function renderBikeTable(){
-  const tbody=document.getElementById('bike-tbody');
-  document.getElementById('bike-count-badge').textContent=bikeFiltered.length+' bikes';
-  if(!bikeFiltered.length){
-    tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state"><p>No bikes found</p><small>${state.bikes.length?'Try adjusting filters.':'Sync sheets or load demo data.'}</small></div></td></tr>`;
-    renderPagination('bike-page-ctrl','bike-page-info',bikeFiltered.length,bikePage,bikeRpp,'bikeGoToPage');
+// ─────────────────────────────────────────────────────────────────
+// ASSET SUB-TAB SWITCHER
+// ─────────────────────────────────────────────────────────────────
+let _assetSubTab='bike';
+function setAssetSubTab(type){
+  _assetSubTab=type;
+  ['bike','sim','inventory'].forEach(t=>{
+    const btn=document.getElementById('asset-sub-'+t);
+    const panel=document.getElementById('asset-panel-'+t);
+    if(btn) btn.classList.toggle('active',t===type);
+    if(panel) panel.style.display=(t===type)?'':'none';
+  });
+}
+
+// Build paired checkout/checkin rows from CIO log for a given asset type
+function buildAssetRows(assetType){
+  const lc=assetType.toLowerCase();
+  const records=(state.checkinout||[]).filter(r=>(r.AssetType||'').toLowerCase()===lc);
+  const sorted=[...records].sort((a,b)=>(b.Timestamp||'').localeCompare(a.Timestamp||''));
+  const groups=[];
+  const usedRefs=new Set();
+  sorted.forEach(r=>{
+    if(usedRefs.has(r.RefID)) return;
+    const action=(r.Action||'').toLowerCase();
+    if(action.includes('out')){
+      usedRefs.add(r.RefID);
+      const matchIn=sorted.find(r2=>{
+        if(usedRefs.has(r2.RefID)) return false;
+        const a2=(r2.Action||'').toLowerCase();
+        return a2.includes('in')&&!a2.includes('out')
+          &&(r2.EmpID||r2.EID)===(r.EmpID||r.EID)
+          &&(r2.AssetID||'')===(r.AssetID||'')
+          &&(r2.Timestamp||'')>(r.Timestamp||'');
+      });
+      if(matchIn) usedRefs.add(matchIn.RefID);
+      groups.push({out:r,in:matchIn||null});
+    } else if(!action.includes('swap')){
+      usedRefs.add(r.RefID);
+      groups.push({out:null,in:r});
+    }
+  });
+  return groups;
+}
+
+function renderAssetTableRows(groups, tbodyId){
+  const tbody=document.getElementById(tbodyId);
+  if(!groups.length){
+    tbody.innerHTML=`<tr><td colspan="5"><div class="empty-state"><p>No records found</p><small>Sync sheets or adjust filters.</small></div></td></tr>`;
     return;
   }
-  const start=(bikePage-1)*bikeRpp;
-  const page=bikeFiltered.slice(start,start+bikeRpp);
-  tbody.innerHTML=page.map(b=>{
-    const st=(b.Status||'Available').toLowerCase();
-    const stBadge=st==='available'?'<span class="badge green">Available</span>':st==='maintenance'?'<span class="badge amber">Maintenance</span>':'<span class="badge amber">Assigned</span>';
-    const assignedName=(b.AssignedTo)?getEmployeeName(b.AssignedTo):'—';
+  tbody.innerHTML=groups.map(g=>{
+    const r=g.out||g.in;
+    const riderName=r.RiderName||r.Name||'';
+    const eid=r.EID||r.EmpID||'—';
+    const assetType=r.AssetType||'—';
+    const assetId=r.AssetID||'—';
+    const outTs=g.out?(g.out.Timestamp||'').slice(0,16):'—';
+    const inTs=g.in?(g.in.Timestamp||'').slice(0,16):'—';
     return `<tr class="fade-in">
-      <td><span class="mono cs-main">${esc(b.BikeID||'—')}</span></td>
-      <td><span class="mono cs-sub">${esc(b.PlateNo||'—')}</span></td>
-      <td><span class="mono cs-sub" style="font-size:10.5px;">${esc(b.ChassisNo||'—')}</span></td>
-      <td style="font-size:12px;">${esc(b.Make||'—')}</td>
-      <td style="font-size:12.5px;font-weight:600;">${esc(b.Model||'—')}</td>
-      <td style="font-size:12px;">${esc(b.Emirate||'—')}</td>
-      <td>${stBadge}</td>
       <td>
-        ${b.AssignedTo?`<div class="cs"><span class="cs-main" style="font-size:11.5px;">${esc(assignedName)}</span><span class="cs-sub">${esc(b.AssignedTo)}</span></div>`:'<span style="color:var(--text3);">—</span>'}
+        <div style="display:flex;align-items:center;gap:7px;">
+          ${riderName?`<div class="avatar-sm" style="background:${strColor(riderName)}">${initials(riderName)}</div>`:''}
+          <div class="cs">
+            <span class="cs-main" style="font-size:12px;">${esc(riderName||'—')}</span>
+            <span class="cs-sub">${esc(eid)}</span>
+          </div>
+        </div>
       </td>
       <td>
-        <button class="tb-btn icon-only sm" onclick='openBikeDetail(${JSON.stringify(JSON.stringify(b))})' title="View">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <div class="cs">
+          <span class="cs-main"><span class="badge gray" style="margin-right:4px;">${esc(assetType)}</span>${esc(assetId)}</span>
+        </div>
+      </td>
+      <td>${g.out?`<span class="badge green" style="font-size:10px;margin-right:4px;">↗ Out</span><span class="mono cs-sub">${outTs}</span>`:'<span style="color:var(--text3);">—</span>'}</td>
+      <td>${g.in?`<span class="badge red" style="font-size:10px;margin-right:4px;">↙ In</span><span class="mono cs-sub">${inTs}</span>`:'<span class="badge amber" style="font-size:10px;">Still Out</span>'}</td>
+      <td>
+        <button class="tb-btn icon-only sm" onclick='openCioDetail(${JSON.stringify(JSON.stringify(r))})' title="View details">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
       </td>
     </tr>`;
   }).join('');
-  renderPagination('bike-page-ctrl','bike-page-info',bikeFiltered.length,bikePage,bikeRpp,'bikeGoToPage');
+}
+
+// SIM filter state
+let simFiltered=[], simPage=1, simRpp=25;
+function applySimFilter(){
+  const search=(document.getElementById('sim-search').value||'').toLowerCase().trim();
+  const statusF=(document.getElementById('sim-status-filter').value||'').toLowerCase();
+  const allGroups=buildAssetRows('SIM');
+  simFiltered=allGroups.filter(g=>{
+    const r=g.out||g.in;
+    if(statusF==='assigned'&&g.in&&!g.out) return false;
+    if(statusF==='available'&&g.out&&!g.in) return false;
+    if(search){
+      const hay=((r.EID||r.EmpID||'')+(r.RiderName||'')+(r.AssetID||'')).toLowerCase();
+      if(!hay.includes(search)) return false;
+    }
+    return true;
+  });
+  document.getElementById('sim-count-badge').textContent=simFiltered.length+' SIMs';
+  simPage=1;
+  renderAssetTableRows(simFiltered,'sim-tbody');
+  renderPagination('sim-page-ctrl','sim-page-info',simFiltered.length,simPage,simRpp,'simGoToPage');
+}
+function clearSimFilter(){document.getElementById('sim-search').value='';document.getElementById('sim-status-filter').value='';applySimFilter();}
+function simGoToPage(p){simPage=p;renderAssetTableRows(simFiltered,'sim-tbody');renderPagination('sim-page-ctrl','sim-page-info',simFiltered.length,simPage,simRpp,'simGoToPage');}
+
+// Inventory filter state
+let invFiltered=[], invPage=1, invRpp=25;
+function applyInvFilter(){
+  const search=(document.getElementById('inv-search').value||'').toLowerCase().trim();
+  const allGroups=buildAssetRows('Inventory');
+  invFiltered=allGroups.filter(g=>{
+    if(!search) return true;
+    const r=g.out||g.in;
+    const hay=((r.EID||r.EmpID||'')+(r.RiderName||'')+(r.AssetID||'')).toLowerCase();
+    return hay.includes(search);
+  });
+  document.getElementById('inv-count-badge').textContent=invFiltered.length+' items';
+  invPage=1;
+  renderAssetTableRows(invFiltered,'inv-tbody');
+  renderPagination('inv-page-ctrl','inv-page-info',invFiltered.length,invPage,invRpp,'invGoToPage');
+}
+function clearInvFilter(){document.getElementById('inv-search').value='';applyInvFilter();}
+function invGoToPage(p){invPage=p;renderAssetTableRows(invFiltered,'inv-tbody');renderPagination('inv-page-ctrl','inv-page-info',invFiltered.length,invPage,invRpp,'invGoToPage');}
+
+function renderBikeTable(){
+  const groups=buildAssetRows('Bike');
+  // Apply filter (search + status)
+  const search=(document.getElementById('bike-search')?document.getElementById('bike-search').value||'':'').toLowerCase().trim();
+  const statusF=(document.getElementById('bike-status')?document.getElementById('bike-status').value||'':'').toLowerCase();
+  let filtered=groups.filter(g=>{
+    const r=g.out||g.in;
+    if(statusF==='assigned'&&!g.out) return false;
+    if(statusF==='available'&&g.out&&!g.in) return false;
+    if(search){
+      const b=(state.bikes||[]).find(x=>x.BikeID===(r.AssetID||''));
+      const extra=b?(b.PlateNo||'')+' '+(b.ChassisNo||''):'' ;
+      const hay=((r.EID||r.EmpID||'')+(r.RiderName||'')+(r.AssetID||'')+extra).toLowerCase();
+      if(!hay.includes(search)) return false;
+    }
+    return true;
+  });
+  document.getElementById('bike-count-badge').textContent=filtered.length+' records';
+  if(!filtered.length){
+    document.getElementById('bike-tbody').innerHTML=`<tr><td colspan="5"><div class="empty-state"><p>No bike records found</p><small>${state.checkinout.length?'Try adjusting filters.':'Sync sheets or load demo data.'}</small></div></td></tr>`;
+    renderPagination('bike-page-ctrl','bike-page-info',0,1,bikeRpp,'bikeGoToPage');
+    return;
+  }
+  const effectiveRpp=filtered.length<=VS_ROWS?filtered.length:bikeRpp;
+  const start=(bikePage-1)*effectiveRpp;
+  renderAssetTableRows(filtered.slice(start,start+effectiveRpp),'bike-tbody');
+  renderPagination('bike-page-ctrl','bike-page-info',filtered.length,bikePage,effectiveRpp,'bikeGoToPage');
 }
 
 function bikeGoToPage(p){bikePage=p;renderBikeTable();}
@@ -2703,36 +2909,14 @@ async function submitCheckin(){
 }
 
 
-// Legacy stubs (no longer used but kept to avoid reference errors)
-function autoFillCurrentAsset(){}
-function populateAssetIds(){}
+
 
 // ─────────────────────────────────────────────────────────────────
-// ACTIVITY LOG — structured rows with all asset details
+// ACTIVITY LOG (in-memory only — no UI tab)
 // ─────────────────────────────────────────────────────────────────
 function addLog(type,msg,rec){
   state.log.unshift({type,msg,time:new Date().toLocaleString('en-GB',{hour12:false}),rec:rec||null});
-  if(state.log.length>200)state.log=state.log.slice(0,200);
-  renderLog();
-}
-
-function renderLog(){
-  _logFiltered=[...state.log];
-  // Respect any active filters
-  const search=(document.getElementById('log-search')?document.getElementById('log-search').value||'':'').trim();
-  const typeF=(document.getElementById('log-type-filter')?document.getElementById('log-type-filter').value||'':'');
-  const actionF=(document.getElementById('log-action-filter')?document.getElementById('log-action-filter').value||'':'');
-  if(search||typeF||actionF){
-    applyLogFilter();
-  } else {
-    document.getElementById('log-count-badge').textContent=state.log.length+' entries';
-    const el=document.getElementById('log-list');
-    if(!state.log.length){
-      el.innerHTML='<div class="empty-state"><p>No activity yet</p><small>Check-in/out actions will appear here.</small></div>';
-      return;
-    }
-    renderLogFiltered();
-  }
+  if(state.log.length>200) state.log=state.log.slice(0,200);
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -2766,86 +2950,6 @@ function renderAssetHistoryHTML(assetId){
   </div>`;
 }
 
-function clearLog(){state.log=[];renderLog();showToast('Log cleared','ok');}
-
-// ─────────────────────────────────────────────────────────────────
-// ACTIVITY LOG FILTER
-// ─────────────────────────────────────────────────────────────────
-let _logFiltered=[];
-
-function applyLogFilter(){
-  const search=(document.getElementById('log-search')?document.getElementById('log-search').value||'':'').toLowerCase().trim();
-  const typeF=(document.getElementById('log-type-filter')?document.getElementById('log-type-filter').value||'':'').toLowerCase();
-  const actionF=(document.getElementById('log-action-filter')?document.getElementById('log-action-filter').value||'':'').toLowerCase();
-
-  _logFiltered=(state.log||[]).filter(l=>{
-    const r=l.rec||{};
-    // Action type filter (log type: out/in/swap)
-    if(actionF&&l.type!==actionF)return false;
-    // Asset type filter
-    if(typeF&&!(r.AssetType||'').toLowerCase().includes(typeF))return false;
-    // Search: rider name, EID, RiderID, Bike ID, SIM ID, SIM number, Asset ID
-    if(search){
-      const sim=r.EmpID?getAssignedSim(r.EmpID):null;
-      const simNum=sim?(sim.Number||sim.SimID||sim.ID||''):'';
-      const hay=[
-        r.RiderName||'', r.EmpID||'', r.RiderID||'',
-        r.AssetID||'', r.AssetType||'', r.Notes||'',
-        simNum, l.msg||''
-      ].join(' ').toLowerCase();
-      if(!hay.includes(search))return false;
-    }
-    return true;
-  });
-  renderLogFiltered();
-}
-
-function clearLogFilter(){
-  if(document.getElementById('log-search')) document.getElementById('log-search').value='';
-  if(document.getElementById('log-type-filter')) document.getElementById('log-type-filter').value='';
-  if(document.getElementById('log-action-filter')) document.getElementById('log-action-filter').value='';
-  _logFiltered=[...state.log];
-  renderLogFiltered();
-}
-
-function renderLogFiltered(){
-  const el=document.getElementById('log-list');
-  document.getElementById('log-count-badge').textContent=_logFiltered.length+' entries';
-  if(!_logFiltered.length){
-    el.innerHTML='<div class="empty-state"><p>No activity matches your filters</p><small>Try adjusting the search or filters.</small></div>';
-    return;
-  }
-  el.innerHTML=_logFiltered.map(l=>{
-    const r=l.rec||{};
-    const bike=r.EmpID?getAssignedBike(r.EmpID):null;
-    const sim=r.EmpID?getAssignedSim(r.EmpID):null;
-    const hasInv=r.EmpID?getEmployeeInventory(r.EmpID):false;
-    const dotClass=l.type==='out'?'out':l.type==='in'?'in':l.type==='swap'?'swap':'info';
-    return `<div class="log-item">
-      <div class="log-dot ${dotClass}"></div>
-      <div class="log-body" style="flex:1;">
-        <div class="log-msg">${esc(l.msg)}</div>
-        ${r.RefID?`<div class="log-row-grid">
-          <div class="log-cell"><div class="log-cell-label">Ref ID</div><div class="log-cell-value">${esc(r.RefID)}</div></div>
-          <div class="log-cell"><div class="log-cell-label">Emp ID</div><div class="log-cell-value">${esc(r.EmpID||'—')}</div></div>
-          <div class="log-cell"><div class="log-cell-label">Rider ID</div><div class="log-cell-value">${esc(r.RiderID||'—')}</div></div>
-          <div class="log-cell"><div class="log-cell-label">Company</div><div class="log-cell-value">${esc(r.Company||'—')}</div></div>
-          <div class="log-cell"><div class="log-cell-label">Bike</div><div class="log-cell-value asset">${bike?esc(bike.BikeID):(r.AssetType==='Bike'?esc(r.AssetID):'—')}</div></div>
-          <div class="log-cell"><div class="log-cell-label">SIM</div><div class="log-cell-value asset">${sim?(esc(sim.SimID||sim.ID)):(r.AssetType==='SIM'?esc(r.AssetID):'—')}</div></div>
-          <div class="log-cell"><div class="log-cell-label">Inventory</div><div class="log-cell-value ${hasInv?'yes':'no'}">${hasInv?'Yes':'No'}</div></div>
-        </div>`:''}
-        <div class="log-time">${l.time}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function getEmployeeInventory(eid){
-  const e=(state.employees||[]).find(emp=>(emp.EmpID||emp.EID)===eid);
-  if(!e)return false;
-  const inv=e.Inventory||'';
-  return inv.trim()&&inv.toLowerCase()!=='no'&&inv!=='0';
-}
 
 // ─────────────────────────────────────────────────────────────────
 // PAGINATION
@@ -2891,7 +2995,7 @@ function strColor(s){let h=0;for(let c of s)h=(h*31+c.charCodeAt(0))%COLORS.leng
 // TAB / VIEW SWITCHING
 // ─────────────────────────────────────────────────────────────────
 function switchTab(tab){
-  ['checkinout','bikes','employees','log'].forEach(t=>{
+  ['checkinout','bikes','employees'].forEach(t=>{
     const panel=document.getElementById('tab-panel-'+t);
     const btn=document.getElementById('tab-'+t);
     if(panel) panel.style.display=t===tab?'block':'none';
@@ -2970,9 +3074,6 @@ function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
   try{const p=window.parent?.document?.documentElement;if(p){applyTheme(p.getAttribute('data-theme')||'dark');new MutationObserver(()=>applyTheme(p.getAttribute('data-theme')||'dark')).observe(p,{attributes:true,attributeFilter:['data-theme']});}else{try{const t=sessionStorage.getItem('__ui_theme');if(t)applyTheme(t);}catch(e){}}}catch(e){}
   switchTab('checkinout');
   switchView('main');
-  // Highlight default history button
-  const defBtn=document.getElementById('hist-btn-log');
-  if(defBtn) defBtn.classList.add('primary');
   // syncAll reads all data from IDB and renders — no direct API calls.
   // Background API sync is handled by dataLayer.js which broadcasts ap-cache-updated.
   syncAll().catch(e=>console.warn('Init sync error:',e));
