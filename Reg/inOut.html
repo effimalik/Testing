@@ -2542,7 +2542,12 @@ function openNewCheckinModal(){
     .filter(e=>(e.Status||'Active').toLowerCase()==='active')
     .map(e=>({
       value: e.EmpID||e.EID,
-      label: (e.Name||(e.EmpID||e.EID)) + (e.EmpID?' ['+e.EmpID+']':'')
+      label: [
+        e.EmpID||e.EID,
+        e.Name||'',
+        e.EIDNumber||'',
+        e.Phone||''
+      ].filter(Boolean).join(' · ')
     }));
   sdSetOptions('rider',riderOptions);
   document.getElementById('rider-info-panel').classList.remove('visible');
@@ -2719,7 +2724,13 @@ function renderCoItemsPanel(type, eid){
     hasLocked=locked.length>0;
     options=available.map(b=>({
       value:b.BikeID,
-      label:b.BikeID+(b.PlateNo?' · '+b.PlateNo:'')+(b.Make?' · '+b.Make:'')+(b.Model&&b.Model!==b.Make?' '+b.Model:'')
+      label:[
+        b.BikeID,
+        b.PlateNo||'',
+        (b.Make||'') + (b.Model&&b.Model!==b.Make?' '+b.Model:''),
+        b.Emirate||'',
+        b.ChassisNo?'Ch:'+b.ChassisNo.slice(-6):''
+      ].filter(Boolean).join(' · ')
     }));
   }else if(type==='SIM'){
     // Show Sim Number · Network for easy identification
@@ -2732,7 +2743,12 @@ function renderCoItemsPanel(type, eid){
     hasLocked=locked.length>0;
     options=available.map(sm=>({
       value:sm.SimID||sm.ID,
-      label:(sm.SimID||sm.ID)+(sm.Number&&sm.Number!==(sm.SimID||sm.ID)?' · '+sm.Number:'')+(sm.Network?' · '+sm.Network:'')
+      label:[
+        sm.SimID||sm.ID,
+        (sm.Number&&sm.Number!==(sm.SimID||sm.ID))?sm.Number:'',
+        sm.Network||'',
+        sm.Status&&sm.Status.toLowerCase()!=='active'?'['+sm.Status+']':''
+      ].filter(Boolean).join(' · ')
     }));
   }else if(type==='Company'){
     // Show EIDNumber or Phone as reference, no company field in new schema
@@ -2950,10 +2966,10 @@ function selectSwapOld(idx){
   let replOptions=[];
   if(_swapSelectedOld.type==='Bike'){
     replOptions=(state.bikes||[]).filter(b=>(b.Status||'').toLowerCase()==='available'&&!(b.AssignedTo||'').trim()&&b.BikeID!==_swapSelectedOld.id)
-      .map(b=>({value:b.BikeID,label:b.BikeID}));
+      .map(b=>({value:b.BikeID,label:[b.BikeID,b.PlateNo||'',(b.Make||'')+(b.Model&&b.Model!==b.Make?' '+b.Model:''),b.Emirate||'',b.ChassisNo?'Ch:'+b.ChassisNo.slice(-6):''].filter(Boolean).join(' · ')}));
   }else if(_swapSelectedOld.type==='SIM'){
     replOptions=(state.sims||[]).filter(s=>!(s.AssignedTo||'').trim()&&(s.SimID||s.ID)!==_swapSelectedOld.id)
-      .map(s=>({value:s.SimID||s.ID,label:(s.Number||s.SimID||s.ID)+(s.Network?' · '+s.Network:'')}));
+      .map(s=>({value:s.SimID||s.ID,label:[s.SimID||s.ID,(s.Number&&s.Number!==(s.SimID||s.ID))?s.Number:'',s.Network||'',s.Status&&s.Status.toLowerCase()!=='active'?'['+s.Status+']':''].filter(Boolean).join(' · ')}));
   }
   sdSetOptions('swapnew',replOptions);
   document.getElementById('swap-new-section').style.display='';
