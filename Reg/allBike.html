@@ -350,7 +350,6 @@ const AV_FG  = ['#58a6ff','#3fb950','#e3b341','#d2a8ff','#ffa198','#22d3ee'];
 const AV_BG  = ['rgba(31,111,235,.2)','rgba(26,127,55,.2)','rgba(154,103,0,.2)','rgba(110,64,201,.2)','rgba(191,69,66,.2)','rgba(14,116,144,.2)'];
 
 /* ── Pipeline constants ── */
-const SLICE_SZ = 200;  // rows per render block
 const VS_ROWS  = 40;   // visible rows in virtual-scroll window
 let   ROW_H    = 56;   // px — updated at runtime from first rendered row
 
@@ -359,7 +358,6 @@ let bikes          = [];   // Memory-Hoist: full array in RAM
 let bikeSearchQuery = '';
 let currentFilter  = 'all';
 let _vsInstance    = null;
-let _currentBlock  = 0;
 let _panelId       = null;
 
 /* ═══════════ UTILITY ═══════════ */
@@ -622,55 +620,57 @@ function buildBikeRow(b, idx) {
 }
 
 /* ═══════════ VIRTUAL-SCROLL ENGINE ═══════════ */
-function _buildVS_block(block, total, blockIdx) {
+function _buildVS(rows) {
   const wrap  = document.querySelector('.bike-table-wrap');
   const tbody = document.getElementById('bike-tbody');
   if (!wrap || !tbody) return;
 
   if (_vsInstance) { _vsInstance.destroy(); _vsInstance = null; }
 
-  if (!block.length) {
+  /* ── footer count ── */
+  let nav = document.getElementById('bike-block-nav');
+  if (!nav) {
+    nav = document.createElement('div');
+    nav.id = 'bike-block-nav';
+    nav.style.cssText = 'padding:9px 14px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);';
+    document.querySelector('.bike-table-card')?.appendChild(nav);
+  }
+
+  if (!rows.length) {
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px 16px;">
       <div style="color:var(--text3);display:flex;flex-direction:column;align-items:center;gap:10px;">
         <i class="ti ti-motorbike" style="font-size:36px;opacity:.4;"></i>
         <span style="font-size:13px;">No bikes match this filter</span>
       </div></td></tr>`;
-    _renderBlockNav(0, 0); return;
+    nav.innerHTML = '';
+    return;
   }
+
+  nav.innerHTML = `<span>${rows.length} bike${rows.length !== 1 ? 's' : ''}</span>`;
 
   tbody.innerHTML = '';
   const _trTop = document.createElement('tr'); _trTop.className = 'vs-spacer-top';
   const tdT = document.createElement('td'); tdT.colSpan = 6; tdT.style.cssText = 'padding:0;height:0;';
   _trTop.appendChild(tdT);
-
   const _trBot = document.createElement('tr'); _trBot.className = 'vs-spacer-bot';
   const tdB = document.createElement('td'); tdB.colSpan = 6; tdB.style.cssText = 'padding:0;height:0;';
   _trBot.appendChild(tdB);
-
   tbody.appendChild(_trTop);
   tbody.appendChild(_trBot);
 
   let _startIdx = 0;
-  const baseIdx = blockIdx * SLICE_SZ;
 
   function _setSpacers(start) {
-    const bot = Math.max(0, block.length - start - VS_ROWS);
     tdT.style.height = (start * ROW_H) + 'px';
-    tdB.style.height = (bot   * ROW_H) + 'px';
+    tdB.style.height = (Math.max(0, rows.length - start - VS_ROWS) * ROW_H) + 'px';
   }
 
   function _paint(start) {
-    _startIdx = Math.max(0, Math.min(start, Math.max(0, block.length - VS_ROWS)));
-    const visible = block.slice(_startIdx, _startIdx + VS_ROWS);
+    _startIdx = Math.max(0, Math.min(start, Math.max(0, rows.length - VS_ROWS)));
+    const visible = rows.slice(_startIdx, _startIdx + VS_ROWS);
     tbody.querySelectorAll('tr.vs-row').forEach(r => r.remove());
-    const html = visible.map((b, i) => buildBikeRow(b, baseIdx + _startIdx + i)).join('');
-    _trBot.insertAdjacentHTML('beforebegin', html);
+    _trBot.insertAdjacentHTML('beforebegin', visible.map((b, i) => buildBikeRow(b, _startIdx + i)).join(''));
     _setSpacers(_startIdx);
-  }
-
-  function _measureRowH() {
-    const firstRow = tbody.querySelector('tr.vs-row');
-    if (firstRow) ROW_H = Math.max(firstRow.getBoundingClientRect().height, 1);
   }
 
   function _onScroll() {
@@ -680,71 +680,17 @@ function _buildVS_block(block, total, blockIdx) {
 
   wrap.addEventListener('scroll', _onScroll, { passive: true });
   _paint(0);
-  requestAnimationFrame(_measureRowH);
+  requestAnimationFrame(() => {
+    const firstRow = tbody.querySelector('tr.vs-row');
+    if (firstRow) ROW_H = Math.max(firstRow.getBoundingClientRect().height, 1);
+  });
 
-  _vsInstance = {
-    destroy() { wrap.removeEventListener('scroll', _onScroll); }
-  };
-
-  _renderBlockNav(total, blockIdx);
-}
-
-/* ── Block navigation bar ── */
-function _renderBlockNav(total, blockIdx) {
-  const tableCard = document.querySelector('.bike-table-card');
-  if (!tableCard) return;
-
-  let nav = document.getElementById('bike-block-nav');
-  const totalBlocks = Math.ceil(total / SLICE_SZ);
-
-  if (!nav) {
-    nav = document.createElement('div');
-    nav.id = 'bike-block-nav';
-    nav.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 14px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);flex-wrap:wrap;';
-    tableCard.appendChild(nav);
-  }
-
-  if (!total || totalBlocks <= 1) {
-    nav.innerHTML = total ? `<span style="color:var(--text3);">${total} bike${total !== 1 ? 's' : ''}</span>` : '';
-    return;
-  }
-
-  const start = blockIdx * SLICE_SZ + 1;
-  const end   = Math.min((blockIdx + 1) * SLICE_SZ, total);
-  const btnStyle = (dis, act) => `padding:4px 11px;font-size:11.5px;border-radius:6px;border:1px solid var(--border);background:${act ? 'var(--accent)' : 'var(--surface)'};color:${act ? '#fff' : 'var(--text2)'};cursor:${dis ? 'default' : 'pointer'};opacity:${dis ? '.4' : '1'};font-family:var(--font);`;
-
-  let pageButtons = '';
-  for (let b = 0; b < totalBlocks; b++) {
-    pageButtons += `<button onclick="_goBlock(${b})" style="${btnStyle(false, b === blockIdx)}">${b + 1}</button>`;
-  }
-
-  nav.innerHTML = `
-    <span style="color:var(--text3);">${start}–${end} <span style="opacity:.6;">of</span> ${total}</span>
-    <div style="display:flex;align-items:center;gap:4px;">
-      <button onclick="_goBlock(${blockIdx - 1})" style="${btnStyle(blockIdx === 0, false)}">‹</button>
-      ${pageButtons}
-      <button onclick="_goBlock(${blockIdx + 1})" style="${btnStyle(blockIdx >= totalBlocks - 1, false)}">›</button>
-    </div>
-    <span style="color:var(--text3);font-size:11px;">Block ${blockIdx + 1}/${totalBlocks} · ${SLICE_SZ} rows</span>`;
-}
-
-function _goBlock(blockIdx) {
-  const filtered    = getFilteredBikes(bikes);
-  const totalBlocks = Math.ceil(filtered.length / SLICE_SZ);
-  if (blockIdx < 0 || blockIdx >= totalBlocks) return;
-  _currentBlock = blockIdx;
-  const start = blockIdx * SLICE_SZ;
-  const block = filtered.slice(start, start + SLICE_SZ);
-  _buildVS_block(block, filtered.length, blockIdx);
-  document.querySelector('.bike-table-wrap')?.scrollTo({ top: 0, behavior: 'smooth' });
+  _vsInstance = { destroy() { wrap.removeEventListener('scroll', _onScroll); } };
 }
 
 /* ── Main render entry ── */
 function renderBikeTable(list) {
-  const filtered    = getFilteredBikes(list);
-  _currentBlock     = 0;
-  const firstBlock  = filtered.slice(0, SLICE_SZ);
-  _buildVS_block(firstBlock, filtered.length, 0);
+  _buildVS(getFilteredBikes(list));
 }
 
 function filterBikes(q) {
