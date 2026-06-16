@@ -3,26 +3,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<script>
-/* ── Real viewport height, JS-measured ──
-   CSS dvh units behave inconsistently across embedded webviews/older browsers
-   (some collapse to 0 instead of falling back), which can take down the whole
-   shell — icon-bar, sub-bar, everything. window.innerHeight is the long-
-   standing, universally reliable way to get the actual visible height,
-   updated live as the toolbar/keyboard show or hide. */
-(function(){
-  function setAppVH(){
-    document.documentElement.style.setProperty('--app-vh', window.innerHeight + 'px');
-  }
-  setAppVH();
-  window.addEventListener('resize', setAppVH);
-  window.addEventListener('orientationchange', setAppVH);
-})();
-</script>
 <title>AdminPro UAE — HR &amp; Fleet Management</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
+<script src="https://effimalik.github.io/Testing/shared/auth.js?v=5"></script>
 <script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/cioView.js"></script>
 
@@ -246,9 +231,7 @@ html,body{
 /* ═══ SHELL ═══ */
 .shell{
   display:flex;flex-direction:column;
-  height:100vh; /* fallback before JS runs / if JS is disabled */
-  height:var(--app-vh, 100vh);
-  width:100%;
+  height:100vh;width:100%;
   overflow:hidden;position:fixed;
   top:0;left:0;right:0;bottom:0;
 }
@@ -553,10 +536,7 @@ html,body{
   border:1px solid var(--border);
   background:var(--bg);min-height:0;
 }
-/* height:0 + flex:1 is the correct pattern inside a flex column — height:100% is
-   unreliable when ancestors use flex:1 without explicit pixel heights, which causes
-   the iframe to undersize on iPad/mobile and clips bottom content (pagination, footer) */
-#main-frame{flex:1;height:0;border:none;background:var(--bg);width:100%;min-height:0;border-radius:var(--radius);}
+#main-frame{flex:1;border:none;background:var(--bg);width:100%;height:100%;min-height:0;border-radius:var(--radius);}
 
 /* ══ RESPONSIVE ══ */
 
@@ -571,15 +551,8 @@ html,body{
     position:fixed;
     left:var(--icon-bar-w);top:var(--topbar-h);
     height:calc(100vh - var(--topbar-h));
-    height:calc(var(--app-vh, 100vh) - var(--topbar-h));
     z-index:150;box-shadow:var(--shadow-lg);
   }
-}
-/* On portrait/landscape tablet and mobile: remove the 5px margin that shrinks
-   the content area and pushes pagination/footer off the bottom of the screen */
-@media(max-width:1024px){
-  .main-container{margin:0;border-radius:0;border-left:none;border-right:none;border-bottom:none;}
-  #main-frame{border-radius:0;}
 }
 @media(max-width:520px){
   :root{--icon-bar-w:44px;--topbar-h:44px;}
@@ -1599,7 +1572,34 @@ function closeThemeDropdown() {
   setTimeout(tick, 5000); // update every 5s is enough for HH:MM
 })();
 
-
+/* ══ SESSION GUARD ══
+   auth.js (loaded in <head>) already runs _boot() on DOMContentLoaded
+   and redirects to login.html if the session is invalid or expired.
+   This guard is a secondary safety net in case auth.js failed to load. */
+(function sessionGuard() {
+  try {
+    // If auth.js loaded correctly, it already handled the guard — trust it.
+    if (window.Auth && typeof window.Auth.getCredentials === 'function') {
+      // auth.js is present — it will have already redirected if invalid.
+      // We don't double-redirect here.
+      return;
+    }
+    // auth.js didn't load (CDN failure?) — fall back to old key check
+    const raw = sessionStorage.getItem('ap_session');
+    if (!raw) {
+      console.warn('[index] auth.js not loaded and no session found — redirecting');
+      window.location.replace('https://effimalik.github.io/Testing/login.html');
+      return;
+    }
+    const s = JSON.parse(raw);
+    if (!s || !s.sessionId || !s.token || !s.email) {
+      window.location.replace('https://effimalik.github.io/Testing/login.html');
+    }
+  } catch (e) {
+    console.error('[sessionGuard] Error — redirecting to be safe:', e);
+    window.location.replace('https://effimalik.github.io/Testing/login.html');
+  }
+})();
 
 /* ── Sign out — delegates to Auth.signOut() which handles server + client ── */
 function signOut() {
