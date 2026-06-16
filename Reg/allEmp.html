@@ -86,33 +86,83 @@
   --shadow:0 1px 3px rgba(0,0,0,.45); --shadow-md:0 4px 16px rgba(0,0,0,.5); --shadow-lg:0 8px 32px rgba(0,0,0,.6);
 }
 
-html, body { height: 100%; }
-body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: clamp(12px, 1.5vw, 15px); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: clamp(12px, 1.5vw, 15px); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow: hidden; }
 
-/* ── Page wrapper ── */
-.page { width: 100%; max-width: 100%; margin: 0 auto; padding: clamp(10px, 2vw, 24px) clamp(10px, 2.5vw, 24px); box-sizing: border-box; overflow-x: hidden; }
+/* ── Page wrapper — fills the available viewport/iframe height and clips
+     everything to its own box so no child can ever spill outside #allEmp ── */
+.page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100dvh;
+  min-height: 0;
+  margin: 0 auto;
+  padding: clamp(8px, 2vw, 24px) clamp(10px, 2.5vw, 24px);
+  box-sizing: border-box;
+  overflow: hidden;
+}
 
-/* ── Page header ── */
-.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 12px; }
-.page-title { font-size: clamp(16px, 2.5vw, 22px); font-weight: 700; display: flex; align-items: center; gap: 10px; color: var(--text); }
-.page-title i { color: var(--accent); font-size: clamp(18px, 3vw, 26px); line-height: 1; }
+/* ── Page header — heading, description, search box and filter buttons
+     all share a single row, with the controls pinned to the right ── */
+.page-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px clamp(10px, 2vw, 20px);
+  flex-shrink: 0;
+  padding-bottom: clamp(8px, 1.4vw, 12px);
+  margin-bottom: clamp(8px, 1.4vw, 12px);
+  border-bottom: 1.5px solid var(--border);
+}
+.page-header-text {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 160px;
+}
+.page-title { font-size: clamp(15px, 2.2vw, 22px); font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--text); flex-shrink: 0; white-space: nowrap; }
+.page-title i { color: var(--accent); font-size: clamp(17px, 2.6vw, 26px); line-height: 1; }
 
-/* ── Page divider & description ── */
-.page-divider { border-top: 1.5px solid var(--border); margin-bottom: 18px; padding-top: 10px; }
-.page-desc { font-size: clamp(11px, 1.2vw, 13px); color: var(--text3); display: flex; align-items: center; gap: 7px; }
-.page-desc i { color: var(--accent); font-size: clamp(14px, 1.8vw, 17px); flex-shrink: 0; line-height: 1; }
-@media (max-width: 600px) { .page-desc { display: none; } .page-divider { padding-top: 4px; margin-bottom: 10px; } }
- 
+/* ── Description — sits inline next to the title, ellipsizes instead of
+     wrapping so it never pushes the controls off the row ── */
+.page-desc {
+  font-size: clamp(11px, 1.1vw, 13px);
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding-left: 12px;
+  border-left: 1.5px solid var(--border);
+  overflow: hidden;
+}
+.page-desc i { color: var(--accent); font-size: clamp(14px, 1.6vw, 17px); flex-shrink: 0; line-height: 1; }
+.page-desc span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 760px) { .page-desc { display: none; } }
 
-/* ── Toolbar ── */
-.emp-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; width: 100%; }
-.search-group { display: flex; align-items: center; gap: 6px; flex: 1 1 180px; min-width: 140px; max-width: 100%; width: 100%; }
-.search-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: clamp(30px,4vw,36px); height: clamp(30px,4vw,36px); border-radius: var(--radius); border: 1px solid var(--border2); background: var(--surface); color: var(--text3); flex-shrink: 0; cursor: default; font-size: clamp(15px,2vw,18px); }
-.search-input { flex: 1; padding: clamp(6px,1vw,8px) clamp(8px,1.2vw,12px); border: 1px solid var(--border2); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: var(--font); font-size: clamp(11px,1.3vw,13px); transition: border .18s, box-shadow .18s; min-width: 0; width: 100%; }
+/* ── Header controls (search + filters) — right-aligned, wraps as a unit
+     onto its own line on tablet widths instead of overflowing ── */
+.page-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  margin-left: auto;
+  max-width: 100%;
+}
+.search-group { display: flex; align-items: center; gap: 6px; flex: 1 1 140px; min-width: 90px; max-width: 240px; }
+.search-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: clamp(28px,4vw,34px); height: clamp(28px,4vw,34px); border-radius: var(--radius); border: 1px solid var(--border2); background: var(--surface); color: var(--text3); flex-shrink: 0; cursor: default; font-size: clamp(14px,2vw,17px); }
+.search-input { flex: 1; padding: clamp(6px,1vw,7px) clamp(8px,1.2vw,11px); border: 1px solid var(--border2); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: var(--font); font-size: clamp(11px,1.3vw,13px); transition: border .18s, box-shadow .18s; min-width: 0; width: 100%; }
 .search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
 .search-input::placeholder { color: var(--text3); }
-.hr-filter-pills { display: flex; gap: 5px; flex-shrink: 0; flex-wrap: wrap; }
-.hr-filter-btn { display: inline-flex; align-items: center; gap: 5px; padding: clamp(5px,.8vw,7px) clamp(10px,1.2vw,14px); border-radius: 20px; border: 1.5px solid var(--border2); background: var(--surface); color: var(--text2); font-family: var(--font); font-size: clamp(10px,1.1vw,12px); font-weight: 600; cursor: pointer; transition: all .18s; white-space: nowrap; }
+.hr-filter-pills { display: flex; gap: 5px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.hr-filter-btn { display: inline-flex; align-items: center; gap: 5px; padding: clamp(5px,.8vw,7px) clamp(9px,1.2vw,13px); border-radius: 20px; border: 1.5px solid var(--border2); background: var(--surface); color: var(--text2); font-family: var(--font); font-size: clamp(10px,1.1vw,12px); font-weight: 600; cursor: pointer; transition: all .18s; white-space: nowrap; flex-shrink: 0; }
 .hr-filter-btn i { font-size: 15px; flex-shrink: 0; line-height: 1; display: inline-flex; align-items: center; }
 .hr-filter-btn:hover { background: var(--surface2); color: var(--text); }
 .hr-filter-btn.active   { background: var(--surface2); color: var(--text); border-color: var(--border2); box-shadow: 0 0 0 2px var(--accent); }
@@ -123,9 +173,59 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .hr-filter-btn.valid    { border-color: var(--teal);  color: var(--teal); }
 .hr-filter-btn.valid.active    { background: var(--teal-dim); box-shadow: 0 0 0 2px var(--teal); }
 
-/* ── Table ── */
-.emp-table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); overflow: hidden; width: 100%; }
-.emp-table-wrap { overflow-x: hidden; overflow-y: auto; max-height: calc(100vh - 260px); min-height: 200px; -webkit-overflow-scrolling: touch; width: 100%; }
+/* On smaller screens the filter buttons drop their labels and become
+   icon-only "chips" so the whole controls row keeps fitting in one line. */
+@media (max-width: 760px) {
+  .hr-filter-btn span { display: none; }
+  .hr-filter-btn { padding: 7px 8px; gap: 0; }
+  .hr-filter-btn i { font-size: 16px; }
+  .search-group { flex: 0 1 120px; min-width: 80px; max-width: 150px; }
+}
+@media (max-width: 420px) {
+  .search-group { flex: 0 1 90px; min-width: 60px; max-width: 110px; }
+  .hr-filter-btn { padding: 6px 7px; }
+}
+
+/* ── Table card — flex column so the header row, scrollable body and the
+     footer/pagination bar always add up to exactly the available height.
+     The footer never gets pushed out; the body scrolls internally instead. ── */
+.emp-table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.emp-table-wrap { overflow-x: hidden; overflow-y: auto; flex: 1 1 auto; min-height: 60px; -webkit-overflow-scrolling: touch; width: 100%; }
+
+/* ── Footer / pagination ("view controls") bar, appended by JS — pinned to
+     the bottom of the table card, never shrinks, never causes overflow ── */
+.emp-block-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: clamp(7px,1.2vw,9px) clamp(10px,1.6vw,14px);
+  border-top: 1px solid var(--border);
+  font-size: clamp(10.5px,1.1vw,12px);
+  color: var(--text3);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  background: var(--surface);
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.emp-block-nav-pages { display: flex; align-items: center; gap: 4px; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.emp-block-nav-pages::-webkit-scrollbar { display: none; }
+@media (max-width: 600px) {
+  .emp-block-nav { justify-content: center; text-align: center; }
+  .emp-block-nav-pages { order: 3; width: 100%; justify-content: center; }
+}
 .emp-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: clamp(11px, 1.3vw, 13px); }
 .emp-table thead th { position: sticky; top: 0; z-index: 2; background: var(--bg3); text-align: left; font-size: clamp(9px, 1vw, 10.5px); font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; padding: clamp(8px,1.2vw,11px) clamp(8px,1.2vw,14px); border-bottom: 2px solid var(--border); overflow: hidden; text-overflow: ellipsis; }
 .emp-table td { padding: clamp(8px,1.2vw,11px) clamp(8px,1.2vw,14px); border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; }
@@ -304,10 +404,6 @@ select option { background: var(--surface2); color: var(--text); }
   .emp-table th:nth-child(5), .emp-table td:nth-child(5) { width: 44%; }
 }
 @media (max-width: 768px) {
-  .emp-toolbar { flex-wrap: wrap; gap: 6px; }
-  .hr-filter-pills { flex-wrap: wrap; }
-  .hr-filter-btn { padding: 5px 10px; font-size: 11px; }
-  .emp-table-wrap { max-height: calc(100dvh - 280px); }
   .dp-sheet { width: 100%; border-left: none; }
   .dp-fl { width: 100px; }
   .dp-ex-grid { grid-template-columns: repeat(2, 1fr); }
@@ -321,8 +417,15 @@ select option { background: var(--surface2); color: var(--text); }
   .dp-ex-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 420px) {
-  .emp-table-wrap { max-height: calc(100dvh - 300px); }
   .dp-ex-grid { grid-template-columns: repeat(2, 1fr); }
+}
+/* ── Short-height screens (e.g. iPad in Split View / landscape with the
+   browser chrome visible) — trim vertical breathing room first instead of
+   ever letting the footer/pagination bar get pushed out of view. ── */
+@media (max-height: 560px) {
+  .page-header { padding-bottom: 6px; margin-bottom: 6px; }
+  .page-desc { display: none; }
+  .emp-table-wrap { min-height: 40px; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>
@@ -339,30 +442,29 @@ select option { background: var(--surface2); color: var(--text); }
 })();
 </script>
 
-<div class="page">
+<div class="page" id="allEmp">
 
-  <!-- Page header -->
+  <!-- Page header: heading + description (left), search + filters (right) -->
   <div class="page-header">
-    <div class="page-title">
-      <i class="ti ti-users"></i>
-      All Employees
+    <div class="page-header-text">
+      <div class="page-title">
+        <i class="ti ti-users"></i>
+        All Employees
+      </div>
+      <p class="page-desc"><i class="ti ti-info-circle"></i><span>Browse, search and manage all employee records — view document expiry statuses, request salary advances, and edit employee details in real time.</span></p>
     </div>
-  </div>
-  <div class="page-divider">
-    <p class="page-desc"><i class="ti ti-info-circle"></i> Browse, search and manage all employee records — view document expiry statuses, request salary advances, and edit employee details in real time.</p>
-  </div>
 
-  <!-- Toolbar -->
-  <div class="emp-toolbar">
-    <div class="search-group">
-      <span class="search-icon-btn" aria-hidden="true"><i class="ti ti-search"></i></span>
-      <input class="search-input" type="text" id="emp-search-input" placeholder="Search name, EID, ID, ref..." oninput="filterEmps(this.value)" />
-    </div>
-    <div class="hr-filter-pills">
-      <button class="hr-filter-btn active" data-filter="all"          onclick="filterHR('all')"><i class="ti ti-users"></i> All</button>
-      <button class="hr-filter-btn expired"  data-filter="expired"    onclick="filterHR('expired')"><i class="ti ti-alert-circle"></i> Expired</button>
-      <button class="hr-filter-btn expiring" data-filter="expiring_soon" onclick="filterHR('expiring_soon')"><i class="ti ti-clock"></i> Expiring</button>
-      <button class="hr-filter-btn valid"    data-filter="valid"      onclick="filterHR('valid')"><i class="ti ti-circle-check"></i> Valid</button>
+    <div class="page-header-controls">
+      <div class="search-group">
+        <span class="search-icon-btn" aria-hidden="true"><i class="ti ti-search"></i></span>
+        <input class="search-input" type="text" id="emp-search-input" placeholder="Search name, EID, ID, ref..." oninput="filterEmps(this.value)" />
+      </div>
+      <div class="hr-filter-pills">
+        <button class="hr-filter-btn active" data-filter="all"          onclick="filterHR('all')"><i class="ti ti-users"></i><span> All</span></button>
+        <button class="hr-filter-btn expired"  data-filter="expired"    onclick="filterHR('expired')"><i class="ti ti-alert-circle"></i><span> Expired</span></button>
+        <button class="hr-filter-btn expiring" data-filter="expiring_soon" onclick="filterHR('expiring_soon')"><i class="ti ti-clock"></i><span> Expiring</span></button>
+        <button class="hr-filter-btn valid"    data-filter="valid"      onclick="filterHR('valid')"><i class="ti ti-circle-check"></i><span> Valid</span></button>
+      </div>
     </div>
   </div>
 
@@ -908,7 +1010,7 @@ function _renderBlockNav(total, blockIdx) {
   if (!nav) {
     nav = document.createElement('div');
     nav.id = 'emp-block-nav';
-    nav.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 14px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);flex-wrap:wrap;';
+    nav.className = 'emp-block-nav';
     tableCard.appendChild(nav);
   }
 
@@ -916,7 +1018,7 @@ function _renderBlockNav(total, blockIdx) {
 
   const start = blockIdx * SLICE_SZ + 1;
   const end   = Math.min((blockIdx + 1) * SLICE_SZ, total);
-  const btnStyle = (dis, act) => `padding:4px 11px;font-size:11.5px;border-radius:6px;border:1px solid var(--border);background:${act?'var(--accent)':'var(--surface)'};color:${act?'#fff':'var(--text2)'};cursor:${dis?'default':'pointer'};opacity:${dis?'.4':'1'};font-family:var(--font);`;
+  const btnStyle = (dis, act) => `flex-shrink:0;padding:4px 11px;font-size:11.5px;border-radius:6px;border:1px solid var(--border);background:${act?'var(--accent)':'var(--surface)'};color:${act?'#fff':'var(--text2)'};cursor:${dis?'default':'pointer'};opacity:${dis?'.4':'1'};font-family:var(--font);`;
 
   let pageButtons = '';
   for (let b = 0; b < totalBlocks; b++) {
@@ -924,13 +1026,13 @@ function _renderBlockNav(total, blockIdx) {
   }
 
   nav.innerHTML = `
-    <span style="color:var(--text3);">${start}–${end} <span style="color:var(--text3);opacity:.6;">of</span> ${total}</span>
-    <div style="display:flex;align-items:center;gap:4px;">
+    <span style="color:var(--text3);white-space:nowrap;">${start}–${end} <span style="color:var(--text3);opacity:.6;">of</span> ${total}</span>
+    <div class="emp-block-nav-pages">
       <button onclick="_goBlock(${blockIdx-1})" style="${btnStyle(blockIdx===0,false)}">‹</button>
       ${pageButtons}
       <button onclick="_goBlock(${blockIdx+1})" style="${btnStyle(blockIdx>=totalBlocks-1,false)}">›</button>
     </div>
-    <span style="color:var(--text3);font-size:11px;">Block ${blockIdx+1}/${totalBlocks} · ${SLICE_SZ} rows</span>`;
+    <span style="color:var(--text3);font-size:11px;white-space:nowrap;">Block ${blockIdx+1}/${totalBlocks} · ${SLICE_SZ} rows</span>`;
 }
 
 function _goBlock(blockIdx) {
