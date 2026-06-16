@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
-<script src="https://effimalik.github.io/Testing/shared/auth.js?v=5"></script>
 <script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/cioView.js"></script>
 
@@ -232,6 +231,12 @@ html,body{
 .shell{
   display:flex;flex-direction:column;
   height:100vh;width:100%;
+  height:100dvh; /* iOS/iPadOS Safari: 100vh = the LARGEST viewport size (toolbars
+                    hidden), so it can extend below the real visible area when the
+                    toolbar is showing — clipping anything pinned to the bottom
+                    (e.g. the allEmp footer/pagination bar) with no way to scroll
+                    to it, since this shell is fixed + overflow:hidden. 100dvh
+                    tracks the ACTUAL visible viewport instead. */
   overflow:hidden;position:fixed;
   top:0;left:0;right:0;bottom:0;
 }
@@ -551,6 +556,7 @@ html,body{
     position:fixed;
     left:var(--icon-bar-w);top:var(--topbar-h);
     height:calc(100vh - var(--topbar-h));
+    height:calc(100dvh - var(--topbar-h));
     z-index:150;box-shadow:var(--shadow-lg);
   }
 }
@@ -1572,34 +1578,7 @@ function closeThemeDropdown() {
   setTimeout(tick, 5000); // update every 5s is enough for HH:MM
 })();
 
-/* ══ SESSION GUARD ══
-   auth.js (loaded in <head>) already runs _boot() on DOMContentLoaded
-   and redirects to login.html if the session is invalid or expired.
-   This guard is a secondary safety net in case auth.js failed to load. */
-(function sessionGuard() {
-  try {
-    // If auth.js loaded correctly, it already handled the guard — trust it.
-    if (window.Auth && typeof window.Auth.getCredentials === 'function') {
-      // auth.js is present — it will have already redirected if invalid.
-      // We don't double-redirect here.
-      return;
-    }
-    // auth.js didn't load (CDN failure?) — fall back to old key check
-    const raw = sessionStorage.getItem('ap_session');
-    if (!raw) {
-      console.warn('[index] auth.js not loaded and no session found — redirecting');
-      window.location.replace('https://effimalik.github.io/Testing/login.html');
-      return;
-    }
-    const s = JSON.parse(raw);
-    if (!s || !s.sessionId || !s.token || !s.email) {
-      window.location.replace('https://effimalik.github.io/Testing/login.html');
-    }
-  } catch (e) {
-    console.error('[sessionGuard] Error — redirecting to be safe:', e);
-    window.location.replace('https://effimalik.github.io/Testing/login.html');
-  }
-})();
+
 
 /* ── Sign out — delegates to Auth.signOut() which handles server + client ── */
 function signOut() {
