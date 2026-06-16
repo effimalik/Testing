@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   dataLayer.js — AdminPro UAE  v2.2
+   dataLayer.js — FleetFlow Pro  v2.2
    Cache-first data layer · IndexedDB persistence · session-auth
    Permission-driven: only permitted datasets are fetched or cached.
 
