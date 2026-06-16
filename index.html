@@ -220,14 +220,15 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   --shadow-lg:0 8px 32px rgba(0,0,0,.6);
 }
 
-/* html,body{
+ html,body{
   height:100%;width:100%;
   font-family:var(--font);
   background:var(--bg);color:var(--text);
   font-size:14px;-webkit-font-smoothing:antialiased;
-  overflow:hidden;
+  overflow-x:hidden;
 }
-
+	
+/*
 .shell{
   display:flex;flex-direction:column;
   height:100vh;width:100%;
@@ -236,18 +237,12 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 } */
 
 
-	
-html,body{
-  height:100%;
-  width:100%;
-  overflow-x:hidden;
-}
-
 .shell{
   display:flex;
   flex-direction:column;
   height:100dvh;
   width:100%;
+  inset:0; 
 }
 	
 
