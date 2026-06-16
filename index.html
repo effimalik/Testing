@@ -553,7 +553,10 @@ html,body{
   border:1px solid var(--border);
   background:var(--bg);min-height:0;
 }
-#main-frame{flex:1;border:none;background:var(--bg);width:100%;height:100%;min-height:0;border-radius:var(--radius);}
+/* height:0 + flex:1 is the correct pattern inside a flex column — height:100% is
+   unreliable when ancestors use flex:1 without explicit pixel heights, which causes
+   the iframe to undersize on iPad/mobile and clips bottom content (pagination, footer) */
+#main-frame{flex:1;height:0;border:none;background:var(--bg);width:100%;min-height:0;border-radius:var(--radius);}
 
 /* ══ RESPONSIVE ══ */
 
@@ -571,6 +574,12 @@ html,body{
     height:calc(var(--app-vh, 100vh) - var(--topbar-h));
     z-index:150;box-shadow:var(--shadow-lg);
   }
+}
+/* On portrait/landscape tablet and mobile: remove the 5px margin that shrinks
+   the content area and pushes pagination/footer off the bottom of the screen */
+@media(max-width:1024px){
+  .main-container{margin:0;border-radius:0;border-left:none;border-right:none;border-bottom:none;}
+  #main-frame{border-radius:0;}
 }
 @media(max-width:520px){
   :root{--icon-bar-w:44px;--topbar-h:44px;}
