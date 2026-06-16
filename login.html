@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>AdminPro UAE — Sign In</title>
+<title>FleetFlow Pro — Sign In</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
@@ -270,7 +270,7 @@ body::after{
 <header class="topbar">
   <div class="tb-logo"><i class="ti ti-truck"></i></div>
   <div>
-    <div class="tb-name">AdminPro UAE</div>
+    <div class="tb-name">FleetFlow Pro</div>
     <div class="tb-sub">HR &amp; Fleet Management</div>
   </div>
   <div class="tb-spacer"></div>
@@ -287,7 +287,7 @@ body::after{
   <div class="card">
     <div class="card-icon"><i class="ti ti-shield-lock"></i></div>
     <div class="card-title">Secure Sign In</div>
-    <div class="card-subtitle">Access AdminPro UAE with your authorised Google account.</div>
+    <div class="card-subtitle">Access FleetFlow Pro with your authorised Google account.</div>
 
     <div class="divider"></div>
 
@@ -326,7 +326,7 @@ body::after{
           <div class="step" id="step-2"><div class="step-dot"></div><span>Retrieving your account</span></div>
           <div class="step" id="step-3"><div class="step-dot"></div><span>Checking access database</span></div>
           <div class="step" id="step-4"><div class="step-dot"></div><span>Validating account status</span></div>
-          <div class="step" id="step-5"><div class="step-dot"></div><span>Opening AdminPro UAE</span></div>
+          <div class="step" id="step-5"><div class="step-dot"></div><span>Opening FleetFlow Pro</span></div>
         </div>
         <div class="status-msg" id="status-msg" style="display:none;margin-top:10px;"></div>
       </div>
@@ -722,7 +722,7 @@ async function startGoogleLogin() {
     await sleep(350);
     showDenied(
       result && result.email   ? result.email   : null,
-      result && result.reason  ? result.reason  : 'Your account is not authorised to access AdminPro UAE. Contact your administrator.',
+      result && result.reason  ? result.reason  : 'Your account is not authorised to access FleetFlow Pro. Contact your administrator.',
       result && result.title   ? result.title   : 'Access Denied',
       result && result.status === 'inactive' ? 'ti-user-off' : 'ti-shield-x',
       result && result.status === 'inactive'  // isWarning = true for inactive accounts
