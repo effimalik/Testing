@@ -415,7 +415,8 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
   .search-input{width:140px;}
 }
 @media(max-width:600px){
-  .page{padding:12px 12px 50px;}
+  #cio-card-grid{grid-template-columns:1fr!important;}
+}
   .summary-card{padding:5px 7px;gap:5px;min-width:76px;}
   .summary-card-value{font-size:12px;}
   .summary-card-label{font-size:8px;}
@@ -547,24 +548,9 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
       </div>
     </div>
 
-    <!-- COMBINED TOOLBAR ROW: Tabs + History Buttons + Search/Date in one compact line -->
+    <!-- TOOLBAR ROW: Search/Date only -->
     <div class="toolbar-combined">
-      <!-- Main Tab Buttons -->
-      <button class="tab-btn2 active" id="tab-checkinout" onclick="switchTab('checkinout')" title="Check In / Out">
-        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        CIO
-      </button>
-      <button class="tab-btn2" id="tab-bikes" onclick="switchTab('bikes')" title="Assets">
-        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-        Assets
-      </button>
-      <button class="tab-btn2" id="tab-employees" onclick="switchTab('employees')" title="Employees">
-        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Riders
-      </button>
-
-
-      <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:auto;">
         <div class="search-wrap">
           <svg class="search-ico" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input class="search-input" id="cio-search" type="text" placeholder="Bike No, Employee, SIM…" oninput="applyCheckinFilter()" style="width:160px;height:30px;"/>
@@ -590,75 +576,14 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
       <!-- hidden select kept for action filter logic compatibility -->
       <select id="cio-action" style="display:none;" onchange="applyCheckinFilter()"><option value=""></option></select>
 
-      <!-- Item-type filter pills — filter ap2_cioLog by AssetType -->
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
-        <span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;">Filter:</span>
-        <button id="cio-item-all"       class="hr-filter-btn active"    onclick="setCioItemFilter('all')">All Items</button>
-        <button id="cio-item-bike"      class="hr-filter-btn"           onclick="setCioItemFilter('bike')">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 0 0-1 1v6h-6l-3.5-5H4"/></svg>
-          Bike
-        </button>
-        <button id="cio-item-sim"       class="hr-filter-btn"           onclick="setCioItemFilter('sim')">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-          SIM
-        </button>
-        <button id="cio-item-company"   class="hr-filter-btn"           onclick="setCioItemFilter('company')">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-          Company
-        </button>
-        <button id="cio-item-inventory" class="hr-filter-btn"           onclick="setCioItemFilter('inventory')">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-          Inventory
-        </button>
-      </div>
-
-      <div class="data-table-card">
-        <div class="data-table-header">
-          <div class="data-table-title">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-            Check In / Out Log
-            <span class="badge blue" id="cio-count-badge">0 records</span>
-          </div>
-          <!-- rpp in toolbar row above -->
-        </div>
-        <div class="data-table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th class="w160">Emp ID / Name</th>
-                <th class="w160">Item Name / Item ID</th>
-                <th class="w140">Check Out Date / Time</th>
-                <th class="w140">Check In Date / Time</th>
-                <th class="w60">Details</th>
-              </tr>
-            </thead>
-            <tbody id="cio-tbody"></tbody>
-          </table>
-        </div>
-        <div class="pagination-bar">
-          <div class="pagination-info" id="cio-page-info">— records</div>
-          <div class="pagination-controls" id="cio-page-ctrl"></div>
-          <div class="pagination-right">
-            <span class="rpp-label">Rows:</span>
-            <select class="rpp-select" id="cio-rpp2-dup" onchange="cioRppChange()" style="display:none;"></select>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ASSETS TAB — Available / History / Status × Bike/SIM/Company/Inventory -->
-    <div id="tab-panel-bikes" style="display:none;">
-
-      <!-- ── TOP CONTROL BAR ── -->
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
-
-        <!-- VIEW buttons -->
+      <!-- VIEW + TYPE control row (always visible) -->
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:7px 12px;box-shadow:var(--shadow);">
         <span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;flex-shrink:0;">View:</span>
-        <button id="av-view-available" class="hr-filter-btn active" onclick="setAssetView('available')">
+        <button id="av-view-available" class="hr-filter-btn" onclick="setAssetView('available')">
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           Available
         </button>
-        <button id="av-view-history" class="hr-filter-btn" onclick="setAssetView('history')">
+        <button id="av-view-history" class="hr-filter-btn active" onclick="setAssetView('history')">
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           History
         </button>
@@ -669,40 +594,50 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
 
         <div class="toolbar-divider-v" style="height:20px;"></div>
 
-        <!-- ASSET TYPE buttons -->
         <span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;flex-shrink:0;">Type:</span>
-        <button id="asset-sub-bike" class="hr-filter-btn active" onclick="setAssetSubTab('bike')">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 0 0-1 1v6H8l-3.5-5H4a1 1 0 0 0 0 2h.5l3.5 5H14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/></svg>
+        <button id="cio-item-all"       class="hr-filter-btn active"    onclick="setCioItemFilter('all');setAssetSubTab('bike')">All Items</button>
+        <button id="cio-item-bike"      class="hr-filter-btn"           onclick="setCioItemFilter('bike');setAssetSubTab('bike')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 0 0-1 1v6h-6l-3.5-5H4"/></svg>
           Bike
         </button>
-        <button id="asset-sub-sim" class="hr-filter-btn" onclick="setAssetSubTab('sim')">
+        <button id="cio-item-sim"       class="hr-filter-btn"           onclick="setCioItemFilter('sim');setAssetSubTab('sim')">
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
           SIM
         </button>
-        <button id="asset-sub-company" class="hr-filter-btn" onclick="setAssetSubTab('company')">
+        <button id="cio-item-company"   class="hr-filter-btn"           onclick="setCioItemFilter('company');setAssetSubTab('company')">
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
           Company
         </button>
-        <button id="asset-sub-inventory" class="hr-filter-btn" onclick="setAssetSubTab('inventory')">
+        <button id="cio-item-inventory" class="hr-filter-btn"           onclick="setCioItemFilter('inventory');setAssetSubTab('inventory')">
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
           Inventory
         </button>
-
-        <!-- Search -->
-        <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-shrink:0;">
-          <div class="search-wrap">
-            <svg class="search-ico" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="search-input" id="asset-search" type="text" placeholder="Search…" oninput="applyAssetSearch()" style="width:140px;height:30px;"/>
-          </div>
-          <button class="tb-btn sm icon-only" onclick="clearAssetSearch()" title="Clear" style="height:30px;width:30px;padding:0;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
       </div>
 
-      <!-- ══ AVAILABLE VIEW ══ -->
-      <div id="av-panel-available">
-        <!-- item badge header -->
+      <!-- CIO Record Card Grid (2 per row) — shown for History view -->
+      <div id="cio-view-history-panel">
+      <div class="data-table-card">
+        <div class="data-table-header">
+          <div class="data-table-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Check In / Out Log
+            <span class="badge blue" id="cio-count-badge">0 records</span>
+          </div>
+        </div>
+        <div id="cio-card-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--border);"></div>
+        <div class="pagination-bar">
+          <div class="pagination-info" id="cio-page-info">— records</div>
+          <div class="pagination-controls" id="cio-page-ctrl"></div>
+          <div class="pagination-right">
+            <span class="rpp-label">Rows:</span>
+            <select class="rpp-select" id="cio-rpp2-dup" onchange="cioRppChange()" style="display:none;"></select>
+          </div>
+        </div>
+      </div>
+      </div>
+
+      <!-- AVAILABLE VIEW (from assets tab) -->
+      <div id="av-panel-available" style="display:none;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
           <span id="av-avail-label" class="asset-section-label available" style="padding:0;border:none;font-size:11px;margin:0;">Available Items</span>
           <span class="badge green" id="av-avail-count">0</span>
@@ -712,38 +647,7 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
         </div>
       </div>
 
-      <!-- ══ HISTORY VIEW ══ -->
-      <div id="av-panel-history" style="display:none;">
-        <div class="data-table-card">
-          <div class="data-table-header">
-            <div class="data-table-title" id="av-hist-title">
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              History
-              <span class="badge blue" id="av-hist-badge">0 records</span>
-            </div>
-          </div>
-          <div class="data-table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th class="w160">Rider</th>
-                  <th class="w120">Item ID</th>
-                  <th class="w140">Check Out</th>
-                  <th class="w140">Check In</th>
-                  <th class="w60">Details</th>
-                </tr>
-              </thead>
-              <tbody id="av-hist-tbody"></tbody>
-            </table>
-          </div>
-          <div class="pagination-bar">
-            <div class="pagination-info" id="av-hist-info">0 records</div>
-            <div class="pagination-controls" id="av-hist-ctrl"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ══ STATUS VIEW — rider-wise current holdings ══ -->
+      <!-- STATUS VIEW (from assets tab) -->
       <div id="av-panel-status" style="display:none;">
         <div class="data-table-card">
           <div class="data-table-header">
@@ -774,6 +678,37 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
         </div>
       </div>
 
+      <!-- HISTORY VIEW from assets tab (used by Available/History for asset sub-types) -->
+      <div id="av-panel-history" style="display:none;">
+        <div class="data-table-card">
+          <div class="data-table-header">
+            <div class="data-table-title" id="av-hist-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              History
+              <span class="badge blue" id="av-hist-badge">0 records</span>
+            </div>
+          </div>
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="w160">Rider</th>
+                  <th class="w120">Item ID</th>
+                  <th class="w140">Check Out</th>
+                  <th class="w140">Check In</th>
+                  <th class="w60">Details</th>
+                </tr>
+              </thead>
+              <tbody id="av-hist-tbody"></tbody>
+            </table>
+          </div>
+          <div class="pagination-bar">
+            <div class="pagination-info" id="av-hist-info">0 records</div>
+            <div class="pagination-controls" id="av-hist-ctrl"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- keep old IDs alive (used by renderHistoryRows / processAll aliases) — hidden -->
       <div style="display:none;">
         <div id="bike-avail-grid"></div><div id="bike-assigned-grid"></div><tbody id="bike-tbody"></tbody>
@@ -786,7 +721,18 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
         <span id="inv-avail-badge"></span><span id="inv-assigned-badge"></span><span id="inv-hist-badge"></span>
         <span id="inv-page-info"></span><div id="inv-page-ctrl"></div>
       </div>
+    </div>
 
+    <!-- ASSETS TAB (now hidden — content moved to CIO panel) -->
+    <div id="tab-panel-bikes" style="display:none;">
+      <!-- keep asset-sub-* IDs alive for setAssetSubTab JS calls -->
+      <div style="display:none;">
+        <button id="asset-sub-bike"></button>
+        <button id="asset-sub-sim"></button>
+        <button id="asset-sub-company"></button>
+        <button id="asset-sub-inventory"></button>
+        <input id="asset-search" type="text"/>
+      </div>
     </div>
 
     <!-- EMPLOYEES TAB -->
@@ -1719,29 +1665,26 @@ function cioRppChange(){
 }
 
 function renderCheckinTable(){
-  const tbody=document.getElementById('cio-tbody');
+  const grid=document.getElementById('cio-card-grid');
   document.getElementById('cio-count-badge').textContent=ciFiltered.length+' records';
   if(!ciFiltered.length){
-    tbody.innerHTML=`<tr><td colspan="5"><div class="empty-state"><svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto;display:block;opacity:.3;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>No records found</p><small>${state.checkinout.length?'Adjust filters or sync sheets.':'No data yet. Sync sheets or load demo data.'}</small></div></td></tr>`;
+    grid.style.gridTemplateColumns='1fr';
+    grid.innerHTML=`<div style="padding:40px 20px;text-align:center;background:var(--surface);"><svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 10px;display:block;opacity:.3;color:var(--text3);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p style="font-size:13px;color:var(--text3);">No records found</p><small style="font-size:11px;color:var(--text3);">${state.checkinout.length?'Adjust filters or sync sheets.':'No data yet. Sync sheets or load demo data.'}</small></div>`;
     renderPagination('cio-page-ctrl','cio-page-info',ciFiltered.length,ciPage,ciRpp,'ciGoToPage');
     return;
   }
+  grid.style.gridTemplateColumns='repeat(2,1fr)';
 
   // Group records: pair each Check Out with its matching Check In
-  // Key: empId + assetType + assetId — ordered by checkout time desc
   const groups=[];
   const usedRefs=new Set();
-
-  // Sort desc by timestamp so we process newest first
   const sorted=[...ciFiltered].sort((a,b)=>(b.Timestamp||'').localeCompare(a.Timestamp||''));
 
-  // Build paired rows: for each Check Out find its corresponding Check In
   sorted.forEach(r=>{
     if(usedRefs.has(r.RefID)) return;
     const action=(r.Action||'').toLowerCase();
     if(action.includes('out')){
       usedRefs.add(r.RefID);
-      // Find matching Check In: same emp + same assetType + same assetId, after this checkout
       const matchIn=sorted.find(r2=>{
         if(usedRefs.has(r2.RefID)) return false;
         const a2=(r2.Action||'').toLowerCase();
@@ -1754,7 +1697,6 @@ function renderCheckinTable(){
       if(matchIn) usedRefs.add(matchIn.RefID);
       groups.push({out:r, in:matchIn||null});
     } else if(!action.includes('swap')){
-      // Orphan check-in (no matching checkout visible)
       usedRefs.add(r.RefID);
       groups.push({out:null, in:r});
     }
@@ -1764,7 +1706,7 @@ function renderCheckinTable(){
   const start=(ciPage-1)*effectiveRpp;
   const page=groups.slice(start,start+effectiveRpp);
 
-  tbody.innerHTML=page.map(g=>{
+  grid.innerHTML=page.map(g=>{
     const r=g.out||g.in;
     const riderName=r.RiderName||r.Name||'';
     const eid=r.EID||r.EmpID||'—';
@@ -1772,30 +1714,40 @@ function renderCheckinTable(){
     const assetId=r.AssetID||'—';
     const outTs=g.out?(g.out.Timestamp||'').slice(0,16):'—';
     const inTs=g.in?(g.in.Timestamp||'').slice(0,16):'—';
+    const stillOut=g.out&&!g.in;
     const refRec=g.out||g.in;
-    return `<tr class="fade-in">
-      <td>
-        <div style="display:flex;align-items:center;gap:7px;">
-          ${riderName?`<div class="avatar-sm" style="background:${strColor(riderName)}">${initials(riderName)}</div>`:''}
+    return `<div class="fade-in" style="background:var(--surface);padding:12px 14px;display:flex;align-items:flex-start;gap:10px;">
+      <!-- Avatar -->
+      <div style="flex-shrink:0;">
+        ${riderName?`<div class="avatar-sm" style="background:${strColor(riderName)};width:32px;height:32px;font-size:11px;">${initials(riderName)}</div>`:'<div style="width:32px;height:32px;border-radius:50%;background:var(--surface2);"></div>'}
+      </div>
+      <!-- Content -->
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px;">
           <div class="cs">
-            <span class="cs-main" style="font-size:12px;">${esc(riderName||'—')}</span>
+            <span class="cs-main" style="font-size:12.5px;">${esc(riderName||'—')}</span>
             <span class="cs-sub">${esc(eid)}</span>
           </div>
+          <button class="tb-btn icon-only sm" onclick='openCioDetail(${JSON.stringify(JSON.stringify(refRec))})' title="View details" style="flex-shrink:0;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
         </div>
-      </td>
-      <td>
-        <div class="cs">
-          <span class="cs-main"><span class="badge gray" style="margin-right:4px;">${esc(assetType)}</span>${esc(assetId)}</span>
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;">
+          <span class="badge gray" style="font-size:10px;">${esc(assetType)}</span>
+          <span class="mono cs-main" style="font-size:11.5px;">${esc(assetId)}</span>
         </div>
-      </td>
-      <td>${g.out?`<span class="badge green" style="font-size:10px;margin-right:4px;">↗ Out</span><span class="mono cs-sub">${outTs}</span>`:'<span style="color:var(--text3);">—</span>'}</td>
-      <td>${g.in?`<span class="badge red" style="font-size:10px;margin-right:4px;">↙ In</span><span class="mono cs-sub">${inTs}</span>`:'<span class="badge amber" style="font-size:10px;">Still Out</span>'}</td>
-      <td>
-        <button class="tb-btn icon-only sm" onclick='openCioDetail(${JSON.stringify(JSON.stringify(refRec))})' title="View details">
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
-      </td>
-    </tr>`;
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 8px;">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:2px;">Check Out</div>
+            ${g.out?`<span class="badge green" style="font-size:10px;margin-right:3px;">↗ Out</span><span class="mono" style="font-size:10px;color:var(--text2);">${outTs}</span>`:'<span style="color:var(--text3);font-size:11px;">—</span>'}
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 8px;">
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:2px;">Check In</div>
+            ${g.in?`<span class="badge red" style="font-size:10px;margin-right:3px;">↙ In</span><span class="mono" style="font-size:10px;color:var(--text2);">${inTs}</span>`:`<span class="badge amber" style="font-size:10px;">${stillOut?'Still Out':'—'}</span>`}
+          </div>
+        </div>
+      </div>
+    </div>`;
   }).join('');
   renderPagination('cio-page-ctrl','cio-page-info',groups.length,ciPage,effectiveRpp,'ciGoToPage');
 }
@@ -2116,16 +2068,23 @@ function renderInvPanel(){
 }
 
 // ── View state (Available / History / Status)
-let _assetView='available';
+let _assetView='history';
 
 function setAssetView(view){
   _assetView=view;
   ['available','history','status'].forEach(v=>{
     const btn=document.getElementById('av-view-'+v);
-    const panel=document.getElementById('av-panel-'+v);
     if(btn) btn.classList.toggle('active',v===view);
-    if(panel) panel.style.display=(v===view)?'':'none';
   });
+  // Show/hide the CIO history card-grid vs asset panels
+  const cioPnl=document.getElementById('cio-view-history-panel');
+  const avPnl=document.getElementById('av-panel-available');
+  const histPnl=document.getElementById('av-panel-history');
+  const stPnl=document.getElementById('av-panel-status');
+  if(cioPnl) cioPnl.style.display=(view==='history')?'':'none';
+  if(avPnl)  avPnl.style.display=(view==='available')?'':'none';
+  if(histPnl) histPnl.style.display='none'; // av-panel-history used internally for sub-type history
+  if(stPnl)  stPnl.style.display=(view==='status')?'':'none';
   renderAssetPanel();
 }
 
