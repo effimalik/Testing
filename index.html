@@ -3,6 +3,22 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<script>
+/* ── Real viewport height, JS-measured ──
+   CSS dvh units behave inconsistently across embedded webviews/older browsers
+   (some collapse to 0 instead of falling back), which can take down the whole
+   shell — icon-bar, sub-bar, everything. window.innerHeight is the long-
+   standing, universally reliable way to get the actual visible height,
+   updated live as the toolbar/keyboard show or hide. */
+(function(){
+  function setAppVH(){
+    document.documentElement.style.setProperty('--app-vh', window.innerHeight + 'px');
+  }
+  setAppVH();
+  window.addEventListener('resize', setAppVH);
+  window.addEventListener('orientationchange', setAppVH);
+})();
+</script>
 <title>AdminPro UAE — HR &amp; Fleet Management</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -230,13 +246,9 @@ html,body{
 /* ═══ SHELL ═══ */
 .shell{
   display:flex;flex-direction:column;
-  height:100vh;width:100%;
-  height:100dvh; /* iOS/iPadOS Safari: 100vh = the LARGEST viewport size (toolbars
-                    hidden), so it can extend below the real visible area when the
-                    toolbar is showing — clipping anything pinned to the bottom
-                    (e.g. the allEmp footer/pagination bar) with no way to scroll
-                    to it, since this shell is fixed + overflow:hidden. 100dvh
-                    tracks the ACTUAL visible viewport instead. */
+  height:100vh; /* fallback before JS runs / if JS is disabled */
+  height:var(--app-vh, 100vh);
+  width:100%;
   overflow:hidden;position:fixed;
   top:0;left:0;right:0;bottom:0;
 }
@@ -556,7 +568,7 @@ html,body{
     position:fixed;
     left:var(--icon-bar-w);top:var(--topbar-h);
     height:calc(100vh - var(--topbar-h));
-    height:calc(100dvh - var(--topbar-h));
+    height:calc(var(--app-vh, 100vh) - var(--topbar-h));
     z-index:150;box-shadow:var(--shadow-lg);
   }
 }
