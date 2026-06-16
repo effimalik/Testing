@@ -551,46 +551,40 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
     <!-- ROW 1: View Buttons -->
     <div class="toolbar-combined" style="margin-bottom:6px;">
       <span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;flex-shrink:0;">View:</span>
-
-      <!-- Available -->
       <button id="av-view-available" class="tab-btn2" onclick="setAssetView('available')">
         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        <span style="margin-left:5px;">Available</span>
+        Available
       </button>
-
-      <!-- History -->
       <button id="av-view-history" class="tab-btn2 active" onclick="setAssetView('history')">
         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span style="margin-left:5px;">History</span>
+        History
+      </button>
+      <button id="av-view-status" class="tab-btn2" onclick="setAssetView('status')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Status
       </button>
 
-      <!-- Type pills — only shown in History & Available views -->
-      <div id="type-pills-wrap" style="display:flex;align-items:center;gap:5px;margin-left:10px;">
+      <!-- Type pills — hidden for Status view -->
+      <div id="type-pills-wrap" style="display:flex;align-items:center;gap:5px;margin-left:8px;">
         <div class="toolbar-divider-v" style="height:20px;margin-right:4px;"></div>
         <span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;flex-shrink:0;">Type:</span>
-
-        <!-- Employee pill — history only -->
-        <button id="cio-item-employee" class="tab-btn2 active" onclick="setViewType('employee')">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-          <span style="margin-left:4px;">Employee</span>
-        </button>
-
-        <!-- Bike pill -->
-        <button id="cio-item-bike" class="tab-btn2" onclick="setViewType('bike')">
+        <button id="cio-item-all"       class="tab-btn2 active"  onclick="setViewType('all')">All</button>
+        <button id="cio-item-bike"      class="tab-btn2"         onclick="setViewType('bike')">
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 0 0-1 1v6h-6l-3.5-5H4"/></svg>
-          <span style="margin-left:4px;">Bike</span>
+          Bike
         </button>
-
-        <!-- SIM pill -->
-        <button id="cio-item-sim" class="tab-btn2" onclick="setViewType('sim')">
+        <button id="cio-item-sim"       class="tab-btn2"         onclick="setViewType('sim')">
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-          <span style="margin-left:4px;">SIM</span>
+          SIM
         </button>
-
-        <!-- Hidden stubs for legacy JS that references these IDs -->
-        <button id="cio-item-all"       style="display:none;" onclick="setViewType('all')"></button>
-        <button id="cio-item-company"   style="display:none;" onclick="setViewType('company')"></button>
-        <button id="cio-item-inventory" style="display:none;" onclick="setViewType('inventory')"></button>
+        <button id="cio-item-company"   class="tab-btn2"         onclick="setViewType('company')" id-avail-hide="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          Company
+        </button>
+        <button id="cio-item-inventory" class="tab-btn2"         onclick="setViewType('inventory')" id-avail-hide="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          Inventory
+        </button>
       </div>
     </div>
 
@@ -600,21 +594,19 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
 
       <!-- ══ HISTORY VIEW ══ -->
       <div id="cio-view-history-panel">
-
-        <!-- ── EMPLOYEE sub-view ── -->
-        <div id="hist-sub-employee" class="data-table-card">
+        <div class="data-table-card">
           <div class="data-table-header" style="flex-wrap:wrap;gap:8px;">
             <div class="data-table-title">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              <span style="margin-left:6px;">Employee List</span>
-              <span class="badge purple" style="margin-left:6px;" id="cio-count-badge">0</span>
+              Employee History List
+              <span class="badge purple" id="cio-count-badge">0 records</span>
             </div>
-            <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;flex-wrap:nowrap;">
               <div class="search-wrap">
                 <svg class="search-ico" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <input class="search-input" id="cio-search" type="text" placeholder="Name, Emp ID…" oninput="applyCheckinFilter()" style="width:150px;height:30px;"/>
               </div>
-              <button class="tb-btn sm icon-only" onclick="clearCheckinFilter()" title="Clear filters" style="height:30px;width:30px;padding:0;">
+              <button class="tb-btn sm icon-only" onclick="clearCheckinFilter()" title="Clear" style="height:30px;width:30px;padding:0;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
               <select class="rpp-select" id="cio-rpp" onchange="cioRppChange()" style="height:30px;">
@@ -628,182 +620,83 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
             <table class="data-table">
               <thead>
                 <tr>
-                  <th style="width:75px;">Emp ID</th>
-                  <th style="width:170px;">Name</th>
+                  <th style="width:80px;">Emp ID</th>
+                  <th style="width:180px;">Name</th>
                   <th style="width:110px;">Phone</th>
-                  <th style="width:80px;">Status</th>
-                  <th style="width:95px;">Bike Assigned</th>
-                  <th style="width:95px;">SIM Assigned</th>
-                  <th style="width:110px;">Company</th>
-                  <th style="width:130px;">Inventory</th>
-                  <th style="width:75px;">History</th>
+                  <th style="width:90px;">HR Status</th>
+                  <th style="width:100px;">Assigned Bike</th>
+                  <th style="width:100px;">Assigned SIM</th>
+                  <th style="width:120px;">Company</th>
+                  <th style="width:140px;">Inventory</th>
+                  <th style="width:70px;">History</th>
                 </tr>
               </thead>
               <tbody id="cio-card-grid"></tbody>
             </table>
           </div>
           <div class="pagination-bar">
-            <div class="pagination-info" id="cio-page-info">— employees</div>
+            <div class="pagination-info" id="cio-page-info">— records</div>
             <div class="pagination-controls" id="cio-page-ctrl"></div>
           </div>
         </div>
+      </div>
 
-        <!-- ── BIKE HISTORY sub-view ── -->
-        <div id="hist-sub-bike" class="data-table-card" style="display:none;">
-          <div class="data-table-header" style="flex-wrap:wrap;gap:8px;">
-            <div class="data-table-title">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 0 0-1 1v6H8l-3.5-5H4"/></svg>
-              <span style="margin-left:6px;">Bike Check-In / Check-Out History</span>
-              <span class="badge orange" style="margin-left:6px;" id="bike-hist-count">0</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;">
-              <div class="search-wrap">
-                <svg class="search-ico" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input class="search-input" id="bike-hist-search" type="text" placeholder="Bike ID, Rider…" oninput="renderBikeHistTable()" style="width:150px;height:30px;"/>
-              </div>
-              <button class="tb-btn sm icon-only" onclick="document.getElementById('bike-hist-search').value='';renderBikeHistTable();" title="Clear" style="height:30px;width:30px;padding:0;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
-              <select class="rpp-select" id="bike-hist-rpp" onchange="renderBikeHistTable()" style="height:30px;">
-                <option value="20">20/pg</option>
-                <option value="50" selected>50/pg</option>
-                <option value="100">100/pg</option>
-              </select>
-            </div>
-          </div>
-          <div class="data-table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th style="width:40px;">#</th>
-                  <th style="width:100px;">Bike ID</th>
-                  <th style="width:90px;">Plate No</th>
-                  <th style="width:160px;">Rider / Employee</th>
-                  <th style="width:140px;">Check Out</th>
-                  <th style="width:140px;">Check In</th>
-                  <th style="width:80px;">Status</th>
-                  <th style="width:60px;">Detail</th>
-                </tr>
-              </thead>
-              <tbody id="bike-hist-tbody"></tbody>
-            </table>
-          </div>
-          <div class="pagination-bar">
-            <div class="pagination-info" id="bike-hist-info">— records</div>
-            <div class="pagination-controls" id="bike-hist-ctrl"></div>
-          </div>
-        </div>
-
-        <!-- ── SIM HISTORY sub-view ── -->
-        <div id="hist-sub-sim" class="data-table-card" style="display:none;">
-          <div class="data-table-header" style="flex-wrap:wrap;gap:8px;">
-            <div class="data-table-title">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-              <span style="margin-left:6px;">SIM Check-In / Check-Out History</span>
-              <span class="badge purple" style="margin-left:6px;" id="sim-hist-count">0</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;">
-              <div class="search-wrap">
-                <svg class="search-ico" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input class="search-input" id="sim-hist-search" type="text" placeholder="SIM ID, Rider…" oninput="renderSimHistTable()" style="width:150px;height:30px;"/>
-              </div>
-              <button class="tb-btn sm icon-only" onclick="document.getElementById('sim-hist-search').value='';renderSimHistTable();" title="Clear" style="height:30px;width:30px;padding:0;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
-              <select class="rpp-select" id="sim-hist-rpp" onchange="renderSimHistTable()" style="height:30px;">
-                <option value="20">20/pg</option>
-                <option value="50" selected>50/pg</option>
-                <option value="100">100/pg</option>
-              </select>
-            </div>
-          </div>
-          <div class="data-table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th style="width:40px;">#</th>
-                  <th style="width:100px;">SIM ID</th>
-                  <th style="width:110px;">SIM Number</th>
-                  <th style="width:80px;">Network</th>
-                  <th style="width:160px;">Rider / Employee</th>
-                  <th style="width:140px;">Check Out</th>
-                  <th style="width:140px;">Check In</th>
-                  <th style="width:80px;">Status</th>
-                  <th style="width:60px;">Detail</th>
-                </tr>
-              </thead>
-              <tbody id="sim-hist-tbody"></tbody>
-            </table>
-          </div>
-          <div class="pagination-bar">
-            <div class="pagination-info" id="sim-hist-info">— records</div>
-            <div class="pagination-controls" id="sim-hist-ctrl"></div>
-          </div>
-        </div>
-
-      </div><!-- /cio-view-history-panel -->
-
-      <!-- ══ EMPLOYEE HISTORY MODAL (from History button in Employee row) ══ -->
+      <!-- ══ INLINE HISTORY MODAL (Employee CIO History) ══ -->
       <div class="modal-backdrop" id="modal-emp-history">
-        <div class="modal" style="max-width:740px;">
+        <div class="modal" style="max-width:720px;">
           <div class="modal-header">
             <h2 style="display:flex;align-items:center;gap:8px;">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <span id="emp-hist-modal-title" style="margin-left:4px;">Employee History</span>
+              <span id="emp-hist-modal-title">Employee History</span>
             </h2>
             <button class="tb-btn icon-only sm" onclick="closeModal('modal-emp-history')">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
-          <div class="modal-body" style="padding-top:14px;">
+          <div class="modal-body">
             <!-- Employee info strip -->
-            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
-              <div id="emp-hist-avatar" class="avatar-sm" style="width:40px;height:40px;font-size:15px;flex-shrink:0;"></div>
-              <div style="flex:1;min-width:0;">
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px;" id="emp-hist-strip">
+              <div id="emp-hist-avatar" class="avatar-sm" style="width:38px;height:38px;font-size:14px;"></div>
+              <div>
                 <div style="font-weight:700;font-size:14px;color:var(--text);" id="emp-hist-name">—</div>
-                <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px;" id="emp-hist-id">—</div>
+                <div style="font-size:11px;color:var(--text3);font-family:var(--mono);" id="emp-hist-id">—</div>
               </div>
-              <!-- Current assignment badges -->
-              <div id="emp-hist-badges" style="display:flex;flex-wrap:wrap;gap:5px;flex-shrink:0;"></div>
             </div>
-
-            <!-- Tabs -->
-            <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
-              <button class="tab-btn active" id="ehtab-bike" onclick="switchEmpHistTab('bike')" style="display:flex;align-items:center;gap:5px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 0 0-1 1v6H8l-3.5-5H4"/></svg>
-                <span>Bike History</span>
+            <!-- History tabs -->
+            <div style="display:flex;gap:6px;margin-bottom:12px;" id="emp-hist-tabs">
+              <button class="tab-btn active" id="ehtab-company" onclick="switchEmpHistTab('company')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                Company / Route
               </button>
-              <button class="tab-btn" id="ehtab-sim" onclick="switchEmpHistTab('sim')" style="display:flex;align-items:center;gap:5px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-                <span>SIM History</span>
+              <button class="tab-btn" id="ehtab-bike" onclick="switchEmpHistTab('bike')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/></svg>
+                Bike History
+              </button>
+              <button class="tab-btn" id="ehtab-sim" onclick="switchEmpHistTab('sim')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/></svg>
+                SIM History
               </button>
             </div>
-
             <!-- History table -->
-            <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);max-height:400px;overflow-y:auto;">
-              <table class="data-table" style="min-width:520px;">
+            <div style="overflow-x:auto;max-height:380px;border:1px solid var(--border);border-radius:var(--radius);">
+              <table class="data-table" id="emp-hist-table">
                 <thead id="emp-hist-thead">
                   <tr>
-                    <th style="width:36px;">#</th>
-                    <th>Asset ID</th>
-                    <th>Rider / Emp ID</th>
+                    <th style="width:50px;">#</th>
+                    <th>Item</th>
                     <th>Check Out</th>
                     <th>Check In</th>
-                    <th style="width:72px;">Status</th>
-                    <th style="width:52px;">Detail</th>
+                    <th style="width:70px;">Detail</th>
                   </tr>
                 </thead>
                 <tbody id="emp-hist-tbody">
-                  <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3);">Loading…</td></tr>
+                  <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text3);">Loading…</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
           <div class="modal-footer">
-            <button class="tb-btn sm" onclick="closeModal('modal-emp-history')" style="display:flex;align-items:center;gap:5px;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              <span>Close</span>
-            </button>
+            <button class="tb-btn sm" onclick="closeModal('modal-emp-history')">Close</button>
           </div>
         </div>
       </div>
