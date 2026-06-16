@@ -206,7 +206,7 @@ select option { background: var(--surface2); color: var(--text); }
 #detail-panel.open { pointer-events: auto; }
 .dp-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.55); backdrop-filter: blur(3px); opacity: 0; transition: opacity .28s; }
 #detail-panel.open .dp-backdrop { opacity: 1; }
-.dp-sheet { position: relative; width: min(440px, 100%); height: 100dvh; max-height: 100dvh; background: var(--bg2); border-left: 1px solid var(--border2); display: flex; flex-direction: column; transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); box-shadow: -8px 0 40px rgba(0,0,0,.4); overflow: hidden; }
+.dp-sheet { position: relative; width: min(440px, 100%); height: 100dvh; max-height: 95dvh; background: var(--bg2); border-left: 1px solid var(--border2); display: flex; flex-direction: column; transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); box-shadow: -8px 0 40px rgba(0,0,0,.4); overflow: hidden; }
 #detail-panel.open .dp-sheet { transform: translateX(0); }
 .dp-header { padding: 20px 22px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-shrink: 0; background: var(--bg2); }
 .dp-header-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
