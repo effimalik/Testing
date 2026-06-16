@@ -104,6 +104,296 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 @media (max-width: 600px) { .page-desc { display: none; } .page-divider { padding-top: 4px; margin-bottom: 10px; } }
 
 
+
+
+/* =====================================================
+   AP2 RESPONSIVE FIX PACK
+   Fixes:
+   - Edit button hidden on Mobile/iPad
+   - Footer buttons cut off
+   - Modal overflow
+   - Detail panel overflow
+   - Dynamic viewport sizing
+   - Safe area support
+===================================================== */
+
+/* ===== DETAIL PANEL ===== */
+
+.dp-sheet{
+    width:min(440px,100%);
+    max-width:100vw;
+    height:100dvh;
+    max-height:100dvh;
+
+    display:flex;
+    flex-direction:column;
+
+    overflow:hidden;
+}
+
+.dp-body{
+    flex:1;
+    min-height:0;
+
+    overflow-y:auto;
+    overflow-x:hidden;
+
+    padding-bottom:12px;
+
+    -webkit-overflow-scrolling:touch;
+}
+
+/* ===== FOOTER FIX ===== */
+
+.dp-footer{
+    position:sticky;
+    bottom:0;
+
+    z-index:50;
+
+    background:var(--bg2);
+
+    flex-shrink:0;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex-wrap:wrap;
+
+    gap:8px;
+
+    padding:12px;
+    padding-bottom:calc(12px + env(safe-area-inset-bottom));
+
+    border-top:1px solid var(--border);
+}
+
+/* footer buttons */
+
+.dp-footer .dp-btn{
+    min-height:40px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    white-space:nowrap;
+}
+
+/* ===== MODAL FIX ===== */
+
+.modal-backdrop{
+    padding:12px;
+    box-sizing:border-box;
+}
+
+.modal{
+    width:min(96vw,760px);
+
+    max-width:96vw;
+    max-height:95dvh;
+
+    display:flex;
+    flex-direction:column;
+
+    overflow:hidden;
+}
+
+.modal-body{
+    flex:1;
+    min-height:0;
+
+    overflow-y:auto;
+    overflow-x:hidden;
+
+    -webkit-overflow-scrolling:touch;
+}
+
+.modal-footer{
+    flex-shrink:0;
+
+    display:flex;
+    flex-wrap:wrap;
+
+    gap:8px;
+
+    padding-bottom:calc(12px + env(safe-area-inset-bottom));
+}
+
+/* ===== TABLE ACTIONS ===== */
+
+.emp-table td:last-child{
+    overflow:visible !important;
+}
+
+.emp-table td:last-child > div{
+    flex-wrap:wrap !important;
+}
+
+/* ===== LARGE TABLET ===== */
+
+@media (max-width:1024px){
+
+    .dp-sheet{
+        width:100%;
+        max-width:100%;
+    }
+
+    .dp-footer{
+        display:grid;
+        grid-template-columns:repeat(3,1fr);
+    }
+
+    .dp-footer .dp-btn{
+        width:100%;
+    }
+
+    .modal{
+        width:95vw;
+    }
+}
+
+/* ===== TABLET ===== */
+
+@media (max-width:768px){
+
+    .dp-header{
+        padding:14px;
+    }
+
+    .dp-section{
+        padding:14px;
+    }
+
+    .dp-field{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:4px;
+    }
+
+    .dp-fl{
+        width:auto;
+    }
+
+    .dp-fv{
+        text-align:left;
+        width:100%;
+    }
+
+    .dp-ex-grid{
+        grid-template-columns:repeat(2,1fr);
+    }
+
+    .modal{
+        width:96vw;
+        max-height:96dvh;
+    }
+
+    .modal-footer{
+        justify-content:center;
+    }
+}
+
+/* ===== MOBILE ===== */
+
+@media (max-width:600px){
+
+    .dp-footer{
+        grid-template-columns:1fr;
+    }
+
+    .dp-footer .dp-btn{
+        width:100%;
+    }
+
+    .modal-footer .tb-btn{
+        width:100%;
+        justify-content:center;
+    }
+
+    .dp-name{
+        font-size:14px;
+    }
+
+    .dp-sub{
+        font-size:11px;
+    }
+
+    .dp-header-actions{
+        gap:6px;
+    }
+
+    .dp-ex-grid{
+        grid-template-columns:repeat(2,1fr);
+    }
+}
+
+/* ===== SMALL MOBILE ===== */
+
+@media (max-width:480px){
+
+    .dp-header{
+        padding:12px;
+    }
+
+    .dp-section{
+        padding:12px;
+    }
+
+    .dp-footer{
+        padding:10px;
+        padding-bottom:calc(10px + env(safe-area-inset-bottom));
+    }
+
+    .dp-btn{
+        font-size:12px;
+    }
+
+    .modal{
+        width:98vw;
+        max-height:98dvh;
+    }
+}
+
+/* ===== IOS SAFETY ===== */
+
+@supports(padding:max(0px)){
+
+    .dp-footer{
+        padding-bottom:max(
+            12px,
+            env(safe-area-inset-bottom)
+        );
+    }
+
+    .modal-footer{
+        padding-bottom:max(
+            12px,
+            env(safe-area-inset-bottom)
+        );
+    }
+}
+
+/* ===== SCROLLBAR ===== */
+
+.dp-body::-webkit-scrollbar,
+.modal-body::-webkit-scrollbar{
+    width:6px;
+}
+
+.dp-body::-webkit-scrollbar-thumb,
+.modal-body::-webkit-scrollbar-thumb{
+    background:var(--border2);
+    border-radius:20px;
+}
+
+
+
+
+
+
+  
+
 /* ── Toolbar ── */
 .emp-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; width: 100%; }
 .search-group { display: flex; align-items: center; gap: 6px; flex: 1 1 180px; min-width: 140px; max-width: 100%; width: 100%; }
