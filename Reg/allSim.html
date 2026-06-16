@@ -85,32 +85,77 @@
   --shadow:0 1px 3px rgba(0,0,0,.45); --shadow-md:0 4px 16px rgba(0,0,0,.5); --shadow-lg:0 8px 32px rgba(0,0,0,.6);
 }
 
-html, body { height: 100%; }
-body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: clamp(12px, 1.5vw, 15px); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: clamp(12px, 1.5vw, 15px); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow: hidden; }
 
-/* ── Page wrapper ── */
-.page { width: 100%; max-width: 100%; margin: 0 auto; padding: clamp(10px, 2vw, 24px) clamp(10px, 2.5vw, 24px); box-sizing: border-box; overflow-x: hidden; }
+/* ── Page wrapper — fills viewport, clips overflow ── */
+.page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100dvh;
+  min-height: 0;
+  margin: 0 auto;
+  padding: clamp(8px, 2vw, 24px) clamp(10px, 2.5vw, 24px);
+  box-sizing: border-box;
+  overflow: hidden;
+}
 
-/* ── Page header ── */
-.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 12px; }
-.page-title { font-size: clamp(16px, 2.5vw, 22px); font-weight: 700; display: flex; align-items: center; gap: 10px; color: var(--text); }
-.page-title i { color: var(--accent); font-size: clamp(18px, 3vw, 26px); line-height: 1; }
+/* ── Page header — title+desc left, search+filters right, single row ── */
+.page-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px clamp(10px, 2vw, 20px);
+  flex-shrink: 0;
+  padding-bottom: clamp(8px, 1.4vw, 12px);
+  margin-bottom: clamp(8px, 1.4vw, 12px);
+  border-bottom: 1.5px solid var(--border);
+}
+.page-header-text {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 160px;
+}
+.page-title { font-size: clamp(15px, 2.2vw, 22px); font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--text); flex-shrink: 0; white-space: nowrap; }
+.page-title i { color: var(--accent); font-size: clamp(17px, 2.6vw, 26px); line-height: 1; }
+.page-desc {
+  font-size: clamp(11px, 1.1vw, 13px);
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding-left: 12px;
+  border-left: 1.5px solid var(--border);
+  overflow: hidden;
+}
+.page-desc i { color: var(--accent); font-size: clamp(14px, 1.6vw, 17px); flex-shrink: 0; line-height: 1; }
+.page-desc span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 760px) { .page-desc { display: none; } }
 
-/* ── Page divider & description ── */
-.page-divider { border-top: 1.5px solid var(--border); margin-bottom: 18px; padding-top: 10px; }
-.page-desc { font-size: clamp(11px, 1.2vw, 13px); color: var(--text3); display: flex; align-items: center; gap: 7px; }
-.page-desc i { color: var(--accent); font-size: clamp(14px, 1.8vw, 17px); flex-shrink: 0; line-height: 1; }
-@media (max-width: 600px) { .page-desc { display: none; } .page-divider { padding-top: 4px; margin-bottom: 10px; } }
-
-/* ── Toolbar ── */
-.sim-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; width: 100%; }
-.search-group { display: flex; align-items: center; gap: 6px; flex: 1 1 180px; min-width: 140px; max-width: 100%; width: 100%; }
-.search-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: clamp(30px,4vw,36px); height: clamp(30px,4vw,36px); border-radius: var(--radius); border: 1px solid var(--border2); background: var(--surface); color: var(--text3); flex-shrink: 0; cursor: default; font-size: clamp(15px,2vw,18px); }
-.search-input { flex: 1; padding: clamp(6px,1vw,8px) clamp(8px,1.2vw,12px); border: 1px solid var(--border2); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: var(--font); font-size: clamp(11px,1.3vw,13px); transition: border .18s, box-shadow .18s; min-width: 0; width: 100%; }
+/* ── Header controls — search + filter pills, right-aligned ── */
+.page-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  margin-left: auto;
+  max-width: 100%;
+}
+.search-group { display: flex; align-items: center; gap: 6px; flex: 1 1 140px; min-width: 90px; max-width: 240px; }
+.search-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: clamp(28px,4vw,34px); height: clamp(28px,4vw,34px); border-radius: var(--radius); border: 1px solid var(--border2); background: var(--surface); color: var(--text3); flex-shrink: 0; cursor: default; font-size: clamp(14px,2vw,17px); }
+.search-input { flex: 1; padding: clamp(6px,1vw,7px) clamp(8px,1.2vw,11px); border: 1px solid var(--border2); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: var(--font); font-size: clamp(11px,1.3vw,13px); transition: border .18s, box-shadow .18s; min-width: 0; width: 100%; }
 .search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
 .search-input::placeholder { color: var(--text3); }
-.filter-pills { display: flex; gap: 5px; flex-shrink: 0; flex-wrap: wrap; }
-.filter-btn { display: inline-flex; align-items: center; gap: 5px; padding: clamp(5px,.8vw,7px) clamp(10px,1.2vw,14px); border-radius: 20px; border: 1.5px solid var(--border2); background: var(--surface); color: var(--text2); font-family: var(--font); font-size: clamp(10px,1.1vw,12px); font-weight: 600; cursor: pointer; transition: all .18s; white-space: nowrap; }
+.filter-pills { display: flex; gap: 5px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.filter-btn { display: inline-flex; align-items: center; gap: 5px; padding: clamp(5px,.8vw,7px) clamp(9px,1.2vw,13px); border-radius: 20px; border: 1.5px solid var(--border2); background: var(--surface); color: var(--text2); font-family: var(--font); font-size: clamp(10px,1.1vw,12px); font-weight: 600; cursor: pointer; transition: all .18s; white-space: nowrap; flex-shrink: 0; }
 .filter-btn i { font-size: 15px; flex-shrink: 0; line-height: 1; display: inline-flex; align-items: center; }
 .filter-btn:hover { background: var(--surface2); color: var(--text); }
 .filter-btn.active    { background: var(--surface2); color: var(--text); border-color: var(--border2); box-shadow: 0 0 0 2px var(--accent); }
@@ -123,10 +168,54 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .filter-btn.sim-lost.active     { background: var(--red-dim);    box-shadow: 0 0 0 2px var(--red); }
 .filter-btn.sim-suspended { border-color: var(--amber); color: var(--amber); }
 .filter-btn.sim-suspended.active { background: var(--amber-dim); box-shadow: 0 0 0 2px var(--amber); }
+@media (max-width: 760px) {
+  .filter-btn span { display: none; }
+  .filter-btn { padding: 7px 8px; gap: 0; }
+  .filter-btn i { font-size: 16px; }
+  .search-group { flex: 0 1 120px; min-width: 80px; max-width: 150px; }
+}
+@media (max-width: 420px) {
+  .search-group { flex: 0 1 90px; min-width: 60px; max-width: 110px; }
+  .filter-btn { padding: 6px 7px; }
+}
 
-/* ── Table ── */
-.sim-table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); overflow: hidden; width: 100%; }
-.sim-table-wrap { overflow-x: hidden; overflow-y: auto; max-height: calc(100vh - 260px); min-height: 200px; -webkit-overflow-scrolling: touch; width: 100%; }
+/* ── Table card — flex column so footer is always pinned ── */
+.sim-table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.sim-table-wrap { overflow-x: hidden; overflow-y: auto; flex: 1 1 auto; min-height: 60px; -webkit-overflow-scrolling: touch; width: 100%; }
+
+/* ── Footer / pagination bar ── */
+.sim-block-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: clamp(7px,1.2vw,9px) clamp(10px,1.6vw,14px);
+  border-top: 1px solid var(--border);
+  font-size: clamp(10.5px,1.1vw,12px);
+  color: var(--text3);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  background: var(--surface);
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.sim-block-nav-pages { display: flex; align-items: center; gap: 4px; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.sim-block-nav-pages::-webkit-scrollbar { display: none; }
+@media (max-width: 600px) {
+  .sim-block-nav { justify-content: center; text-align: center; }
+  .sim-block-nav-pages { order: 3; width: 100%; justify-content: center; }
+}
 .sim-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: clamp(11px, 1.3vw, 13px); }
 .sim-table thead th { position: sticky; top: 0; z-index: 2; background: var(--bg3); text-align: left; font-size: clamp(9px, 1vw, 10.5px); font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; padding: clamp(8px,1.2vw,11px) clamp(8px,1.2vw,14px); border-bottom: 2px solid var(--border); overflow: hidden; text-overflow: ellipsis; }
 .sim-table td { padding: clamp(8px,1.2vw,11px) clamp(8px,1.2vw,14px); border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; }
@@ -231,10 +320,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
   .sim-table th:nth-child(3), .sim-table td:nth-child(3) { display: none; }
 }
 @media (max-width: 768px) {
-  .sim-toolbar { flex-wrap: wrap; gap: 6px; }
   .filter-pills { flex-wrap: wrap; }
-  .filter-btn { padding: 5px 10px; font-size: 11px; }
-  .sim-table-wrap { max-height: calc(100dvh - 280px); }
+  .sim-table-wrap { min-height: 40px; }
   .dp-sheet { width: 100%; border-left: none; }
   .dp-fl { width: 100px; }
 }
@@ -246,6 +333,11 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
   .sim-table th:nth-child(5), .sim-table td:nth-child(5) { width: 30%; }
   .row-btn span { display: none; }
   .row-btn { padding: 5px 7px; gap: 0; }
+}
+@media (max-height: 560px) {
+  .page-header { padding-bottom: 6px; margin-bottom: 6px; }
+  .page-desc { display: none; }
+  .sim-table-wrap { min-height: 40px; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>
@@ -266,29 +358,28 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 
 <div class="page">
 
-  <!-- Page header -->
+  <!-- Page header: heading + description (left), search + filters (right) -->
   <div class="page-header">
-    <div class="page-title">
-      <i class="ti ti-sim-card"></i>
-      SIM Cards
+    <div class="page-header-text">
+      <div class="page-title">
+        <i class="ti ti-sim-card"></i>
+        SIM Cards
+      </div>
+      <p class="page-desc"><i class="ti ti-info-circle"></i><span>Browse, search and manage all SIM cards — view SIM numbers, companies, and filter by status.</span></p>
     </div>
-  </div>
-  <div class="page-divider">
-    <p class="page-desc"><i class="ti ti-info-circle"></i> Browse, search and manage all SIM cards — view SIM numbers, companies, and filter by status (Active, Inactive, Lost, Suspended).</p>
-  </div>
 
-  <!-- Toolbar -->
-  <div class="sim-toolbar">
-    <div class="search-group">
-      <span class="search-icon-btn" aria-hidden="true"><i class="ti ti-search"></i></span>
-      <input class="search-input" type="text" id="sim-search-input" placeholder="Search SIM ID, number, company, status…" oninput="filterSims(this.value)" />
-    </div>
-    <div class="filter-pills">
-      <button class="filter-btn active"         data-filter="all"       onclick="setFilter('all')"><i class="ti ti-layout-list"></i> All</button>
-      <button class="filter-btn sim-active"     data-filter="active"    onclick="setFilter('active')"><i class="ti ti-circle-check"></i> Active</button>
-      <button class="filter-btn sim-inactive"   data-filter="inactive"  onclick="setFilter('inactive')"><i class="ti ti-circle-off"></i> Inactive</button>
-      <button class="filter-btn sim-lost"       data-filter="lost"      onclick="setFilter('lost')"><i class="ti ti-alert-circle"></i> Lost</button>
-      <button class="filter-btn sim-suspended"  data-filter="suspended" onclick="setFilter('suspended')"><i class="ti ti-clock-pause"></i> Suspended</button>
+    <div class="page-header-controls">
+      <div class="search-group">
+        <span class="search-icon-btn" aria-hidden="true"><i class="ti ti-search"></i></span>
+        <input class="search-input" type="text" id="sim-search-input" placeholder="Search SIM ID, number, company, status…" oninput="filterSims(this.value)" />
+      </div>
+      <div class="filter-pills">
+        <button class="filter-btn active"         data-filter="all"       onclick="setFilter('all')"><i class="ti ti-layout-list"></i><span> All</span></button>
+        <button class="filter-btn sim-active"     data-filter="active"    onclick="setFilter('active')"><i class="ti ti-circle-check"></i><span> Active</span></button>
+        <button class="filter-btn sim-inactive"   data-filter="inactive"  onclick="setFilter('inactive')"><i class="ti ti-circle-off"></i><span> Inactive</span></button>
+        <button class="filter-btn sim-lost"       data-filter="lost"      onclick="setFilter('lost')"><i class="ti ti-alert-circle"></i><span> Lost</span></button>
+        <button class="filter-btn sim-suspended"  data-filter="suspended" onclick="setFilter('suspended')"><i class="ti ti-clock-pause"></i><span> Suspended</span></button>
+      </div>
     </div>
   </div>
 
@@ -541,33 +632,70 @@ function buildSimRow(s, idx) {
 }
 
 /* ═══════════ VIRTUAL-SCROLL ENGINE ═══════════ */
-function _buildVS(rows) {
+const SLICE_SZ = 200;
+let _currentBlock = 0;
+
+function _renderSimBlockNav(total, blockIdx) {
+  const tableCard = document.querySelector('.sim-table-card');
+  if (!tableCard) return;
+
+  let nav = document.getElementById('sim-block-nav');
+  const totalBlocks = Math.ceil(total / SLICE_SZ);
+
+  if (!nav) {
+    nav = document.createElement('div');
+    nav.id = 'sim-block-nav';
+    nav.className = 'sim-block-nav';
+    tableCard.appendChild(nav);
+  }
+
+  if (!total || totalBlocks <= 1) { nav.innerHTML = total ? `<span style="color:var(--text3);">${total} SIM${total!==1?'s':''}</span>` : ''; return; }
+
+  const start = blockIdx * SLICE_SZ + 1;
+  const end   = Math.min((blockIdx + 1) * SLICE_SZ, total);
+  const btnStyle = (dis, act) => `flex-shrink:0;padding:4px 11px;font-size:11.5px;border-radius:6px;border:1px solid var(--border);background:${act?'var(--accent)':'var(--surface)'};color:${act?'#fff':'var(--text2)'};cursor:${dis?'default':'pointer'};opacity:${dis?'.4':'1'};font-family:var(--font);`;
+
+  let pageButtons = '';
+  for (let b = 0; b < totalBlocks; b++) {
+    pageButtons += `<button onclick="_goSimBlock(${b})" style="${btnStyle(false, b===blockIdx)}">${b+1}</button>`;
+  }
+
+  nav.innerHTML = `
+    <span style="color:var(--text3);white-space:nowrap;">${start}–${end} <span style="color:var(--text3);opacity:.6;">of</span> ${total}</span>
+    <div class="sim-block-nav-pages">
+      <button onclick="_goSimBlock(${blockIdx-1})" style="${btnStyle(blockIdx===0,false)}">‹</button>
+      ${pageButtons}
+      <button onclick="_goSimBlock(${blockIdx+1})" style="${btnStyle(blockIdx>=totalBlocks-1,false)}">›</button>
+    </div>
+    <span style="color:var(--text3);font-size:11px;white-space:nowrap;">Block ${blockIdx+1}/${totalBlocks} · ${SLICE_SZ} rows</span>`;
+}
+
+function _goSimBlock(blockIdx) {
+  const filtered = getFilteredSims(sims);
+  const totalBlocks = Math.ceil(filtered.length / SLICE_SZ);
+  if (blockIdx < 0 || blockIdx >= totalBlocks) return;
+  _currentBlock = blockIdx;
+  const start = blockIdx * SLICE_SZ;
+  const block = filtered.slice(start, start + SLICE_SZ);
+  _buildVS_block(block, filtered.length, blockIdx);
+  document.querySelector('.sim-table-wrap')?.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function _buildVS_block(block, total, blockIdx) {
   const wrap  = document.querySelector('.sim-table-wrap');
   const tbody = document.getElementById('sim-tbody');
   if (!wrap || !tbody) return;
 
   if (_vsInstance) { _vsInstance.destroy(); _vsInstance = null; }
 
-  /* ── footer count ── */
-  let nav = document.getElementById('sim-block-nav');
-  if (!nav) {
-    nav = document.createElement('div');
-    nav.id = 'sim-block-nav';
-    nav.style.cssText = 'padding:9px 14px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);';
-    document.querySelector('.sim-table-card')?.appendChild(nav);
-  }
-
-  if (!rows.length) {
+  if (!block.length) {
     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;">
       <div style="color:var(--text3);display:flex;flex-direction:column;align-items:center;gap:10px;">
         <i class="ti ti-sim-card-off" style="font-size:36px;opacity:.4;"></i>
         <span style="font-size:13px;">No SIM cards match this filter</span>
       </div></td></tr>`;
-    nav.innerHTML = '';
-    return;
+    _renderSimBlockNav(0, 0); return;
   }
-
-  nav.innerHTML = `<span>${rows.length} SIM${rows.length !== 1 ? 's' : ''}</span>`;
 
   tbody.innerHTML = '';
   const _trTop = document.createElement('tr'); _trTop.className = 'vs-spacer-top';
@@ -580,18 +708,24 @@ function _buildVS(rows) {
   tbody.appendChild(_trBot);
 
   let _startIdx = 0;
+  const baseIdx = blockIdx * SLICE_SZ;
 
   function _setSpacers(start) {
     tdT.style.height = (start * ROW_H) + 'px';
-    tdB.style.height = (Math.max(0, rows.length - start - VS_ROWS) * ROW_H) + 'px';
+    tdB.style.height = (Math.max(0, block.length - start - VS_ROWS) * ROW_H) + 'px';
   }
 
   function _paint(start) {
-    _startIdx = Math.max(0, Math.min(start, Math.max(0, rows.length - VS_ROWS)));
-    const visible = rows.slice(_startIdx, _startIdx + VS_ROWS);
+    _startIdx = Math.max(0, Math.min(start, Math.max(0, block.length - VS_ROWS)));
+    const visible = block.slice(_startIdx, _startIdx + VS_ROWS);
     tbody.querySelectorAll('tr.vs-row').forEach(r => r.remove());
-    _trBot.insertAdjacentHTML('beforebegin', visible.map((s, i) => buildSimRow(s, _startIdx + i)).join(''));
+    _trBot.insertAdjacentHTML('beforebegin', visible.map((s, i) => buildSimRow(s, baseIdx + _startIdx + i)).join(''));
     _setSpacers(_startIdx);
+  }
+
+  function _measureRowH() {
+    const firstRow = tbody.querySelector('tr.vs-row');
+    if (firstRow) ROW_H = Math.max(40, firstRow.getBoundingClientRect().height || ROW_H);
   }
 
   function _onScroll() {
@@ -601,17 +735,23 @@ function _buildVS(rows) {
 
   wrap.addEventListener('scroll', _onScroll, { passive: true });
   _paint(0);
-  requestAnimationFrame(() => {
-    const firstRow = tbody.querySelector('tr.vs-row');
-    if (firstRow) ROW_H = Math.max(40, firstRow.getBoundingClientRect().height || ROW_H);
-  });
+  requestAnimationFrame(_measureRowH);
 
   _vsInstance = { destroy() { wrap.removeEventListener('scroll', _onScroll); } };
+
+  _renderSimBlockNav(total, blockIdx);
+}
+
+function _buildVS(rows) {
+  _currentBlock = 0;
+  _buildVS_block(rows.slice(0, SLICE_SZ), rows.length, 0);
 }
 
 /* ── Main render entry ── */
 function renderSimTable(list) {
-  _buildVS(getFilteredSims(list));
+  const filtered = getFilteredSims(list);
+  _currentBlock = 0;
+  _buildVS_block(filtered.slice(0, SLICE_SZ), filtered.length, 0);
 }
 
 function filterSims(q) {
