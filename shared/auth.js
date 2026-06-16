@@ -1,6 +1,6 @@
 
 /* ═══════════════════════════════════════════════════════════════
-   auth.js — AdminPro UAE  v3.0
+   auth.js — FleetFlow Pro  v3.0
    Server-validated sessions · absolute + inactivity expiry · secure logout
    LOAD FIRST on every page (before dataLayer.js and any page JS)
 
