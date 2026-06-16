@@ -597,37 +597,106 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
         <div class="data-table-card">
           <div class="data-table-header" style="flex-wrap:wrap;gap:8px;">
             <div class="data-table-title">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              History
-              <span class="badge blue" id="cio-count-badge">0 records</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              Employee History List
+              <span class="badge purple" id="cio-count-badge">0 records</span>
             </div>
             <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;flex-wrap:nowrap;">
               <div class="search-wrap">
                 <svg class="search-ico" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input class="search-input" id="cio-search" type="text" placeholder="Rider, Asset ID…" oninput="applyCheckinFilter()" style="width:150px;height:30px;"/>
+                <input class="search-input" id="cio-search" type="text" placeholder="Name, Emp ID…" oninput="applyCheckinFilter()" style="width:150px;height:30px;"/>
               </div>
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text3);flex-shrink:0;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              <input type="date" class="filter-input" id="cio-from" onchange="applyCheckinFilter()" style="width:108px;height:30px;"/>
-              <span style="color:var(--text3);font-size:11px;">–</span>
-              <input type="date" class="filter-input" id="cio-to" onchange="applyCheckinFilter()" style="width:108px;height:30px;"/>
               <button class="tb-btn sm icon-only" onclick="clearCheckinFilter()" title="Clear" style="height:30px;width:30px;padding:0;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
               <select class="rpp-select" id="cio-rpp" onchange="cioRppChange()" style="height:30px;">
-                <option value="10">10/pg</option>
                 <option value="20">20/pg</option>
-                <option value="25" selected>25/pg</option>
-                <option value="50">50/pg</option>
+                <option value="50" selected>50/pg</option>
+                <option value="100">100/pg</option>
               </select>
             </div>
           </div>
-          <!-- 2-per-row card grid inside a scrollable area -->
-          <div style="overflow-y:auto;max-height:520px;">
-            <div id="cio-card-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--border);min-height:80px;"></div>
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width:80px;">Emp ID</th>
+                  <th style="width:180px;">Name</th>
+                  <th style="width:110px;">Phone</th>
+                  <th style="width:90px;">HR Status</th>
+                  <th style="width:100px;">Assigned Bike</th>
+                  <th style="width:100px;">Assigned SIM</th>
+                  <th style="width:120px;">Company</th>
+                  <th style="width:140px;">Inventory</th>
+                  <th style="width:70px;">History</th>
+                </tr>
+              </thead>
+              <tbody id="cio-card-grid"></tbody>
+            </table>
           </div>
           <div class="pagination-bar">
             <div class="pagination-info" id="cio-page-info">— records</div>
             <div class="pagination-controls" id="cio-page-ctrl"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ INLINE HISTORY MODAL (Employee CIO History) ══ -->
+      <div class="modal-backdrop" id="modal-emp-history">
+        <div class="modal" style="max-width:720px;">
+          <div class="modal-header">
+            <h2 style="display:flex;align-items:center;gap:8px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span id="emp-hist-modal-title">Employee History</span>
+            </h2>
+            <button class="tb-btn icon-only sm" onclick="closeModal('modal-emp-history')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <!-- Employee info strip -->
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px;" id="emp-hist-strip">
+              <div id="emp-hist-avatar" class="avatar-sm" style="width:38px;height:38px;font-size:14px;"></div>
+              <div>
+                <div style="font-weight:700;font-size:14px;color:var(--text);" id="emp-hist-name">—</div>
+                <div style="font-size:11px;color:var(--text3);font-family:var(--mono);" id="emp-hist-id">—</div>
+              </div>
+            </div>
+            <!-- History tabs -->
+            <div style="display:flex;gap:6px;margin-bottom:12px;" id="emp-hist-tabs">
+              <button class="tab-btn active" id="ehtab-company" onclick="switchEmpHistTab('company')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                Company / Route
+              </button>
+              <button class="tab-btn" id="ehtab-bike" onclick="switchEmpHistTab('bike')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/></svg>
+                Bike History
+              </button>
+              <button class="tab-btn" id="ehtab-sim" onclick="switchEmpHistTab('sim')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/></svg>
+                SIM History
+              </button>
+            </div>
+            <!-- History table -->
+            <div style="overflow-x:auto;max-height:380px;border:1px solid var(--border);border-radius:var(--radius);">
+              <table class="data-table" id="emp-hist-table">
+                <thead id="emp-hist-thead">
+                  <tr>
+                    <th style="width:50px;">#</th>
+                    <th>Item</th>
+                    <th>Check Out</th>
+                    <th>Check In</th>
+                    <th style="width:70px;">Detail</th>
+                  </tr>
+                </thead>
+                <tbody id="emp-hist-tbody">
+                  <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text3);">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="tb-btn sm" onclick="closeModal('modal-emp-history')">Close</button>
           </div>
         </div>
       </div>
@@ -892,6 +961,40 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
               Inventory
             </button>
+            <!-- Company panel (inline, shown when Company type selected) -->
+            <div id="co-company-inline" style="display:none;margin-top:6px;">
+              <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Select Company</div>
+              <select class="form-select" id="co-company-select" style="font-size:12px;padding:5px 8px;">
+                <option value="">— Pick Company —</option>
+                <option value="Noon">Noon</option>
+                <option value="Talabat">Talabat</option>
+                <option value="Deliveroo">Deliveroo</option>
+                <option value="NawNaw">NawNaw</option>
+              </select>
+              <button class="tb-btn sm success" onclick="addCompanyItem()" style="width:100%;margin-top:5px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Company
+              </button>
+            </div>
+            <!-- Inventory panel (inline, shown when Inventory type selected) -->
+            <div id="co-inventory-inline" style="display:none;margin-top:6px;">
+              <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Select Inventory</div>
+              <div style="display:flex;flex-direction:column;gap:4px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 9px;">
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;">
+                  <input type="checkbox" id="inv-helmet" value="Helmet" style="accent-color:var(--teal);width:13px;height:13px;"> Helmet
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;">
+                  <input type="checkbox" id="inv-thermalbox" value="ThermalBox" style="accent-color:var(--teal);width:13px;height:13px;"> ThermalBox
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;">
+                  <input type="checkbox" id="inv-uniform" value="Uniform" style="accent-color:var(--teal);width:13px;height:13px;"> Uniform
+                </label>
+              </div>
+              <button class="tb-btn sm success" onclick="addInventoryItems()" style="width:100%;margin-top:5px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Inventory
+              </button>
+            </div>
           </div>
           <!-- Available items for selected type -->
           <div style="flex:1;min-width:0;">
@@ -1178,7 +1281,7 @@ let state={
 };
 
 // Filtered/paginated
-let ciFiltered=[],ciPage=1,ciRpp=25;
+let ciFiltered=[],ciPage=1,ciRpp=50;
 let bikeFiltered=[],bikePage=1,bikeRpp=25;
 let empFiltered=[],empPage=1,empRpp=25;
 
@@ -1622,31 +1725,10 @@ function updateSummaryCards(){
 // ─────────────────────────────────────────────────────────────────
 function applyCheckinFilter(){
   const search=(document.getElementById('cio-search').value||'').toLowerCase().trim();
-  const action=(document.getElementById('cio-action').value||'').toLowerCase();
-  const from=document.getElementById('cio-from').value;
-  const to=document.getElementById('cio-to').value;
-
-  ciFiltered=(state.checkinout||[]).filter(r=>{
-    const ts=(r.Timestamp||r.Date||'').slice(0,10);
-    if(from&&ts&&ts<from)return false;
-    if(to&&ts&&ts>to)return false;
-    if(action&&!(r.Action||'').toLowerCase().includes(action))return false;
-    // Item-type filter from toolbar pill buttons
-    if(_cioItemFilter!=='all'&&(r.AssetType||'').toLowerCase()!==_cioItemFilter)return false;
+  // Filter employees for history table
+  ciFiltered=(state.employees||[]).filter(e=>{
     if(search){
-      let extra='';
-      const assetType=(r.AssetType||'').toLowerCase();
-      if(assetType==='bike'){
-        const bike=(state.bikes||[]).find(b=>b.BikeID===r.AssetID);
-        if(bike) extra+=' '+(bike.PlateNo||'')+' '+(bike.ChassisNo||'');
-      }else if(assetType==='sim'){
-        const sim=(state.sims||[]).find(si=>(si.SimID||si.ID)===r.AssetID);
-        if(sim) extra+=' '+(sim.Number||'');
-      }
-      const hay=[
-        r.RiderName||r.Name||'', r.EID||r.EmpID||'', r.AssetID||'',
-        r.RefID||'', r.Notes||'', r.Company||'', r.AssetType||'', extra
-      ].join(' ').toLowerCase();
+      const hay=((e.EmpID||e.EID||'')+(e.Name||'')+(e.Phone||'')+(e.EIDNumber||'')).toLowerCase();
       if(!hay.includes(search))return false;
     }
     return true;
@@ -1657,7 +1739,6 @@ function applyCheckinFilter(){
 
 function setCioItemFilter(type){
   _cioItemFilter=type;
-  // Update pill button active states
   ['all','bike','sim','company','inventory'].forEach(t=>{
     const btn=document.getElementById('cio-item-'+t);
     if(btn) btn.classList.toggle('active',t===type);
@@ -1666,117 +1747,175 @@ function setCioItemFilter(type){
 }
 
 function clearCheckinFilter(){
-  ['cio-search','cio-from','cio-to'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('cio-action').value='';
+  const s=document.getElementById('cio-search');
+  if(s) s.value='';
+  const a=document.getElementById('cio-action');
+  if(a) a.value='';
+  const f=document.getElementById('cio-from');
+  if(f) f.value='';
+  const t=document.getElementById('cio-to');
+  if(t) t.value='';
   setCioItemFilter('all');
 }
 
 function cioRppChange(){
   const v1=document.getElementById('cio-rpp').value;
-  ciRpp=parseInt(v1)||25;
+  ciRpp=parseInt(v1)||50;
   document.getElementById('cio-rpp').value=ciRpp;
   ciPage=1;renderCheckinTable();
 }
 
 function renderCheckinTable(){
-  const grid=document.getElementById('cio-card-grid');
-  document.getElementById('cio-count-badge').textContent=ciFiltered.length+' records';
+  const tbody=document.getElementById('cio-card-grid');
+  document.getElementById('cio-count-badge').textContent=ciFiltered.length+' employees';
   if(!ciFiltered.length){
-    grid.style.gridTemplateColumns='1fr';
-    grid.innerHTML=`<div style="padding:40px 20px;text-align:center;background:var(--surface);"><svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 10px;display:block;opacity:.3;color:var(--text3);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p style="font-size:13px;color:var(--text3);">No records found</p><small style="font-size:11px;color:var(--text3);">${state.checkinout.length?'Adjust filters or sync sheets.':'No data yet. Sync sheets or load demo data.'}</small></div>`;
-    renderPagination('cio-page-ctrl','cio-page-info',ciFiltered.length,ciPage,ciRpp,'ciGoToPage');
+    tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state"><p>No employees found</p><small>${(state.employees||[]).length?'Adjust filters.':'Sync sheets or load demo data.'}</small></div></td></tr>`;
+    renderPagination('cio-page-ctrl','cio-page-info',0,ciPage,ciRpp,'ciGoToPage');
     return;
   }
-  grid.style.gridTemplateColumns='repeat(2,1fr)';
-
-  // Group records: pair each Check Out with its matching Check In
-  const groups=[];
-  const usedRefs=new Set();
-  const sorted=[...ciFiltered].sort((a,b)=>(b.Timestamp||'').localeCompare(a.Timestamp||''));
-
-  sorted.forEach(r=>{
-    if(usedRefs.has(r.RefID)) return;
-    const action=(r.Action||'').toLowerCase();
-    if(action.includes('out')){
-      usedRefs.add(r.RefID);
-      const matchIn=sorted.find(r2=>{
-        if(usedRefs.has(r2.RefID)) return false;
-        const a2=(r2.Action||'').toLowerCase();
-        return a2.includes('in')&&!a2.includes('out')
-          &&(r2.EmpID||r2.EID)===(r.EmpID||r.EID)
-          &&(r2.AssetType||'').toLowerCase()===(r.AssetType||'').toLowerCase()
-          &&(r2.AssetID||'')===(r.AssetID||'')
-          &&(r2.Timestamp||'')>(r.Timestamp||'');
-      });
-      if(matchIn) usedRefs.add(matchIn.RefID);
-      groups.push({out:r, in:matchIn||null});
-    } else if(!action.includes('swap')){
-      usedRefs.add(r.RefID);
-      groups.push({out:null, in:r});
-    }
-  });
-
-  const effectiveRpp=groups.length<=VS_ROWS?groups.length:ciRpp;
-  const start=(ciPage-1)*effectiveRpp;
-  const page=groups.slice(start,start+effectiveRpp);
-
-  grid.innerHTML=page.map(g=>{
-    const r=g.out||g.in;
-    const riderName=r.RiderName||r.Name||'';
-    const eid=r.EID||r.EmpID||'—';
-    const assetType=r.AssetType||'—';
-    const assetId=r.AssetID||'—';
-    const outTs=g.out?(g.out.Timestamp||'').slice(0,16):'—';
-    const inTs=g.in?(g.in.Timestamp||'').slice(0,16):'—';
-    const stillOut=g.out&&!g.in;
-    const refRec=g.out||g.in;
-    return `<div class="fade-in" style="background:var(--surface);padding:12px 14px;display:flex;align-items:flex-start;gap:10px;">
-      <!-- Avatar -->
-      <div style="flex-shrink:0;">
-        ${riderName?`<div class="avatar-sm" style="background:${strColor(riderName)};width:32px;height:32px;font-size:11px;">${initials(riderName)}</div>`:'<div style="width:32px;height:32px;border-radius:50%;background:var(--surface2);"></div>'}
-      </div>
-      <!-- Content -->
-      <div style="flex:1;min-width:0;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px;">
-          <div class="cs">
-            <span class="cs-main" style="font-size:12.5px;">${esc(riderName||'—')}</span>
-            <span class="cs-sub">${esc(eid)}</span>
-          </div>
-          <button class="tb-btn icon-only sm" onclick='openCioDetail(${JSON.stringify(JSON.stringify(refRec))})' title="View details" style="flex-shrink:0;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
+  const start=(ciPage-1)*ciRpp;
+  const page=ciFiltered.slice(start,start+ciRpp);
+  tbody.innerHTML=page.map(e=>{
+    const eid=e.EmpID||e.EID||'—';
+    const master=(state.masterMap||{})[eid]||{};
+    const bike=master.bike||(getAssignedBike(eid)||{}).BikeID||'';
+    const sim=master.sim||((state.sims||[]).find(s=>s.AssignedTo===eid)||{}).SimID||'';
+    const company=master.company||'';
+    const inventory=master.inventory&&master.inventory.toLowerCase()!=='no'&&master.inventory!=='0'?master.inventory:'';
+    const st=(e.Status||'Active');
+    return `<tr class="fade-in">
+      <td><span class="mono" style="font-size:11.5px;font-weight:700;">${esc(eid)}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:7px;">
+          <div class="avatar-sm" style="background:${strColor(e.Name||'')};">${initials(e.Name||'?')}</div>
+          <div class="cs"><span class="cs-main" style="font-size:12px;">${esc(e.Name||'—')}</span></div>
         </div>
-        <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;">
-          <span class="badge gray" style="font-size:10px;">${esc(assetType)}</span>
-          <span class="mono cs-main" style="font-size:11.5px;">${esc(assetId)}</span>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 8px;">
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:2px;">Check Out</div>
-            ${g.out?`<span class="badge green" style="font-size:10px;margin-right:3px;">↗ Out</span><span class="mono" style="font-size:10px;color:var(--text2);">${outTs}</span>`:'<span style="color:var(--text3);font-size:11px;">—</span>'}
-          </div>
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 8px;">
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:2px;">Check In</div>
-            ${g.in?`<span class="badge red" style="font-size:10px;margin-right:3px;">↙ In</span><span class="mono" style="font-size:10px;color:var(--text2);">${inTs}</span>`:`<span class="badge amber" style="font-size:10px;">${stillOut?'Still Out':'—'}</span>`}
-          </div>
-        </div>
-      </div>
-    </div>`;
+      </td>
+      <td><span class="mono" style="font-size:11px;color:var(--text2);">${esc(e.Phone||'—')}</span></td>
+      <td><span class="badge ${st.toLowerCase()==='active'?'green':'gray'}" style="font-size:10px;">${esc(st)}</span></td>
+      <td>${bike?`<span class="badge orange" style="font-size:10px;">${esc(bike)}</span>`:'<span style="color:var(--text3);font-size:11px;">—</span>'}</td>
+      <td>${sim?`<span class="badge purple" style="font-size:10px;">${esc(sim)}</span>`:'<span style="color:var(--text3);font-size:11px;">—</span>'}</td>
+      <td>${company?`<span class="badge blue" style="font-size:10px;">${esc(company)}</span>`:'<span style="color:var(--text3);font-size:11px;">—</span>'}</td>
+      <td>${inventory?`<span class="badge amber" style="font-size:10px;">${esc(inventory)}</span>`:'<span style="color:var(--text3);font-size:11px;">—</span>'}</td>
+      <td>
+        <button class="tb-btn icon-only sm" onclick='openEmpHistoryModal(${JSON.stringify(JSON.stringify(e))})' title="View History">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </button>
+      </td>
+    </tr>`;
   }).join('');
-  renderPagination('cio-page-ctrl','cio-page-info',groups.length,ciPage,effectiveRpp,'ciGoToPage');
+  renderPagination('cio-page-ctrl','cio-page-info',ciFiltered.length,ciPage,ciRpp,'ciGoToPage');
 }
 
-function ciGoToPage(p){ciPage=p;renderCheckinTable();document.getElementById('main-page').scrollIntoView({behavior:'smooth',block:'start'});}
+function ciGoToPage(p){ciPage=p;renderCheckinTable();}
+
+// ── Employee History Modal ──
+let _empHistTab='company';
+let _empHistEid='';
+
+function openEmpHistoryModal(eStr){
+  const e=typeof eStr==='string'?JSON.parse(eStr):eStr;
+  const eid=e.EmpID||e.EID||'';
+  _empHistEid=eid;
+  // Set header
+  document.getElementById('emp-hist-modal-title').textContent=(e.Name||eid)+' — History';
+  const av=document.getElementById('emp-hist-avatar');
+  av.style.background=strColor(e.Name||eid);
+  av.textContent=initials(e.Name||'?');
+  document.getElementById('emp-hist-name').textContent=e.Name||'—';
+  document.getElementById('emp-hist-id').textContent='Emp ID: '+eid;
+  // Switch to default tab
+  switchEmpHistTab('company');
+  document.getElementById('modal-emp-history').classList.add('open');
+}
+
+function switchEmpHistTab(tab){
+  _empHistTab=tab;
+  ['company','bike','sim'].forEach(t=>{
+    const b=document.getElementById('ehtab-'+t);
+    if(b) b.classList.toggle('active',t===tab);
+  });
+  renderEmpHistoryTable();
+}
+
+function renderEmpHistoryTable(){
+  const tbody=document.getElementById('emp-hist-tbody');
+  const thead=document.getElementById('emp-hist-thead');
+  const eid=_empHistEid;
+  const tab=_empHistTab;
+  const assetTypeFilter=tab==='company'?'company':tab==='bike'?'bike':'sim';
+
+  // Update header
+  const col2Label=tab==='company'?'Company / Route':tab==='bike'?'Bike ID':'SIM ID';
+  thead.innerHTML=`<tr>
+    <th style="width:40px;">#</th>
+    <th style="width:130px;">${col2Label}</th>
+    <th>Check Out</th>
+    <th>Check In</th>
+    <th style="width:60px;">Detail</th>
+  </tr>`;
+
+  // Get records for this employee and type
+  const records=(state.checkinout||[]).filter(r=>
+    (r.EmpID||r.EID||'')===(eid)&&(r.AssetType||'').toLowerCase()===assetTypeFilter
+  ).sort((a,b)=>(b.Timestamp||'').localeCompare(a.Timestamp||''));
+
+  if(!records.length){
+    tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text3);font-size:12px;">No ${tab} history found for this employee.</td></tr>`;
+    return;
+  }
+
+  // Pair checkouts with checkins
+  const pairs=[];
+  const byAsset={};
+  records.forEach(r=>{
+    const aid=r.AssetID||'';
+    if(!byAsset[aid]) byAsset[aid]=[];
+    byAsset[aid].push(r);
+  });
+  Object.entries(byAsset).forEach(([assetId,evts])=>{
+    const sorted=evts.sort((a,b)=>(a.Timestamp||'').localeCompare(b.Timestamp||''));
+    let pendingOut=null;
+    sorted.forEach(r=>{
+      const act=(r.Action||'').toLowerCase();
+      if(act.includes('out')&&!act.includes('check in')){pendingOut=r;}
+      else if(act.includes('in')&&pendingOut){pairs.push({out:pendingOut,in:r,assetId});pendingOut=null;}
+    });
+    if(pendingOut) pairs.push({out:pendingOut,in:null,assetId});
+  });
+  pairs.sort((a,b)=>{
+    const ta=(a.out||a.in||{}).Timestamp||'';
+    const tb=(b.out||b.in||{}).Timestamp||'';
+    return tb.localeCompare(ta);
+  });
+
+  tbody.innerHTML=pairs.map((p,i)=>{
+    const r=p.out||p.in;
+    const outTs=p.out?(p.out.Timestamp||'').slice(0,16):'—';
+    const inTs=p.in?(p.in.Timestamp||'').slice(0,16):'—';
+    return `<tr class="fade-in">
+      <td style="color:var(--text3);font-size:11px;">${i+1}</td>
+      <td><span class="mono" style="font-size:12px;font-weight:600;">${esc(p.assetId||'—')}</span></td>
+      <td>${p.out?`<span class="badge green" style="font-size:10px;margin-right:3px;">↗ Out</span><span class="mono" style="font-size:11px;">${outTs}</span>`:'<span style="color:var(--text3);">—</span>'}</td>
+      <td>${p.in?`<span class="badge red" style="font-size:10px;margin-right:3px;">↙ In</span><span class="mono" style="font-size:11px;">${inTs}</span>`:'<span class="badge amber" style="font-size:10px;">Still Out</span>'}</td>
+      <td>
+        <button class="tb-btn icon-only sm" onclick='openCioDetail(${JSON.stringify(JSON.stringify(r))})' title="Detail">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
 
 function openCioDetail(rStr){
-  const r=JSON.parse(rStr);
+  const r=typeof rStr==='string'?JSON.parse(rStr):rStr;
   const isOut=(r.Action||'').includes('Out');
   document.getElementById('detail-modal-title').innerHTML=`${isOut?'↗ Check Out':'↙ Check In'} Detail — <span style="font-family:var(--mono);font-size:13px;">${esc(r.RefID||'')}</span>`;
   document.getElementById('modal-detail-body').innerHTML=`
     <div class="detail-grid">
       <div class="detail-row full"><div class="detail-label">Ref ID</div><div class="detail-value accent mono">${esc(r.RefID||'—')}</div></div>
       <div class="detail-row"><div class="detail-label">Rider Name</div><div class="detail-value">${esc(r.RiderName||r.Name||'—')}</div></div>
-      <div class="detail-row"><div class="detail-label">EID</div><div class="detail-value mono">${esc(r.EID||'—')}</div></div>
+      <div class="detail-row"><div class="detail-label">EID</div><div class="detail-value mono">${esc(r.EID||r.EmpID||'—')}</div></div>
       <div class="detail-row"><div class="detail-label">Action</div><div class="detail-value ${isOut?'teal':'red'}">${esc(r.Action||'—')}</div></div>
       <div class="detail-row"><div class="detail-label">Asset Type</div><div class="detail-value">${esc(r.AssetType||'—')}</div></div>
       <div class="detail-row"><div class="detail-label">Asset ID</div><div class="detail-value mono orange">${esc(r.AssetID||'—')}</div></div>
@@ -1787,10 +1926,6 @@ function openCioDetail(rStr){
     </div>`;
   document.getElementById('modal-detail').classList.add('open');
 }
-
-// ─────────────────────────────────────────────────────────────────
-// ASSETS TAB — Available / Assigned / History
-// ─────────────────────────────────────────────────────────────────
 let _assetSubTab='bike';
 let _assetSearch='';
 
@@ -2121,12 +2256,25 @@ function setAssetView(view){
   // Hide type pills for Status; show for Available (Bike/SIM only) and History (all)
   const typePills=document.getElementById('type-pills-wrap');
   if(typePills) typePills.style.display=(view==='status')?'none':'flex';
-  // For Available view hide Company/Inventory type buttons
-  ['cio-item-company','cio-item-inventory'].forEach(id=>{
+  // For Available view: only Bike and SIM pills; hide All/Company/Inventory
+  const availOnlyHide=['cio-item-all','cio-item-company','cio-item-inventory'];
+  availOnlyHide.forEach(id=>{
     const b=document.getElementById(id);
     if(b) b.style.display=(view==='available')?'none':'';
   });
-  // For history view always show all type buttons
+  // If switching to Available and current sub-tab is not bike/sim, reset to bike
+  if(view==='available'&&(_assetSubTab!=='bike'&&_assetSubTab!=='sim')){
+    _assetSubTab='bike';
+    ['bike','sim','company','inventory'].forEach(t=>{
+      const b=document.getElementById('asset-sub-'+t);
+      if(b) b.classList.toggle('active',t==='bike');
+    });
+    // Also highlight cio-item-bike pill
+    ['bike','sim'].forEach(t=>{
+      const b=document.getElementById('cio-item-'+t);
+      if(b) b.classList.toggle('active',t==='bike');
+    });
+  }
   renderAssetPanel();
 }
 
@@ -2174,7 +2322,11 @@ function renderAvailableView(){
       return true;
     }).map(b=>({
       id:b.BikeID,
-      lines:[b.PlateNo||'',((b.Make||'')+(b.Model&&b.Model!==b.Make?' '+b.Model:'')).trim(),b.Emirate||''].filter(Boolean)
+      col1:b.PlateNo||'—',
+      col2:((b.Make||'')+(b.Model&&b.Model!==b.Make?' '+b.Model:'')).trim()||'—',
+      col3:b.Emirate||'—',
+      col4:b.MulkiyaExpiry||'—',
+      h1:'Plate No', h2:'Make / Model', h3:'Emirate', h4:'Mulkiya Expiry'
     }));
   }else if(type==='sim'){
     items=(state.sims||[]).filter(s=>{
@@ -2186,57 +2338,59 @@ function renderAvailableView(){
       return true;
     }).map(s=>({
       id:s.SimID||s.ID,
-      lines:[s.Number&&s.Number!==(s.SimID||s.ID)?s.Number:'',s.Network||''].filter(Boolean)
-    }));
-  }else if(type==='company'){
-    // Company = riders with NO company currently assigned (available slot)
-    items=(state.employees||[]).filter(e=>{
-      const a=(state.masterMap||{})[e.EmpID||e.EID]||{};
-      if(a.company&&a.company.trim()) return false; // already has company
-      if((e.Status||'').toLowerCase()!=='active') return false;
-      if(q){
-        const hay=((e.EmpID||e.EID||'')+(e.Name||'')).toLowerCase();
-        if(!hay.includes(q)) return false;
-      }
-      return true;
-    }).map(e=>({
-      id:e.EmpID||e.EID,
-      lines:[e.Name||'','No company assigned'].filter(Boolean)
+      col1:s.Number&&s.Number!==(s.SimID||s.ID)?s.Number:'—',
+      col2:s.Network||'—',
+      col3:'', col4:'',
+      h1:'SIM Number', h2:'Network / Operator', h3:'', h4:''
     }));
   }else{
-    // Inventory: items whose latest log event is Check In (returned/available)
-    const latestByAsset={};
-    (state.checkinout||[]).filter(r=>(r.AssetType||'').toLowerCase()==='inventory').forEach(r=>{
-      const aid=r.AssetID||'';
-      if(!latestByAsset[aid]||r.Timestamp>latestByAsset[aid].Timestamp) latestByAsset[aid]=r;
-    });
-    items=Object.entries(latestByAsset).filter(([,r])=>{
-      const a=(r.Action||'').toLowerCase();
-      return a.includes('in')&&!a.includes('out');
-    }).filter(([id])=>{
-      if(!q) return true;
-      return id.toLowerCase().includes(q);
-    }).map(([id,r])=>({
-      id,lines:['Last returned: '+(r.Timestamp||'').slice(0,10)]
-    }));
+    items=[];
+  }
+
+  // Update table headers dynamically
+  const thead=document.getElementById('av-avail-thead');
+  if(thead&&items.length){
+    const sample=items[0];
+    thead.innerHTML=`<tr>
+      <th style="width:140px;">Asset ID</th>
+      <th>${esc(sample.h1)}</th>
+      <th>${esc(sample.h2)}</th>
+      ${sample.h3?`<th>${esc(sample.h3)}</th>`:''}
+      ${sample.h4?`<th>${esc(sample.h4)}</th>`:''}
+      <th style="width:80px;">Status</th>
+    </tr>`;
+  } else if(thead){
+    thead.innerHTML=`<tr><th>Asset ID</th><th>Details</th><th>Status</th></tr>`;
   }
 
   document.getElementById('av-avail-count').textContent=items.length;
-  const grid=document.getElementById('av-avail-grid');
+  const tbody=document.getElementById('av-avail-grid');
   if(!items.length){
-    const typeLabel={bike:'bikes',sim:'SIMs',company:'riders without company',inventory:'returned items'}[type]||'items';
-    grid.innerHTML=`<div class="asset-empty" style="grid-column:1/-1;"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 8px;display:block;opacity:.3;"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>No available ${typeLabel}${q?' matching search':''}</div>`;
+    const typeLabel={bike:'bikes',sim:'SIMs'}[type]||'items';
+    tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><p>No available ${typeLabel}${q?' matching search':''}</p></div></td></tr>`;
+    renderPagination('av-avail-ctrl','av-avail-info',0,_avAvailPage,_avAvailRpp,'avAvailGoToPage');
     return;
   }
-  grid.innerHTML=items.map(it=>`
-    <div class="asset-card available fade-in">
-      <div class="asset-card-header">
-        <span class="asset-card-id">${esc(it.id)}</span>
-        <span class="badge green" style="font-size:10px;">Available</span>
-      </div>
-      ${it.lines.length?`<div class="asset-card-meta">${it.lines.map(l=>`<span>${esc(l)}</span>`).join('')}</div>`:''}
-    </div>`).join('');
+
+  // Paginate
+  const total=items.length;
+  const start=(_avAvailPage-1)*_avAvailRpp;
+  const page=items.slice(start,start+_avAvailRpp);
+  const hasMeta=!!(page[0]&&page[0].h3);
+
+  tbody.innerHTML=page.map(it=>`<tr class="fade-in">
+    <td><span class="mono cs-main" style="font-size:12px;font-weight:700;">${esc(it.id)}</span></td>
+    <td><span style="font-size:12px;">${esc(it.col1)}</span></td>
+    <td><span style="font-size:12px;">${esc(it.col2)}</span></td>
+    ${it.h3?`<td><span style="font-size:12px;">${esc(it.col3)}</span></td>`:''}
+    ${it.h4?`<td><span style="font-size:12px;font-family:var(--mono);">${esc(it.col4)}</span></td>`:''}
+    <td><span class="badge green" style="font-size:10px;">Available</span></td>
+  </tr>`).join('');
+  renderPagination('av-avail-ctrl','av-avail-info',total,_avAvailPage,_avAvailRpp,'avAvailGoToPage');
 }
+function avAvailGoToPage(p){_avAvailPage=p;renderAvailableView();}
+// keep old alias
+function _avAvailGoToPage(p){_avAvailPage=p;renderAvailableView();}
 
 // ── HISTORY VIEW — paired checkout/checkin rows per asset type ──
 let _avHistPage=1; const _avHistRpp=50;
@@ -2859,8 +3013,47 @@ function selectCoType(type){
     const b=document.getElementById('co-type-'+t);
     if(b&&!b.classList.contains('disabled-asset')) b.classList.toggle('selected', t===type);
   });
+  // Show/hide inline Company/Inventory panels
+  const compInline=document.getElementById('co-company-inline');
+  const invInline=document.getElementById('co-inventory-inline');
+  if(compInline) compInline.style.display=(type==='Company')?'':'none';
+  if(invInline) invInline.style.display=(type==='Inventory')?'':'none';
+
   const eid=document.getElementById('cio-rider-select').value;
-  renderCoItemsPanel(type, eid);
+  if(type==='Company'||type==='Inventory'){
+    // Hide generic dropdown panel for these types
+    document.getElementById('co-items-panel').style.display='none';
+    document.getElementById('co-items-empty').style.display='none';
+  } else {
+    renderCoItemsPanel(type, eid);
+  }
+}
+
+// Add Company from dropdown
+function addCompanyItem(){
+  const sel=document.getElementById('co-company-select');
+  const val=sel?sel.value:'';
+  if(!val){showToast('Select a company first','warn');return;}
+  if(_coSelectedItems.some(i=>i.type==='Company'&&i.id===val)){showToast('Company already added','warn');return;}
+  _coSelectedItems.push({type:'Company',id:val,meta:''});
+  renderCoSelectedList();
+  if(sel) sel.value='';
+  showToast('Company '+val+' added','ok');
+}
+
+// Add Inventory items from checkboxes (comma-separated)
+function addInventoryItems(){
+  const boxes=['inv-helmet','inv-thermalbox','inv-uniform'];
+  const selected=boxes.map(id=>document.getElementById(id)).filter(cb=>cb&&cb.checked).map(cb=>cb.value);
+  if(!selected.length){showToast('Select at least one inventory item','warn');return;}
+  const invStr=selected.join(', ');
+  // Remove any existing inventory entry and replace
+  const existIdx=_coSelectedItems.findIndex(i=>i.type==='Inventory');
+  if(existIdx>=0) _coSelectedItems.splice(existIdx,1);
+  _coSelectedItems.push({type:'Inventory',id:invStr,meta:''});
+  renderCoSelectedList();
+  boxes.forEach(id=>{const cb=document.getElementById(id);if(cb)cb.checked=false;});
+  showToast('Inventory: '+invStr+' added','ok');
 }
 
 function renderCoSection(eid){
@@ -2932,12 +3125,8 @@ function renderCoItemsPanel(type, eid){
       value:sm.SimID||sm.ID,
       label:(sm.SimID||sm.ID)+(sm.Number&&sm.Number!==(sm.SimID||sm.ID)?' · '+sm.Number:'')+(sm.Network?' · '+sm.Network:'')
     }));
-  }else if(type==='Company'){
-    // Show EIDNumber or Phone as reference, no company field in new schema
-    options=[{value:'Company',label:'Assign to Company'}];
-  }else{
-    options=[{value:'Inventory',label:'Inventory Item — describe in Notes'}];
   }
+  // Company and Inventory are handled by inline panels (co-company-inline / co-inventory-inline)
 
   sdSetOptions('coitem',options);
 
@@ -3376,7 +3565,7 @@ function switchView(view){
 // ─────────────────────────────────────────────────────────────────
 function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('open');}
 document.addEventListener('DOMContentLoaded',function(){
-  ['modal-cio','modal-detail','modal-add-bike'].forEach(id=>{
+  ['modal-cio','modal-detail','modal-add-bike','modal-emp-history'].forEach(id=>{
     const el=document.getElementById(id);
     if(el) el.addEventListener('click',e=>{if(e.target===el)closeModal(id);});
   });
