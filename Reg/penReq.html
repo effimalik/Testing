@@ -266,23 +266,13 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
     <div class="section-header-top">
       <div class="section-title-group">
         <h2>
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Advance Requests — Master Sheet
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Advance Requests — Approved, Amount Missing
         </h2>
         <div class="section-desc">
           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-          Live data from IndexedDB cache · Pending requests
+          Live data from IndexedDB cache · Approved requests with empty/zero Amount
         </div>
-      </div>
-      <div class="section-actions">
-        <button class="tb-btn success" id="btn-accept-sel" onclick="acceptSelected()" disabled>
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          Accept <span id="sel-count">0</span>
-        </button>
-        <button class="tb-btn danger" id="btn-reject-sel" onclick="rejectSelected()" disabled>
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-          Reject Selected
-        </button>
       </div>
     </div>
     <div class="section-sep"></div>
@@ -291,20 +281,20 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
   <!-- TOP BAR -->
   <div class="top-bar">
     <div class="summary-cards">
-      <!-- Pending Requests -->
+      <!-- Flagged records -->
       <div class="summary-card">
         <div class="summary-card-icon amber">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </div>
         <div class="summary-card-body">
-          <div class="summary-card-value" id="card-pending">0</div>
+          <div class="summary-card-value" id="card-flagged">0</div>
           <div class="summary-card-label">
             <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
-            Req-Pending
+            Approved · Amount Missing
           </div>
         </div>
       </div>
-      <!-- Total Requested Amount (pending only) -->
+      <!-- Total Requested Amount (flagged rows) -->
       <div class="summary-card">
         <div class="summary-card-icon orange">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -317,29 +307,29 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
           </div>
         </div>
       </div>
-      <!-- Installments -->
+      <!-- App Amount total (sanity check — should be 0 across flagged rows) -->
       <div class="summary-card">
         <div class="summary-card-icon purple">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
         <div class="summary-card-body">
-          <div class="summary-card-value" id="card-installments">0</div>
+          <div class="summary-card-value" id="card-app-amount">AED 0</div>
           <div class="summary-card-label">
             <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
-            Req-Installment
+            App-Amount
           </div>
         </div>
       </div>
-      <!-- Lump-sum -->
+      <!-- Unique employees affected -->
       <div class="summary-card">
         <div class="summary-card-icon accent">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
         <div class="summary-card-body">
-          <div class="summary-card-value" id="card-lumpsum">0</div>
+          <div class="summary-card-value" id="card-employees">0</div>
           <div class="summary-card-label">
             <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
-             1-Payment
+            Employees
           </div>
         </div>
       </div>
@@ -380,7 +370,7 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
       <div class="data-table-title">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
         Requests
-        <span class="badge amber" id="pending-badge" style="margin-left:4px;">0</span>
+        <span class="badge amber" id="result-badge" style="margin-left:4px;">0</span>
       </div>
       <div class="data-table-toolbar">
         <div class="search-wrap">
@@ -389,10 +379,6 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
           </span>
           <input type="text" class="search-input" id="f-search" placeholder="Search name, ref, EID…" oninput="applyFilters()" />
         </div>
-        <label style="font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:5px;">
-          <input type="checkbox" id="chk-all-pending" onchange="toggleAllPending(this.checked)" style="width:14px;height:14px;" />
-          Select All
-        </label>
       </div>
     </div>
 
@@ -401,15 +387,13 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
       <table class="data-table">
         <thead>
           <tr>
-            <th style="width:32px;padding-left:10px;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-            </th>
-            <th style="width:12%;">REF ID</th>
+            <th style="width:13%;">REF ID</th>
             <th style="width:7%;">Emp ID</th>
-            <th style="width:24%;">Name &amp; EID</th>
-            <th style="width:22%;">Amount (AED) &amp; Reason</th>
-            <th style="width:20%;">Ret Req Months</th>
-            <th style="width:15%;">Action</th>
+            <th style="width:22%;">Name &amp; EID</th>
+            <th style="width:18%;">Req Amount &amp; Reason</th>
+            <th style="width:12%;">App Amount</th>
+            <th style="width:18%;">Ret Req Months</th>
+            <th style="width:10%;">Status</th>
           </tr>
         </thead>
         <tbody id="pending-tbody"></tbody>
@@ -437,74 +421,6 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
 </div>
 
 <!-- ACCEPT MODAL -->
-<div class="modal-backdrop" id="modal-accept">
-  <div class="modal">
-    <div class="modal-header">
-      <h2>
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        Accept Advance Request
-      </h2>
-      <button class="tb-btn icon-only" onclick="closeModal('modal-accept')">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div class="emp-strip" id="accept-strip"></div>
-      <div class="info-box">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Accept as-is or override the repayment plan before confirming.
-      </div>
-      <div class="field">
-        <label>Accept Mode</label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;">
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;padding:8px 14px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface);flex:1;">
-            <input type="radio" name="accept-mode" value="asis" checked onchange="toggleAcceptMode(this.value)" style="width:14px;height:14px;" />
-            Accept As-Is <span style="font-size:10.5px;color:var(--text3);">(employee's plan)</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;padding:8px 14px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface);flex:1;">
-            <input type="radio" name="accept-mode" value="override" onchange="toggleAcceptMode(this.value)" style="width:14px;height:14px;" />
-            Override Plan
-          </label>
-        </div>
-      </div>
-      <div id="accept-override-wrap" style="display:none;">
-        <div class="field">
-          <label>Override Repayment Plan</label>
-          <select id="accept-months-override" onchange="updateAcceptPreview()">
-            <option value="0">No Installments (Lump-Sum)</option>
-            <option value="1">1 Month — Next Salary Deduction</option>
-            <option value="2">2 Monthly Installments</option>
-            <option value="3">3 Monthly Installments</option>
-            <option value="4">4 Monthly Installments</option>
-            <option value="5">5 Monthly Installments</option>
-            <option value="6">6 Monthly Installments</option>
-            <option value="9">9 Monthly Installments</option>
-            <option value="12">12 Monthly Installments</option>
-          </select>
-        </div>
-      </div>
-      <div id="accept-preview" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;font-size:12px;margin-top:4px;">
-        <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:5px;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          Effective Plan Preview
-        </div>
-        <div id="accept-preview-body" style="color:var(--text2);"></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="tb-btn" onclick="closeModal('modal-accept')">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Cancel
-      </button>
-      <button class="tb-btn danger" onclick="decideFromModal('rejected')">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Reject Instead
-      </button>
-      <button class="tb-btn success" onclick="decideFromModal('approved')">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirm Accept
-      </button>
-    </div>
-  </div>
-</div>
-
 <!-- DETAIL MODAL -->
 <div class="modal-backdrop" id="modal-detail">
   <div class="modal detail-modal">
@@ -520,13 +436,7 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
     <div class="modal-body" id="modal-detail-body"></div>
     <div class="modal-footer">
       <button class="tb-btn" onclick="closeModal('modal-detail')">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back
-      </button>
-      <button class="tb-btn danger" id="detail-reject-btn">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Reject
-      </button>
-      <button class="tb-btn success" id="detail-accept-btn">
-        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Accept
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Close
       </button>
     </div>
   </div>
@@ -591,7 +501,7 @@ async function _idbDel(key){
 
 
 let allRequests=[],filteredList=[],currentPage=1,rowsPerPage=20;
-let selectedRefs=new Set(),pendingAcceptRef=null,detailRef=null;
+let detailRef=null;
 
 function fmt(n){return Number(n).toLocaleString('en-AE',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtShort(n){return Number(n).toLocaleString('en-AE',{minimumFractionDigits:0,maximumFractionDigits:0});}
