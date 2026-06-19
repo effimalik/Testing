@@ -3486,19 +3486,12 @@ function renderCoSection(eid){
   const hasCompany=!!(master.company&&master.company.trim())||(emp&&emp._hasCompany);
   const hasInventory=!!(master.inventory&&master.inventory.trim()&&master.inventory.toLowerCase()!=='no'&&master.inventory!=='0')||(emp&&emp._hasInventory);
 
-  // Set disabled state on type buttons
-  const typeChecks={Bike:hasBike, SIM:hasSim, Company:hasCompany, Inventory:hasInventory};
+  // Allow checkout of multiple items per type — just clear selected state, never disable
   ['Bike','SIM','Company','Inventory'].forEach(t=>{
     const b=document.getElementById('co-type-'+t);
     if(!b) return;
-    b.classList.remove('selected');
-    if(typeChecks[t]){
-      b.classList.add('disabled-asset');
-      b.title=t+' already assigned to this rider';
-    }else{
-      b.classList.remove('disabled-asset');
-      b.title='';
-    }
+    b.classList.remove('selected','disabled-asset');
+    b.title='';
   });
 
   document.getElementById('co-items-panel').style.display='none';
@@ -3607,43 +3600,69 @@ function renderCoSelectedList(){
 }
 
 // ── CHECK IN rendering ──
+function _getAllAssignedItems(eid){
+  // Build full list of currently-assigned items from CIO log (not masterMap which only stores latest single)
+  // For each asset type, track which IDs are currently "out" (Check Out without a matching Check In after)
+  const log=(state.checkinout||[]).filter(r=>(r.EmpID||r.EID||'')===(eid||''));
+  // Group by assetType+assetId, then find latest action
+  const latestByKey={};
+  log.forEach(r=>{
+    const at=(r.AssetType||'').toLowerCase();
+    const aid=(r.AssetID||'').trim();
+    if(!aid) return;
+    const key=at+'::'+aid;
+    if(!latestByKey[key]||r.Timestamp>latestByKey[key].Timestamp) latestByKey[key]=r;
+  });
+  const items=[];
+  Object.entries(latestByKey).forEach(([key,r])=>{
+    const action=(r.Action||'').toLowerCase();
+    const isOut=action.includes('out')&&!action.includes('in');
+    if(!isOut) return;
+    const at=(r.AssetType||'');
+    const aid=(r.AssetID||'').trim();
+    let meta='';
+    if(at.toLowerCase()==='bike'){const b=(state.bikes||[]).find(x=>x.BikeID===aid);meta=b?b.Model||b.PlateNo||'':'';}
+    if(at.toLowerCase()==='sim'){const s=(state.sims||[]).find(x=>(x.SimID||x.ID)===aid);meta=s?s.Number||s.Network||'':'';}
+    items.push({type:at,id:aid,meta});
+  });
+  // Fallback: if log is empty, use masterMap
+  if(!items.length){
+    const master=(state.masterMap||{})[eid]||{};
+    const emp=(state.employees||[]).find(e=>(e.EmpID||e.EID)===eid);
+    if(master.bike){const b=(state.bikes||[]).find(x=>x.BikeID===master.bike)||{};items.push({type:'Bike',id:master.bike,meta:b.Model||''});}
+    if(master.sim){const s=(state.sims||[]).find(x=>(x.SimID||x.ID)===master.sim)||{};items.push({type:'SIM',id:master.sim,meta:s.Number||s.Network||''});}
+    if(master.company) items.push({type:'Company',id:master.company,meta:''});
+    const inv=master.inventory||(emp&&emp.Inventory?emp.Inventory:'');
+    if(inv&&inv.toLowerCase()!=='no'&&inv!=='0') items.push({type:'Inventory',id:inv,meta:''});
+  }
+  return items;
+}
+
 function renderCiSection(eid){
   const list=document.getElementById('checkin-items-list');
   document.getElementById('checkin-confirm-box').style.display='none';
   _checkinPending=null;
-  // Get all items assigned to this rider — use masterMap (from ap2_cioView) as authoritative source
-  const master=(state.masterMap||{})[eid]||{};
-  const bike=getAssignedBike(eid);
-  const sim=getAssignedSim(eid);
-  const emp=(state.employees||[]).find(e=>(e.EmpID||e.EID)===eid);
-  // Use masterMap values if available, else fall back to live state
-  const bikeId=master.bike||(bike?bike.BikeID:'');
-  const simId=master.sim||(sim?(sim.SimID||sim.ID):'');
-  const companyId=master.company||'';
-  const invVal=master.inventory||(emp&&emp.Inventory?emp.Inventory:'');
-  const hasInv=invVal&&invVal.toLowerCase()!=='no'&&invVal!=='0';
-  const hasCompany=companyId&&companyId.trim();
-  const items=[];
-  if(bikeId){const b=(state.bikes||[]).find(x=>x.BikeID===bikeId)||{BikeID:bikeId,Model:''};items.push({type:'Bike',id:bikeId,meta:b.Model||'',obj:b});}
-  if(simId){const sm=(state.sims||[]).find(x=>(x.SimID||x.ID)===simId)||{SimID:simId,Network:''};items.push({type:'SIM',id:simId,meta:sm.Network||'',obj:sm});}
-  if(hasCompany) items.push({type:'Company',id:companyId,meta:'',obj:null});
-  if(hasInv) items.push({type:'Inventory',id:invVal,meta:'',obj:null});
+  const items=_getAllAssignedItems(eid);
   if(!items.length){
     list.innerHTML='<div style="text-align:center;padding:20px 0;color:var(--text3);font-size:13px;">No items currently assigned to this rider.</div>';
     return;
   }
+  // Badge colour per type
+  const typeBadge={Bike:'orange',SIM:'purple',Company:'blue',Inventory:'amber'};
   list.innerHTML=items.map((it,i)=>`
-    <div class="checkin-item-row">
-      <div class="ci-info">
-        <span class="ci-id">${esc(it.type)}: ${esc(it.id)}</span>
-        ${it.meta?`<span class="ci-meta">${esc(it.meta)}</span>`:''}
+    <div class="checkin-item-row" style="gap:10px;">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+        <span class="badge ${typeBadge[it.type]||'gray'}" style="font-size:10px;flex-shrink:0;">${esc(it.type)}</span>
+        <div class="ci-info" style="min-width:0;">
+          <span class="ci-id">${esc(it.id)}</span>
+          ${it.meta?`<span class="ci-meta">${esc(it.meta)}</span>`:''}
+        </div>
       </div>
-      <button class="tb-btn sm danger" onclick="requestCheckinItem(${i})">
+      <button class="tb-btn sm danger" style="flex-shrink:0;" onclick="requestCheckinItem(${i})">
         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
         Check In
       </button>
     </div>`).join('');
-  // Store items list for reference
   list._items=items;
 }
 
@@ -3712,13 +3731,8 @@ function renderSwapSection(eid){
   const list=document.getElementById('swap-assigned-list');
   document.getElementById('swap-new-section').style.display='none';
   _swapSelectedOld=null;
-  // Use masterMap as authoritative source (same as all other sections in this app)
-  const master=(state.masterMap||{})[eid]||{};
-  const bikeId=master.bike||((getAssignedBike(eid)||{}).BikeID)||'';
-  const simId=master.sim||((getAssignedSim(eid)||{}).SimID)||'';
-  const items=[];
-  if(bikeId) items.push({type:'Bike',id:bikeId,meta:''});
-  if(simId) items.push({type:'SIM',id:simId,meta:''});
+  // Use full CIO log to get ALL assigned items (multiple bikes/SIMs supported)
+  const items=_getAllAssignedItems(eid).filter(it=>it.type==='Bike'||it.type==='SIM');
   if(!items.length){
     list.innerHTML='<div style="text-align:center;padding:20px 0;color:var(--text3);font-size:13px;">No items assigned to this rider to swap.</div>';
     return;
