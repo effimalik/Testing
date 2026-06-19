@@ -9,7 +9,6 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
 
 <style>
-/* ══ DESIGN TOKENS ══ */
 :root, [data-theme="dark"] {
   --bg:#0d1117; --bg2:#161b22; --bg3:#1c2333;
   --surface:#21262d; --surface2:#2d333b;
@@ -41,214 +40,169 @@
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;}
-
-/* ── Scrollbar ── */
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
 
-/* ── Layout ── */
-.portal-wrap{display:flex;flex-direction:column;min-height:100vh;max-width:1400px;margin:0 auto;padding:24px 20px;}
+.portal-wrap{display:flex;flex-direction:column;height:100vh;max-width:1500px;margin:0 auto;padding:18px;gap:14px;}
 
-/* ── Portal Header ── */
-.portal-header{display:flex;align-items:center;gap:14px;padding:18px 22px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);margin-bottom:22px;box-shadow:var(--shadow);}
-.portal-logo{width:44px;height:44px;border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.portal-logo i{font-size:22px;color:#fff;}
-.portal-title h1{font-size:18px;font-weight:700;color:var(--text);}
-.portal-title p{font-size:12px;color:var(--text3);}
+.portal-header{display:flex;align-items:center;gap:14px;padding:14px 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);flex-shrink:0;}
+.portal-logo{width:40px;height:40px;border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.portal-logo i{font-size:20px;color:#fff;}
+.portal-title h1{font-size:17px;font-weight:700;color:var(--text);}
+.portal-title p{font-size:11.5px;color:var(--text3);}
 .portal-header-actions{margin-left:auto;display:flex;align-items:center;gap:8px;}
+#cache-status{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text3);padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);font-family:var(--mono);}
 
-/* ── Tab Nav ── */
-.tab-nav{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:5px;margin-bottom:22px;}
-.tab-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 18px;border-radius:var(--radius);border:none;background:transparent;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;white-space:nowrap;}
-.tab-btn i{font-size:17px;line-height:1;}
+.tab-nav{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:5px;flex-shrink:0;}
+.tab-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 18px;border-radius:var(--radius);border:none;background:transparent;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;}
+.tab-btn i{font-size:16px;line-height:1;}
 .tab-btn.active{background:var(--accent);color:#fff;box-shadow:0 0 14px var(--accent-glow);}
 .tab-btn:not(.active):hover{background:var(--surface2);color:var(--text);}
 
-/* ── Section card ── */
-.section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:22px;margin-bottom:18px;box-shadow:var(--shadow);}
-.section-card-title{font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-.section-card-title i{font-size:16px;color:var(--accent);}
-
-/* ── Entity selector ── */
-.entity-selector{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}
-.field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px;}
-.field label{font-size:11.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;}
+.selector-bar{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:14px 18px;flex-shrink:0;box-shadow:var(--shadow);}
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;}
 .field label span.req{color:var(--red);}
-.search-dropdown-wrap{position:relative;}
+.search-dropdown-wrap{position:relative;width:280px;}
 .search-dropdown-input{width:100%;padding:9px 12px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;transition:border .18s,box-shadow .18s;}
 .search-dropdown-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
 .search-dropdown-input::placeholder{color:var(--text3);}
-.dropdown-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface2);border:1.5px solid var(--border2);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:200;max-height:200px;overflow-y:auto;display:none;}
+.dropdown-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface2);border:1.5px solid var(--border2);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:200;max-height:220px;overflow-y:auto;display:none;}
 .dropdown-list.open{display:block;}
-.dropdown-item{padding:9px 13px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .12s;}
+.dropdown-item{padding:9px 13px;font-size:13px;cursor:pointer;transition:background .12s;}
 .dropdown-item:hover{background:var(--accent-dim);}
 .dropdown-item .did{font-family:var(--mono);font-size:11px;color:var(--text3);}
 .dropdown-item .dname{color:var(--text);font-weight:600;}
 .dropdown-item .dname em{color:var(--accent);font-style:normal;}
-.entity-confirm-strip{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 16px;display:flex;align-items:center;gap:12px;margin-top:2px;flex:1;min-width:220px;}
-.entity-confirm-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;}
-.entity-confirm-info{min-width:0;}
-.entity-confirm-name{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.entity-confirm-sub{font-size:11px;color:var(--text3);font-family:var(--mono);}
-.confirm-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:var(--teal-dim);color:var(--teal);border:1px solid rgba(57,211,83,.3);margin-left:6px;}
+.entity-confirm-strip{display:none;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:9px 16px;}
+.entity-confirm-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;}
+.entity-confirm-name{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;}
+.entity-confirm-sub{font-size:10.5px;color:var(--text3);font-family:var(--mono);white-space:nowrap;}
+.confirm-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:9.5px;font-weight:700;background:var(--teal-dim);color:var(--teal);border:1px solid rgba(57,211,83,.3);white-space:nowrap;}
 
-/* ── Doc type grid ── */
-.doc-grid{display:grid;gap:10px;}
-.doc-grid.emp-docs{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));}
-.doc-grid.bike-docs{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));}
-.doc-type-btn{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 12px;border-radius:var(--radius-lg);border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;text-align:center;}
-.doc-type-btn i{font-size:24px;line-height:1;transition:all .2s;}
-.doc-type-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);transform:translateY(-2px);box-shadow:0 4px 14px var(--accent-dim);}
-.doc-type-btn.has-docs{border-color:var(--teal);color:var(--teal);}
-.doc-type-btn.has-docs i{color:var(--teal);}
-.doc-type-btn.expired-docs{border-color:var(--red);color:var(--red);}
-.doc-type-btn.expired-docs i{color:var(--red);}
-.doc-type-btn.expiring-docs{border-color:var(--amber);color:var(--amber);}
-.doc-type-btn.expiring-docs i{color:var(--amber);}
-.doc-count-badge{position:absolute;top:8px;right:8px;background:var(--teal);color:#fff;font-size:9px;font-weight:700;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.main-split{flex:1;display:flex;gap:14px;min-height:0;}
+
+.doc-sidebar{width:130px;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:10px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;box-shadow:var(--shadow);}
+.doc-sidebar-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;color:var(--text3);text-align:center;padding:16px 8px;}
+.doc-sidebar-empty i{font-size:26px;opacity:.4;}
+.doc-sidebar-empty span{font-size:11px;}
+
+.doc-side-btn{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;border-radius:var(--radius-lg);border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;transition:all .18s;text-align:center;}
+.doc-side-btn i{font-size:20px;line-height:1;}
+.doc-side-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+.doc-side-btn.selected{border-color:var(--accent);background:var(--accent-dim);color:var(--accent);box-shadow:0 0 0 1px var(--accent);}
+.doc-side-btn.has-docs{border-color:var(--teal);color:var(--teal);}
+.doc-side-btn.has-docs i{color:var(--teal);}
+.doc-side-btn.expired-docs{border-color:var(--red);color:var(--red);}
+.doc-side-btn.expired-docs i{color:var(--red);}
+.doc-side-btn.expiring-docs{border-color:var(--amber);color:var(--amber);}
+.doc-side-btn.expiring-docs i{color:var(--amber);}
+.doc-side-btn.selected.has-docs,.doc-side-btn.selected.expired-docs,.doc-side-btn.selected.expiring-docs{box-shadow:0 0 0 1px currentColor;}
+.doc-count-badge{position:absolute;top:5px;right:5px;background:var(--teal);color:#fff;font-size:9px;font-weight:700;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
 .doc-count-badge.red{background:var(--red);}
 .doc-count-badge.amber{background:var(--amber);}
-.doc-expiry-hint{font-size:9.5px;font-family:var(--mono);color:var(--text3);margin-top:2px;}
-.doc-expiry-hint.red{color:var(--red);}
-.doc-expiry-hint.amber{color:var(--amber);}
-.doc-expiry-hint.teal{color:var(--teal);}
 
-/* ── Doc list panel ── */
-.doc-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-xl);overflow:hidden;margin-top:4px;}
-.doc-panel-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--surface);}
-.doc-panel-header h3{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;}
-.doc-panel-header h3 i{color:var(--accent);font-size:18px;}
-.doc-panel-close{margin-left:auto;width:30px;height:30px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .15s;}
-.doc-panel-close:hover{background:var(--red-dim);color:var(--red);border-color:var(--red);}
-.doc-panel-body{padding:16px 18px;}
+.doc-center{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;}
+.doc-center-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.doc-center-header h3{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;}
+.doc-center-header h3 i{color:var(--accent);font-size:18px;}
+.doc-center-body{flex:1;overflow-y:auto;padding:16px 18px;}
+.doc-center-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text3);gap:10px;text-align:center;padding:30px;}
+.doc-center-placeholder i{font-size:36px;opacity:.35;}
+.doc-center-placeholder span{font-size:13px;}
 
-/* ── Doc record list ── */
-.doc-records{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
-.doc-record{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);transition:border .15s;}
-.doc-record:hover{border-color:var(--border2);}
-.doc-record-icon{width:36px;height:36px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;}
-.doc-record-icon.pdf{background:var(--red-dim);color:var(--red);}
-.doc-record-icon.img{background:var(--accent-dim);color:var(--accent);}
-.doc-record-meta{flex:1;min-width:0;}
-.doc-record-txn{font-family:var(--mono);font-size:10.5px;color:var(--text3);}
-.doc-record-date{font-size:12px;font-weight:600;color:var(--text);}
-.doc-record-expiry{font-size:11px;}
-.doc-record-expiry.red{color:var(--red);}
-.doc-record-expiry.amber{color:var(--amber);}
-.doc-record-expiry.teal{color:var(--teal);}
-.doc-record-expiry.gray{color:var(--text3);}
-.doc-record-actions{display:flex;gap:6px;flex-shrink:0;}
-.icon-btn{width:30px;height:30px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .15s;}
-.icon-btn.view:hover{background:var(--accent-dim);color:var(--accent);border-color:var(--accent);}
-.icon-btn.del:hover{background:var(--red-dim);color:var(--red);border-color:var(--red);}
-.no-docs-msg{text-align:center;padding:24px 0;color:var(--text3);font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px;}
-.no-docs-msg i{font-size:30px;opacity:.4;}
+.txn-record{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:8px;transition:border .15s;}
+.txn-record:hover{border-color:var(--border2);}
+.txn-record-icon{width:34px;height:34px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;}
+.txn-record-icon.pdf{background:var(--red-dim);color:var(--red);}
+.txn-record-icon.img{background:var(--accent-dim);color:var(--accent);}
+.txn-record-meta{flex:1;min-width:0;}
+.txn-id-btn{display:flex;align-items:center;gap:6px;background:none;border:none;padding:0;cursor:pointer;font-family:var(--mono);font-size:11.5px;color:var(--accent);font-weight:600;text-align:left;}
+.txn-id-btn:hover{text-decoration:underline;}
+.txn-record-date{font-size:11.5px;color:var(--text2);margin-top:2px;}
+.txn-record-expiry{font-size:11px;margin-top:1px;}
+.txn-record-expiry.red{color:var(--red);}
+.txn-record-expiry.amber{color:var(--amber);}
+.txn-record-expiry.teal{color:var(--teal);}
+.txn-record-expiry.gray{color:var(--text3);}
+.txn-badge-latest{font-size:9px;font-weight:700;padding:1px 7px;border-radius:20px;background:var(--teal-dim);color:var(--teal);border:1px solid rgba(57,211,83,.3);margin-left:4px;}
 
-/* ── Upload form ── */
-.upload-section{background:var(--bg3);border:1.5px dashed var(--border2);border-radius:var(--radius-lg);padding:18px;}
-.upload-section-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;display:flex;align-items:center;gap:6px;}
-.upload-section-title i{font-size:14px;color:var(--accent);}
+.txn-new-row{display:flex;align-items:center;gap:10px;padding:13px 14px;border:1.5px dashed var(--border2);border-radius:var(--radius-lg);margin-top:4px;background:var(--bg2);}
+.txn-new-label{flex:1;font-size:12.5px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:8px;}
+.txn-new-label i{font-size:18px;color:var(--text3);}
+.btn-new-upload{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:var(--radius);border:1.5px solid var(--accent);background:var(--accent-dim);color:var(--accent);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;transition:all .18s;}
+.btn-new-upload:hover{background:var(--accent);color:#fff;}
+
+.upload-inline{display:none;margin-top:10px;background:var(--bg3);border:1.5px dashed var(--border2);border-radius:var(--radius-lg);padding:16px;}
+.upload-inline.open{display:block;}
+.upload-inline-title{font-size:11.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.upload-inline-title i{font-size:14px;color:var(--accent);}
 .upload-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}
-.upload-row .field{flex:1;min-width:180px;}
-.file-upload-zone{border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:18px;text-align:center;cursor:pointer;transition:all .18s;background:var(--surface);position:relative;}
+.upload-row .field{flex:1;min-width:200px;}
+.file-upload-zone{border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:16px;text-align:center;cursor:pointer;transition:all .18s;background:var(--surface);position:relative;}
 .file-upload-zone:hover,.file-upload-zone.dragover{border-color:var(--accent);background:var(--accent-dim);}
 .file-upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
-.file-upload-zone i{font-size:28px;color:var(--text3);margin-bottom:6px;}
-.file-upload-zone p{font-size:12px;color:var(--text3);}
+.file-upload-zone i{font-size:24px;color:var(--text3);margin-bottom:6px;}
+.file-upload-zone p{font-size:11.5px;color:var(--text3);}
 .file-upload-zone.has-file{border-color:var(--teal);background:var(--teal-dim);}
 .file-upload-zone.has-file i{color:var(--teal);}
 .file-upload-zone.has-file p{color:var(--teal);}
-.date-input{width:100%;padding:9px 12px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;transition:border .18s;}
+.date-input{width:100%;padding:9px 12px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;}
 .date-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
-.upload-actions{display:flex;justify-content:flex-end;margin-top:14px;gap:8px;}
+.upload-actions{display:flex;justify-content:flex-end;margin-top:12px;gap:8px;}
+.gs-status{display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:var(--radius-lg);font-size:11.5px;font-weight:600;margin-top:10px;}
+.gs-status.loading{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(88,166,255,.3);}
+.gs-status.success{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(57,211,83,.3);}
+.gs-status.error{background:var(--red-dim);color:var(--red);border:1px solid rgba(248,81,73,.3);}
 
-/* ── Buttons ── */
+.doc-preview-panel{width:0;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);overflow:hidden;transition:width .26s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;}
+.doc-preview-panel.open{width:420px;}
+.preview-panel-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.preview-panel-header h3{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.preview-panel-header h3 i{color:var(--accent);font-size:17px;flex-shrink:0;}
+.preview-panel-close{margin-left:auto;width:28px;height:28px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .15s;flex-shrink:0;}
+.preview-panel-close:hover{background:var(--red-dim);color:var(--red);border-color:var(--red);}
+.preview-panel-body{flex:1;overflow-y:auto;padding:16px;}
+.preview-panel-body img.preview-img{max-width:100%;border-radius:var(--radius-lg);display:block;margin:0 auto;}
+.preview-panel-body iframe.preview-pdf{width:100%;height:420px;border:none;border-radius:var(--radius-lg);}
+.preview-meta{display:flex;flex-direction:column;gap:10px;margin-top:14px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);}
+.preview-meta-item{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.preview-meta-item .key{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;}
+.preview-meta-item .val{font-size:12px;font-weight:600;color:var(--text);font-family:var(--mono);text-align:right;}
+.preview-panel-footer{padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0;}
+
 .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:var(--radius);border:1.5px solid;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;white-space:nowrap;line-height:1;}
 .btn i{font-size:16px;line-height:1;flex-shrink:0;}
 .btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 0 12px var(--accent-glow);}
 .btn-primary:hover{filter:brightness(1.1);}
 .btn-ghost{background:transparent;color:var(--text2);border-color:var(--border2);}
 .btn-ghost:hover{background:var(--surface2);color:var(--text);}
-.btn-success{background:var(--teal-dim);color:var(--teal);border-color:var(--teal);}
-.btn-success:hover{background:var(--teal);color:#fff;}
 .btn-sm{padding:6px 12px;font-size:12px;}
 .btn:disabled{opacity:.5;cursor:not-allowed;pointer-events:none;}
+.btn-block{width:100%;justify-content:center;}
 
-/* ── Badge ── */
 .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap;}
-.badge.green{background:rgba(57,211,83,.18);color:#39d353;border:1px solid rgba(57,211,83,.35);}
-.badge.red{background:rgba(248,81,73,.18);color:#f85149;border:1px solid rgba(248,81,73,.35);}
-.badge.amber{background:rgba(227,179,65,.18);color:#e3b341;border:1px solid rgba(227,179,65,.35);}
-.badge.gray{background:rgba(110,118,129,.18);color:#8b949e;border:1px solid rgba(110,118,129,.3);}
 .badge.purple{background:rgba(163,113,247,.18);color:#a371f7;border:1px solid rgba(163,113,247,.3);}
 
-/* ── Toast ── */
-.toast{position:fixed;bottom:28px;right:28px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);padding:13px 20px;border-radius:var(--radius-lg);font-size:13px;font-weight:500;z-index:999;opacity:0;transform:translateY(12px);transition:all .28s cubic-bezier(.34,1.56,.64,1);pointer-events:none;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow-lg);max-width:360px;}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);padding:12px 18px;border-radius:var(--radius-lg);font-size:13px;font-weight:500;z-index:999;opacity:0;transform:translateY(12px);transition:all .28s cubic-bezier(.34,1.56,.64,1);pointer-events:none;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow-lg);max-width:360px;}
 .toast.show{opacity:1;transform:translateY(0);}
 .toast.success{background:var(--teal-dim);color:var(--teal);border-color:rgba(57,211,83,.25);}
 .toast.error{background:var(--red-dim);color:var(--red);border-color:rgba(248,81,73,.25);}
 
-/* ── Modal ── */
-@keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(10px);}to{opacity:1;transform:none;}}
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;}
-.modal-backdrop.open{display:flex;}
-.modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);width:100%;max-width:860px;max-height:90vh;display:flex;flex-direction:column;animation:modalIn .22s ease;}
-.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;}
-.modal-header h2{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;flex:1;}
-.modal-header h2 i{color:var(--accent);font-size:18px;}
-.modal-body{padding:20px;overflow-y:auto;flex:1;}
-.modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0;}
-
-/* ── Preview modal specific ── */
-.preview-img{max-width:100%;max-height:65vh;border-radius:var(--radius-lg);object-fit:contain;display:block;margin:0 auto;}
-.preview-pdf{width:100%;height:65vh;border:none;border-radius:var(--radius-lg);}
-.preview-meta{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);}
-.preview-meta-item{display:flex;flex-direction:column;gap:2px;}
-.preview-meta-item .key{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;}
-.preview-meta-item .val{font-size:12.5px;font-weight:600;color:var(--text);font-family:var(--mono);}
-
-/* ── Loading spinner ── */
 @keyframes spin{to{transform:rotate(360deg);}}
 .spinner{animation:spin 1s linear infinite;display:inline-flex;}
 
-/* ── Google Sheets status row ── */
-.gs-status{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--radius-lg);font-size:12px;font-weight:600;margin-top:10px;}
-.gs-status.loading{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(88,166,255,.3);}
-.gs-status.success{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(57,211,83,.3);}
-.gs-status.error{background:var(--red-dim);color:var(--red);border:1px solid rgba(248,81,73,.3);}
-.gs-status i{font-size:15px;}
-
-/* ── Tab panels ── */
-.tab-panel{display:none;}
-.tab-panel.active{display:block;}
-
-/* ── Bike plate confirm ── */
-.plate-display{background:linear-gradient(135deg,#1a2332,#0d1117);border:2px solid var(--border2);border-radius:var(--radius-lg);padding:14px 20px;display:flex;align-items:center;gap:14px;margin-top:2px;}
-.plate-number{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--amber);letter-spacing:.1em;}
-.plate-badge{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3);letter-spacing:.1em;}
-
-/* ── Divider with label ── */
-.divider-label{display:flex;align-items:center;gap:10px;margin:20px 0;color:var(--text3);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;}
-.divider-label::before,.divider-label::after{content:'';flex:1;height:1px;background:var(--border);}
-
-/* ── Config panel ── */
-.config-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:18px;margin-bottom:14px;}
-.config-card h3{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
-.config-card h3 i{color:var(--accent);}
-.config-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}
-.config-row .field{flex:1;min-width:220px;}
-.input-field{width:100%;padding:9px 12px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;transition:border .18s;}
-.input-field:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
-.input-field::placeholder{color:var(--text3);}
-
-/* ── Responsive ── */
+@media(max-width:900px){
+  .doc-sidebar{width:90px;}
+  .doc-side-btn span{font-size:9.5px;}
+  .doc-preview-panel.open{width:340px;}
+}
 @media(max-width:640px){
-  .portal-wrap{padding:12px 10px;}
-  .tab-btn span{display:none;}
-  .entity-selector{flex-direction:column;}
-  .upload-row{flex-direction:column;}
-  .doc-grid.emp-docs,.doc-grid.bike-docs{grid-template-columns:repeat(2,1fr);}
+  .main-split{flex-direction:column;}
+  .doc-sidebar{width:100%;flex-direction:row;overflow-x:auto;}
+  .doc-preview-panel.open{width:100%;}
+  .doc-preview-panel{position:fixed;inset:0;z-index:300;border-radius:0;}
 }
 </style>
 </head>
@@ -256,22 +210,19 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 
 <div class="portal-wrap">
 
-  <!-- Portal Header -->
   <div class="portal-header">
     <div class="portal-logo"><i class="ti ti-file-certificate"></i></div>
     <div class="portal-title">
       <h1>Document Management Portal</h1>
-      <p>Upload, track, and preview rider & vehicle documents · Google Sheets sync enabled</p>
+      <p>Rider & vehicle document tracking · Synced from fleet cache</p>
     </div>
     <div class="portal-header-actions">
-      <div id="cache-status" style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text3);padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);font-family:var(--mono);">
+      <div id="cache-status">
         <i class="ti ti-loader spinner" style="font-size:13px;"></i> Loading cache…
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="openModal('modal-config')"><i class="ti ti-settings"></i> Config</button>
     </div>
   </div>
 
-  <!-- Tab Nav -->
   <div class="tab-nav">
     <button class="tab-btn active" id="tab-emp-btn" onclick="switchTab('emp')">
       <i class="ti ti-user-check"></i><span>Employee Documents</span>
@@ -281,214 +232,133 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
     </button>
   </div>
 
-  <!-- ═══════ EMPLOYEE TAB ═══════ -->
-  <div class="tab-panel active" id="tab-emp">
+  <!-- EMPLOYEE TAB -->
+  <div class="tab-panel" id="tab-emp" style="display:flex;flex-direction:column;gap:14px;flex:1;min-height:0;">
 
-    <!-- Emp Selector -->
-    <div class="section-card">
-      <div class="section-card-title"><i class="ti ti-search"></i> Select Employee</div>
-      <div class="entity-selector">
-        <div class="field" style="max-width:320px;">
-          <label>Employee ID <span class="req">*</span></label>
-          <div class="search-dropdown-wrap">
-            <input class="search-dropdown-input" id="emp-search" type="text" placeholder="Type Emp ID or Name…" autocomplete="off"
-              oninput="filterEmpDropdown(this.value)" onfocus="openEmpDropdown()" onblur="setTimeout(()=>closeEmpDropdown(),180)"/>
-            <div class="dropdown-list" id="emp-dropdown"></div>
-          </div>
+    <div class="selector-bar">
+      <div class="field">
+        <label>Employee ID <span class="req">*</span></label>
+        <div class="search-dropdown-wrap">
+          <input class="search-dropdown-input" id="emp-search" type="text" placeholder="Type Emp ID or Name…" autocomplete="off"
+            oninput="filterEmpDropdown(this.value)" onfocus="openEmpDropdown()" onblur="setTimeout(()=>closeEmpDropdown(),180)"/>
+          <div class="dropdown-list" id="emp-dropdown"></div>
         </div>
-        <div id="emp-confirm" style="display:none;" class="entity-confirm-strip">
-          <div class="entity-confirm-avatar" id="emp-avatar"></div>
-          <div class="entity-confirm-info">
-            <div class="entity-confirm-name" id="emp-confirm-name">—</div>
-            <div class="entity-confirm-sub" id="emp-confirm-id">—</div>
-          </div>
-          <span class="confirm-badge"><i class="ti ti-check" style="font-size:10px;"></i> Confirmed</span>
+      </div>
+      <div id="emp-confirm" class="entity-confirm-strip">
+        <div class="entity-confirm-avatar" id="emp-avatar"></div>
+        <div>
+          <div class="entity-confirm-name" id="emp-confirm-name">—</div>
+          <div class="entity-confirm-sub" id="emp-confirm-id">—</div>
         </div>
+        <span class="confirm-badge"><i class="ti ti-check" style="font-size:10px;"></i> Confirmed</span>
       </div>
     </div>
 
-    <!-- Emp Doc Buttons -->
-    <div class="section-card" id="emp-docs-section" style="display:none;">
-      <div class="section-card-title"><i class="ti ti-files"></i> Document Categories</div>
-      <div class="doc-grid emp-docs" id="emp-doc-grid">
-        <!-- built by JS -->
+    <div class="main-split" id="emp-main-split">
+      <div class="doc-sidebar" id="emp-doc-sidebar">
+        <div class="doc-sidebar-empty"><i class="ti ti-user-search"></i><span>Select an employee to view document categories</span></div>
+      </div>
+      <div class="doc-center" id="emp-doc-center">
+        <div class="doc-center-placeholder">
+          <i class="ti ti-files"></i>
+          <span>Select a document type from the left to view its records</span>
+        </div>
+      </div>
+      <div class="doc-preview-panel" id="emp-preview-panel">
+        <div class="preview-panel-header">
+          <h3><i class="ti ti-eye"></i> <span id="emp-preview-title">Preview</span></h3>
+          <button class="preview-panel-close" onclick="closePreview('emp')"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="preview-panel-body" id="emp-preview-body"></div>
+        <div class="preview-panel-footer">
+          <a id="emp-preview-download" class="btn btn-ghost btn-sm btn-block" download><i class="ti ti-download"></i> Download Document</a>
+        </div>
       </div>
     </div>
-
-    <!-- Emp Doc Panel (shown when a type is clicked) -->
-    <div id="emp-doc-panel" style="display:none;"></div>
-
   </div>
 
-  <!-- ═══════ BIKE TAB ═══════ -->
-  <div class="tab-panel" id="tab-bike">
+  <!-- BIKE TAB -->
+  <div class="tab-panel" id="tab-bike" style="display:none;flex-direction:column;gap:14px;flex:1;min-height:0;">
 
-    <!-- Bike Selector -->
-    <div class="section-card">
-      <div class="section-card-title"><i class="ti ti-motorbike"></i> Select Bike</div>
-      <div class="entity-selector">
-        <div class="field" style="max-width:320px;">
-          <label>Bike ID <span class="req">*</span></label>
-          <div class="search-dropdown-wrap">
-            <input class="search-dropdown-input" id="bike-search" type="text" placeholder="Type Bike ID…" autocomplete="off"
-              oninput="filterBikeDropdown(this.value)" onfocus="openBikeDropdown()" onblur="setTimeout(()=>closeBikeDropdown(),180)"/>
-            <div class="dropdown-list" id="bike-dropdown"></div>
-          </div>
+    <div class="selector-bar">
+      <div class="field">
+        <label>Bike ID <span class="req">*</span></label>
+        <div class="search-dropdown-wrap">
+          <input class="search-dropdown-input" id="bike-search" type="text" placeholder="Type Bike ID…" autocomplete="off"
+            oninput="filterBikeDropdown(this.value)" onfocus="openBikeDropdown()" onblur="setTimeout(()=>closeBikeDropdown(),180)"/>
+          <div class="dropdown-list" id="bike-dropdown"></div>
         </div>
-        <div id="bike-confirm" style="display:none;" class="entity-confirm-strip">
-          <div class="entity-confirm-avatar" id="bike-avatar" style="background:var(--orange-dim);color:var(--orange);">
-            <i class="ti ti-motorbike" style="font-size:16px;"></i>
-          </div>
-          <div class="entity-confirm-info">
-            <div class="entity-confirm-name" id="bike-confirm-plate">—</div>
-            <div class="entity-confirm-sub" id="bike-confirm-id">—</div>
-          </div>
-          <span class="confirm-badge"><i class="ti ti-check" style="font-size:10px;"></i> Confirmed</span>
+      </div>
+      <div id="bike-confirm" class="entity-confirm-strip">
+        <div class="entity-confirm-avatar" id="bike-avatar" style="background:var(--orange-dim);color:var(--orange);">
+          <i class="ti ti-motorbike" style="font-size:15px;"></i>
         </div>
+        <div>
+          <div class="entity-confirm-name" id="bike-confirm-plate">—</div>
+          <div class="entity-confirm-sub" id="bike-confirm-id">—</div>
+        </div>
+        <span class="confirm-badge"><i class="ti ti-check" style="font-size:10px;"></i> Confirmed</span>
       </div>
     </div>
 
-    <!-- Bike Doc Buttons -->
-    <div class="section-card" id="bike-docs-section" style="display:none;">
-      <div class="section-card-title"><i class="ti ti-files"></i> Vehicle Document Categories</div>
-      <div class="doc-grid bike-docs" id="bike-doc-grid">
-        <!-- built by JS -->
+    <div class="main-split" id="bike-main-split">
+      <div class="doc-sidebar" id="bike-doc-sidebar">
+        <div class="doc-sidebar-empty"><i class="ti ti-motorbike"></i><span>Select a bike to view document categories</span></div>
+      </div>
+      <div class="doc-center" id="bike-doc-center">
+        <div class="doc-center-placeholder">
+          <i class="ti ti-files"></i>
+          <span>Select a document type from the left to view its records</span>
+        </div>
+      </div>
+      <div class="doc-preview-panel" id="bike-preview-panel">
+        <div class="preview-panel-header">
+          <h3><i class="ti ti-eye"></i> <span id="bike-preview-title">Preview</span></h3>
+          <button class="preview-panel-close" onclick="closePreview('bike')"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="preview-panel-body" id="bike-preview-body"></div>
+        <div class="preview-panel-footer">
+          <a id="bike-preview-download" class="btn btn-ghost btn-sm btn-block" download><i class="ti ti-download"></i> Download Document</a>
+        </div>
       </div>
     </div>
-
-    <!-- Bike Doc Panel -->
-    <div id="bike-doc-panel" style="display:none;"></div>
-
   </div>
 
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast" role="alert">
   <i id="toast-icon" class="ti ti-circle-check"></i>
   <span id="toast-msg">Saved</span>
 </div>
 
-<!-- ═══ Preview Modal ═══ -->
-<div class="modal-backdrop" id="modal-preview">
-  <div class="modal" style="max-width:900px;">
-    <div class="modal-header">
-      <h2><i class="ti ti-eye"></i> <span id="preview-title">Document Preview</span></h2>
-      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-preview')"><i class="ti ti-x"></i></button>
-    </div>
-    <div class="modal-body">
-      <div id="preview-content"></div>
-      <div class="preview-meta" id="preview-meta" style="display:none;"></div>
-    </div>
-    <div class="modal-footer">
-      <a id="preview-download" class="btn btn-ghost btn-sm" download><i class="ti ti-download"></i> Download</a>
-      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-preview')"><i class="ti ti-x"></i> Close</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ Config Modal ═══ -->
-<div class="modal-backdrop" id="modal-config">
-  <div class="modal" style="max-width:620px;">
-    <div class="modal-header">
-      <h2><i class="ti ti-settings"></i> Portal Configuration</h2>
-      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-config')"><i class="ti ti-x"></i></button>
-    </div>
-    <div class="modal-body">
-      <div class="config-card">
-        <h3><i class="ti ti-table"></i> Google Sheets Integration</h3>
-        <div class="config-row">
-          <div class="field">
-            <label>Apps Script Web App URL</label>
-            <input class="input-field" id="cfg-script-url" type="url" placeholder="https://script.google.com/macros/s/…/exec"/>
-          </div>
-        </div>
-        <div class="config-row" style="margin-top:10px;">
-          <div class="field">
-            <label>Employee Sheet Name</label>
-            <input class="input-field" id="cfg-emp-sheet" type="text" value="Employees" placeholder="Employees"/>
-          </div>
-          <div class="field">
-            <label>Bike Sheet Name</label>
-            <input class="input-field" id="cfg-bike-sheet" type="text" value="Bikes" placeholder="Bikes"/>
-          </div>
-        </div>
-        <div class="config-row" style="margin-top:10px;">
-          <div class="field">
-            <label>Employee Docs Sheet</label>
-            <input class="input-field" id="cfg-emp-docs-sheet" type="text" value="EmpDocuments" placeholder="EmpDocuments"/>
-          </div>
-          <div class="field">
-            <label>Bike Docs Sheet</label>
-            <input class="input-field" id="cfg-bike-docs-sheet" type="text" value="BikeDocuments" placeholder="BikeDocuments"/>
-          </div>
-        </div>
-      </div>
-      <div class="config-card">
-        <h3><i class="ti ti-database"></i> Demo / Offline Mode</h3>
-        <p style="font-size:12.5px;color:var(--text2);margin-bottom:12px;">When no Apps Script URL is set, the portal runs in demo mode using local IndexedDB storage so you can test the full workflow offline.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-ghost btn-sm" onclick="loadDemoData()"><i class="ti ti-database-import"></i> Load Demo Data</button>
-          <button class="btn btn-ghost btn-sm" onclick="clearAllData()"><i class="ti ti-trash"></i> Clear All Local Data</button>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-config')"><i class="ti ti-x"></i> Cancel</button>
-      <button class="btn btn-primary" onclick="saveConfig()"><i class="ti ti-check"></i> Save Config</button>
-    </div>
-  </div>
-</div>
-
 <script>
 'use strict';
-/* ════════════════════════════════════════════════
-   DOCUMENT MANAGEMENT PORTAL
-   - Employee & Bike document management
-   - Google Sheets via Apps Script
-   - IndexedDB fallback / demo mode
-   - File preview (image + PDF)
-   ════════════════════════════════════════════════ */
 
-/* ══ CONFIG ══ */
-let CFG = {
-  scriptUrl: '',
-  empSheet: 'Employees',
-  bikeSheet: 'Bikes',
-  empDocsSheet: 'EmpDocuments',
-  bikeDocsSheet: 'BikeDocuments',
-};
-
-/* ══ DOC TYPES ══ */
 const EMP_DOC_TYPES = [
-  { key:'contract',      label:'Contract',       icon:'ti-file-text',          color:'accent'  },
-  { key:'visa',          label:'Visa',            icon:'ti-globe',              color:'teal'    },
-  { key:'labour_card',   label:'Labour Card',     icon:'ti-briefcase',          color:'amber'   },
-  { key:'eid_card',      label:'EID Card',        icon:'ti-id-badge-2',         color:'purple'  },
-  { key:'rta_card',      label:'RTA Card',        icon:'ti-steering-wheel',     color:'orange'  },
-  { key:'driving_lic',   label:'Driving License', icon:'ti-license',            color:'accent'  },
-  { key:'health_card',   label:'Health Card',     icon:'ti-heart-plus',         color:'red'     },
-  { key:'passport',      label:'Passport',        icon:'ti-passport',           color:'teal'    },
+  { key:'contract',      label:'Contract',       icon:'ti-file-text'       },
+  { key:'visa',          label:'Visa',            icon:'ti-globe'           },
+  { key:'labour_card',   label:'Labour Card',     icon:'ti-briefcase'       },
+  { key:'eid_card',      label:'EID Card',        icon:'ti-id-badge-2'      },
+  { key:'rta_card',      label:'RTA Card',        icon:'ti-steering-wheel'  },
+  { key:'driving_lic',   label:'Driving License', icon:'ti-license'         },
+  { key:'health_card',   label:'Health Card',     icon:'ti-heart-plus'      },
+  { key:'passport',      label:'Passport',        icon:'ti-passport'        },
 ];
 
 const BIKE_DOC_TYPES = [
-  { key:'mulkia',        label:'Mulkia',          icon:'ti-certificate',        color:'amber'   },
-  { key:'passing',       label:'Passing',         icon:'ti-check-badge',        color:'teal'    },
-  { key:'insurance',     label:'Insurance',       icon:'ti-shield-check',       color:'accent'  },
-  { key:'registration',  label:'Registration',    icon:'ti-file-certificate',   color:'purple'  },
+  { key:'mulkia',        label:'Mulkia',          icon:'ti-certificate'      },
+  { key:'passing',       label:'Passing',         icon:'ti-check-badge'      },
 ];
 
-/* ══ STATE ══ */
 let employees    = [];
 let bikes        = [];
-let empDocs      = {}; // { empId: { docType: [ records ] } }
-let bikeDocs     = {}; // { bikeId: { docType: [ records ] } }
+let empDocs      = {};
+let bikeDocs     = {};
 let selEmpId     = null;
 let selBikeId    = null;
 let activeEmpDocType  = null;
 let activeBikeDocType = null;
 
-/* ══ AVATAR COLORS ══ */
 const AV_BG = ['rgba(88,166,255,.2)','rgba(57,211,83,.2)','rgba(227,179,65,.2)','rgba(163,113,247,.2)','rgba(240,136,62,.2)','rgba(248,81,73,.2)'];
 const AV_FG = ['#58a6ff','#39d353','#e3b341','#a371f7','#f0883e','#f85149'];
 function avatarStyle(name) {
@@ -496,37 +366,17 @@ function avatarStyle(name) {
   return { bg: AV_BG[i], fg: AV_FG[i], initials: (name.split(' ').map(w=>w[0]).join('').substring(0,2)).toUpperCase() };
 }
 
-/* ══ IDB — TWO DATABASES ══
- *
- *  1. ap2_fleet_cache  /  datasets  — READ-ONLY source for employees & bikes
- *       key 'ap2_employee' → { data: [ [row arrays] ] }
- *          row[0] Emp ID  [1] Name  [2] EID Number  [3] DOB
- *          row[4] UAE Mobile  [5] Emergency Mobile  [6] Reference
- *          row[7] Timestamp  [8] HR_Status  [9] Checkout_Exception
- *          row[10] EID Expiry  [11] License Expiry
- *          row[12] Labour Expiry  [13] Insurance Expiry
- *
- *       key 'ap2_bike' → { data: [ [row arrays] ] }
- *          row[0] Bike ID  [1] Plate Number  [2] Make  [3] Model
- *          row[4] Year  [5] Colour  [6] Status  (+ more cols possible)
- *
- *  2. ap2_docportal  /  docdata  — READ-WRITE for uploaded documents & config
- * ════════════════════════════════════════════════════════════════════════════ */
-
-/* ── Fleet cache (read-only) ── */
 const FLEET_IDB   = 'ap2_fleet_cache';
 const FLEET_STORE = 'datasets';
 let _fleetConn = null;
-
 function _getFleetDB() {
   if (_fleetConn) return Promise.resolve(_fleetConn);
   return new Promise((res, rej) => {
-    const req = indexedDB.open(FLEET_IDB);   // no version — open as-is
+    const req = indexedDB.open(FLEET_IDB);
     req.onsuccess = e => { _fleetConn = e.target.result; res(_fleetConn); };
     req.onerror   = e => rej(e.target.error);
   });
 }
-
 async function _fleetRead(cacheKey) {
   const db = await _getFleetDB();
   const rec = await new Promise((res, rej) => {
@@ -539,11 +389,9 @@ async function _fleetRead(cacheKey) {
   return rec.data;
 }
 
-/* ── Portal doc store (read-write) ── */
 const DOC_IDB   = 'ap2_docportal';
 const DOC_STORE = 'docdata';
 let _docConn = null;
-
 function _getDocDB() {
   if (_docConn) return Promise.resolve(_docConn);
   return new Promise((res, rej) => {
@@ -572,77 +420,40 @@ async function idbSet(key, val) {
   });
 }
 
-/* ── Normalise employee row (matches allEmp.html normaliseRow exactly) ── */
 function normaliseEmp(r, i) {
   if (!r) return null;
   const _s = v => (v !== null && v !== undefined && v !== '') ? String(v).trim() : '';
-
-  // Array format from ap2_employee cache
   if (Array.isArray(r)) {
-    if (_s(r[0]) === 'Emp ID') return null;          // skip header row
+    if (_s(r[0]) === 'Emp ID') return null;
     const empId   = (r[0] !== null && r[0] !== undefined && r[0] !== '') ? r[0] : (i + 1);
     const empName = _s(r[1]);
     if (!empName) return null;
-    return {
-      id:      empId,
-      name:    empName,
-      eid:     _s(r[2]),
-      dob:     _s(r[3]),
-      mobile:  _s(r[4]),
-      status:  _s(r[8]) || 'Active',
-    };
+    return { id: empId, name: empName, eid: _s(r[2]), dob: _s(r[3]), mobile: _s(r[4]), status: _s(r[8]) || 'Active' };
   }
-  // Object format (fallback)
   if (r['Name'] !== undefined) {
     if (!r['Name']) return null;
-    return {
-      id:     r['Emp ID'] || (i + 1),
-      name:   r['Name'],
-      eid:    String(r['EID Number'] || ''),
-      dob:    r['Date of Birth'] || '',
-      mobile: r['UAE Mobile No'] || '',
-      status: r['HR_Status'] || 'Active',
-    };
+    return { id: r['Emp ID'] || (i + 1), name: r['Name'], eid: String(r['EID Number'] || ''), dob: r['Date of Birth'] || '', mobile: r['UAE Mobile No'] || '', status: r['HR_Status'] || 'Active' };
   }
   return null;
 }
 
-/* ── Normalise bike row ── */
 function normaliseBike(r, i) {
   if (!r) return null;
   const _s = v => (v !== null && v !== undefined && v !== '') ? String(v).trim() : '';
-
   if (Array.isArray(r)) {
-    if (_s(r[0]) === 'Bike ID' || _s(r[0]) === 'id') return null;  // skip header
+    if (_s(r[0]) === 'Bike ID' || _s(r[0]) === 'id') return null;
     const bikeId = _s(r[0]);
     if (!bikeId) return null;
-    return {
-      id:     bikeId,
-      plate:  _s(r[1]),
-      make:   _s(r[2]),
-      model:  _s(r[3]),
-      year:   _s(r[4]),
-      colour: _s(r[5]),
-      status: _s(r[6]),
-    };
+    return { id: bikeId, plate: _s(r[1]), make: _s(r[2]), model: _s(r[3]), year: _s(r[4]), colour: _s(r[5]), status: _s(r[6]) };
   }
   if (r['Bike ID'] !== undefined || r['id'] !== undefined) {
     const bikeId = _s(r['Bike ID'] || r['id']);
     if (!bikeId) return null;
-    return {
-      id:     bikeId,
-      plate:  _s(r['Plate Number'] || r['plate'] || ''),
-      make:   _s(r['Make'] || r['make'] || ''),
-      model:  _s(r['Model'] || r['model'] || ''),
-      year:   _s(r['Year'] || r['year'] || ''),
-      colour: _s(r['Colour'] || r['Color'] || r['colour'] || ''),
-      status: _s(r['Status'] || r['status'] || ''),
-    };
+    return { id: bikeId, plate: _s(r['Plate Number'] || r['plate'] || ''), make: _s(r['Make'] || r['make'] || ''), model: _s(r['Model'] || r['model'] || ''), year: _s(r['Year'] || r['year'] || ''), colour: _s(r['Colour'] || r['Color'] || r['colour'] || ''), status: _s(r['Status'] || r['status'] || '') };
   }
   return null;
 }
 
-/* ══ UTILS ══ */
 function daysUntil(d) { if(!d) return Infinity; return Math.ceil((new Date(d)-new Date())/86400000); }
 function expiryStatus(d) {
   if(!d) return {status:'gray',label:'No Expiry'};
@@ -661,16 +472,7 @@ function fileToBase64(file) {
     r.readAsDataURL(file);
   });
 }
-function docColorVar(color) {
-  const map = {accent:'--accent',teal:'--teal',amber:'--amber',purple:'--purple',orange:'--orange',red:'--red'};
-  return map[color] || '--accent';
-}
 
-/* ══ MODAL ══ */
-function openModal(id)  { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-/* ══ TOAST ══ */
 let _toastTimer;
 function toast(msg, type='success') {
   const el=document.getElementById('toast'), msgEl=document.getElementById('toast-msg'), icon=document.getElementById('toast-icon');
@@ -681,37 +483,13 @@ function toast(msg, type='success') {
   _toastTimer = setTimeout(()=>{ el.classList.remove('show'); },3500);
 }
 
-/* ══ TAB ══ */
 function switchTab(tab) {
-  ['emp','bike'].forEach(t => {
-    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
-    document.getElementById('tab-'+t+'-btn').classList.toggle('active', t===tab);
-  });
+  document.getElementById('tab-emp').style.display  = tab==='emp'  ? 'flex' : 'none';
+  document.getElementById('tab-bike').style.display = tab==='bike' ? 'flex' : 'none';
+  document.getElementById('tab-emp-btn').classList.toggle('active', tab==='emp');
+  document.getElementById('tab-bike-btn').classList.toggle('active', tab==='bike');
 }
 
-/* ══ CONFIG ══ */
-async function loadConfig() {
-  const saved = await idbGet('portal_config');
-  if(saved) { CFG = {...CFG, ...saved}; }
-  document.getElementById('cfg-script-url').value  = CFG.scriptUrl || '';
-  document.getElementById('cfg-emp-sheet').value    = CFG.empSheet  || 'Employees';
-  document.getElementById('cfg-bike-sheet').value   = CFG.bikeSheet || 'Bikes';
-  document.getElementById('cfg-emp-docs-sheet').value  = CFG.empDocsSheet  || 'EmpDocuments';
-  document.getElementById('cfg-bike-docs-sheet').value = CFG.bikeDocsSheet || 'BikeDocuments';
-}
-async function saveConfig() {
-  CFG.scriptUrl      = document.getElementById('cfg-script-url').value.trim();
-  CFG.empSheet       = document.getElementById('cfg-emp-sheet').value.trim() || 'Employees';
-  CFG.bikeSheet      = document.getElementById('cfg-bike-sheet').value.trim() || 'Bikes';
-  CFG.empDocsSheet   = document.getElementById('cfg-emp-docs-sheet').value.trim() || 'EmpDocuments';
-  CFG.bikeDocsSheet  = document.getElementById('cfg-bike-docs-sheet').value.trim() || 'BikeDocuments';
-  await idbSet('portal_config', CFG);
-  closeModal('modal-config');
-  toast('Configuration saved');
-  loadInitialData();
-}
-
-/* ══ LOAD — reads ap2_fleet_cache (same DB as allEmp.html & the main fleet app) ══ */
 async function loadInitialData() {
   const statusEl = document.getElementById('cache-status');
   const setStatus = (icon, msg, color) => {
@@ -719,9 +497,7 @@ async function loadInitialData() {
     statusEl.style.color = color || 'var(--text3)';
     statusEl.innerHTML = `<i class="ti ${icon}" style="font-size:13px;${icon.includes('loader')?'animation:spin 1s linear infinite;':''}"></i> ${msg}`;
   };
-
   setStatus('ti-loader','Loading cache…');
-
   let empOk = false, bikeOk = false;
 
   try {
@@ -740,116 +516,34 @@ async function loadInitialData() {
     }
   } catch(err) { console.warn('[docPortal] bike cache:', err.message); }
 
-  // ── Uploaded documents live in our own ap2_docportal IDB ──
   const ed = await idbGet('portal_emp_docs');
   const bd = await idbGet('portal_bike_docs');
   if (ed) empDocs  = ed;
   if (bd) bikeDocs = bd;
 
-  // Update status indicator
   if (empOk || bikeOk) {
-    setStatus('ti-circle-check',
-      `${employees.length} employees · ${bikes.length} bikes`,
-      'var(--teal)');
+    setStatus('ti-circle-check', `${employees.length} employees · ${bikes.length} bikes`, 'var(--teal)');
   } else {
-    setStatus('ti-database-off',
-      'Cache empty — Load Demo Data or run main app',
-      'var(--amber)');
+    setStatus('ti-database-off', 'Fleet cache empty — open main app to populate', 'var(--amber)');
   }
 }
 
-/* ══ DEMO DATA — writes into ap2_fleet_cache so the portal works standalone ══ */
-async function loadDemoData() {
-  try {
-    const db = await _getFleetDB();
-    if (!db.objectStoreNames.contains(FLEET_STORE)) {
-      // DB exists but store was never created — need version upgrade
-      // This happens when the fleet app has never run; just populate our own state
-      employees = demoEmployees(); bikes = demoBikes();
-      closeModal('modal-config');
-      toast(`Demo data loaded (in-memory) — ${employees.length} employees, ${bikes.length} bikes`);
-      return;
-    }
-    const empData  = { data: [ empHeaderRow(), ...demoEmployees().map(empToRow) ] };
-    const bikeData = { data: [ bikeHeaderRow(), ...demoBikes().map(bikeToRow) ] };
-    await new Promise((res, rej) => {
-      const tx = db.transaction(FLEET_STORE, 'readwrite');
-      tx.objectStore(FLEET_STORE).put(empData,  'ap2_employee');
-      tx.objectStore(FLEET_STORE).put(bikeData, 'ap2_bike');
-      tx.oncomplete = res;
-      tx.onerror = () => rej(tx.error);
-    });
-    await loadInitialData();
-    closeModal('modal-config');
-    toast(`Demo data loaded — ${employees.length} employees, ${bikes.length} bikes`);
-  } catch(err) {
-    // Fallback: just load into memory
-    employees = demoEmployees(); bikes = demoBikes();
-    closeModal('modal-config');
-    toast(`Demo data loaded (in-memory) — ${employees.length} employees, ${bikes.length} bikes`);
-  }
-}
-
-function empHeaderRow() { return ['Emp ID','Name','EID Number','DOB','UAE Mobile','Emergency','Reference','Timestamp','HR_Status','CO_Exception','EID Expiry','License Expiry','Labour Expiry','Insurance Expiry']; }
-function bikeHeaderRow(){ return ['Bike ID','Plate Number','Make','Model','Year','Colour','Status']; }
-function demoEmployees() {
-  return [
-    {id:'E001',name:'Ahmed Al Rashidi',  eid:'784-1990-1234567-1',mobile:'0501234567',status:'Active'},
-    {id:'E002',name:'Mohammed Khan',     eid:'784-1985-7654321-2',mobile:'0509876543',status:'Active'},
-    {id:'E003',name:'Priya Nair',        eid:'784-1992-2345678-3',mobile:'0551234567',status:'Active'},
-    {id:'E004',name:'Carlos Mendes',     eid:'784-1988-3456789-4',mobile:'0561234567',status:'Active'},
-    {id:'E005',name:'Raj Sharma',        eid:'784-1995-4567890-5',mobile:'0571234567',status:'Active'},
-  ];
-}
-function demoBikes() {
-  return [
-    {id:'B001',plate:'Dubai A 12345',  make:'Yamaha',  model:'NMAX 155',  year:'2022',colour:'Black', status:'Active'},
-    {id:'B002',plate:'Dubai B 67890',  make:'Honda',   model:'PCX 150',   year:'2021',colour:'White', status:'Active'},
-    {id:'B003',plate:'Sharjah C 11111',make:'Suzuki',  model:'Burgman 200',year:'2023',colour:'Red',  status:'Active'},
-    {id:'B004',plate:'Abu Dhabi D 22222',make:'Kawasaki',model:'Z300',    year:'2020',colour:'Blue',  status:'Active'},
-    {id:'B005',plate:'Dubai E 33333',  make:'TVS',     model:'Apache 200',year:'2022',colour:'Grey',  status:'Active'},
-  ];
-}
-function empToRow(e)  { return [e.id,e.name,e.eid||'',e.dob||'',e.mobile||'','','','',e.status||'Active','','','','','']; }
-function bikeToRow(b) { return [b.id,b.plate||'',b.make||'',b.model||'',b.year||'',b.colour||'',b.status||'Active']; }
-
-async function clearAllData() {
-  await idbSet('portal_emp_docs',  {});
-  await idbSet('portal_bike_docs', {});
-  empDocs={}; bikeDocs={};
-  selEmpId=null; selBikeId=null;
-  resetEmpView(); resetBikeView();
-  toast('All uploaded documents cleared','error');
-}
-
-/* ═══════════════════════════════════════
-   EMPLOYEE SECTION
-   ═══════════════════════════════════════ */
 function filterEmpDropdown(q) {
   const list = document.getElementById('emp-dropdown');
   const lq = q.toLowerCase().trim();
-  const hits = employees.filter(e =>
-    String(e.id).toLowerCase().includes(lq) || e.name.toLowerCase().includes(lq)
-  ).slice(0,12);
-
+  const hits = employees.filter(e => String(e.id).toLowerCase().includes(lq) || e.name.toLowerCase().includes(lq)).slice(0,12);
   if(!hits.length) { list.innerHTML='<div class="dropdown-item" style="color:var(--text3);">No employees found</div>'; }
   else {
     list.innerHTML = hits.map(e => {
       const hl = v => v.replace(new RegExp(`(${lq})`, 'gi'), '<em>$1</em>');
       return `<div class="dropdown-item" onmousedown="selectEmployee('${e.id}')">
-        <div style="min-width:0;">
-          <div class="dname">${hl(e.name)}</div>
-          <div class="did">ID: ${hl(String(e.id))}</div>
-        </div>
+        <div class="dname">${hl(e.name)}</div><div class="did">ID: ${hl(String(e.id))}</div>
       </div>`;
     }).join('');
   }
   list.classList.add('open');
 }
-
-function openEmpDropdown() {
-  filterEmpDropdown(document.getElementById('emp-search').value);
-}
+function openEmpDropdown() { filterEmpDropdown(document.getElementById('emp-search').value); }
 function closeEmpDropdown() { document.getElementById('emp-dropdown').classList.remove('open'); }
 
 function selectEmployee(id) {
@@ -860,92 +554,61 @@ function selectEmployee(id) {
   document.getElementById('emp-search').value = `${emp.id} — ${emp.name}`;
   closeEmpDropdown();
 
-  // Show confirm strip
   const av = avatarStyle(emp.name);
   const avEl = document.getElementById('emp-avatar');
-  avEl.style.background = av.bg;
-  avEl.style.color = av.fg;
-  avEl.textContent = av.initials;
+  avEl.style.background = av.bg; avEl.style.color = av.fg; avEl.textContent = av.initials;
   document.getElementById('emp-confirm-name').textContent = emp.name;
   document.getElementById('emp-confirm-id').textContent = `ID: ${emp.id}` + (emp.eid ? ` · EID: ${emp.eid}` : '') + (emp.mobile ? ` · ${emp.mobile}` : '');
   document.getElementById('emp-confirm').style.display='flex';
 
-  // Show doc buttons
-  document.getElementById('emp-docs-section').style.display='block';
-  buildEmpDocGrid();
-  document.getElementById('emp-doc-panel').style.display='none';
+  buildEmpSidebar();
+  resetEmpCenter();
+  closePreview('emp');
 }
 
-function resetEmpView() {
-  document.getElementById('emp-search').value='';
-  document.getElementById('emp-confirm').style.display='none';
-  document.getElementById('emp-docs-section').style.display='none';
-  document.getElementById('emp-doc-panel').style.display='none';
-  selEmpId=null; activeEmpDocType=null;
-}
+function getEmpDocs(empId, docType) { return (empDocs[empId]?.[docType]) || []; }
 
-function getEmpDocs(empId, docType) {
-  return (empDocs[empId]?.[docType]) || [];
-}
-
-function buildEmpDocGrid() {
-  const grid = document.getElementById('emp-doc-grid');
-  grid.innerHTML = EMP_DOC_TYPES.map(dt => {
+function buildEmpSidebar() {
+  const sb = document.getElementById('emp-doc-sidebar');
+  sb.innerHTML = EMP_DOC_TYPES.map(dt => {
     const recs = getEmpDocs(selEmpId, dt.key);
     const latest = recs.length ? recs[recs.length-1] : null;
     const exp = latest?.expiry ? expiryStatus(latest.expiry) : null;
-
-    let cls = 'doc-type-btn';
+    let cls = 'doc-side-btn';
+    if (dt.key === activeEmpDocType) cls += ' selected';
     let countBadge = '';
-    let expiryHint = '';
-
     if(recs.length) {
-      if(exp?.status==='red')   { cls+=' expired-docs'; countBadge=`<div class="doc-count-badge red">${recs.length}</div>`; }
+      if(exp?.status==='red')   { cls+=' expired-docs';  countBadge=`<div class="doc-count-badge red">${recs.length}</div>`; }
       else if(exp?.status==='amber') { cls+=' expiring-docs'; countBadge=`<div class="doc-count-badge amber">${recs.length}</div>`; }
       else { cls+=' has-docs'; countBadge=`<div class="doc-count-badge">${recs.length}</div>`; }
-      expiryHint = exp ? `<div class="doc-expiry-hint ${exp.status}">${exp.label}</div>` : '';
     }
-
-    const colorVar = `var(${docColorVar(dt.color)})`;
-    return `<button class="${cls}" onclick="openEmpDocPanel('${dt.key}')">
-      ${countBadge}
-      <i class="ti ${dt.icon}" style="color:${recs.length?'':'var(--text3)'};"></i>
-      <span>${dt.label}</span>
-      ${expiryHint}
-    </button>`;
+    return `<button class="${cls}" onclick="openEmpDocType('${dt.key}')">${countBadge}<i class="ti ${dt.icon}"></i><span>${dt.label}</span></button>`;
   }).join('');
 }
 
-function openEmpDocPanel(docType) {
+function resetEmpCenter() {
+  document.getElementById('emp-doc-center').innerHTML = `<div class="doc-center-placeholder"><i class="ti ti-files"></i><span>Select a document type from the left to view its records</span></div>`;
+}
+
+function openEmpDocType(docType) {
   activeEmpDocType = docType;
+  buildEmpSidebar();
   const dt = EMP_DOC_TYPES.find(d=>d.key===docType);
   const recs = getEmpDocs(selEmpId, docType);
-  const panel = document.getElementById('emp-doc-panel');
-  panel.style.display='block';
-  panel.innerHTML = buildDocPanel(dt, recs, 'emp');
-  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+  document.getElementById('emp-doc-center').innerHTML = buildCenterPanel(dt, recs, 'emp');
   initFileUploadZone('emp-file-zone','emp-file-input','emp-chosen-file');
 }
 
-/* ═══════════════════════════════════════
-   BIKE SECTION
-   ═══════════════════════════════════════ */
 function filterBikeDropdown(q) {
   const list = document.getElementById('bike-dropdown');
   const lq = q.toLowerCase().trim();
-  const hits = bikes.filter(b =>
-    String(b.id).toLowerCase().includes(lq) || (b.plate||'').toLowerCase().includes(lq)
-  ).slice(0,12);
-
+  const hits = bikes.filter(b => String(b.id).toLowerCase().includes(lq) || (b.plate||'').toLowerCase().includes(lq)).slice(0,12);
   if(!hits.length) { list.innerHTML='<div class="dropdown-item" style="color:var(--text3);">No bikes found</div>'; }
   else {
     list.innerHTML = hits.map(b => {
       const hl = v => v.replace(new RegExp(`(${lq})`, 'gi'), '<em>$1</em>');
       return `<div class="dropdown-item" onmousedown="selectBike('${b.id}')">
-        <div style="min-width:0;">
-          <div class="dname">${hl(b.plate||b.id)}</div>
-          <div class="did">ID: ${hl(String(b.id))} · ${b.make||''} ${b.model||''}</div>
-        </div>
+        <div class="dname">${hl(b.plate||b.id)}</div><div class="did">ID: ${hl(String(b.id))} · ${b.make||''} ${b.model||''}</div>
       </div>`;
     }).join('');
   }
@@ -966,153 +629,120 @@ function selectBike(id) {
   document.getElementById('bike-confirm-id').textContent = `ID: ${bike.id}` + (bike.make ? ` · ${bike.make} ${bike.model||''}` : '') + (bike.colour ? ` · ${bike.colour}` : '');
   document.getElementById('bike-confirm').style.display='flex';
 
-  document.getElementById('bike-docs-section').style.display='block';
-  buildBikeDocGrid();
-  document.getElementById('bike-doc-panel').style.display='none';
+  buildBikeSidebar();
+  resetBikeCenter();
+  closePreview('bike');
 }
 
-function resetBikeView() {
-  document.getElementById('bike-search').value='';
-  document.getElementById('bike-confirm').style.display='none';
-  document.getElementById('bike-docs-section').style.display='none';
-  document.getElementById('bike-doc-panel').style.display='none';
-  selBikeId=null; activeBikeDocType=null;
-}
+function getBikeDocs(bikeId, docType) { return (bikeDocs[bikeId]?.[docType]) || []; }
 
-function getBikeDocs(bikeId, docType) {
-  return (bikeDocs[bikeId]?.[docType]) || [];
-}
-
-function buildBikeDocGrid() {
-  const grid = document.getElementById('bike-doc-grid');
-  grid.innerHTML = BIKE_DOC_TYPES.map(dt => {
+function buildBikeSidebar() {
+  const sb = document.getElementById('bike-doc-sidebar');
+  sb.innerHTML = BIKE_DOC_TYPES.map(dt => {
     const recs = getBikeDocs(selBikeId, dt.key);
     const latest = recs.length ? recs[recs.length-1] : null;
     const exp = latest?.expiry ? expiryStatus(latest.expiry) : null;
-
-    let cls = 'doc-type-btn';
+    let cls = 'doc-side-btn';
+    if (dt.key === activeBikeDocType) cls += ' selected';
     let countBadge = '';
-    let expiryHint = '';
-
     if(recs.length) {
-      if(exp?.status==='red')    { cls+=' expired-docs'; countBadge=`<div class="doc-count-badge red">${recs.length}</div>`; }
+      if(exp?.status==='red')    { cls+=' expired-docs';  countBadge=`<div class="doc-count-badge red">${recs.length}</div>`; }
       else if(exp?.status==='amber') { cls+=' expiring-docs'; countBadge=`<div class="doc-count-badge amber">${recs.length}</div>`; }
       else { cls+=' has-docs'; countBadge=`<div class="doc-count-badge">${recs.length}</div>`; }
-      expiryHint = exp ? `<div class="doc-expiry-hint ${exp.status}">${exp.label}</div>` : '';
     }
-
-    return `<button class="${cls}" onclick="openBikeDocPanel('${dt.key}')">
-      ${countBadge}
-      <i class="ti ${dt.icon}"></i>
-      <span>${dt.label}</span>
-      ${expiryHint}
-    </button>`;
+    return `<button class="${cls}" onclick="openBikeDocType('${dt.key}')">${countBadge}<i class="ti ${dt.icon}"></i><span>${dt.label}</span></button>`;
   }).join('');
 }
 
-function openBikeDocPanel(docType) {
+function resetBikeCenter() {
+  document.getElementById('bike-doc-center').innerHTML = `<div class="doc-center-placeholder"><i class="ti ti-files"></i><span>Select a document type from the left to view its records</span></div>`;
+}
+
+function openBikeDocType(docType) {
   activeBikeDocType = docType;
+  buildBikeSidebar();
   const dt = BIKE_DOC_TYPES.find(d=>d.key===docType);
   const recs = getBikeDocs(selBikeId, docType);
-  const panel = document.getElementById('bike-doc-panel');
-  panel.style.display='block';
-  panel.innerHTML = buildDocPanel(dt, recs, 'bike');
-  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+  document.getElementById('bike-doc-center').innerHTML = buildCenterPanel(dt, recs, 'bike');
   initFileUploadZone('bike-file-zone','bike-file-input','bike-chosen-file');
 }
 
-/* ═══════════════════════════════════════
-   SHARED DOC PANEL BUILDER
-   ═══════════════════════════════════════ */
-function buildDocPanel(dt, recs, mode) {
-  const uploadId  = mode+'-upload-form';
+function buildCenterPanel(dt, recs, mode) {
   const fileZone  = mode+'-file-zone';
   const fileInput = mode+'-file-input';
   const chosenFile= mode+'-chosen-file';
   const dateId    = mode+'-exp-date';
   const gsStatusId= mode+'-gs-status';
+  const uploadId  = mode+'-upload-inline';
 
-  // Build records list
   let recordsHtml = '';
   if(!recs.length) {
-    recordsHtml = `<div class="no-docs-msg"><i class="ti ti-file-off"></i><span>No documents uploaded yet for this category.</span></div>`;
+    recordsHtml = `<div style="text-align:center;padding:20px 0;color:var(--text3);font-size:12.5px;">
+      <i class="ti ti-file-off" style="font-size:26px;display:block;margin-bottom:8px;opacity:.4;"></i>
+      No previous documents for this category.
+    </div>`;
   } else {
-    // Show most recent first
     recordsHtml = [...recs].reverse().map((rec, idx) => {
       const isPdf = rec.fileType === 'pdf';
       const exp   = rec.expiry ? expiryStatus(rec.expiry) : {status:'gray',label:'No expiry set'};
       const isNew = idx === 0;
-      return `<div class="doc-record" style="${isNew?'border-color:var(--teal);background:rgba(57,211,83,.04);':''}">
-        <div class="doc-record-icon ${isPdf?'pdf':'img'}">
-          <i class="ti ${isPdf?'ti-file-type-pdf':'ti-photo'}"></i>
-        </div>
-        <div class="doc-record-meta">
-          <div class="doc-record-txn">${rec.txnId} ${isNew?'<span class="badge green" style="font-size:9px;">Latest</span>':''}</div>
-          <div class="doc-record-date">Uploaded: ${fmtDate(rec.uploadedAt)}</div>
-          <div class="doc-record-expiry ${exp.status}"><i class="ti ti-calendar-event" style="font-size:12px;"></i> Expiry: ${rec.expiry ? fmtDate(rec.expiry) : '—'} · ${exp.label}</div>
-        </div>
-        <div class="doc-record-actions">
-          <button class="icon-btn view" title="Preview" onclick="previewDoc(${JSON.stringify(rec).replace(/"/g,'&quot;')}, '${dt.label}')"><i class="ti ti-eye"></i></button>
+      return `<div class="txn-record">
+        <div class="txn-record-icon ${isPdf?'pdf':'img'}"><i class="ti ${isPdf?'ti-file-type-pdf':'ti-photo'}"></i></div>
+        <div class="txn-record-meta">
+          <button class="txn-id-btn" onclick='previewDoc(${JSON.stringify(rec)}, "${dt.label}", "${mode}")'>
+            <i class="ti ti-eye" style="font-size:13px;"></i> ${rec.txnId}
+            ${isNew?'<span class="txn-badge-latest">Latest</span>':''}
+          </button>
+          <div class="txn-record-date">Uploaded ${fmtDate(rec.uploadedAt)}</div>
+          <div class="txn-record-expiry ${exp.status}"><i class="ti ti-calendar-event" style="font-size:11px;"></i> ${rec.expiry?fmtDate(rec.expiry):'—'} · ${exp.label}</div>
         </div>
       </div>`;
     }).join('');
   }
 
-  const divLabel = recs.length ? 'Upload New Version' : 'Upload Document';
-
-  return `<div class="doc-panel">
-    <div class="doc-panel-header">
+  return `
+    <div class="doc-center-header">
       <h3><i class="ti ${dt.icon}"></i> ${dt.label}</h3>
-      <div style="margin-left:auto;display:flex;align-items:center;gap:6px;">
-        ${recs.length ? `<span class="badge purple">${recs.length} record${recs.length!==1?'s':''}</span>` : ''}
-        <button class="doc-panel-close" onclick="closeDocPanel('${mode}')"><i class="ti ti-x"></i></button>
-      </div>
+      ${recs.length ? `<span class="badge purple" style="margin-left:auto;">${recs.length} record${recs.length!==1?'s':''}</span>` : ''}
     </div>
-    <div class="doc-panel-body">
-
-      <!-- Records -->
-      <div class="doc-records" id="${mode}-doc-records">
-        ${recordsHtml}
+    <div class="doc-center-body">
+      ${recordsHtml}
+      <div class="txn-new-row">
+        <div class="txn-new-label"><i class="ti ti-plus"></i> Upload a new ${dt.label} version</div>
+        <button class="btn-new-upload" onclick="toggleNewUpload('${uploadId}')"><i class="ti ti-upload"></i> New</button>
       </div>
-
-      <!-- Upload -->
-      <div class="divider-label">${divLabel}</div>
-      <div class="upload-section" id="${uploadId}">
-        <div class="upload-section-title"><i class="ti ti-upload"></i> Upload ${dt.label}</div>
+      <div class="upload-inline" id="${uploadId}">
+        <div class="upload-inline-title"><i class="ti ti-cloud-upload"></i> Upload ${dt.label}</div>
         <div class="upload-row">
           <div class="field" style="flex:2;">
             <label>File (Image or PDF) <span class="req">*</span></label>
             <div class="file-upload-zone" id="${fileZone}">
               <input type="file" id="${fileInput}" accept="image/*,.pdf" onchange="handleFileSelect(this, '${fileZone}', '${chosenFile}')"/>
               <i class="ti ti-cloud-upload"></i>
-              <p id="${chosenFile}">Click to browse or drag & drop<br><span style="font-size:10px;opacity:.6;">JPG, PNG, WEBP, PDF accepted</span></p>
+              <p id="${chosenFile}">Click to browse or drag & drop<br><span style="font-size:10px;opacity:.6;">JPG, PNG, WEBP, PDF</span></p>
             </div>
           </div>
           <div class="field">
             <label>Expiry Date <span class="req">*</span></label>
-            <input type="date" class="date-input" id="${dateId}" min="${new Date().toISOString().split('T')[0]}"/>
+            <input type="date" class="date-input" id="${dateId}"/>
           </div>
         </div>
         <div id="${gsStatusId}" style="display:none;"></div>
         <div class="upload-actions">
-          <button class="btn btn-ghost" onclick="resetUploadForm('${mode}')"><i class="ti ti-x"></i> Clear</button>
-          <button class="btn btn-primary" onclick="submitDoc('${mode}','${dt.key}','${dt.label}')"><i class="ti ti-upload"></i> Upload & Save</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleNewUpload('${uploadId}')"><i class="ti ti-x"></i> Cancel</button>
+          <button class="btn btn-primary btn-sm" onclick="submitDoc('${mode}','${dt.key}','${dt.label}')"><i class="ti ti-upload"></i> Upload & Save</button>
         </div>
       </div>
-
-    </div>
-  </div>`;
+    </div>`;
 }
 
-function closeDocPanel(mode) {
-  document.getElementById(mode+'-doc-panel').style.display='none';
-  if(mode==='emp') { activeEmpDocType=null; buildEmpDocGrid(); }
-  else             { activeBikeDocType=null; buildBikeDocGrid(); }
+function toggleNewUpload(id) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.toggle('open');
+  if(el.classList.contains('open')) el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-/* ═══════════════════════════════════════
-   FILE UPLOAD HANDLING
-   ═══════════════════════════════════════ */
 function initFileUploadZone(zoneId, inputId, labelId) {
   const zone = document.getElementById(zoneId);
   if(!zone) return;
@@ -1121,10 +751,7 @@ function initFileUploadZone(zoneId, inputId, labelId) {
   zone.addEventListener('drop', e => {
     e.preventDefault(); zone.classList.remove('dragover');
     const file = e.dataTransfer.files[0];
-    if(file) {
-      document.getElementById(inputId).files = e.dataTransfer.files;
-      handleFileSelect({files:[file]}, zoneId, labelId);
-    }
+    if(file) { document.getElementById(inputId).files = e.dataTransfer.files; handleFileSelect({files:[file]}, zoneId, labelId); }
   });
 }
 
@@ -1134,63 +761,30 @@ function handleFileSelect(input, zoneId, labelId) {
   const label= document.getElementById(labelId);
   if(!file || !zone || !label) return;
   zone.classList.add('has-file');
-  label.innerHTML = `<strong style="font-size:13px;">${file.name}</strong><br><span style="font-size:10.5px;">${(file.size/1024).toFixed(1)} KB · ${file.type||'unknown'}</span>`;
+  label.innerHTML = `<strong style="font-size:12.5px;">${file.name}</strong><br><span style="font-size:10.5px;">${(file.size/1024).toFixed(1)} KB</span>`;
 }
 
-function resetUploadForm(mode) {
-  const fileInput = document.getElementById(mode+'-file-input');
-  const zone = document.getElementById(mode+'-file-zone');
-  const label = document.getElementById(mode+'-chosen-file');
-  const dateEl= document.getElementById(mode+'-exp-date');
-  const gsEl  = document.getElementById(mode+'-gs-status');
-  if(fileInput) fileInput.value='';
-  if(zone) zone.classList.remove('has-file');
-  if(label) label.innerHTML = 'Click to browse or drag & drop<br><span style="font-size:10px;opacity:.6;">JPG, PNG, WEBP, PDF accepted</span>';
-  if(dateEl) dateEl.value='';
-  if(gsEl) { gsEl.style.display='none'; gsEl.innerHTML=''; }
-}
-
-/* ═══════════════════════════════════════
-   SUBMIT DOCUMENT
-   ═══════════════════════════════════════ */
 async function submitDoc(mode, docType, docLabel) {
   const fileInput = document.getElementById(mode+'-file-input');
   const dateEl    = document.getElementById(mode+'-exp-date');
   const gsStatus  = document.getElementById(mode+'-gs-status');
-
   const file = fileInput?.files?.[0];
   const expiry = dateEl?.value;
-
   if(!file)   { toast('Please select a file to upload','error'); return; }
   if(!expiry) { toast('Expiry date is mandatory','error'); return; }
-
   const entityId = mode==='emp' ? selEmpId : selBikeId;
   if(!entityId)  { toast('No entity selected','error'); return; }
 
-  // Show loading
   gsStatus.style.display='flex';
   gsStatus.className='gs-status loading';
-  gsStatus.innerHTML=`<i class="ti ti-loader spinner"></i> Processing file…`;
+  gsStatus.innerHTML=`<i class="ti ti-loader spinner"></i> Saving document…`;
 
   try {
-    // Convert to base64
     const base64 = await fileToBase64(file);
     const isPdf  = file.type === 'application/pdf';
     const txnId  = genTxnId();
+    const record = { txnId, entityId, docType, fileName: file.name, fileType: isPdf?'pdf':'image', mimeType: file.type, fileData: base64, expiry, uploadedAt: new Date().toISOString() };
 
-    const record = {
-      txnId,
-      entityId,
-      docType,
-      fileName:   file.name,
-      fileType:   isPdf ? 'pdf' : 'image',
-      mimeType:   file.type,
-      fileData:   base64,  // base64 data URL
-      expiry,
-      uploadedAt: new Date().toISOString(),
-    };
-
-    // Store locally in IDB
     if(mode==='emp') {
       if(!empDocs[entityId]) empDocs[entityId]={};
       if(!empDocs[entityId][docType]) empDocs[entityId][docType]=[];
@@ -1203,22 +797,11 @@ async function submitDoc(mode, docType, docLabel) {
       await idbSet('portal_bike_docs', bikeDocs);
     }
 
-    // Try Google Sheets sync
-    gsStatus.innerHTML=`<i class="ti ti-loader spinner"></i> Syncing to Google Sheets…`;
-    await syncToSheets(record, mode);
-
     gsStatus.className='gs-status success';
-    gsStatus.innerHTML=`<i class="ti ti-circle-check"></i> Saved successfully · TXN: ${txnId}`;
-
+    gsStatus.innerHTML=`<i class="ti ti-circle-check"></i> Saved · TXN: ${txnId}`;
     toast(`${docLabel} uploaded successfully`);
 
-    // Refresh panel
-    setTimeout(() => {
-      resetUploadForm(mode);
-      if(mode==='emp') { openEmpDocPanel(docType); buildEmpDocGrid(); }
-      else             { openBikeDocPanel(docType); buildBikeDocGrid(); }
-    }, 1200);
-
+    setTimeout(() => { if(mode==='emp') openEmpDocType(docType); else openBikeDocType(docType); }, 900);
   } catch(err) {
     gsStatus.className='gs-status error';
     gsStatus.innerHTML=`<i class="ti ti-alert-circle"></i> ${err.message}`;
@@ -1226,101 +809,49 @@ async function submitDoc(mode, docType, docLabel) {
   }
 }
 
-/* ═══════════════════════════════════════
-   GOOGLE SHEETS SYNC
-   ═══════════════════════════════════════ */
-async function syncToSheets(record, mode) {
-  if(!CFG.scriptUrl) return; // Demo mode — skip
-
-  const sheetName = mode==='emp' ? CFG.empDocsSheet : CFG.bikeDocsSheet;
-
-  const payload = {
-    action: 'saveDoc',
-    sheetName,
-    txnId:      record.txnId,
-    entityId:   record.entityId,
-    docType:    record.docType,
-    fileName:   record.fileName,
-    fileType:   record.fileType,
-    fileData:   record.fileData,
-    expiry:     record.expiry,
-    uploadedAt: record.uploadedAt,
-  };
-
-  const res = await fetch(CFG.scriptUrl, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json();
-  if(data.status !== 'ok') throw new Error(data.message || 'Sheets sync failed');
-}
-
-/* ═══════════════════════════════════════
-   PREVIEW
-   ═══════════════════════════════════════ */
-function previewDoc(rec, docLabel) {
-  if(typeof rec === 'string') {
-    try { rec = JSON.parse(rec); } catch(e) { toast('Cannot parse record','error'); return; }
-  }
-
-  document.getElementById('preview-title').textContent = `${docLabel} — ${rec.txnId}`;
-
-  const content = document.getElementById('preview-content');
-  const meta    = document.getElementById('preview-meta');
-  const dlBtn   = document.getElementById('preview-download');
-
+function previewDoc(rec, docLabel, mode) {
+  if(typeof rec === 'string') { try { rec = JSON.parse(rec); } catch(e) { toast('Cannot parse record','error'); return; } }
+  const panel = document.getElementById(mode+'-preview-panel');
+  document.getElementById(mode+'-preview-title').textContent = `${docLabel} — ${rec.txnId}`;
+  const body = document.getElementById(mode+'-preview-body');
+  let mediaHtml = '';
   if(rec.fileType === 'pdf' || rec.mimeType === 'application/pdf') {
-    content.innerHTML = `<iframe class="preview-pdf" src="${rec.fileData}" title="PDF Preview"></iframe>`;
+    mediaHtml = `<iframe class="preview-pdf" src="${rec.fileData}" title="PDF Preview"></iframe>`;
   } else {
-    content.innerHTML = `<img class="preview-img" src="${rec.fileData}" alt="Document preview"/>`;
+    mediaHtml = `<img class="preview-img" src="${rec.fileData}" alt="Document preview"/>`;
   }
-
   const exp = rec.expiry ? expiryStatus(rec.expiry) : {status:'gray',label:'Not set'};
-  meta.style.display='flex';
-  meta.innerHTML = `
-    <div class="preview-meta-item"><div class="key">Transaction ID</div><div class="val">${rec.txnId}</div></div>
-    <div class="preview-meta-item"><div class="key">Entity ID</div><div class="val">${rec.entityId}</div></div>
-    <div class="preview-meta-item"><div class="key">Document Type</div><div class="val">${rec.docType}</div></div>
-    <div class="preview-meta-item"><div class="key">File Name</div><div class="val">${rec.fileName}</div></div>
-    <div class="preview-meta-item"><div class="key">Uploaded</div><div class="val">${fmtDate(rec.uploadedAt)}</div></div>
-    <div class="preview-meta-item"><div class="key">Expiry</div><div class="val" style="color:var(--${exp.status})">${fmtDate(rec.expiry)} · ${exp.label}</div></div>
-  `;
-
+  body.innerHTML = `
+    ${mediaHtml}
+    <div class="preview-meta">
+      <div class="preview-meta-item"><span class="key">Transaction ID</span><span class="val">${rec.txnId}</span></div>
+      <div class="preview-meta-item"><span class="key">Entity ID</span><span class="val">${rec.entityId}</span></div>
+      <div class="preview-meta-item"><span class="key">File Name</span><span class="val" style="text-align:right;word-break:break-all;">${rec.fileName}</span></div>
+      <div class="preview-meta-item"><span class="key">Uploaded</span><span class="val">${fmtDate(rec.uploadedAt)}</span></div>
+      <div class="preview-meta-item"><span class="key">Expiry</span><span class="val" style="color:var(--${exp.status})">${fmtDate(rec.expiry)}</span></div>
+      <div class="preview-meta-item"><span class="key">Status</span><span class="val" style="color:var(--${exp.status})">${exp.label}</span></div>
+    </div>`;
+  const dlBtn = document.getElementById(mode+'-preview-download');
   dlBtn.href = rec.fileData;
   dlBtn.download = rec.fileName || 'document';
-
-  openModal('modal-preview');
+  panel.classList.add('open');
 }
 
-/* ═══════════════════════════════════════
-   INIT
-   ═══════════════════════════════════════ */
-async function init() {
-  await loadConfig();
-  await loadInitialData();
+function closePreview(mode) { document.getElementById(mode+'-preview-panel').classList.remove('open'); }
 
-  // ── Listen for parent frame messages (theme sync + cache refresh) ──
+async function init() {
+  await loadInitialData();
   window.addEventListener('message', e => {
     if (!e.data) return;
-    if (e.data.type === 'ap-theme' && e.data.theme)
-      document.documentElement.setAttribute('data-theme', e.data.theme);
-    if (e.data.type === 'ap-cache-updated')
-      loadInitialData();  // re-read ap2_fleet_cache when parent refreshes
+    if (e.data.type === 'ap-theme' && e.data.theme) document.documentElement.setAttribute('data-theme', e.data.theme);
+    if (e.data.type === 'ap-cache-updated') loadInitialData();
   });
-
-  // ── Background poll — re-read fleet cache every 30s (mirrors allEmp.html) ──
   setInterval(async () => {
     try {
       const empRows  = await _fleetRead('ap2_employee');
       const bikeRows = await _fleetRead('ap2_bike');
-      if (empRows.length) {
-        const parsed = empRows.map((r,i) => normaliseEmp(r,i)).filter(Boolean);
-        if (parsed.length) employees = parsed;
-      }
-      if (bikeRows.length) {
-        const parsed = bikeRows.map((r,i) => normaliseBike(r,i)).filter(Boolean);
-        if (parsed.length) bikes = parsed;
-      }
+      if (empRows.length) { const parsed = empRows.map((r,i) => normaliseEmp(r,i)).filter(Boolean); if (parsed.length) employees = parsed; }
+      if (bikeRows.length) { const parsed = bikeRows.map((r,i) => normaliseBike(r,i)).filter(Boolean); if (parsed.length) bikes = parsed; }
     } catch(e) { /* silent */ }
   }, 30000);
 }
