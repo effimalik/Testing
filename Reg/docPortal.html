@@ -399,7 +399,7 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 /* ═══════════════════════════════════════════════
    CONFIG
 ═══════════════════════════════════════════════ */
-const GAS_URL     = 'https://script.google.com/macros/s/AKfycbwRS7tRTL0GK3lBRsU8yS_l5RTWomGfvzFNAi0rHo14LxmNyLG0X0mdBRMKVSY8gBTW9w/exec'; // replace
+const GAS_URL     = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec'; // replace
 const FOLDER_ID   = '1qzeREizbo-S_HhzjQtrgFtXyboCIruvs';
 const SHEET_ID    = '1rloK0PsZUHVQeUIcPOmYETUuQrX-Y4g-OiGX_wkxgVk';
 const SHEET_NAME  = 'docLog';
@@ -1030,7 +1030,7 @@ async function submitDoc(mode, docType, docLabel, dateId, gsStatusId, zoneId, st
     }
 
     // Log to Google Sheet (non-blocking — best effort)
-    const driveLink = await uploadToDriveAndSheet(txnId, entityId, docLabel, file, base64, expiry, isPdf).catch(e => {
+    const driveLink = await uploadToDriveAndSheet(txnId, entityId, docLabel, file, base64, expiry).catch(e => {
       console.warn('[docPortal] GSheet log failed:', e.message);
       return '';
     });
@@ -1057,32 +1057,41 @@ async function submitDoc(mode, docType, docLabel, dateId, gsStatusId, zoneId, st
    GOOGLE DRIVE + SHEET LOG via GAS
    Sheet columns: Transaction ID | EID | Doc Type | Doc Link | Exp Date
 ═══════════════════════════════════════════════ */
-async function uploadToDriveAndSheet(txnId, entityId, docLabel, file, base64Data, expiry, isPdf) {
-  // Strip data: URL prefix → pure base64
-  const pureB64 = base64Data.split(',')[1] || base64Data;
+async function uploadToDriveAndSheet(txnId, entityId, docLabel, file, base64Data, expiry) {
+  // Strip data:mime;base64, prefix - keep only the raw base64 string
+  const pureB64 = base64Data.indexOf(',') !== -1 ? base64Data.split(',')[1] : base64Data;
 
   const payload = {
     action:   'uploadDoc',
-    txnId,
-    entityId,
+    txnId:    txnId,
+    entityId: entityId,
     docType:  docLabel,
     fileName: file.name,
     mimeType: file.type,
     fileData: pureB64,
-    expDate:  expiry,
-    folderId: FOLDER_ID,
-    sheetId:  SHEET_ID,
-    sheetName:SHEET_NAME,
+    expDate:  expiry || '',
   };
 
+  // GAS requires text/plain to avoid CORS preflight OPTIONS block
+  // redirect:follow ensures fetch follows the 302 that GAS issues on POST
   const res = await fetch(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' }, // avoid CORS preflight
-    body: JSON.stringify(payload),
+    method:   'POST',
+    redirect: 'follow',
+    headers:  { 'Content-Type': 'text/plain;charset=utf-8' },
+    body:     JSON.stringify(payload),
   });
-  if(!res.ok) throw new Error('GAS responded '+res.status);
-  const json = await res.json();
-  if(json.error) throw new Error(json.error);
+
+  const text = await res.text();
+  console.log('[docPortal] GAS raw response status:', res.status, 'body:', text.substring(0, 500));
+
+  let json;
+  try { json = JSON.parse(text); }
+  catch(e) { throw new Error('GAS returned non-JSON: ' + text.substring(0, 300)); }
+
+  console.log('[docPortal] GAS parsed response:', json);
+
+  if (json.error) throw new Error(json.error + (json.log ? ' | GAS log: ' + json.log.join(' -> ') : ''));
+  if (json.warning) console.warn('[docPortal] GAS warning:', json.warning, json.log);
   return json.driveLink || '';
 }
 
