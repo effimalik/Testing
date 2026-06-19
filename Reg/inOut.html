@@ -3753,13 +3753,25 @@ function selectSwapOld(idx){
   document.getElementById('swap-current-type').textContent=_swapSelectedOld.type;
   document.getElementById('swap-current-id').textContent=_swapSelectedOld.id;
   // Populate searchable replacement dropdown (same type, available only)
+  // Build assigned sets from masterMap (authoritative) + live AssignedTo as fallback
+  const assignedBikes=new Set();
+  const assignedSims=new Set();
+  Object.values(state.masterMap||{}).forEach(a=>{
+    if(a.bike) assignedBikes.add(a.bike);
+    if(a.sim) assignedSims.add(a.sim);
+  });
+  (state.bikes||[]).forEach(b=>{ if((b.AssignedTo||'').trim()) assignedBikes.add(b.BikeID); });
+  (state.sims||[]).forEach(s=>{ if((s.AssignedTo||'').trim()) assignedSims.add(s.SimID||s.ID); });
+
   let replOptions=[];
   if(_swapSelectedOld.type==='Bike'){
-    replOptions=(state.bikes||[]).filter(b=>(b.Status||'').toLowerCase()==='available'&&!(b.AssignedTo||'').trim()&&b.BikeID!==_swapSelectedOld.id)
+    replOptions=(state.bikes||[])
+      .filter(b=>!assignedBikes.has(b.BikeID)&&b.BikeID!==_swapSelectedOld.id)
       .map(b=>({value:b.BikeID,label:b.BikeID}));
   }else if(_swapSelectedOld.type==='SIM'){
-    replOptions=(state.sims||[]).filter(s=>!(s.AssignedTo||'').trim()&&(s.SimID||s.ID)!==_swapSelectedOld.id)
-      .map(s=>({value:s.SimID||s.ID,label:(s.Number||s.SimID||s.ID)+(s.Network?' · '+s.Network:'')}));
+    replOptions=(state.sims||[])
+      .filter(s=>!assignedSims.has(s.SimID||s.ID)&&(s.SimID||s.ID)!==_swapSelectedOld.id)
+      .map(s=>({value:s.SimID||s.ID,label:s.SimID||s.ID}));
   }
   sdSetOptions('swapnew',replOptions);
   document.getElementById('swap-new-section').style.display='';
