@@ -399,7 +399,7 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 /* ═══════════════════════════════════════════════
    CONFIG
 ═══════════════════════════════════════════════ */
-const GAS_URL     = 'https://script.google.com/macros/s/AKfycbwRS7tRTL0GK3lBRsU8yS_l5RTWomGfvzFNAi0rHo14LxmNyLG0X0mdBRMKVSY8gBTW9w/exec'; // replace
+const GAS_URL     = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec'; // replace
 const FOLDER_ID   = '1qzeREizbo-S_HhzjQtrgFtXyboCIruvs';
 const SHEET_ID    = '1rloK0PsZUHVQeUIcPOmYETUuQrX-Y4g-OiGX_wkxgVk';
 const SHEET_NAME  = 'docLog';
@@ -1036,7 +1036,7 @@ async function submitDoc(mode, docType, docLabel, dateId, gsStatusId, zoneId, st
     });
 
     gsStatus.className='gs-status success';
-    gsStatus.innerHTML=`<i class="ti ti-circle-check"></i> Saved locally · TXN: ${txnId}${driveLink?' · <a href="'+driveLink+'" target="_blank" style="color:inherit;text-decoration:underline;">View in Drive</a>':''}`;
+    gsStatus.innerHTML=`<i class="ti ti-circle-check"></i> Saved · TXN: ${txnId} · <span style="opacity:.7;font-size:10.5px;">Syncing to Drive…</span>`;
     toast(`${docLabel} uploaded successfully`);
     delete _stagedFiles[`${mode}-${docType}`];
 
@@ -1058,7 +1058,12 @@ async function submitDoc(mode, docType, docLabel, dateId, gsStatusId, zoneId, st
    Sheet columns: Transaction ID | EID | Doc Type | Doc Link | Exp Date
 ═══════════════════════════════════════════════ */
 async function uploadToDriveAndSheet(txnId, entityId, docLabel, file, base64Data, expiry) {
-  // Strip data:mime;base64, prefix - keep only the raw base64 string
+  // GAS Web Apps on script.google.com do not send CORS headers back to
+  // GitHub Pages origins. The only fetch mode that works cross-origin is
+  // no-cors — which means we cannot read the response body. That is fine
+  // because we already saved the record in IDB before calling this function,
+  // and we generate txnId client-side so we don't need GAS to return it.
+
   const pureB64 = base64Data.indexOf(',') !== -1 ? base64Data.split(',')[1] : base64Data;
 
   const payload = {
@@ -1072,27 +1077,18 @@ async function uploadToDriveAndSheet(txnId, entityId, docLabel, file, base64Data
     expDate:  expiry || '',
   };
 
-  // GAS requires text/plain to avoid CORS preflight OPTIONS block
-  // redirect:follow ensures fetch follows the 302 that GAS issues on POST
-  const res = await fetch(GAS_URL, {
-    method:   'POST',
-    redirect: 'follow',
-    headers:  { 'Content-Type': 'text/plain;charset=utf-8' },
-    body:     JSON.stringify(payload),
+  // no-cors: browser sends the request but we get an opaque response (no body/status).
+  // GAS still receives and processes it — Drive + Sheet are written server-side.
+  await fetch(GAS_URL, {
+    method:  'POST',
+    mode:    'no-cors',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body:    JSON.stringify(payload),
   });
 
-  const text = await res.text();
-  console.log('[docPortal] GAS raw response status:', res.status, 'body:', text.substring(0, 500));
-
-  let json;
-  try { json = JSON.parse(text); }
-  catch(e) { throw new Error('GAS returned non-JSON: ' + text.substring(0, 300)); }
-
-  console.log('[docPortal] GAS parsed response:', json);
-
-  if (json.error) throw new Error(json.error + (json.log ? ' | GAS log: ' + json.log.join(' -> ') : ''));
-  if (json.warning) console.warn('[docPortal] GAS warning:', json.warning, json.log);
-  return json.driveLink || '';
+  // With no-cors we cannot confirm success from the response.
+  // Return empty string — the success banner already shows the local TXN ID.
+  return '';
 }
 
 /* ═══════════════════════════════════════════════
