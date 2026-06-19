@@ -1050,6 +1050,8 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
           Select Items to Check Out
         </div>
+        <!-- Existing assigned items (locked) -->
+        <div id="co-existing-list" style="display:none;margin-bottom:8px;"></div>
         <!-- Left: item type buttons, Right: available items dropdown -->
         <div style="display:flex;gap:10px;align-items:flex-start;">
           <!-- Type selector -->
@@ -3474,25 +3476,41 @@ function addInventoryItems(){
 }
 
 function renderCoSection(eid){
-  // Use masterMap (derived from ap2_cioView) as authoritative source for current assignments
-  const master=(state.masterMap||{})[eid]||{};
-  const emp=eid?(state.employees||[]).find(e=>(e.EmpID||e.EID)===eid):null;
-  const assignedBike=eid?getAssignedBike(eid):null;
-  const assignedSim=eid?getAssignedSim(eid):null;
+  // Build full assigned item list from CIO log (supports multiple per type)
+  const assigned=_getAllAssignedItems(eid);
+  const assignedTypes=new Set(assigned.map(it=>it.type.toLowerCase()));
 
-  // Disable button if ap2_cioView data shows assignment OR live state confirms it
-  const hasBike=!!(master.bike&&master.bike.trim())||(assignedBike!=null)||(emp&&emp._hasBike);
-  const hasSim=!!(master.sim&&master.sim.trim())||(assignedSim!=null)||(emp&&emp._hasSim);
-  const hasCompany=!!(master.company&&master.company.trim())||(emp&&emp._hasCompany);
-  const hasInventory=!!(master.inventory&&master.inventory.trim()&&master.inventory.toLowerCase()!=='no'&&master.inventory!=='0')||(emp&&emp._hasInventory);
-
-  // Allow checkout of multiple items per type — just clear selected state, never disable
+  // Lock buttons for types that already have items checked out; clear for others
   ['Bike','SIM','Company','Inventory'].forEach(t=>{
     const b=document.getElementById('co-type-'+t);
     if(!b) return;
     b.classList.remove('selected','disabled-asset');
     b.title='';
+    if(assignedTypes.has(t.toLowerCase())){
+      b.classList.add('disabled-asset');
+      const existing=assigned.filter(it=>it.type.toLowerCase()===t.toLowerCase()).map(it=>it.id).join(', ');
+      b.title=t+' already assigned: '+existing+'. Use Check In or Swap first.';
+    }
   });
+
+  // Show existing assigned items as read-only info above the selector
+  const existingWrap=document.getElementById('co-existing-list');
+  if(existingWrap){
+    if(assigned.length){
+      const typeBadge={Bike:'orange',SIM:'purple',Company:'blue',Inventory:'amber'};
+      existingWrap.style.display='';
+      existingWrap.innerHTML='<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Already Assigned (locked)</div>'+
+        assigned.map(it=>`<div style="display:flex;align-items:center;gap:7px;padding:5px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:4px;">
+          <span class="badge ${typeBadge[it.type]||'gray'}" style="font-size:10px;flex-shrink:0;">${esc(it.type)}</span>
+          <span class="mono" style="font-size:12px;font-weight:600;">${esc(it.id)}</span>
+          ${it.meta?`<span style="font-size:11px;color:var(--text3);">${esc(it.meta)}</span>`:''}
+          <span class="badge amber" style="font-size:10px;margin-left:auto;">Locked</span>
+        </div>`).join('');
+    } else {
+      existingWrap.style.display='none';
+      existingWrap.innerHTML='';
+    }
+  }
 
   document.getElementById('co-items-panel').style.display='none';
   document.getElementById('co-items-empty').style.display='';
@@ -3510,31 +3528,38 @@ function renderCoItemsPanel(type, eid){
   let hasLocked=false;
   let options=[];
 
+  // Build set of all assigned bike/SIM IDs from CIO log (authoritative)
+  const allAssignedBikes=new Set();
+  const allAssignedSims=new Set();
+  Object.values(state.masterMap||{}).forEach(a=>{ if(a.bike) allAssignedBikes.add(a.bike); if(a.sim) allAssignedSims.add(a.sim); });
+  (state.bikes||[]).forEach(b=>{ if((b.AssignedTo||'').trim()) allAssignedBikes.add(b.BikeID); });
+  (state.sims||[]).forEach(s=>{ if((s.AssignedTo||'').trim()) allAssignedSims.add(s.SimID||s.ID); });
+  // Also scan CIO log for currently-out items
+  const logAssigned=_getAllAssignedItems('__all__');  // pass special key handled below
+
   if(type==='Bike'){
+    // Any bike appearing as "out" in any employee's log is assigned
+    const logBikes=new Set();
+    (state.checkinout||[]).forEach(r=>{
+      if((r.AssetType||'').toLowerCase()!=='bike') return;
+      const aid=(r.AssetID||'').trim(); if(!aid) return;
+    });
+    // Use masterMap + bike.AssignedTo to determine availability
     const available=(state.bikes||[]).filter(b=>{
-      const isAvail=(b.Status||'').toLowerCase()==='available'&&!(b.AssignedTo||'').trim();
-      const alreadyInCart=_coSelectedItems.some(i=>i.type==='Bike'&&i.id===b.BikeID);
-      return isAvail&&!alreadyInCart;
+      if(allAssignedBikes.has(b.BikeID)) return false;
+      if(_coSelectedItems.some(i=>i.type==='Bike'&&i.id===b.BikeID)) return false;
+      return true;
     });
-    const locked=(state.bikes||[]).filter(b=>(b.AssignedTo||'').trim()&&(b.AssignedTo||'')!==eid);
-    hasLocked=locked.length>0;
-    options=available.map(b=>({
-      value:b.BikeID,
-      label:b.BikeID+(b.PlateNo?' · '+b.PlateNo:'')+(b.Make?' · '+b.Make:'')+(b.Model&&b.Model!==b.Make?' '+b.Model:'')
-    }));
+    hasLocked=allAssignedBikes.size>0;
+    options=available.map(b=>({value:b.BikeID,label:b.BikeID}));
   }else if(type==='SIM'){
-    // Show Sim Number · Network for easy identification
     const available=(state.sims||[]).filter(sm=>{
-      const isAvail=!(sm.AssignedTo||'').trim();
-      const alreadyInCart=_coSelectedItems.some(i=>i.type==='SIM'&&i.id===(sm.SimID||sm.ID));
-      return isAvail&&!alreadyInCart;
+      if(allAssignedSims.has(sm.SimID||sm.ID)) return false;
+      if(_coSelectedItems.some(i=>i.type==='SIM'&&i.id===(sm.SimID||sm.ID))) return false;
+      return true;
     });
-    const locked=(state.sims||[]).filter(sm=>(sm.AssignedTo||'').trim()&&(sm.AssignedTo||'')!==eid);
-    hasLocked=locked.length>0;
-    options=available.map(sm=>({
-      value:sm.SimID||sm.ID,
-      label:(sm.SimID||sm.ID)+(sm.Number&&sm.Number!==(sm.SimID||sm.ID)?' · '+sm.Number:'')+(sm.Network?' · '+sm.Network:'')
-    }));
+    hasLocked=allAssignedSims.size>0;
+    options=available.map(sm=>({value:sm.SimID||sm.ID,label:sm.SimID||sm.ID}));
   }
   // Company and Inventory are handled by inline panels (co-company-inline / co-inventory-inline)
 
@@ -3813,15 +3838,14 @@ async function submitCheckin(){
   // ── CHECK OUT ──
   if(action==='Check Out'){
     if(!_coSelectedItems.length){showToast('Add at least one item to check out','warn');return;}
-    // Validate all items are still available
+    // Validate all items are still available (use masterMap + CIO log)
+    const allAssigned={bikes:new Set(),sims:new Set()};
+    Object.values(state.masterMap||{}).forEach(a=>{ if(a.bike) allAssigned.bikes.add(a.bike); if(a.sim) allAssigned.sims.add(a.sim); });
+    (state.bikes||[]).forEach(b=>{ if((b.AssignedTo||'').trim()) allAssigned.bikes.add(b.BikeID); });
+    (state.sims||[]).forEach(s=>{ if((s.AssignedTo||'').trim()) allAssigned.sims.add(s.SimID||s.ID); });
     for(const it of _coSelectedItems){
-      if(it.type==='Bike'){
-        const bike=(state.bikes||[]).find(b=>b.BikeID===it.id);
-        if(bike&&(bike.AssignedTo||'').trim()){showToast(it.id+' is already assigned','error');return;}
-      }else if(it.type==='SIM'){
-        const sim=(state.sims||[]).find(s=>(s.SimID||s.ID)===it.id);
-        if(sim&&(sim.AssignedTo||'').trim()){showToast(it.id+' is already assigned','error');return;}
-      }
+      if(it.type==='Bike'&&allAssigned.bikes.has(it.id)){showToast(it.id+' is already assigned to a rider','error');return;}
+      if(it.type==='SIM'&&allAssigned.sims.has(it.id)){showToast(it.id+' is already assigned to a rider','error');return;}
     }
     const records=[];
     for(const it of _coSelectedItems){
@@ -3853,23 +3877,25 @@ async function submitCheckin(){
     const oldType=_swapSelectedOld.type;
     const oldId=_swapSelectedOld.id;
 
-    // Validate: item to return must be checked out (assigned to this rider)
-    if(oldType==='Bike'){
-      const ob=state.bikes.find(b=>b.BikeID===oldId);
-      if(!ob||(ob.AssignedTo||'').trim()!==riderEid){showToast(oldId+' is not currently checked out to this rider','error');return;}
-    }else if(oldType==='SIM'){
-      const os=(state.sims||[]).find(s=>(s.SimID||s.ID)===oldId);
-      if(!os||(os.AssignedTo||'').trim()!==riderEid){showToast(oldId+' is not currently checked out to this rider','error');return;}
+    // Validate: item to return must appear in rider's currently-assigned list (from CIO log)
+    const riderItems=_getAllAssignedItems(riderEid);
+    const riderHasOld=riderItems.some(it=>it.type===oldType&&it.id===oldId);
+    if(!riderHasOld){
+      // Fallback: check live state
+      let liveFallback=false;
+      if(oldType==='Bike'){const ob=state.bikes.find(b=>b.BikeID===oldId);liveFallback=ob&&(ob.AssignedTo||'')===(riderEid);}
+      else if(oldType==='SIM'){const os=(state.sims||[]).find(s=>(s.SimID||s.ID)===oldId);liveFallback=os&&(os.AssignedTo||'')===(riderEid);}
+      if(!liveFallback){showToast(oldId+' is not currently checked out to this rider','error');return;}
     }
 
-    // Validate: replacement must be available (checked in, not assigned)
-    if(oldType==='Bike'){
-      const nb=state.bikes.find(b=>b.BikeID===newId);
-      if(!nb||(nb.AssignedTo||'').trim()||(nb.Status||'').toLowerCase()!=='available'){showToast(newId+' is not available','error');return;}
-    }else if(oldType==='SIM'){
-      const ns=(state.sims||[]).find(s=>(s.SimID||s.ID)===newId);
-      if(!ns||(ns.AssignedTo||'').trim()){showToast(newId+' is not available','error');return;}
-    }
+    // Validate: replacement must not appear in any rider's assigned list
+    const allItems=[];
+    (state.employees||[]).forEach(e=>{
+      const eid2=e.EmpID||e.EID;
+      if(eid2!==riderEid) _getAllAssignedItems(eid2).forEach(it=>allItems.push(it));
+    });
+    const newAlreadyAssigned=allItems.some(it=>it.type===oldType&&it.id===newId);
+    if(newAlreadyAssigned){showToast(newId+' is already assigned to another rider','error');return;}
 
     const recIn={Timestamp:ts,RefID:makeRef(),RiderName:rider?rider.Name:'Unknown',EmpID:riderEid,
       RiderID:rider?rider.RiderID||'':'',Company:rider?rider.Company||'':'',
