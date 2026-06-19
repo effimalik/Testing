@@ -1075,8 +1075,9 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
               <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Select Company</div>
               <select class="form-select" id="co-company-select" style="font-size:12px;padding:5px 8px;">
                 <option value="">— Pick Company —</option>
-                <option value="Deliveroo">Deliveroo</option>
                 <option value="Noon">Noon</option>
+                <option value="Talabat">Talabat</option>
+                <option value="Deliveroo">Deliveroo</option>
                 <option value="NawNaw">NawNaw</option>
               </select>
               <button class="tb-btn sm success" onclick="addCompanyItem()" style="width:100%;margin-top:5px;">
@@ -1090,6 +1091,9 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
               <div style="display:flex;flex-direction:column;gap:4px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 9px;">
                 <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;">
                   <input type="checkbox" id="inv-helmet" value="Helmet" style="accent-color:var(--teal);width:13px;height:13px;"> Helmet
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;">
+                  <input type="checkbox" id="inv-thermalbox" value="ThermalBox" style="accent-color:var(--teal);width:13px;height:13px;"> ThermalBox
                 </label>
                 <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;">
                   <input type="checkbox" id="inv-uniform" value="Uniform" style="accent-color:var(--teal);width:13px;height:13px;"> Uniform
@@ -3307,7 +3311,7 @@ function openNewCheckinModal(){
     .filter(e=>(e.Status||'Active').toLowerCase()==='active')
     .map(e=>({
       value: e.EmpID||e.EID,
-      label: (e.EmpID||e.EID) + (e.Name?' - '+e.Name:'')
+      label: (e.Name||(e.EmpID||e.EID)) + (e.EmpID?' ['+e.EmpID+']':'')
     }));
   sdSetOptions('rider',riderOptions);
   document.getElementById('rider-info-panel').classList.remove('visible');
@@ -3456,7 +3460,7 @@ function addCompanyItem(){
 
 // Add Inventory items from checkboxes (comma-separated)
 function addInventoryItems(){
-  const boxes=['inv-helmet','inv-uniform'];
+  const boxes=['inv-helmet','inv-thermalbox','inv-uniform'];
   const selected=boxes.map(id=>document.getElementById(id)).filter(cb=>cb&&cb.checked).map(cb=>cb.value);
   if(!selected.length){showToast('Select at least one inventory item','warn');return;}
   const invStr=selected.join(', ');
@@ -3523,7 +3527,7 @@ function renderCoItemsPanel(type, eid){
     hasLocked=locked.length>0;
     options=available.map(b=>({
       value:b.BikeID,
-      label:b.BikeID
+      label:b.BikeID+(b.PlateNo?' · '+b.PlateNo:'')+(b.Make?' · '+b.Make:'')+(b.Model&&b.Model!==b.Make?' '+b.Model:'')
     }));
   }else if(type==='SIM'){
     // Show Sim Number · Network for easy identification
@@ -3536,7 +3540,7 @@ function renderCoItemsPanel(type, eid){
     hasLocked=locked.length>0;
     options=available.map(sm=>({
       value:sm.SimID||sm.ID,
-      label:(sm.SimID||sm.ID)
+      label:(sm.SimID||sm.ID)+(sm.Number&&sm.Number!==(sm.SimID||sm.ID)?' · '+sm.Number:'')+(sm.Network?' · '+sm.Network:'')
     }));
   }
   // Company and Inventory are handled by inline panels (co-company-inline / co-inventory-inline)
@@ -3708,11 +3712,13 @@ function renderSwapSection(eid){
   const list=document.getElementById('swap-assigned-list');
   document.getElementById('swap-new-section').style.display='none';
   _swapSelectedOld=null;
-  const bike=getAssignedBike(eid);
-  const sim=getAssignedSim(eid);
+  // Use masterMap as authoritative source (same as all other sections in this app)
+  const master=(state.masterMap||{})[eid]||{};
+  const bikeId=master.bike||((getAssignedBike(eid)||{}).BikeID)||'';
+  const simId=master.sim||((getAssignedSim(eid)||{}).SimID)||'';
   const items=[];
-  if(bike) items.push({type:'Bike',id:bike.BikeID,meta:bike.Model||''});
-  if(sim) items.push({type:'SIM',id:sim.SimID||sim.ID,meta:sim.Network||''});
+  if(bikeId) items.push({type:'Bike',id:bikeId,meta:''});
+  if(simId) items.push({type:'SIM',id:simId,meta:''});
   if(!items.length){
     list.innerHTML='<div style="text-align:center;padding:20px 0;color:var(--text3);font-size:13px;">No items assigned to this rider to swap.</div>';
     return;
@@ -3753,7 +3759,7 @@ function selectSwapOld(idx){
       .map(b=>({value:b.BikeID,label:b.BikeID}));
   }else if(_swapSelectedOld.type==='SIM'){
     replOptions=(state.sims||[]).filter(s=>!(s.AssignedTo||'').trim()&&(s.SimID||s.ID)!==_swapSelectedOld.id)
-      .map(s=>({value:s.SimID||s.ID,label:s.SimID||s.ID}));
+      .map(s=>({value:s.SimID||s.ID,label:(s.Number||s.SimID||s.ID)+(s.Network?' · '+s.Network:'')}));
   }
   sdSetOptions('swapnew',replOptions);
   document.getElementById('swap-new-section').style.display='';
