@@ -1601,7 +1601,8 @@ async function loadEmployees(){
       if(!id||seen.has(id))return false;
       seen.add(id);return true;
     });
-    state.employees=parsed;
+    // Sort alphabetically by Name for all dropdowns and tables
+    state.employees=parsed.sort((a,b)=>(a.Name||'').localeCompare(b.Name||''));
   }catch(e){ console.error('[loadEmployees]',e); }
 }
 
@@ -1626,7 +1627,8 @@ async function loadBikes(){
     }
     const seen=new Set();
     parsed=parsed.filter(b=>{ if(seen.has(b.BikeID))return false; seen.add(b.BikeID); return true; });
-    state.bikes=parsed;
+    // Sort by BikeID
+    state.bikes=parsed.sort((a,b)=>(a.BikeID||'').localeCompare(b.BikeID||''));
   }catch(e){ console.error('[loadBikes]',e); }
 }
 
@@ -1660,7 +1662,8 @@ async function loadSims(){
     }
     const seen=new Set();
     parsed=parsed.filter(s=>{ if(seen.has(s.SimID))return false; seen.add(s.SimID); return true; });
-    state.sims=parsed;
+    // Sort by SimID
+    state.sims=parsed.sort((a,b)=>(a.SimID||'').localeCompare(b.SimID||''));
   }catch(e){ console.error('[loadSims]',e); }
 }
 
@@ -1699,79 +1702,106 @@ async function loadCioLogFromIDB(){
   }catch(e){ console.error('[loadCioLogFromIDB]',e); }
 }
 
-// Derive current bike & SIM assignments per rider from ap2_cioLog
+// Build masterMap from ap2_cioView (pre-computed current assignment state)
+// cioView record: {empId, itemType, item, seq, checkOutTs, checkInTs}
+// Currently assigned = checkOutTs is set AND (checkInTs is null OR checkInTs < checkOutTs)
 async function loadMasterAssignments(){
   try{
-    const rows=await _readIDB(IDB_KEYS.cio);
-    if(!rows||!rows.length){
-      // View not ready yet — fall back to deriving from in-memory checkinout
+    const raw=await _readIDB(IDB_KEYS.cioView);
+    if(!raw||!raw.length){
+      // cioView not ready — fall back to deriving from raw log
       _deriveMasterFromLog();
       return;
     }
-    // ap2_cioView has the most recent record per rider per asset type.
-    // Treat any "Check Out" record without a corresponding "Check In" as currently assigned.
-    const parsed=toRows(rows).map(parseCioRow).filter(r=>r.EmpID);
-    // Build assignment maps from parsed view
-    const bikeMap={};   // bikeID → empID
-    const simMap={};    // simID → empID
-    const empAssignMap={}; // empID → {bike,sim,company,inventory,status}
 
-    // Group by empId to find latest state per asset type
-    const byEmp={};
-    parsed.forEach(r=>{
-      const eid=r.EmpID;
-      if(!eid) return;
-      if(!byEmp[eid]) byEmp[eid]={};
-      const at=(r.AssetType||'').toLowerCase();
-      const isOut=(r.Action||'').toLowerCase().includes('out');
-      const ts=r.Timestamp||'';
-      // Track latest record per asset type (sorted desc so first seen is latest)
-      if(!byEmp[eid][at]||ts>(byEmp[eid][at].ts||'')){
-        byEmp[eid][at]={assetId:r.AssetID,isOut,ts};
+    // Unwrap IDB envelope: cioView is stored as [{data:[...rows]}]
+    let records=[];
+    if(Array.isArray(raw)){
+      raw.forEach(entry=>{
+        const rows=entry.data||entry.rows||entry;
+        if(Array.isArray(rows)) records=records.concat(rows);
+        else if(Array.isArray(entry)) records=records.concat(entry);
+      });
+    }
+    if(!records.length){ _deriveMasterFromLog(); return; }
+
+    const bikeMap={};       // bikeID → empId (who currently has it)
+    const simMap={};        // simID  → empId
+    const empAssignMap={};  // empId  → {bike,sim,company,inventory, bikes[],sims[],companies[],inventories[]}
+
+    records.forEach(r=>{
+      const eid=String(r.empId||'').trim(); if(!eid) return;
+      const itemType=String(r.itemType||'').toLowerCase().trim();
+      const item=String(r.item||'').trim(); if(!item||item==='INACTIVE') return;
+
+      // Determine if currently checked out:
+      // checkOutTs is set AND (checkInTs is null/empty OR checkOutTs > checkInTs)
+      const coTs=r.checkOutTs||null;
+      const ciTs=r.checkInTs||null;
+      const isCurrentlyOut=coTs&&(!ciTs||(new Date(coTs)>new Date(ciTs)));
+      if(!isCurrentlyOut) return;
+
+      if(!empAssignMap[eid]){
+        empAssignMap[eid]={bike:'',sim:'',company:'',inventory:'',
+          bikes:[],sims:[],companies:[],inventories:[]};
+      }
+      const a=empAssignMap[eid];
+
+      if(itemType==='bike'){
+        if(!a.bikes.includes(item)){ a.bikes.push(item); if(!a.bike) a.bike=item; }
+        bikeMap[item]=eid;
+      } else if(itemType==='sim'){
+        if(!a.sims.includes(item)){ a.sims.push(item); if(!a.sim) a.sim=item; }
+        simMap[item]=eid;
+      } else if(itemType==='company'){
+        if(!a.companies.includes(item)){ a.companies.push(item); if(!a.company) a.company=item; }
+      } else if(itemType==='inventory'){
+        if(!a.inventories.includes(item)){ a.inventories.push(item); if(!a.inventory) a.inventory=item; }
       }
     });
 
-    Object.entries(byEmp).forEach(([eid,types])=>{
-      const bike=(types['bike']&&types['bike'].isOut)?types['bike'].assetId:'';
-      const sim=(types['sim']&&types['sim'].isOut)?types['sim'].assetId:'';
-      const company=(types['company']&&types['company'].isOut)?types['company'].assetId:'';
-      const inventory=(types['inventory']&&types['inventory'].isOut)?types['inventory'].assetId:'';
-      empAssignMap[eid]={bike,sim,company,inventory,status:''};
-      if(bike) bikeMap[bike]=eid;
-      if(sim) simMap[sim]=eid;
-    });
-
     state.masterMap=empAssignMap;
+    state.cioViewRecords=records;  // keep raw cioView rows for history tables
 
+    // Write back AssignedTo on bike/sim objects for live-state lookups
     (state.bikes||[]).forEach(b=>{
       b.AssignedTo=bikeMap[b.BikeID]||'';
       b.Status=b.AssignedTo?'Assigned':'Available';
     });
     (state.sims||[]).forEach(sm=>{
-      sm.AssignedTo=simMap[sm.SimID||sm.ID]||sm.AssignedTo||'';
+      sm.AssignedTo=simMap[sm.SimID||sm.ID]||'';
     });
     (state.employees||[]).forEach(emp=>{
       const eid=emp.EmpID||emp.EID;
       const a=empAssignMap[eid]||{};
-      emp._hasBike=!!(a.bike&&a.bike.trim());
-      emp._hasSim=!!(a.sim&&a.sim.trim());
-      emp._hasCompany=!!(a.company&&a.company.trim());
-      emp._hasInventory=!!(a.inventory&&a.inventory.trim()&&a.inventory.toLowerCase()!=='no'&&a.inventory!=='0');
+      emp._hasBike=a.bikes&&a.bikes.length>0;
+      emp._hasSim=a.sims&&a.sims.length>0;
+      emp._hasCompany=a.companies&&a.companies.length>0;
+      emp._hasInventory=a.inventories&&a.inventories.length>0;
     });
-  }catch(e){ console.error('[loadMasterAssignments]',e); }
+    console.info('[loadMasterAssignments] cioView loaded:',Object.keys(empAssignMap).length,'riders with assignments');
+  }catch(e){ console.error('[loadMasterAssignments]',e); _deriveMasterFromLog(); }
 }
 
 // Fallback: derive current assignment state from in-memory checkinout log
 function _deriveMasterFromLog(){
   const bikeMap={};
   const simMap={};
-  (state.checkinout||[]).forEach(r=>{
+  // Process oldest→newest (checkinout is stored desc, so reverse)
+  const sorted=[...(state.checkinout||[])].sort((a,b)=>(a.Timestamp||'').localeCompare(b.Timestamp||''));
+  sorted.forEach(r=>{
     const eid=r.EmpID; const action=(r.Action||'').toLowerCase();
-    const assetType=(r.AssetType||'').toLowerCase(); const assetId=r.AssetID;
+    const assetType=(r.AssetType||'').toLowerCase(); const assetId=(r.AssetID||'').trim();
     if(!assetId) return;
-    const isOut=action.includes('out');
-    if(assetType==='bike'){ if(isOut) bikeMap[assetId]=eid; else delete bikeMap[assetId]; }
-    else if(assetType==='sim'){ if(isOut) simMap[assetId]=eid; else delete simMap[assetId]; }
+    const isOut=action.includes('out')&&!action.includes('check in');
+    const isIn=action.includes('in')&&!action.includes('check out');
+    if(assetType==='bike'){
+      if(isOut||action.includes('swap')){ bikeMap[assetId]=eid; }
+      else if(isIn){ delete bikeMap[assetId]; }
+    } else if(assetType==='sim'){
+      if(isOut||action.includes('swap')){ simMap[assetId]=eid; }
+      else if(isIn){ delete simMap[assetId]; }
+    }
   });
   (state.bikes||[]).forEach(b=>{
     b.AssignedTo=bikeMap[b.BikeID]||'';
@@ -2398,14 +2428,10 @@ let _bikeHistPage=1; let _simHistPage=1;
 // ── Switch between Employee / Bike / SIM sub-views (works in both Available and History) ──
 function setViewType(type){
   _viewType=type;
-  // Highlight pill buttons
-  ['employee','bike','sim','all','company','inventory'].forEach(t=>{
-    const b=document.getElementById('cio-item-'+t);
-    if(b) b.classList.toggle('active',t===type);
-  });
+  _assetSubTab=type;
+  const validTypes=['employee','bike','sim'];
+  _syncTypePills(validTypes, type);
   if(_assetView==='available'){
-    // Available: employee=unassigned riders, bike=unassigned bikes, sim=unassigned SIMs
-    _assetSubTab=type;
     renderAvailableView();
     return;
   }
@@ -2422,7 +2448,7 @@ function setViewType(type){
 
 function setAssetView(view){
   _assetView=view;
-  // Nav button active state (only available + history)
+  // Nav button active state
   ['available','history'].forEach(v=>{
     const btn=document.getElementById('av-view-'+v);
     if(btn) btn.classList.toggle('active',v===view);
@@ -2432,20 +2458,34 @@ function setAssetView(view){
   const el_avail=document.getElementById('av-panel-available');
   if(el_hist) el_hist.style.display=(view==='history')?'':'none';
   if(el_avail) el_avail.style.display=(view==='available')?'':'none';
-  // Always show all type pills; Employee pill works in Available too (unassigned riders)
-  const typePills=document.getElementById('type-pills-wrap');
-  if(typePills) typePills.style.display='flex';
+
   if(view==='available'){
+    // Available only supports employee / bike / sim
     const validAvail=['employee','bike','sim'];
     if(!validAvail.includes(_viewType)) _viewType='employee';
-    ['employee','bike','sim'].forEach(t=>{
-      const b=document.getElementById('cio-item-'+t);
-      if(b) b.classList.toggle('active',t===_viewType);
-    });
+    _syncTypePills(validAvail,_viewType);
     renderAvailableView();
   } else {
+    // History supports employee / bike / sim
+    const validHist=['employee','bike','sim'];
+    if(!validHist.includes(_viewType)) _viewType='employee';
+    _syncTypePills(validHist,_viewType);
     renderAssetPanel();
   }
+}
+
+// Sync type pill active/hidden state
+function _syncTypePills(validTypes, activeType){
+  ['employee','bike','sim','all','company','inventory'].forEach(t=>{
+    const b=document.getElementById('cio-item-'+t);
+    if(!b) return;
+    if(!validTypes.includes(t)){
+      b.style.display='none';
+    } else {
+      b.style.display='';
+      b.classList.toggle('active', t===activeType);
+    }
+  });
 }
 
 function renderAssetPanel(){
@@ -2466,6 +2506,11 @@ function renderAssetPanel(){
 }
 
 // ── BIKE HISTORY table (standalone, all bikes × all riders) ──
+function _getCioViewRecords(itemType){
+  // Read from state.cioViewRecords (populated by loadMasterAssignments from ap2_cioView)
+  return (state.cioViewRecords||[]).filter(r=>(r.itemType||'').toLowerCase()===itemType);
+}
+
 function renderBikeHistTable(){
   const q=(document.getElementById('bike-hist-search')||{}).value||'';
   const rpp=parseInt((document.getElementById('bike-hist-rpp')||{}).value||50);
@@ -2473,7 +2518,33 @@ function renderBikeHistTable(){
   const countEl=document.getElementById('bike-hist-count');
   if(!tbody) return;
 
-  // Build pairs: group all CIO records by BikeID
+  // Use cioView records if available (pre-computed sessions), else fall back to raw log
+  const cioRecs=_getCioViewRecords('bike');
+  if(cioRecs.length){
+    // cioView: each record = one checkout session {empId, item, seq, checkOutTs, checkInTs}
+    let rows=cioRecs.map(r=>{
+      const emp=(state.employees||[]).find(e=>(e.EmpID||e.EID)===String(r.empId));
+      const name=emp?emp.Name||r.empId:r.empId;
+      return {bikeId:r.item,empId:String(r.empId),name,seq:r.seq,
+        checkOutTs:r.checkOutTs||'',checkInTs:r.checkInTs||''};
+    });
+    // Filter
+    if(q){ const ql=q.toLowerCase(); rows=rows.filter(r=>r.bikeId.toLowerCase().includes(ql)||r.name.toLowerCase().includes(ql)||String(r.empId).includes(ql)); }
+    // Sort by checkOutTs desc
+    rows.sort((a,b)=>(b.checkOutTs||'').localeCompare(a.checkOutTs||''));
+    if(countEl) countEl.textContent=rows.length+' records';
+    const page=rows.slice(0,rpp);
+    tbody.innerHTML=page.map(r=>`<tr class="fade-in">
+      <td><span class="mono" style="font-weight:600;">${esc(r.bikeId)}</span></td>
+      <td><div class="cs"><span class="cs-main">${esc(r.name)}</span><span class="cs-sub">${esc(String(r.empId))}</span></div></td>
+      <td><span class="badge gray" style="font-size:10px;">#${r.seq}</span></td>
+      <td style="font-size:11px;color:var(--text2);">${r.checkOutTs?new Date(r.checkOutTs).toLocaleString():'—'}</td>
+      <td style="font-size:11px;color:var(--text2);">${r.checkInTs?new Date(r.checkInTs).toLocaleString():'<span style="color:var(--orange);font-weight:600;">Out</span>'}</td>
+    </tr>`).join('')||'<tr><td colspan="5"><div class="empty-state"><p>No bike history</p></div></td></tr>';
+    return;
+  }
+
+  // Fallback: build pairs from raw log grouped by BikeID
   const bikeRecords=(state.checkinout||[]).filter(r=>(r.AssetType||'').toLowerCase()==='bike');
   const byBike={};
   bikeRecords.forEach(r=>{
@@ -2563,6 +2634,30 @@ function renderSimHistTable(){
   const countEl=document.getElementById('sim-hist-count');
   if(!tbody) return;
 
+  // Use cioView records if available
+  const cioRecs=_getCioViewRecords('sim');
+  if(cioRecs.length){
+    let rows=cioRecs.map(r=>{
+      const emp=(state.employees||[]).find(e=>(e.EmpID||e.EID)===String(r.empId));
+      const name=emp?emp.Name||r.empId:r.empId;
+      return {simId:r.item,empId:String(r.empId),name,seq:r.seq,
+        checkOutTs:r.checkOutTs||'',checkInTs:r.checkInTs||''};
+    });
+    if(q){ const ql=q.toLowerCase(); rows=rows.filter(r=>r.simId.toLowerCase().includes(ql)||r.name.toLowerCase().includes(ql)||String(r.empId).includes(ql)); }
+    rows.sort((a,b)=>(b.checkOutTs||'').localeCompare(a.checkOutTs||''));
+    if(countEl) countEl.textContent=rows.length+' records';
+    const page=rows.slice(0,rpp);
+    tbody.innerHTML=page.map(r=>`<tr class="fade-in">
+      <td><span class="mono" style="font-weight:600;">${esc(r.simId)}</span></td>
+      <td><div class="cs"><span class="cs-main">${esc(r.name)}</span><span class="cs-sub">${esc(String(r.empId))}</span></div></td>
+      <td><span class="badge gray" style="font-size:10px;">#${r.seq}</span></td>
+      <td style="font-size:11px;color:var(--text2);">${r.checkOutTs?new Date(r.checkOutTs).toLocaleString():'—'}</td>
+      <td style="font-size:11px;color:var(--text2);">${r.checkInTs?new Date(r.checkInTs).toLocaleString():'<span style="color:var(--orange);font-weight:600;">Out</span>'}</td>
+    </tr>`).join('')||'<tr><td colspan="5"><div class="empty-state"><p>No SIM history</p></div></td></tr>';
+    return;
+  }
+
+  // Fallback: build pairs from raw log
   const simRecords=(state.checkinout||[]).filter(r=>(r.AssetType||'').toLowerCase()==='sim');
   const bySim={};
   simRecords.forEach(r=>{
@@ -2690,8 +2785,9 @@ function renderAvailableView(){
     </tr>`;
     const items=(state.employees||[]).filter(e=>{
       const eid=e.EmpID||e.EID||'';
-      const hasBike=!!(state.bikes||[]).find(b=>(b.AssignedTo||'')===eid);
-      const hasSim=!!(state.sims||[]).find(s=>(s.AssignedTo||'')===eid);
+      const master=(state.masterMap||{})[eid]||{};
+      const hasBike=!!(master.bike)||(state.bikes||[]).some(b=>(b.AssignedTo||'')===eid);
+      const hasSim=!!(master.sim)||(state.sims||[]).some(s=>(s.AssignedTo||'')===eid);
       if(hasBike&&hasSim) return false; // fully assigned — skip
       if(q){
         const hay=(eid+(e.Name||'')+(e.Phone||'')).toLowerCase();
@@ -2709,8 +2805,9 @@ function renderAvailableView(){
     const page=items.slice(start,start+_avAvailRpp);
     tbody.innerHTML=page.map(e=>{
       const eid=e.EmpID||e.EID||'—';
-      const hasBike=!!(state.bikes||[]).find(b=>(b.AssignedTo||'')===eid);
-      const hasSim=!!(state.sims||[]).find(s=>(s.AssignedTo||'')===eid);
+      const masterRow=(state.masterMap||{})[eid]||{};
+      const hasBike=!!(masterRow.bike)||(state.bikes||[]).some(b=>(b.AssignedTo||'')===eid);
+      const hasSim=!!(masterRow.sim)||(state.sims||[]).some(s=>(s.AssignedTo||'')===eid);
       const st=e.Status||'Active';
       const avail=!hasBike&&!hasSim?'No Bike & SIM':!hasBike?'No Bike':'No SIM';
       const availColor=!hasBike&&!hasSim?'red':'amber';
@@ -3626,39 +3723,31 @@ function renderCoSelectedList(){
 
 // ── CHECK IN rendering ──
 function _getAllAssignedItems(eid){
-  // Build full list of currently-assigned items from CIO log (not masterMap which only stores latest single)
-  // For each asset type, track which IDs are currently "out" (Check Out without a matching Check In after)
-  const log=(state.checkinout||[]).filter(r=>(r.EmpID||r.EID||'')===(eid||''));
-  // Group by assetType+assetId, then find latest action
-  const latestByKey={};
-  log.forEach(r=>{
-    const at=(r.AssetType||'').toLowerCase();
-    const aid=(r.AssetID||'').trim();
-    if(!aid) return;
-    const key=at+'::'+aid;
-    if(!latestByKey[key]||r.Timestamp>latestByKey[key].Timestamp) latestByKey[key]=r;
-  });
+  // Read directly from masterMap which is now built from cioView (most accurate source)
+  // masterMap[eid].bikes/sims/companies/inventories are full arrays
+  const master=(state.masterMap||{})[eid]||{};
   const items=[];
-  Object.entries(latestByKey).forEach(([key,r])=>{
-    const action=(r.Action||'').toLowerCase();
-    const isOut=action.includes('out')&&!action.includes('in');
-    if(!isOut) return;
-    const at=(r.AssetType||'');
-    const aid=(r.AssetID||'').trim();
-    let meta='';
-    if(at.toLowerCase()==='bike'){const b=(state.bikes||[]).find(x=>x.BikeID===aid);meta=b?b.Model||b.PlateNo||'':'';}
-    if(at.toLowerCase()==='sim'){const s=(state.sims||[]).find(x=>(x.SimID||x.ID)===aid);meta=s?s.Number||s.Network||'':'';}
-    items.push({type:at,id:aid,meta});
+  const typeLabel={bike:'Bike',sim:'SIM',company:'Company',inventory:'Inventory'};
+
+  (master.bikes||[]).forEach(id=>{
+    items.push({type:'Bike',id,meta:''});
   });
-  // Fallback: if log is empty, use masterMap
+  (master.sims||[]).forEach(id=>{
+    items.push({type:'SIM',id,meta:''});
+  });
+  (master.companies||[]).forEach(id=>{
+    items.push({type:'Company',id,meta:''});
+  });
+  (master.inventories||[]).forEach(id=>{
+    items.push({type:'Inventory',id,meta:''});
+  });
+
+  // If masterMap has no entry (cioView not loaded yet), fallback to single values
   if(!items.length){
-    const master=(state.masterMap||{})[eid]||{};
-    const emp=(state.employees||[]).find(e=>(e.EmpID||e.EID)===eid);
-    if(master.bike){const b=(state.bikes||[]).find(x=>x.BikeID===master.bike)||{};items.push({type:'Bike',id:master.bike,meta:b.Model||''});}
-    if(master.sim){const s=(state.sims||[]).find(x=>(x.SimID||x.ID)===master.sim)||{};items.push({type:'SIM',id:master.sim,meta:s.Number||s.Network||''});}
+    if(master.bike) items.push({type:'Bike',id:master.bike,meta:''});
+    if(master.sim) items.push({type:'SIM',id:master.sim,meta:''});
     if(master.company) items.push({type:'Company',id:master.company,meta:''});
-    const inv=master.inventory||(emp&&emp.Inventory?emp.Inventory:'');
-    if(inv&&inv.toLowerCase()!=='no'&&inv!=='0') items.push({type:'Inventory',id:inv,meta:''});
+    if(master.inventory) items.push({type:'Inventory',id:master.inventory,meta:''});
   }
   return items;
 }
