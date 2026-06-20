@@ -46,67 +46,50 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 
 .portal-wrap{display:flex;flex-direction:column;height:100vh;max-width:1500px;margin:0 auto;padding:18px;gap:14px;}
 
-/* ── HEADER ── */
-.portal-header{display:flex;align-items:center;gap:14px;padding:12px 18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);flex-shrink:0;}
-.portal-logo{width:38px;height:38px;border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.portal-logo i{font-size:19px;color:#fff;}
-.portal-title h1{font-size:16px;font-weight:700;color:var(--text);}
-.portal-title p{font-size:11px;color:var(--text3);}
+.portal-header{display:flex;align-items:center;gap:14px;padding:14px 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);flex-shrink:0;}
+.portal-logo{width:40px;height:40px;border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.portal-logo i{font-size:20px;color:#fff;}
+.portal-title h1{font-size:17px;font-weight:700;color:var(--text);}
+.portal-title p{font-size:11.5px;color:var(--text3);}
 .portal-header-actions{margin-left:auto;display:flex;align-items:center;gap:8px;}
+#cache-status{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text3);padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);font-family:var(--mono);}
 
-/* compact toggle */
-.theme-toggle{display:flex;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:2px;gap:2px;cursor:pointer;}
-.theme-toggle-opt{width:26px;height:26px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text3);transition:all .15s;}
-.theme-toggle-opt.active{background:var(--surface2);color:var(--text);box-shadow:var(--shadow);}
-
-#cache-status{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);padding:4px 9px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);font-family:var(--mono);}
-
-/* ── TAB NAV ── */
-.tab-nav{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:4px;flex-shrink:0;}
-.tab-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:8px 16px;border-radius:var(--radius);border:none;background:transparent;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;}
-.tab-btn i{font-size:15px;line-height:1;}
+.tab-nav{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:5px;flex-shrink:0;}
+.tab-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 18px;border-radius:var(--radius);border:none;background:transparent;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;}
+.tab-btn i{font-size:16px;line-height:1;}
 .tab-btn.active{background:var(--accent);color:#fff;box-shadow:0 0 14px var(--accent-glow);}
 .tab-btn:not(.active):hover{background:var(--surface2);color:var(--text);}
 
-/* ── SELECTOR BAR ── */
-.selector-bar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:12px 16px;flex-shrink:0;box-shadow:var(--shadow);}
-.field{display:flex;flex-direction:column;gap:5px;}
-.field label{font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;}
+.selector-bar{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:14px 18px;flex-shrink:0;box-shadow:var(--shadow);}
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;}
 .field label span.req{color:var(--red);}
-.search-dropdown-wrap{position:relative;width:260px;}
-.search-dropdown-input{width:100%;padding:8px 11px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;transition:border .18s,box-shadow .18s;}
+.search-dropdown-wrap{position:relative;width:280px;}
+.search-dropdown-input{width:100%;padding:9px 12px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;transition:border .18s,box-shadow .18s;}
 .search-dropdown-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
 .search-dropdown-input::placeholder{color:var(--text3);}
 .dropdown-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface2);border:1.5px solid var(--border2);border-radius:var(--radius);box-shadow:var(--shadow-lg);z-index:200;max-height:220px;overflow-y:auto;display:none;}
 .dropdown-list.open{display:block;}
-.dropdown-item{padding:8px 12px;font-size:13px;cursor:pointer;transition:background .12s;}
+.dropdown-item{padding:9px 13px;font-size:13px;cursor:pointer;transition:background .12s;}
 .dropdown-item:hover{background:var(--accent-dim);}
 .dropdown-item .did{font-family:var(--mono);font-size:11px;color:var(--text3);}
 .dropdown-item .dname{color:var(--text);font-weight:600;}
 .dropdown-item .dname em{color:var(--accent);font-style:normal;}
-
-.entity-confirm-strip{display:none;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:7px 14px;}
-.entity-confirm-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;flex-shrink:0;}
+.entity-confirm-strip{display:none;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:9px 16px;}
+.entity-confirm-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;}
 .entity-confirm-name{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;}
-.entity-confirm-sub{font-size:10px;color:var(--text3);font-family:var(--mono);white-space:nowrap;}
-.confirm-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:9px;font-weight:700;background:var(--teal-dim);color:var(--teal);border:1px solid rgba(57,211,83,.3);white-space:nowrap;}
+.entity-confirm-sub{font-size:10.5px;color:var(--text3);font-family:var(--mono);white-space:nowrap;}
+.confirm-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:9.5px;font-weight:700;background:var(--teal-dim);color:var(--teal);border:1px solid rgba(57,211,83,.3);white-space:nowrap;}
 
-/* clear selection button */
-.btn-clear-sel{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:var(--radius);border:1.5px solid var(--border2);background:transparent;color:var(--text3);font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;align-self:flex-end;}
-.btn-clear-sel:hover{border-color:var(--red);color:var(--red);background:var(--red-dim);}
-.btn-clear-sel i{font-size:13px;}
-
-/* ── MAIN SPLIT ── */
 .main-split{flex:1;display:flex;gap:14px;min-height:0;}
 
-/* ── SIDEBAR ── */
-.doc-sidebar{width:124px;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:8px;display:flex;flex-direction:column;gap:5px;overflow-y:auto;box-shadow:var(--shadow);}
-.doc-sidebar-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;color:var(--text3);text-align:center;padding:12px 6px;}
-.doc-sidebar-empty i{font-size:24px;opacity:.4;}
-.doc-sidebar-empty span{font-size:10.5px;}
+.doc-sidebar{width:130px;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:10px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;box-shadow:var(--shadow);}
+.doc-sidebar-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;color:var(--text3);text-align:center;padding:16px 8px;}
+.doc-sidebar-empty i{font-size:26px;opacity:.4;}
+.doc-sidebar-empty span{font-size:11px;}
 
-.doc-side-btn{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 6px;border-radius:var(--radius-lg);border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-family:var(--font);font-size:10.5px;font-weight:600;cursor:pointer;transition:all .18s;text-align:center;line-height:1.25;}
-.doc-side-btn i{font-size:18px;line-height:1;}
+.doc-side-btn{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;border-radius:var(--radius-lg);border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;transition:all .18s;text-align:center;}
+.doc-side-btn i{font-size:20px;line-height:1;}
 .doc-side-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
 .doc-side-btn.selected{border-color:var(--accent);background:var(--accent-dim);color:var(--accent);box-shadow:0 0 0 1px var(--accent);}
 .doc-side-btn.has-docs{border-color:var(--teal);color:var(--teal);}
@@ -116,131 +99,93 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 .doc-side-btn.expiring-docs{border-color:var(--amber);color:var(--amber);}
 .doc-side-btn.expiring-docs i{color:var(--amber);}
 .doc-side-btn.selected.has-docs,.doc-side-btn.selected.expired-docs,.doc-side-btn.selected.expiring-docs{box-shadow:0 0 0 1px currentColor;}
-.doc-count-badge{position:absolute;top:4px;right:4px;background:var(--teal);color:#fff;font-size:8.5px;font-weight:700;width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.doc-count-badge{position:absolute;top:5px;right:5px;background:var(--teal);color:#fff;font-size:9px;font-weight:700;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
 .doc-count-badge.red{background:var(--red);}
 .doc-count-badge.amber{background:var(--amber);}
 
-/* ── DOC CENTER ── */
 .doc-center{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;}
-.doc-center-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;}
-.doc-center-header h3{font-size:13.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;}
-.doc-center-header h3 i{color:var(--accent);font-size:17px;}
-.doc-center-body{flex:1;overflow-y:auto;padding:14px 16px;}
+.doc-center-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.doc-center-header h3{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;}
+.doc-center-header h3 i{color:var(--accent);font-size:18px;}
+.doc-center-body{flex:1;overflow-y:auto;padding:16px 18px;}
 .doc-center-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text3);gap:10px;text-align:center;padding:30px;}
-.doc-center-placeholder i{font-size:34px;opacity:.35;}
-.doc-center-placeholder span{font-size:12.5px;}
+.doc-center-placeholder i{font-size:36px;opacity:.35;}
+.doc-center-placeholder span{font-size:13px;}
 
-/* ── DOC TYPE INFO BANNER ── */
-.doc-type-info{display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:var(--radius);margin-bottom:12px;font-size:11.5px;}
-.doc-type-info.info-pdf{background:var(--red-dim);border:1px solid rgba(248,81,73,.2);color:var(--red);}
-.doc-type-info.info-img{background:var(--accent-dim);border:1px solid rgba(88,166,255,.2);color:var(--accent);}
-.doc-type-info.info-any{background:var(--purple-dim);border:1px solid rgba(163,113,247,.2);color:var(--purple);}
-.doc-type-info i{font-size:15px;flex-shrink:0;}
-.info-chip{font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:20px;border:1px solid currentColor;opacity:.8;margin-left:auto;}
-
-/* ── TXN RECORDS ── */
-.txn-record{display:flex;align-items:center;gap:10px;padding:10px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:7px;transition:border .15s;}
+.txn-record{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:8px;transition:border .15s;}
 .txn-record:hover{border-color:var(--border2);}
-.txn-record-icon{width:32px;height:32px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;}
+.txn-record-icon{width:34px;height:34px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;}
 .txn-record-icon.pdf{background:var(--red-dim);color:var(--red);}
 .txn-record-icon.img{background:var(--accent-dim);color:var(--accent);}
 .txn-record-meta{flex:1;min-width:0;}
-.txn-id-btn{display:flex;align-items:center;gap:5px;background:none;border:none;padding:0;cursor:pointer;font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:600;text-align:left;}
+.txn-id-btn{display:flex;align-items:center;gap:6px;background:none;border:none;padding:0;cursor:pointer;font-family:var(--mono);font-size:11.5px;color:var(--accent);font-weight:600;text-align:left;}
 .txn-id-btn:hover{text-decoration:underline;}
-.txn-record-date{font-size:11px;color:var(--text2);margin-top:2px;}
-.txn-record-expiry{font-size:10.5px;margin-top:1px;}
+.txn-record-date{font-size:11.5px;color:var(--text2);margin-top:2px;}
+.txn-record-expiry{font-size:11px;margin-top:1px;}
 .txn-record-expiry.red{color:var(--red);}
 .txn-record-expiry.amber{color:var(--amber);}
 .txn-record-expiry.teal{color:var(--teal);}
 .txn-record-expiry.gray{color:var(--text3);}
-.txn-badge-latest{font-size:8.5px;font-weight:700;padding:1px 6px;border-radius:20px;background:var(--teal-dim);color:var(--teal);border:1px solid rgba(57,211,83,.3);margin-left:4px;}
+.txn-badge-latest{font-size:9px;font-weight:700;padding:1px 7px;border-radius:20px;background:var(--teal-dim);color:var(--teal);border:1px solid rgba(57,211,83,.3);margin-left:4px;}
 
-/* ── UPLOAD ROW ── */
-.txn-new-row{display:flex;align-items:center;gap:10px;padding:11px 13px;border:1.5px dashed var(--border2);border-radius:var(--radius-lg);margin-top:4px;background:var(--bg2);}
-.txn-new-label{flex:1;font-size:12px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:7px;}
-.txn-new-label i{font-size:17px;color:var(--text3);}
-.btn-new-upload{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:1.5px solid var(--accent);background:var(--accent-dim);color:var(--accent);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .18s;}
+.txn-new-row{display:flex;align-items:center;gap:10px;padding:13px 14px;border:1.5px dashed var(--border2);border-radius:var(--radius-lg);margin-top:4px;background:var(--bg2);}
+.txn-new-label{flex:1;font-size:12.5px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:8px;}
+.txn-new-label i{font-size:18px;color:var(--text3);}
+.btn-new-upload{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:var(--radius);border:1.5px solid var(--accent);background:var(--accent-dim);color:var(--accent);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;transition:all .18s;}
 .btn-new-upload:hover{background:var(--accent);color:#fff;}
 
-.upload-inline{display:none;margin-top:10px;background:var(--bg3);border:1.5px dashed var(--border2);border-radius:var(--radius-lg);padding:14px;}
+.upload-inline{display:none;margin-top:10px;background:var(--bg3);border:1.5px dashed var(--border2);border-radius:var(--radius-lg);padding:16px;}
 .upload-inline.open{display:block;}
-.upload-inline-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;gap:5px;}
-.upload-inline-title i{font-size:13px;color:var(--accent);}
+.upload-inline-title{font-size:11.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.upload-inline-title i{font-size:14px;color:var(--accent);}
 .upload-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}
-.upload-row .field{flex:1;min-width:190px;}
-
-/* ── FILE ZONE ── */
+.upload-row .field{flex:1;min-width:200px;}
 .file-upload-zone{border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:16px;text-align:center;cursor:pointer;transition:all .18s;background:var(--surface);position:relative;}
 .file-upload-zone:hover,.file-upload-zone.dragover{border-color:var(--accent);background:var(--accent-dim);}
 .file-upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
-.file-upload-zone i.zone-icon{font-size:22px;color:var(--text3);margin-bottom:5px;display:block;}
-.file-upload-zone p{font-size:11px;color:var(--text3);}
+.file-upload-zone i{font-size:24px;color:var(--text3);margin-bottom:6px;}
+.file-upload-zone p{font-size:11.5px;color:var(--text3);}
 .file-upload-zone.has-file{border-color:var(--teal);background:var(--teal-dim);}
-.file-upload-zone.has-file i.zone-icon{color:var(--teal);}
+.file-upload-zone.has-file i{color:var(--teal);}
 .file-upload-zone.has-file p{color:var(--teal);}
-.file-upload-zone.err-file{border-color:var(--red) !important;background:var(--red-dim) !important;}
-.file-upload-zone.err-file i.zone-icon{color:var(--red);}
-.file-upload-zone.err-file p{color:var(--red);}
-.file-accept-hint{font-size:9.5px;opacity:.65;display:block;margin-top:3px;}
-
-/* file preview strip inside zone */
-.file-preview-strip{display:none;align-items:center;gap:8px;margin-top:10px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
-.file-preview-strip.show{display:flex;}
-.file-preview-strip img{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--border2);}
-.file-preview-strip .fp-pdf{width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:var(--red-dim);border-radius:6px;border:1px solid rgba(248,81,73,.3);}
-.file-preview-strip .fp-pdf i{font-size:20px;color:var(--red);}
-.fp-info{flex:1;min-width:0;}
-.fp-name{font-size:11.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.fp-size{font-size:10.5px;color:var(--text3);font-family:var(--mono);}
-.btn-remove-file{background:none;border:none;cursor:pointer;color:var(--text3);padding:4px;border-radius:var(--radius);font-size:14px;display:flex;align-items:center;justify-content:center;transition:color .15s;}
-.btn-remove-file:hover{color:var(--red);}
-
-.date-input{width:100%;padding:8px 11px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;}
+.date-input{width:100%;padding:9px 12px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;}
 .date-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
-.date-input.no-expiry{display:none;}
-
-.field-hint{font-size:10px;color:var(--text3);margin-top:3px;display:flex;align-items:center;gap:4px;}
-.field-hint i{font-size:11px;}
-
 .upload-actions{display:flex;justify-content:flex-end;margin-top:12px;gap:8px;}
-.gs-status{display:flex;align-items:center;gap:7px;padding:8px 13px;border-radius:var(--radius-lg);font-size:11.5px;font-weight:600;margin-top:10px;}
+.gs-status{display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:var(--radius-lg);font-size:11.5px;font-weight:600;margin-top:10px;}
 .gs-status.loading{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(88,166,255,.3);}
 .gs-status.success{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(57,211,83,.3);}
 .gs-status.error{background:var(--red-dim);color:var(--red);border:1px solid rgba(248,81,73,.3);}
 
-/* ── PREVIEW PANEL ── */
 .doc-preview-panel{width:0;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);overflow:hidden;transition:width .26s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;}
 .doc-preview-panel.open{width:420px;}
-.preview-panel-header{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;}
-.preview-panel-header h3{font-size:12.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.preview-panel-header h3 i{color:var(--accent);font-size:16px;flex-shrink:0;}
-.preview-panel-close{margin-left:auto;width:26px;height:26px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s;flex-shrink:0;}
+.preview-panel-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.preview-panel-header h3{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.preview-panel-header h3 i{color:var(--accent);font-size:17px;flex-shrink:0;}
+.preview-panel-close{margin-left:auto;width:28px;height:28px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .15s;flex-shrink:0;}
 .preview-panel-close:hover{background:var(--red-dim);color:var(--red);border-color:var(--red);}
-.preview-panel-body{flex:1;overflow-y:auto;padding:14px;}
-.preview-panel-body img.preview-img{max-width:100%;border-radius:var(--radius-lg);display:block;margin:0 auto;border:1px solid var(--border);}
-.preview-panel-body iframe.preview-pdf{width:100%;height:400px;border:none;border-radius:var(--radius-lg);}
-.preview-meta{display:flex;flex-direction:column;gap:9px;margin-top:12px;padding:11px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);}
+.preview-panel-body{flex:1;overflow-y:auto;padding:16px;}
+.preview-panel-body img.preview-img{max-width:100%;border-radius:var(--radius-lg);display:block;margin:0 auto;}
+.preview-panel-body iframe.preview-pdf{width:100%;height:420px;border:none;border-radius:var(--radius-lg);}
+.preview-meta{display:flex;flex-direction:column;gap:10px;margin-top:14px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);}
 .preview-meta-item{display:flex;justify-content:space-between;align-items:center;gap:10px;}
-.preview-meta-item .key{font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;}
-.preview-meta-item .val{font-size:11.5px;font-weight:600;color:var(--text);font-family:var(--mono);text-align:right;word-break:break-all;}
-.preview-panel-footer{padding:11px 14px;border-top:1px solid var(--border);flex-shrink:0;}
+.preview-meta-item .key{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;}
+.preview-meta-item .val{font-size:12px;font-weight:600;color:var(--text);font-family:var(--mono);text-align:right;}
+.preview-panel-footer{padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0;}
 
-/* ── BUTTONS ── */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);border:1.5px solid;font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .18s;white-space:nowrap;line-height:1;}
-.btn i{font-size:15px;line-height:1;flex-shrink:0;}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:var(--radius);border:1.5px solid;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;white-space:nowrap;line-height:1;}
+.btn i{font-size:16px;line-height:1;flex-shrink:0;}
 .btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 0 12px var(--accent-glow);}
 .btn-primary:hover{filter:brightness(1.1);}
 .btn-ghost{background:transparent;color:var(--text2);border-color:var(--border2);}
 .btn-ghost:hover{background:var(--surface2);color:var(--text);}
-.btn-sm{padding:5px 11px;font-size:11.5px;}
+.btn-sm{padding:6px 12px;font-size:12px;}
 .btn:disabled{opacity:.5;cursor:not-allowed;pointer-events:none;}
 .btn-block{width:100%;justify-content:center;}
 
-.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap;}
 .badge.purple{background:rgba(163,113,247,.18);color:#a371f7;border:1px solid rgba(163,113,247,.3);}
 
-/* ── TOAST ── */
-.toast{position:fixed;bottom:22px;right:22px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);padding:11px 16px;border-radius:var(--radius-lg);font-size:12.5px;font-weight:500;z-index:999;opacity:0;transform:translateY(12px);transition:all .28s cubic-bezier(.34,1.56,.64,1);pointer-events:none;display:flex;align-items:center;gap:9px;box-shadow:var(--shadow-lg);max-width:340px;}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);padding:12px 18px;border-radius:var(--radius-lg);font-size:13px;font-weight:500;z-index:999;opacity:0;transform:translateY(12px);transition:all .28s cubic-bezier(.34,1.56,.64,1);pointer-events:none;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow-lg);max-width:360px;}
 .toast.show{opacity:1;transform:translateY(0);}
 .toast.success{background:var(--teal-dim);color:var(--teal);border-color:rgba(57,211,83,.25);}
 .toast.error{background:var(--red-dim);color:var(--red);border-color:rgba(248,81,73,.25);}
@@ -249,9 +194,9 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 .spinner{animation:spin 1s linear infinite;display:inline-flex;}
 
 @media(max-width:900px){
-  .doc-sidebar{width:86px;}
-  .doc-side-btn span{font-size:9px;}
-  .doc-preview-panel.open{width:320px;}
+  .doc-sidebar{width:90px;}
+  .doc-side-btn span{font-size:9.5px;}
+  .doc-preview-panel.open{width:340px;}
 }
 @media(max-width:640px){
   .main-split{flex-direction:column;}
@@ -265,26 +210,19 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 
 <div class="portal-wrap">
 
-  <!-- HEADER -->
   <div class="portal-header">
     <div class="portal-logo"><i class="ti ti-file-certificate"></i></div>
     <div class="portal-title">
       <h1>Document Management Portal</h1>
-      <p>Rider &amp; vehicle document tracking · AP2 Fleet</p>
+      <p>Rider & vehicle document tracking · Synced from fleet cache</p>
     </div>
     <div class="portal-header-actions">
       <div id="cache-status">
-        <i class="ti ti-loader spinner" style="font-size:12px;"></i> Loading…
-      </div>
-      <!-- compact theme toggle -->
-      <div class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
-        <div class="theme-toggle-opt active" id="toggle-dark"><i class="ti ti-moon"></i></div>
-        <div class="theme-toggle-opt" id="toggle-light"><i class="ti ti-sun"></i></div>
+        <i class="ti ti-loader spinner" style="font-size:13px;"></i> Loading cache…
       </div>
     </div>
   </div>
 
-  <!-- TAB NAV -->
   <div class="tab-nav">
     <button class="tab-btn active" id="tab-emp-btn" onclick="switchTab('emp')">
       <i class="ti ti-user-check"></i><span>Employee Documents</span>
@@ -294,15 +232,15 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
     </button>
   </div>
 
-  <!-- ══ EMPLOYEE TAB ══ -->
+  <!-- EMPLOYEE TAB -->
   <div class="tab-panel" id="tab-emp" style="display:flex;flex-direction:column;gap:14px;flex:1;min-height:0;">
 
     <div class="selector-bar">
       <div class="field">
-        <label>Employee <span class="req">*</span></label>
+        <label>Employee ID <span class="req">*</span></label>
         <div class="search-dropdown-wrap">
-          <input class="search-dropdown-input" id="emp-search" type="text" placeholder="Type ID or Name…" autocomplete="off"
-            oninput="filterEmpDropdown(this.value)" onfocus="openEmpDropdown()" onblur="setTimeout(()=>closeEmpDropdown(),200)"/>
+          <input class="search-dropdown-input" id="emp-search" type="text" placeholder="Type Emp ID or Name…" autocomplete="off"
+            oninput="filterEmpDropdown(this.value)" onfocus="openEmpDropdown()" onblur="setTimeout(()=>closeEmpDropdown(),180)"/>
           <div class="dropdown-list" id="emp-dropdown"></div>
         </div>
       </div>
@@ -312,19 +250,19 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
           <div class="entity-confirm-name" id="emp-confirm-name">—</div>
           <div class="entity-confirm-sub" id="emp-confirm-id">—</div>
         </div>
-        <span class="confirm-badge"><i class="ti ti-check" style="font-size:9px;"></i> Selected</span>
+        <span class="confirm-badge"><i class="ti ti-check" style="font-size:10px;"></i> Confirmed</span>
       </div>
-      <button class="btn-clear-sel" id="emp-clear-btn" style="display:none;" onclick="clearEmpSelection()">
-        <i class="ti ti-x"></i> Clear
-      </button>
     </div>
 
     <div class="main-split" id="emp-main-split">
       <div class="doc-sidebar" id="emp-doc-sidebar">
-        <div class="doc-sidebar-empty"><i class="ti ti-user-search"></i><span>Select an employee first</span></div>
+        <div class="doc-sidebar-empty"><i class="ti ti-user-search"></i><span>Select an employee to view document categories</span></div>
       </div>
       <div class="doc-center" id="emp-doc-center">
-        <div class="doc-center-placeholder"><i class="ti ti-files"></i><span>Select a document type from the sidebar</span></div>
+        <div class="doc-center-placeholder">
+          <i class="ti ti-files"></i>
+          <span>Select a document type from the left to view its records</span>
+        </div>
       </div>
       <div class="doc-preview-panel" id="emp-preview-panel">
         <div class="preview-panel-header">
@@ -339,39 +277,50 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
     </div>
   </div>
 
-  <!-- ══ BIKE TAB ══ -->
+  <!-- BIKE TAB -->
   <div class="tab-panel" id="tab-bike" style="display:none;flex-direction:column;gap:14px;flex:1;min-height:0;">
 
     <div class="selector-bar">
       <div class="field">
-        <label>Bike <span class="req">*</span></label>
+        <label>Bike ID <span class="req">*</span></label>
         <div class="search-dropdown-wrap">
-          <input class="search-dropdown-input" id="bike-search" type="text" placeholder="Type Bike ID or Plate…" autocomplete="off"
-            oninput="filterBikeDropdown(this.value)" onfocus="openBikeDropdown()" onblur="setTimeout(()=>closeBikeDropdown(),200)"/>
+          <input class="search-dropdown-input" id="bike-search" type="text" placeholder="Type Bike ID (known) or a new one…" autocomplete="off"
+            oninput="filterBikeDropdown(this.value)" onfocus="openBikeDropdown()" onblur="setTimeout(()=>closeBikeDropdown(),180)"/>
           <div class="dropdown-list" id="bike-dropdown"></div>
         </div>
       </div>
+      <div class="field" id="bike-plate-field" style="display:none;">
+        <label>Plate Number <span class="req">*</span></label>
+        <input class="search-dropdown-input" id="bike-plate-input" type="text" placeholder="e.g. Dubai A 12345" style="width:220px;"/>
+      </div>
+      <button class="btn btn-primary btn-sm" id="bike-confirm-btn" style="display:none;" onclick="confirmNewBike()">
+        <i class="ti ti-check"></i> Use this Bike
+      </button>
       <div id="bike-confirm" class="entity-confirm-strip">
         <div class="entity-confirm-avatar" id="bike-avatar" style="background:var(--orange-dim);color:var(--orange);">
-          <i class="ti ti-motorbike" style="font-size:14px;"></i>
+          <i class="ti ti-motorbike" style="font-size:15px;"></i>
         </div>
         <div>
           <div class="entity-confirm-name" id="bike-confirm-plate">—</div>
           <div class="entity-confirm-sub" id="bike-confirm-id">—</div>
         </div>
-        <span class="confirm-badge"><i class="ti ti-check" style="font-size:9px;"></i> Selected</span>
+        <span class="confirm-badge"><i class="ti ti-check" style="font-size:10px;"></i> Confirmed</span>
+        <button class="btn btn-ghost btn-sm" style="margin-left:4px;" onclick="changeBike()" title="Switch bike"><i class="ti ti-replace"></i></button>
       </div>
-      <button class="btn-clear-sel" id="bike-clear-btn" style="display:none;" onclick="clearBikeSelection()">
-        <i class="ti ti-x"></i> Clear
-      </button>
+    </div>
+    <div id="bike-registry-note" style="display:none;font-size:11px;color:var(--text3);padding:0 4px;">
+      <i class="ti ti-info-circle" style="font-size:12px;"></i> No bike master-list exists in the fleet cache — bikes you confirm here are saved locally to this portal for reuse.
     </div>
 
     <div class="main-split" id="bike-main-split">
       <div class="doc-sidebar" id="bike-doc-sidebar">
-        <div class="doc-sidebar-empty"><i class="ti ti-motorbike"></i><span>Select a bike first</span></div>
+        <div class="doc-sidebar-empty"><i class="ti ti-motorbike"></i><span>Select a bike to view document categories</span></div>
       </div>
       <div class="doc-center" id="bike-doc-center">
-        <div class="doc-center-placeholder"><i class="ti ti-files"></i><span>Select a document type from the sidebar</span></div>
+        <div class="doc-center-placeholder">
+          <i class="ti ti-files"></i>
+          <span>Select a document type from the left to view its records</span>
+        </div>
       </div>
       <div class="doc-preview-panel" id="bike-preview-panel">
         <div class="preview-panel-header">
@@ -396,39 +345,22 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 <script>
 'use strict';
 
-/* ═══════════════════════════════════════════════
-   CONFIG
-═══════════════════════════════════════════════ */
-const GAS_URL     = 'https://script.google.com/macros/s/AKfycbx1gSx6V5eReoeYYpmwCic0SyA7hDOSQSYoWH2zoRsfaDliSk3UeBsh0m1yZqyo1BDo6A/exec'; // replace
-const FOLDER_ID   = '1qzeREizbo-S_HhzjQtrgFtXyboCIruvs';
-const SHEET_ID    = '1rloK0PsZUHVQeUIcPOmYETUuQrX-Y4g-OiGX_wkxgVk';
-const SHEET_NAME  = 'docLog';
-
-/* ═══════════════════════════════════════════════
-   DOC TYPE DEFINITIONS
-   fileType: 'pdf' | 'image' | 'any'
-   hasExpiry: true | false
-   accept: MIME string for input
-═══════════════════════════════════════════════ */
 const EMP_DOC_TYPES = [
-  { key:'contract',    label:'Contract',        icon:'ti-file-text',      fileType:'pdf',   hasExpiry:false, accept:'application/pdf' },
-  { key:'visa',        label:'Visa',            icon:'ti-globe',          fileType:'any',   hasExpiry:true,  accept:'image/*,application/pdf' },
-  { key:'labour_card', label:'Labour Card',     icon:'ti-briefcase',      fileType:'any',   hasExpiry:true,  accept:'image/*,application/pdf' },
-  { key:'eid_card',    label:'EID Card',        icon:'ti-id-badge-2',     fileType:'image', hasExpiry:true,  accept:'image/*' },
-  { key:'rta_card',    label:'RTA Card',        icon:'ti-steering-wheel', fileType:'image', hasExpiry:true,  accept:'image/*' },
-  { key:'driving_lic', label:'Driving License', icon:'ti-license',        fileType:'any',   hasExpiry:true,  accept:'image/*,application/pdf' },
-  { key:'health_card', label:'Health Card',     icon:'ti-heart-plus',     fileType:'image', hasExpiry:true,  accept:'image/*' },
-  { key:'passport',    label:'Passport',        icon:'ti-passport',       fileType:'any',   hasExpiry:true,  accept:'image/*,application/pdf' },
+  { key:'contract',      label:'Contract',       icon:'ti-file-text'       },
+  { key:'visa',          label:'Visa',            icon:'ti-globe'           },
+  { key:'labour_card',   label:'Labour Card',     icon:'ti-briefcase'       },
+  { key:'eid_card',      label:'EID Card',        icon:'ti-id-badge-2'      },
+  { key:'rta_card',      label:'RTA Card',        icon:'ti-steering-wheel'  },
+  { key:'driving_lic',   label:'Driving License', icon:'ti-license'         },
+  { key:'health_card',   label:'Health Card',     icon:'ti-heart-plus'      },
+  { key:'passport',      label:'Passport',        icon:'ti-passport'        },
 ];
 
 const BIKE_DOC_TYPES = [
-  { key:'mulkia',  label:'Mulkia',  icon:'ti-certificate', fileType:'any', hasExpiry:true,  accept:'image/*,application/pdf' },
-  { key:'passing', label:'Passing', icon:'ti-check-badge', fileType:'any', hasExpiry:true,  accept:'image/*,application/pdf' },
+  { key:'mulkia',        label:'Mulkia',          icon:'ti-certificate'      },
+  { key:'passing',       label:'Passing',         icon:'ti-check-badge'      },
 ];
 
-/* ═══════════════════════════════════════════════
-   STATE
-═══════════════════════════════════════════════ */
 let employees    = [];
 let bikes        = [];
 let empDocs      = {};
@@ -438,73 +370,73 @@ let selBikeId    = null;
 let activeEmpDocType  = null;
 let activeBikeDocType = null;
 
-// Per-upload-panel staged files: key = mode+'-'+docType
-const _stagedFiles = {};
-
-/* ═══════════════════════════════════════════════
-   THEME
-═══════════════════════════════════════════════ */
-let _currentTheme = localStorage.getItem('ap2_theme') || 'dark';
-applyTheme(_currentTheme);
-
-function applyTheme(t) {
-  _currentTheme = t;
-  document.documentElement.setAttribute('data-theme', t);
-  document.getElementById('toggle-dark')?.classList.toggle('active', t==='dark');
-  document.getElementById('toggle-light')?.classList.toggle('active', t==='light');
-  localStorage.setItem('ap2_theme', t);
-}
-function toggleTheme() { applyTheme(_currentTheme==='dark' ? 'light' : 'dark'); }
-
-/* ═══════════════════════════════════════════════
-   AVATAR
-═══════════════════════════════════════════════ */
-const AV_BG = ['rgba(88,166,255,.22)','rgba(57,211,83,.22)','rgba(227,179,65,.22)','rgba(163,113,247,.22)','rgba(240,136,62,.22)','rgba(248,81,73,.22)'];
+const AV_BG = ['rgba(88,166,255,.2)','rgba(57,211,83,.2)','rgba(227,179,65,.2)','rgba(163,113,247,.2)','rgba(240,136,62,.2)','rgba(248,81,73,.2)'];
 const AV_FG = ['#58a6ff','#39d353','#e3b341','#a371f7','#f0883e','#f85149'];
 function avatarStyle(name) {
-  const i = (name||'?').charCodeAt(0) % AV_BG.length;
-  return { bg: AV_BG[i], fg: AV_FG[i], initials: ((name||'?').split(' ').map(w=>w[0]).join('').substring(0,2)).toUpperCase() };
+  const i = name.charCodeAt(0) % AV_BG.length;
+  return { bg: AV_BG[i], fg: AV_FG[i], initials: (name.split(' ').map(w=>w[0]).join('').substring(0,2)).toUpperCase() };
 }
 
-/* ═══════════════════════════════════════════════
-   FLEET IDB (read-only consumer)
-═══════════════════════════════════════════════ */
+/* ══ FLEET CACHE (READ-ONLY) — exact same source allEmp.html uses ══
+ *  IndexedDB: ap2_fleet_cache  ›  Object Store: datasets  ›  Key: 'ap2_employee'
+ *  IMPORTANT: this cache is populated by the MAIN fleet app, in the SAME browser.
+ *  This portal does not create or seed it — it only reads what's already there.
+ *  There is currently no equivalent master-list cache for bikes in the source
+ *  system (only a "Bike No" column inside check-in/out log rows) — so Bike ID
+ *  is entered manually below, with autocomplete from bikes you've used before.
+ * ════════════════════════════════════════════════════════════════════════ */
 const FLEET_IDB   = 'ap2_fleet_cache';
 const FLEET_STORE = 'datasets';
+const FLEET_KEY_EMP = 'ap2_employee';
 let _fleetConn = null;
+let _fleetOpenError = null;
+
 function _getFleetDB() {
   if (_fleetConn) return Promise.resolve(_fleetConn);
   return new Promise((res, rej) => {
-    const req = indexedDB.open(FLEET_IDB); // no version — read only
+    // No version specified — opens whatever version already exists.
+    // If the DB has never been created (main app never ran in this browser),
+    // this call itself will CREATE an empty v1 DB with no object stores,
+    // which is indistinguishable from "not populated yet" — we detect that below.
+    const req = indexedDB.open(FLEET_IDB);
     req.onsuccess = e => { _fleetConn = e.target.result; res(_fleetConn); };
-    req.onerror   = e => rej(e.target.error);
+    req.onerror   = e => { _fleetOpenError = e.target.error; rej(e.target.error); };
   });
 }
+
 async function _fleetRead(cacheKey) {
   const db = await _getFleetDB();
+  if (!db.objectStoreNames.contains(FLEET_STORE)) {
+    // Store doesn't exist — the main app has never written to this DB in this browser
+    throw new Error(`Object store "${FLEET_STORE}" not found — open the main fleet app in this browser first`);
+  }
   const rec = await new Promise((res, rej) => {
     const tx  = db.transaction(FLEET_STORE, 'readonly');
     const req = tx.objectStore(FLEET_STORE).get(cacheKey);
     req.onsuccess = () => res(req.result || null);
     req.onerror   = () => rej(req.error);
   });
-  if (!rec || !Array.isArray(rec.data) || !rec.data.length) return [];
+  if (!rec) throw new Error(`Key "${cacheKey}" not found in cache yet`);
+  if (!Array.isArray(rec.data)) throw new Error(`Key "${cacheKey}" exists but has no .data array`);
   return rec.data;
 }
 
-/* ═══════════════════════════════════════════════
-   DOC IDB (local storage of uploaded docs)
-═══════════════════════════════════════════════ */
+/* ══ DOCUMENT STORE (READ-WRITE) — local to this portal only ══ */
 const DOC_IDB   = 'ap2_docportal';
 const DOC_STORE = 'docdata';
 let _docConn = null;
+
 function _getDocDB() {
   if (_docConn) return Promise.resolve(_docConn);
   return new Promise((res, rej) => {
     const req = indexedDB.open(DOC_IDB, 1);
-    req.onupgradeneeded = e => { e.target.result.createObjectStore(DOC_STORE); };
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(DOC_STORE)) db.createObjectStore(DOC_STORE);
+    };
     req.onsuccess = e => { _docConn = e.target.result; res(_docConn); };
-    req.onerror   = e => rej(e.target.error);
+    req.onerror   = e => rej(e.target.error || new Error('Failed to open document database'));
+    req.onblocked = () => rej(new Error('Document database is blocked — close other tabs of this portal and retry'));
   });
 }
 async function idbGet(key) {
@@ -513,28 +445,33 @@ async function idbGet(key) {
     const tx  = db.transaction(DOC_STORE, 'readonly');
     const req = tx.objectStore(DOC_STORE).get(key);
     req.onsuccess = () => res(req.result ?? null);
-    req.onerror   = () => rej(req.error);
+    req.onerror   = () => rej(req.error || new Error('Read failed'));
   });
 }
 async function idbSet(key, val) {
   const db = await _getDocDB();
   return new Promise((res, rej) => {
-    const tx  = db.transaction(DOC_STORE, 'readwrite');
+    let tx;
+    try {
+      tx = db.transaction(DOC_STORE, 'readwrite');
+    } catch(err) {
+      rej(new Error('Could not start write transaction: ' + err.message));
+      return;
+    }
     const req = tx.objectStore(DOC_STORE).put(val, key);
-    req.onsuccess = () => res();
-    req.onerror   = () => rej(req.error);
+    req.onsuccess = () => res(true);
+    req.onerror   = () => rej(req.error || new Error('Write failed'));
+    tx.onerror    = () => rej(tx.error || new Error('Transaction failed — possibly quota exceeded'));
+    tx.onabort    = () => rej(tx.error || new Error('Transaction aborted'));
   });
 }
 
-/* ═══════════════════════════════════════════════
-   NORMALISERS
-═══════════════════════════════════════════════ */
 function normaliseEmp(r, i) {
   if (!r) return null;
   const _s = v => (v !== null && v !== undefined && v !== '') ? String(v).trim() : '';
   if (Array.isArray(r)) {
     if (_s(r[0]) === 'Emp ID') return null;
-    const empId = (r[0] !== null && r[0] !== undefined && r[0] !== '') ? r[0] : (i + 1);
+    const empId   = (r[0] !== null && r[0] !== undefined && r[0] !== '') ? r[0] : (i + 1);
     const empName = _s(r[1]);
     if (!empName) return null;
     return { id: empId, name: empName, eid: _s(r[2]), dob: _s(r[3]), mobile: _s(r[4]), status: _s(r[8]) || 'Active' };
@@ -546,7 +483,15 @@ function normaliseEmp(r, i) {
   return null;
 }
 
+/* ── Bikes: there is no master "bike list" cache in the source system —
+ *  only a free-text "Bike No" column inside check-out/check-in log rows.
+ *  So bikes here are a locally-maintained registry (saved in our own
+ *  ap2_docportal IDB), seeded from any bike IDs you've already uploaded
+ *  documents for, plus whatever you add manually via "+ Add Bike". ── */
+let bikeRegistry = []; // [{id, plate}]
+
 function normaliseBike(r, i) {
+  // Kept for forward-compatibility if a real bike cache is added later.
   if (!r) return null;
   const _s = v => (v !== null && v !== undefined && v !== '') ? String(v).trim() : '';
   if (Array.isArray(r)) {
@@ -558,28 +503,20 @@ function normaliseBike(r, i) {
   if (r['Bike ID'] !== undefined || r['id'] !== undefined) {
     const bikeId = _s(r['Bike ID'] || r['id']);
     if (!bikeId) return null;
-    return { id: bikeId, plate: _s(r['Plate Number']||r['plate']||''), make: _s(r['Make']||r['make']||''), model: _s(r['Model']||r['model']||''), year: _s(r['Year']||r['year']||''), colour: _s(r['Colour']||r['Color']||r['colour']||''), status: _s(r['Status']||r['status']||'') };
+    return { id: bikeId, plate: _s(r['Plate Number'] || r['plate'] || ''), make: _s(r['Make'] || r['make'] || ''), model: _s(r['Model'] || r['model'] || ''), year: _s(r['Year'] || r['year'] || ''), colour: _s(r['Colour'] || r['Color'] || r['colour'] || ''), status: _s(r['Status'] || r['status'] || '') };
   }
   return null;
 }
 
-/* ═══════════════════════════════════════════════
-   HELPERS
-═══════════════════════════════════════════════ */
 function daysUntil(d) { if(!d) return Infinity; return Math.ceil((new Date(d)-new Date())/86400000); }
 function expiryStatus(d) {
   if(!d) return {status:'gray',label:'No Expiry'};
   const days = daysUntil(d);
   if(days < 0)   return {status:'red',   label:`Expired ${Math.abs(days)}d ago`};
-  if(days <= 45) return {status:'amber', label:`Expires in ${days}d`};
+  if(days <= 45)  return {status:'amber', label:`Expires in ${days}d`};
   return {status:'teal', label:`Valid · ${days}d left`};
 }
-function fmtDate(d) {
-  if(!d) return '—';
-  const dt = new Date(d);
-  if(isNaN(dt)) return d;
-  return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
-}
+function fmtDate(d) { if(!d) return '—'; const dt=new Date(d); return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
 function genTxnId() { return 'TXN-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2,6).toUpperCase(); }
 function fileToBase64(file) {
   return new Promise((res,rej) => {
@@ -596,13 +533,10 @@ function toast(msg, type='success') {
   clearTimeout(_toastTimer); el.className='toast';
   msgEl.textContent=msg;
   icon.className = type==='error' ? 'ti ti-x-circle' : 'ti ti-circle-check';
-  requestAnimationFrame(()=>{ el.classList.add('show', type); });
+  requestAnimationFrame(()=>{ el.classList.add('show',type); });
   _toastTimer = setTimeout(()=>{ el.classList.remove('show'); },3500);
 }
 
-/* ═══════════════════════════════════════════════
-   TAB SWITCH
-═══════════════════════════════════════════════ */
 function switchTab(tab) {
   document.getElementById('tab-emp').style.display  = tab==='emp'  ? 'flex' : 'none';
   document.getElementById('tab-bike').style.display = tab==='bike' ? 'flex' : 'none';
@@ -610,50 +544,83 @@ function switchTab(tab) {
   document.getElementById('tab-bike-btn').classList.toggle('active', tab==='bike');
 }
 
-/* ═══════════════════════════════════════════════
-   CLEAR SELECTIONS
-═══════════════════════════════════════════════ */
-function clearEmpSelection() {
-  selEmpId = null;
-  activeEmpDocType = null;
-  document.getElementById('emp-search').value = '';
-  document.getElementById('emp-confirm').style.display = 'none';
-  document.getElementById('emp-clear-btn').style.display = 'none';
-  document.getElementById('emp-doc-sidebar').innerHTML = '<div class="doc-sidebar-empty"><i class="ti ti-user-search"></i><span>Select an employee first</span></div>';
-  document.getElementById('emp-doc-center').innerHTML  = '<div class="doc-center-placeholder"><i class="ti ti-files"></i><span>Select a document type from the sidebar</span></div>';
-  closePreview('emp');
-  // clear any staged files for emp
-  Object.keys(_stagedFiles).filter(k=>k.startsWith('emp-')).forEach(k=>delete _stagedFiles[k]);
+async function loadInitialData() {
+  const statusEl = document.getElementById('cache-status');
+  const setStatus = (icon, msg, color, title) => {
+    if (!statusEl) return;
+    statusEl.style.color = color || 'var(--text3)';
+    statusEl.title = title || '';
+    statusEl.innerHTML = `<i class="ti ${icon}" style="font-size:13px;${icon.includes('loader')?'animation:spin 1s linear infinite;':''}"></i> ${msg}`;
+  };
+  setStatus('ti-loader','Loading cache…');
+
+  let empOk = false, empErrMsg = '';
+
+  try {
+    const empRows = await _fleetRead(FLEET_KEY_EMP);
+    const parsed = empRows.map((r, i) => normaliseEmp(r, i)).filter(Boolean);
+    if (parsed.length) { employees = parsed; empOk = true; }
+    else empErrMsg = 'Cache has rows but none parsed — check column layout';
+  } catch(err) {
+    empErrMsg = err.message;
+    console.warn('[docPortal] employee cache read failed:', err.message);
+  }
+
+  // ── Document records (read-write, local to this portal) ──
+  try {
+    const ed = await idbGet('portal_emp_docs');
+    const bd = await idbGet('portal_bike_docs');
+    const br = await idbGet('portal_bike_registry');
+    if (ed) empDocs  = ed;
+    if (bd) bikeDocs = bd;
+    if (br && Array.isArray(br)) bikeRegistry = br;
+  } catch(err) {
+    console.error('[docPortal] local document store read failed:', err.message);
+    toast('Could not read local document store: ' + err.message, 'error');
+  }
+
+  // ── Seed bike registry from any bike IDs already used in uploaded docs ──
+  Object.keys(bikeDocs).forEach(bikeId => {
+    if (!bikeRegistry.find(b => b.id === bikeId)) bikeRegistry.push({ id: bikeId, plate: '' });
+  });
+  bikes = bikeRegistry;
+
+  if (empOk) {
+    setStatus('ti-circle-check', `${employees.length} employees · ${bikes.length} bikes registered`, 'var(--teal)');
+  } else {
+    setStatus('ti-alert-triangle', 'Employee cache unavailable — see tooltip', 'var(--amber)',
+      `${empErrMsg}\n\nOpen the main fleet app (allEmp.html) in THIS SAME browser/tab group first — it writes to IndexedDB "ap2_fleet_cache" which this portal then reads. This portal cannot create that data itself.`);
+  }
 }
 
-function clearBikeSelection() {
-  selBikeId = null;
-  activeBikeDocType = null;
-  document.getElementById('bike-search').value = '';
-  document.getElementById('bike-confirm').style.display = 'none';
-  document.getElementById('bike-clear-btn').style.display = 'none';
-  document.getElementById('bike-doc-sidebar').innerHTML = '<div class="doc-sidebar-empty"><i class="ti ti-motorbike"></i><span>Select a bike first</span></div>';
-  document.getElementById('bike-doc-center').innerHTML  = '<div class="doc-center-placeholder"><i class="ti ti-files"></i><span>Select a document type from the sidebar</span></div>';
-  closePreview('bike');
-  Object.keys(_stagedFiles).filter(k=>k.startsWith('bike-')).forEach(k=>delete _stagedFiles[k]);
+/* ── Bike registry: add / persist manually-entered bikes locally ── */
+async function addBikeToRegistry(id, plate) {
+  id = String(id || '').trim();
+  if (!id) return false;
+  if (bikeRegistry.find(b => b.id === id)) return true; // already known
+  bikeRegistry.push({ id, plate: String(plate || '').trim() });
+  try {
+    await idbSet('portal_bike_registry', bikeRegistry);
+    bikes = bikeRegistry;
+    return true;
+  } catch(err) {
+    toast('Could not save bike to registry: ' + err.message, 'error');
+    return false;
+  }
 }
 
-/* ═══════════════════════════════════════════════
-   EMPLOYEE DROPDOWN
-═══════════════════════════════════════════════ */
 function filterEmpDropdown(q) {
   const list = document.getElementById('emp-dropdown');
-  const lq = (q||'').toLowerCase().trim();
+  const lq = q.toLowerCase().trim();
   const hits = employees.filter(e => String(e.id).toLowerCase().includes(lq) || e.name.toLowerCase().includes(lq)).slice(0,12);
   if(!hits.length) { list.innerHTML='<div class="dropdown-item" style="color:var(--text3);">No employees found</div>'; }
   else {
-    const re = lq ? new RegExp(`(${lq.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi') : null;
-    const hl = v => re ? v.replace(re, '<em>$1</em>') : v;
-    list.innerHTML = hits.map(e =>
-      `<div class="dropdown-item" onmousedown="selectEmployee('${e.id}')">
-        <div class="dname">${hl(e.name)}</div><div class="did">ID: ${hl(String(e.id))}${e.eid?' · EID: '+e.eid:''}</div>
-      </div>`
-    ).join('');
+    list.innerHTML = hits.map(e => {
+      const hl = v => v.replace(new RegExp(`(${lq})`, 'gi'), '<em>$1</em>');
+      return `<div class="dropdown-item" onmousedown="selectEmployee('${e.id}')">
+        <div class="dname">${hl(e.name)}</div><div class="did">ID: ${hl(String(e.id))}</div>
+      </div>`;
+    }).join('');
   }
   list.classList.add('open');
 }
@@ -665,15 +632,16 @@ function selectEmployee(id) {
   if(!emp) return;
   selEmpId = String(id);
   activeEmpDocType = null;
-  document.getElementById('emp-search').value = `${emp.name} (${emp.id})`;
+  document.getElementById('emp-search').value = `${emp.id} — ${emp.name}`;
   closeEmpDropdown();
+
   const av = avatarStyle(emp.name);
   const avEl = document.getElementById('emp-avatar');
   avEl.style.background = av.bg; avEl.style.color = av.fg; avEl.textContent = av.initials;
   document.getElementById('emp-confirm-name').textContent = emp.name;
   document.getElementById('emp-confirm-id').textContent = `ID: ${emp.id}` + (emp.eid ? ` · EID: ${emp.eid}` : '') + (emp.mobile ? ` · ${emp.mobile}` : '');
   document.getElementById('emp-confirm').style.display='flex';
-  document.getElementById('emp-clear-btn').style.display='inline-flex';
+
   buildEmpSidebar();
   resetEmpCenter();
   closePreview('emp');
@@ -684,50 +652,60 @@ function getEmpDocs(empId, docType) { return (empDocs[empId]?.[docType]) || []; 
 function buildEmpSidebar() {
   const sb = document.getElementById('emp-doc-sidebar');
   sb.innerHTML = EMP_DOC_TYPES.map(dt => {
-    const recs   = getEmpDocs(selEmpId, dt.key);
+    const recs = getEmpDocs(selEmpId, dt.key);
     const latest = recs.length ? recs[recs.length-1] : null;
-    const exp    = (latest?.expiry && dt.hasExpiry) ? expiryStatus(latest.expiry) : null;
+    const exp = latest?.expiry ? expiryStatus(latest.expiry) : null;
     let cls = 'doc-side-btn';
     if (dt.key === activeEmpDocType) cls += ' selected';
     let countBadge = '';
     if(recs.length) {
-      if(exp?.status==='red')        { cls+=' expired-docs';  countBadge=`<div class="doc-count-badge red">${recs.length}</div>`; }
+      if(exp?.status==='red')   { cls+=' expired-docs';  countBadge=`<div class="doc-count-badge red">${recs.length}</div>`; }
       else if(exp?.status==='amber') { cls+=' expiring-docs'; countBadge=`<div class="doc-count-badge amber">${recs.length}</div>`; }
-      else                           { cls+=' has-docs';      countBadge=`<div class="doc-count-badge">${recs.length}</div>`; }
+      else { cls+=' has-docs'; countBadge=`<div class="doc-count-badge">${recs.length}</div>`; }
     }
     return `<button class="${cls}" onclick="openEmpDocType('${dt.key}')">${countBadge}<i class="ti ${dt.icon}"></i><span>${dt.label}</span></button>`;
   }).join('');
 }
 
 function resetEmpCenter() {
-  document.getElementById('emp-doc-center').innerHTML = `<div class="doc-center-placeholder"><i class="ti ti-files"></i><span>Select a document type from the sidebar</span></div>`;
+  document.getElementById('emp-doc-center').innerHTML = `<div class="doc-center-placeholder"><i class="ti ti-files"></i><span>Select a document type from the left to view its records</span></div>`;
 }
 
 function openEmpDocType(docType) {
   activeEmpDocType = docType;
   buildEmpSidebar();
-  const dt   = EMP_DOC_TYPES.find(d=>d.key===docType);
+  const dt = EMP_DOC_TYPES.find(d=>d.key===docType);
   const recs = getEmpDocs(selEmpId, docType);
   document.getElementById('emp-doc-center').innerHTML = buildCenterPanel(dt, recs, 'emp');
-  initFileUploadZone(`emp-${docType}-file-zone`, `emp-${docType}-file-input`, dt);
+  initFileUploadZone('emp-file-zone','emp-file-input','emp-chosen-file');
 }
 
-/* ═══════════════════════════════════════════════
-   BIKE DROPDOWN
-═══════════════════════════════════════════════ */
 function filterBikeDropdown(q) {
   const list = document.getElementById('bike-dropdown');
-  const lq = (q||'').toLowerCase().trim();
+  const plateField = document.getElementById('bike-plate-field');
+  const confirmBtn = document.getElementById('bike-confirm-btn');
+  const note = document.getElementById('bike-registry-note');
+  const lq = q.toLowerCase().trim();
+
+  if (!lq) { list.classList.remove('open'); plateField.style.display='none'; confirmBtn.style.display='none'; note.style.display='none'; return; }
+
   const hits = bikes.filter(b => String(b.id).toLowerCase().includes(lq) || (b.plate||'').toLowerCase().includes(lq)).slice(0,12);
-  if(!hits.length) { list.innerHTML='<div class="dropdown-item" style="color:var(--text3);">No bikes found</div>'; }
-  else {
-    const re = lq ? new RegExp(`(${lq.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi') : null;
-    const hl = v => re ? v.replace(re, '<em>$1</em>') : v;
-    list.innerHTML = hits.map(b =>
-      `<div class="dropdown-item" onmousedown="selectBike('${b.id}')">
-        <div class="dname">${hl(b.plate||b.id)}</div><div class="did">ID: ${hl(String(b.id))} · ${b.make||''} ${b.model||''}</div>
-      </div>`
-    ).join('');
+
+  if(!hits.length) {
+    list.innerHTML = `<div class="dropdown-item" style="color:var(--text3);"><i class="ti ti-plus" style="font-size:12px;"></i> No match — fill in plate number below and click "Use this Bike" to register "${q.trim()}"</div>`;
+    plateField.style.display='flex';
+    confirmBtn.style.display='inline-flex';
+    note.style.display='block';
+  } else {
+    list.innerHTML = hits.map(b => {
+      const hl = v => v.replace(new RegExp(`(${lq.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<em>$1</em>');
+      return `<div class="dropdown-item" onmousedown="selectBike('${b.id}')">
+        <div class="dname">${hl(b.plate||b.id)}</div><div class="did">ID: ${hl(String(b.id))}</div>
+      </div>`;
+    }).join('');
+    plateField.style.display='none';
+    confirmBtn.style.display='none';
+    note.style.display='none';
   }
   list.classList.add('open');
 }
@@ -737,15 +715,50 @@ function closeBikeDropdown() { document.getElementById('bike-dropdown').classLis
 function selectBike(id) {
   const bike = bikes.find(b => String(b.id) === String(id));
   if(!bike) return;
-  selBikeId = String(id);
-  activeBikeDocType = null;
-  document.getElementById('bike-search').value = `${bike.plate||bike.id} (${bike.id})`;
+  applyBikeSelection(bike);
   closeBikeDropdown();
+}
+
+async function confirmNewBike() {
+  const idInput    = document.getElementById('bike-search');
+  const plateInput = document.getElementById('bike-plate-input');
+  const id    = idInput.value.trim();
+  const plate = plateInput.value.trim();
+
+  if (!id)    { toast('Enter a Bike ID', 'error'); return; }
+  if (!plate) { toast('Plate Number is required to confirm a new bike', 'error'); return; }
+
+  const ok = await addBikeToRegistry(id, plate);
+  if (!ok) return;
+
+  const bike = bikes.find(b => b.id === id);
+  applyBikeSelection(bike);
+  toast(`Bike "${id}" registered and selected`);
+}
+
+function applyBikeSelection(bike) {
+  selBikeId = String(bike.id);
+  activeBikeDocType = null;
+  document.getElementById('bike-search').value = bike.plate ? `${bike.id} — ${bike.plate}` : bike.id;
+  document.getElementById('bike-plate-field').style.display='none';
+  document.getElementById('bike-confirm-btn').style.display='none';
+  document.getElementById('bike-registry-note').style.display='none';
+
   document.getElementById('bike-confirm-plate').textContent = bike.plate || bike.id;
-  document.getElementById('bike-confirm-id').textContent = `ID: ${bike.id}` + (bike.make ? ` · ${bike.make} ${bike.model||''}` : '') + (bike.colour ? ` · ${bike.colour}` : '');
+  document.getElementById('bike-confirm-id').textContent = `ID: ${bike.id}` + (bike.make ? ` · ${bike.make} ${bike.model||''}` : '');
   document.getElementById('bike-confirm').style.display='flex';
-  document.getElementById('bike-clear-btn').style.display='inline-flex';
+
   buildBikeSidebar();
+  resetBikeCenter();
+  closePreview('bike');
+}
+
+function changeBike() {
+  selBikeId = null;
+  activeBikeDocType = null;
+  document.getElementById('bike-confirm').style.display='none';
+  document.getElementById('bike-search').value = '';
+  document.getElementById('bike-search').focus();
   resetBikeCenter();
   closePreview('bike');
 }
@@ -755,82 +768,62 @@ function getBikeDocs(bikeId, docType) { return (bikeDocs[bikeId]?.[docType]) || 
 function buildBikeSidebar() {
   const sb = document.getElementById('bike-doc-sidebar');
   sb.innerHTML = BIKE_DOC_TYPES.map(dt => {
-    const recs   = getBikeDocs(selBikeId, dt.key);
+    const recs = getBikeDocs(selBikeId, dt.key);
     const latest = recs.length ? recs[recs.length-1] : null;
-    const exp    = (latest?.expiry && dt.hasExpiry) ? expiryStatus(latest.expiry) : null;
+    const exp = latest?.expiry ? expiryStatus(latest.expiry) : null;
     let cls = 'doc-side-btn';
     if (dt.key === activeBikeDocType) cls += ' selected';
     let countBadge = '';
     if(recs.length) {
-      if(exp?.status==='red')        { cls+=' expired-docs';  countBadge=`<div class="doc-count-badge red">${recs.length}</div>`; }
+      if(exp?.status==='red')    { cls+=' expired-docs';  countBadge=`<div class="doc-count-badge red">${recs.length}</div>`; }
       else if(exp?.status==='amber') { cls+=' expiring-docs'; countBadge=`<div class="doc-count-badge amber">${recs.length}</div>`; }
-      else                           { cls+=' has-docs';      countBadge=`<div class="doc-count-badge">${recs.length}</div>`; }
+      else { cls+=' has-docs'; countBadge=`<div class="doc-count-badge">${recs.length}</div>`; }
     }
     return `<button class="${cls}" onclick="openBikeDocType('${dt.key}')">${countBadge}<i class="ti ${dt.icon}"></i><span>${dt.label}</span></button>`;
   }).join('');
 }
 
 function resetBikeCenter() {
-  document.getElementById('bike-doc-center').innerHTML = `<div class="doc-center-placeholder"><i class="ti ti-files"></i><span>Select a document type from the sidebar</span></div>`;
+  document.getElementById('bike-doc-center').innerHTML = `<div class="doc-center-placeholder"><i class="ti ti-files"></i><span>Select a document type from the left to view its records</span></div>`;
 }
 
 function openBikeDocType(docType) {
   activeBikeDocType = docType;
   buildBikeSidebar();
-  const dt   = BIKE_DOC_TYPES.find(d=>d.key===docType);
+  const dt = BIKE_DOC_TYPES.find(d=>d.key===docType);
   const recs = getBikeDocs(selBikeId, docType);
   document.getElementById('bike-doc-center').innerHTML = buildCenterPanel(dt, recs, 'bike');
-  initFileUploadZone(`bike-${docType}-file-zone`, `bike-${docType}-file-input`, dt);
+  initFileUploadZone('bike-file-zone','bike-file-input','bike-chosen-file');
 }
 
-/* ═══════════════════════════════════════════════
-   BUILD CENTER PANEL  (doc-type-aware)
-═══════════════════════════════════════════════ */
 function buildCenterPanel(dt, recs, mode) {
-  const pfx       = `${mode}-${dt.key}`;
-  const fileZoneId = `${pfx}-file-zone`;
-  const fileInputId= `${pfx}-file-input`;
-  const dateId     = `${pfx}-exp-date`;
-  const gsStatusId = `${pfx}-gs-status`;
-  const uploadId   = `${pfx}-upload-inline`;
-  const stripId    = `${pfx}-file-strip`;
-
-  // info banner based on fileType
-  let infoCls='info-any', infoIcon='ti-files', infoText='Accepts PDF or image files', infoChip='PDF / Image';
-  if(dt.fileType==='pdf')   { infoCls='info-pdf'; infoIcon='ti-file-type-pdf'; infoText='This document requires a PDF file'; infoChip='PDF only'; }
-  if(dt.fileType==='image') { infoCls='info-img'; infoIcon='ti-photo'; infoText='This document requires an image file (JPG, PNG, WEBP)'; infoChip='Image only'; }
-
-  // hint for file accept
-  let acceptHint = 'JPG, PNG, WEBP, PDF';
-  if(dt.fileType==='pdf')   acceptHint = 'PDF only';
-  if(dt.fileType==='image') acceptHint = 'JPG, PNG, WEBP';
-
-  // expiry field visibility
-  const dateDisplay = dt.hasExpiry ? '' : 'style="display:none;"';
-  const dateHint    = dt.hasExpiry
-    ? `<div class="field-hint"><i class="ti ti-calendar-event"></i> Expiry date required</div>`
-    : `<div class="field-hint"><i class="ti ti-info-circle"></i> No expiry for this document type</div>`;
+  const fileZone  = mode+'-file-zone';
+  const fileInput = mode+'-file-input';
+  const chosenFile= mode+'-chosen-file';
+  const dateId    = mode+'-exp-date';
+  const gsStatusId= mode+'-gs-status';
+  const uploadId  = mode+'-upload-inline';
 
   let recordsHtml = '';
   if(!recs.length) {
-    recordsHtml = `<div style="text-align:center;padding:20px 0;color:var(--text3);font-size:12px;">
-      <i class="ti ti-file-off" style="font-size:24px;display:block;margin-bottom:8px;opacity:.4;"></i>
-      No records yet for this document type.
+    recordsHtml = `<div style="text-align:center;padding:20px 0;color:var(--text3);font-size:12.5px;">
+      <i class="ti ti-file-off" style="font-size:26px;display:block;margin-bottom:8px;opacity:.4;"></i>
+      No previous documents for this category.
     </div>`;
   } else {
     recordsHtml = [...recs].reverse().map((rec, idx) => {
       const isPdf = rec.fileType === 'pdf';
-      const exp   = (rec.expiry && dt.hasExpiry) ? expiryStatus(rec.expiry) : {status:'gray',label:dt.hasExpiry?'No expiry set':'N/A'};
+      const exp   = rec.expiry ? expiryStatus(rec.expiry) : {status:'gray',label:'No expiry set'};
       const isNew = idx === 0;
       return `<div class="txn-record">
         <div class="txn-record-icon ${isPdf?'pdf':'img'}"><i class="ti ${isPdf?'ti-file-type-pdf':'ti-photo'}"></i></div>
         <div class="txn-record-meta">
           <button class="txn-id-btn" onclick='previewDoc(${JSON.stringify(rec)}, "${dt.label}", "${mode}")'>
-            <i class="ti ti-eye" style="font-size:12px;"></i> ${rec.txnId}
+            <i class="ti ti-eye" style="font-size:13px;"></i> ${rec.txnId}
             ${isNew?'<span class="txn-badge-latest">Latest</span>':''}
           </button>
           <div class="txn-record-date">Uploaded ${fmtDate(rec.uploadedAt)}</div>
-          <div class="txn-record-expiry ${exp.status}"><i class="ti ti-calendar-event" style="font-size:10.5px;"></i> ${(rec.expiry&&dt.hasExpiry)?fmtDate(rec.expiry):'—'} · ${exp.label}</div>
+          <div class="txn-record-expiry ${exp.status}"><i class="ti ti-calendar-event" style="font-size:11px;"></i> ${rec.expiry?fmtDate(rec.expiry):'—'} · ${exp.label}</div>
         </div>
       </div>`;
     }).join('');
@@ -842,144 +835,34 @@ function buildCenterPanel(dt, recs, mode) {
       ${recs.length ? `<span class="badge purple" style="margin-left:auto;">${recs.length} record${recs.length!==1?'s':''}</span>` : ''}
     </div>
     <div class="doc-center-body">
-      <div class="doc-type-info ${infoCls}">
-        <i class="ti ${infoIcon}"></i>
-        <span>${infoText}</span>
-        <span class="info-chip">${infoChip}</span>
-      </div>
       ${recordsHtml}
       <div class="txn-new-row">
-        <div class="txn-new-label"><i class="ti ti-plus"></i> Upload new ${dt.label}</div>
+        <div class="txn-new-label"><i class="ti ti-plus"></i> Upload a new ${dt.label} version</div>
         <button class="btn-new-upload" onclick="toggleNewUpload('${uploadId}')"><i class="ti ti-upload"></i> New</button>
       </div>
       <div class="upload-inline" id="${uploadId}">
         <div class="upload-inline-title"><i class="ti ti-cloud-upload"></i> Upload ${dt.label}</div>
         <div class="upload-row">
           <div class="field" style="flex:2;">
-            <label>File <span class="req">*</span></label>
-            <div class="file-upload-zone" id="${fileZoneId}" onclick="document.getElementById('${fileInputId}').click()">
-              <input type="file" id="${fileInputId}" accept="${dt.accept}" style="display:none;"
-                onchange="handleFileSelect(this, '${fileZoneId}', '${stripId}', '${mode}', '${dt.key}', '${dt.fileType}')"/>
-              <i class="ti ti-cloud-upload zone-icon"></i>
-              <p>Click to browse or drag &amp; drop<br><span class="file-accept-hint">${acceptHint}</span></p>
-            </div>
-            <!-- file preview strip -->
-            <div class="file-preview-strip" id="${stripId}">
-              <div id="${stripId}-thumb"></div>
-              <div class="fp-info">
-                <div class="fp-name" id="${stripId}-name"></div>
-                <div class="fp-size" id="${stripId}-size"></div>
-              </div>
-              <button class="btn-remove-file" title="Remove file" onclick="removeFile('${fileZoneId}','${stripId}','${mode}','${dt.key}')"><i class="ti ti-x"></i></button>
+            <label>File (Image or PDF) <span class="req">*</span></label>
+            <div class="file-upload-zone" id="${fileZone}">
+              <input type="file" id="${fileInput}" accept="image/*,.pdf" onchange="handleFileSelect(this, '${fileZone}', '${chosenFile}')"/>
+              <i class="ti ti-cloud-upload"></i>
+              <p id="${chosenFile}">Click to browse or drag & drop<br><span style="font-size:10px;opacity:.6;">JPG, PNG, WEBP, PDF</span></p>
             </div>
           </div>
-          <div class="field" ${dateDisplay}>
+          <div class="field">
             <label>Expiry Date <span class="req">*</span></label>
             <input type="date" class="date-input" id="${dateId}"/>
-            ${dateHint}
           </div>
-          ${!dt.hasExpiry ? `<div class="field"><div style="height:36px;"></div>${dateHint}</div>` : ''}
         </div>
         <div id="${gsStatusId}" style="display:none;"></div>
         <div class="upload-actions">
-          <button class="btn btn-ghost btn-sm" onclick="cancelUpload('${uploadId}','${fileZoneId}','${stripId}','${mode}','${dt.key}')"><i class="ti ti-x"></i> Cancel</button>
-          <button class="btn btn-primary btn-sm" onclick="submitDoc('${mode}','${dt.key}','${dt.label}','${dateId}','${gsStatusId}','${fileZoneId}','${stripId}')"><i class="ti ti-upload"></i> Upload &amp; Save</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleNewUpload('${uploadId}')"><i class="ti ti-x"></i> Cancel</button>
+          <button class="btn btn-primary btn-sm" onclick="submitDoc('${mode}','${dt.key}','${dt.label}')"><i class="ti ti-upload"></i> Upload & Save</button>
         </div>
       </div>
     </div>`;
-}
-
-/* ═══════════════════════════════════════════════
-   FILE ZONE INIT & HANDLING
-═══════════════════════════════════════════════ */
-function initFileUploadZone(zoneId, inputId, dt) {
-  const zone = document.getElementById(zoneId);
-  if(!zone) return;
-  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
-  zone.addEventListener('dragleave', () => { zone.classList.remove('dragover'); });
-  zone.addEventListener('drop', e => {
-    e.preventDefault(); zone.classList.remove('dragover');
-    const file = e.dataTransfer.files[0];
-    if(!file) return;
-    // inject into hidden input via DataTransfer
-    const inp = document.getElementById(inputId);
-    if(inp) {
-      try { inp.files = e.dataTransfer.files; } catch(err) { /* Firefox quirk */ }
-      const stripId = zoneId.replace('-file-zone','-file-strip');
-      const modeKey = zoneId.replace('-file-zone',''); // e.g. emp-visa
-      const [mode, ...rest] = modeKey.split('-'); const docType = rest.join('-');
-      handleFileSelect({files:[file]}, zoneId, stripId, mode, docType, dt.fileType);
-    }
-  });
-}
-
-function handleFileSelect(input, zoneId, stripId, mode, docType, fileTypeCfg) {
-  const file = input.files?.[0];
-  const zone = document.getElementById(zoneId);
-  const strip= document.getElementById(stripId);
-  if(!file || !zone) return;
-
-  // Validate file type
-  const isPdf  = file.type === 'application/pdf';
-  const isImage= file.type.startsWith('image/');
-  let valid = true;
-  if(fileTypeCfg === 'pdf'   && !isPdf)   valid = false;
-  if(fileTypeCfg === 'image' && !isImage) valid = false;
-  if(!isPdf && !isImage)                  valid = false;
-
-  if(!valid) {
-    zone.classList.add('err-file');
-    zone.querySelector('.zone-icon').className = 'ti ti-alert-circle zone-icon';
-    zone.querySelector('p').innerHTML = `<strong>Invalid file type</strong><br><span class="file-accept-hint">${fileTypeCfg==='pdf'?'Only PDF allowed':fileTypeCfg==='image'?'Only images allowed':'PDF or image required'}</span>`;
-    // clear staged
-    delete _stagedFiles[`${mode}-${docType}`];
-    if(strip) strip.classList.remove('show');
-    toast(`Invalid file. ${fileTypeCfg==='pdf'?'Upload a PDF.':fileTypeCfg==='image'?'Upload an image.':'Upload PDF or image.'}`, 'error');
-    return;
-  }
-
-  // Good — stage it
-  _stagedFiles[`${mode}-${docType}`] = file;
-  zone.classList.remove('err-file');
-  zone.classList.add('has-file');
-  zone.querySelector('.zone-icon').className = 'ti ti-check zone-icon';
-  zone.querySelector('p').innerHTML = `<strong style="font-size:12px;">${file.name}</strong><br><span class="file-accept-hint">${(file.size/1024).toFixed(1)} KB · ${isPdf?'PDF':'Image'}</span>`;
-
-  // File preview strip
-  if(strip) {
-    strip.classList.add('show');
-    document.getElementById(stripId+'-name').textContent = file.name;
-    document.getElementById(stripId+'-size').textContent = (file.size/1024).toFixed(1)+' KB · '+(isPdf?'PDF':'Image');
-    const thumbEl = document.getElementById(stripId+'-thumb');
-    if(isPdf) {
-      thumbEl.innerHTML = `<div class="fp-pdf"><i class="ti ti-file-type-pdf"></i></div>`;
-    } else {
-      const url = URL.createObjectURL(file);
-      thumbEl.innerHTML = `<img src="${url}" alt="preview" onload="URL.revokeObjectURL(this.src)"/>`;
-    }
-  }
-}
-
-function removeFile(zoneId, stripId, mode, docType) {
-  delete _stagedFiles[`${mode}-${docType}`];
-  const zone = document.getElementById(zoneId);
-  const strip= document.getElementById(stripId);
-  const inp  = document.getElementById(zoneId.replace('-file-zone','-file-input'));
-  if(inp) inp.value = '';
-  if(zone) {
-    zone.classList.remove('has-file','err-file');
-    zone.querySelector('.zone-icon').className = 'ti ti-cloud-upload zone-icon';
-    zone.querySelector('p').innerHTML = `Click to browse or drag &amp; drop<br><span class="file-accept-hint">${zone.querySelector('p span')?.textContent||'JPG, PNG, WEBP, PDF'}</span>`;
-  }
-  if(strip) strip.classList.remove('show');
-}
-
-function cancelUpload(uploadId, zoneId, stripId, mode, docType) {
-  toggleNewUpload(uploadId);
-  removeFile(zoneId, stripId, mode, docType);
-  // also clear date
-  const dateEl = document.getElementById(`${mode}-${docType}-exp-date`);
-  if(dateEl) dateEl.value = '';
 }
 
 function toggleNewUpload(id) {
@@ -989,114 +872,90 @@ function toggleNewUpload(id) {
   if(el.classList.contains('open')) el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-/* ═══════════════════════════════════════════════
-   SUBMIT (local IDB + Google Sheets log)
-═══════════════════════════════════════════════ */
-async function submitDoc(mode, docType, docLabel, dateId, gsStatusId, zoneId, stripId) {
-  const dt       = (mode==='emp' ? EMP_DOC_TYPES : BIKE_DOC_TYPES).find(d=>d.key===docType);
-  const file     = _stagedFiles[`${mode}-${docType}`];
-  const dateEl   = document.getElementById(dateId);
-  const gsStatus = document.getElementById(gsStatusId);
-  const expiry   = dateEl?.value || '';
-  const entityId = mode==='emp' ? selEmpId : selBikeId;
+function initFileUploadZone(zoneId, inputId, labelId) {
+  const zone = document.getElementById(zoneId);
+  if(!zone) return;
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => { zone.classList.remove('dragover'); });
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if(file) { document.getElementById(inputId).files = e.dataTransfer.files; handleFileSelect({files:[file]}, zoneId, labelId); }
+  });
+}
 
-  // ── Validation ──
-  if(!entityId)   { toast(`No ${mode==='emp'?'employee':'bike'} selected`, 'error'); return; }
-  if(!file)       { toast('Please select a file to upload', 'error'); document.getElementById(zoneId)?.classList.add('err-file'); return; }
-  if(dt.hasExpiry && !expiry) { toast('Expiry date is required for '+docLabel, 'error'); dateEl?.focus(); return; }
+function handleFileSelect(input, zoneId, labelId) {
+  const file = input.files?.[0];
+  const zone = document.getElementById(zoneId);
+  const label= document.getElementById(labelId);
+  if(!file || !zone || !label) return;
+  zone.classList.add('has-file');
+  label.innerHTML = `<strong style="font-size:12.5px;">${file.name}</strong><br><span style="font-size:10.5px;">${(file.size/1024).toFixed(1)} KB</span>`;
+}
+
+async function submitDoc(mode, docType, docLabel) {
+  const fileInput = document.getElementById(mode+'-file-input');
+  const dateEl    = document.getElementById(mode+'-exp-date');
+  const gsStatus  = document.getElementById(mode+'-gs-status');
+  const file = fileInput?.files?.[0];
+  const expiry = dateEl?.value;
+  if(!file)   { toast('Please select a file to upload','error'); return; }
+  if(!expiry) { toast('Expiry date is mandatory','error'); return; }
+  const entityId = mode==='emp' ? selEmpId : selBikeId;
+  if(!entityId)  { toast('No entity selected','error'); return; }
+
+  const MAX_BYTES = 8 * 1024 * 1024; // 8 MB guard — large files can blow IDB quotas on some browsers
+  if (file.size > MAX_BYTES) {
+    toast(`File too large (${(file.size/1024/1024).toFixed(1)} MB) — please use a file under 8 MB`, 'error');
+    return;
+  }
 
   gsStatus.style.display='flex';
   gsStatus.className='gs-status loading';
-  gsStatus.innerHTML=`<i class="ti ti-loader spinner"></i> Saving document…`;
+  gsStatus.innerHTML=`<i class="ti ti-loader spinner"></i> Reading file…`;
 
   try {
-    const base64  = await fileToBase64(file);
-    const isPdf   = file.type === 'application/pdf';
-    const txnId   = genTxnId();
-    const now     = new Date().toISOString();
-    const record  = { txnId, entityId, docType, docLabel, fileName: file.name, fileType: isPdf?'pdf':'image', mimeType: file.type, fileData: base64, expiry: dt.hasExpiry ? expiry : '', uploadedAt: now };
+    const base64 = await fileToBase64(file);
+    const isPdf  = file.type === 'application/pdf';
+    const txnId  = genTxnId();
+    const record = { txnId, entityId, docType, fileName: file.name, fileType: isPdf?'pdf':'image', mimeType: file.type, fileData: base64, expiry, uploadedAt: new Date().toISOString() };
 
-    // Save locally in IDB
-    if(mode==='emp') {
-      if(!empDocs[entityId])          empDocs[entityId]={};
-      if(!empDocs[entityId][docType]) empDocs[entityId][docType]=[];
-      empDocs[entityId][docType].push(record);
-      await idbSet('portal_emp_docs', empDocs);
-    } else {
-      if(!bikeDocs[entityId])          bikeDocs[entityId]={};
-      if(!bikeDocs[entityId][docType]) bikeDocs[entityId][docType]=[];
-      bikeDocs[entityId][docType].push(record);
-      await idbSet('portal_bike_docs', bikeDocs);
+    gsStatus.innerHTML=`<i class="ti ti-loader spinner"></i> Saving to local store…`;
+
+    const targetStoreKey = mode === 'emp' ? 'portal_emp_docs' : 'portal_bike_docs';
+    const targetMap = mode === 'emp' ? empDocs : bikeDocs;
+
+    if(!targetMap[entityId]) targetMap[entityId] = {};
+    if(!targetMap[entityId][docType]) targetMap[entityId][docType] = [];
+    targetMap[entityId][docType].push(record);
+
+    await idbSet(targetStoreKey, targetMap);
+
+    // ── Verify the write actually persisted by reading it back ──
+    gsStatus.innerHTML=`<i class="ti ti-loader spinner"></i> Verifying save…`;
+    const verify = await idbGet(targetStoreKey);
+    const verifyRecs = verify?.[entityId]?.[docType] || [];
+    const found = verifyRecs.find(r => r.txnId === txnId);
+    if (!found) {
+      throw new Error('Write completed but verification read-back did not find the record — storage may be full or restricted (e.g. private/incognito mode)');
     }
 
-    // Log to Google Sheet (non-blocking — best effort)
-    const driveLink = await uploadToDriveAndSheet(txnId, entityId, docLabel, file, base64, expiry).catch(e => {
-      console.warn('[docPortal] GSheet log failed:', e.message);
-      return '';
-    });
-
     gsStatus.className='gs-status success';
-    gsStatus.innerHTML=`<i class="ti ti-circle-check"></i> Saved · TXN: ${txnId} · <span style="opacity:.7;font-size:10.5px;">Syncing to Drive…</span>`;
-    toast(`${docLabel} uploaded successfully`);
-    delete _stagedFiles[`${mode}-${docType}`];
+    gsStatus.innerHTML=`<i class="ti ti-circle-check"></i> Saved & verified · TXN: ${txnId}`;
+    toast(`${docLabel} uploaded and saved successfully`);
 
-    // refresh the center panel
-    setTimeout(() => {
-      if(mode==='emp') openEmpDocType(docType);
-      else openBikeDocType(docType);
-    }, 900);
-
+    setTimeout(() => { if(mode==='emp') openEmpDocType(docType); else openBikeDocType(docType); }, 900);
   } catch(err) {
     gsStatus.className='gs-status error';
-    gsStatus.innerHTML=`<i class="ti ti-alert-circle"></i> ${err.message}`;
-    toast('Upload failed: '+err.message, 'error');
+    gsStatus.innerHTML=`<i class="ti ti-alert-circle"></i> Save failed: ${err.message}`;
+    toast('Upload failed: '+err.message,'error');
+    console.error('[docPortal] submitDoc error:', err);
   }
 }
 
-/* ═══════════════════════════════════════════════
-   GOOGLE DRIVE + SHEET LOG via GAS
-   Sheet columns: Transaction ID | EID | Doc Type | Doc Link | Exp Date
-═══════════════════════════════════════════════ */
-async function uploadToDriveAndSheet(txnId, entityId, docLabel, file, base64Data, expiry) {
-  // GAS Web Apps on script.google.com do not send CORS headers back to
-  // GitHub Pages origins. The only fetch mode that works cross-origin is
-  // no-cors — which means we cannot read the response body. That is fine
-  // because we already saved the record in IDB before calling this function,
-  // and we generate txnId client-side so we don't need GAS to return it.
-
-  const pureB64 = base64Data.indexOf(',') !== -1 ? base64Data.split(',')[1] : base64Data;
-
-  const payload = {
-    action:   'uploadDoc',
-    txnId:    txnId,
-    entityId: entityId,
-    docType:  docLabel,
-    fileName: file.name,
-    mimeType: file.type,
-    fileData: pureB64,
-    expDate:  expiry || '',
-  };
-
-  // no-cors: browser sends the request but we get an opaque response (no body/status).
-  // GAS still receives and processes it — Drive + Sheet are written server-side.
-  await fetch(GAS_URL, {
-    method:  'POST',
-    mode:    'no-cors',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body:    JSON.stringify(payload),
-  });
-
-  // With no-cors we cannot confirm success from the response.
-  // Return empty string — the success banner already shows the local TXN ID.
-  return '';
-}
-
-/* ═══════════════════════════════════════════════
-   PREVIEW PANEL
-═══════════════════════════════════════════════ */
 function previewDoc(rec, docLabel, mode) {
   if(typeof rec === 'string') { try { rec = JSON.parse(rec); } catch(e) { toast('Cannot parse record','error'); return; } }
-  const dt = (mode==='emp' ? EMP_DOC_TYPES : BIKE_DOC_TYPES).find(d=>d.key===rec.docType) || {};
+  const panel = document.getElementById(mode+'-preview-panel');
   document.getElementById(mode+'-preview-title').textContent = `${docLabel} — ${rec.txnId}`;
   const body = document.getElementById(mode+'-preview-body');
   let mediaHtml = '';
@@ -1105,83 +964,47 @@ function previewDoc(rec, docLabel, mode) {
   } else {
     mediaHtml = `<img class="preview-img" src="${rec.fileData}" alt="Document preview"/>`;
   }
-  const exp = (rec.expiry && dt.hasExpiry) ? expiryStatus(rec.expiry) : {status:'gray',label:'N/A'};
+  const exp = rec.expiry ? expiryStatus(rec.expiry) : {status:'gray',label:'Not set'};
   body.innerHTML = `
     ${mediaHtml}
     <div class="preview-meta">
       <div class="preview-meta-item"><span class="key">Transaction ID</span><span class="val">${rec.txnId}</span></div>
       <div class="preview-meta-item"><span class="key">Entity ID</span><span class="val">${rec.entityId}</span></div>
-      <div class="preview-meta-item"><span class="key">Doc Type</span><span class="val">${rec.docLabel||docLabel}</span></div>
-      <div class="preview-meta-item"><span class="key">File</span><span class="val">${rec.fileName}</span></div>
-      <div class="preview-meta-item"><span class="key">File Type</span><span class="val">${rec.fileType?.toUpperCase()||'—'}</span></div>
+      <div class="preview-meta-item"><span class="key">File Name</span><span class="val" style="text-align:right;word-break:break-all;">${rec.fileName}</span></div>
       <div class="preview-meta-item"><span class="key">Uploaded</span><span class="val">${fmtDate(rec.uploadedAt)}</span></div>
-      ${dt.hasExpiry !== false ? `<div class="preview-meta-item"><span class="key">Expiry</span><span class="val" style="color:var(--${exp.status})">${fmtDate(rec.expiry)}</span></div>
-      <div class="preview-meta-item"><span class="key">Status</span><span class="val" style="color:var(--${exp.status})">${exp.label}</span></div>` : ''}
+      <div class="preview-meta-item"><span class="key">Expiry</span><span class="val" style="color:var(--${exp.status})">${fmtDate(rec.expiry)}</span></div>
+      <div class="preview-meta-item"><span class="key">Status</span><span class="val" style="color:var(--${exp.status})">${exp.label}</span></div>
     </div>`;
   const dlBtn = document.getElementById(mode+'-preview-download');
   dlBtn.href = rec.fileData;
   dlBtn.download = rec.fileName || 'document';
-  document.getElementById(mode+'-preview-panel').classList.add('open');
+  panel.classList.add('open');
 }
 
 function closePreview(mode) { document.getElementById(mode+'-preview-panel').classList.remove('open'); }
 
-/* ═══════════════════════════════════════════════
-   DATA LOAD
-═══════════════════════════════════════════════ */
-async function loadInitialData() {
-  const statusEl = document.getElementById('cache-status');
-  const setStatus = (icon, msg, color) => {
-    if(!statusEl) return;
-    statusEl.style.color = color || 'var(--text3)';
-    statusEl.innerHTML = `<i class="ti ${icon}" style="font-size:12px;${icon.includes('loader')?'animation:spin 1s linear infinite;':''}"></i> ${msg}`;
-  };
-  setStatus('ti-loader','Loading…');
-  let empOk=false, bikeOk=false;
-  try {
-    const empRows = await _fleetRead('ap2_employee');
-    if(empRows.length) {
-      const parsed = empRows.map((r,i)=>normaliseEmp(r,i)).filter(Boolean);
-      if(parsed.length) { employees=parsed; empOk=true; }
-    }
-  } catch(err) { console.warn('[docPortal] emp cache:', err.message); }
-  try {
-    const bikeRows = await _fleetRead('ap2_bike');
-    if(bikeRows.length) {
-      const parsed = bikeRows.map((r,i)=>normaliseBike(r,i)).filter(Boolean);
-      if(parsed.length) { bikes=parsed; bikeOk=true; }
-    }
-  } catch(err) { console.warn('[docPortal] bike cache:', err.message); }
-
-  const ed = await idbGet('portal_emp_docs');
-  const bd = await idbGet('portal_bike_docs');
-  if(ed) empDocs  = ed;
-  if(bd) bikeDocs = bd;
-
-  if(empOk || bikeOk) {
-    setStatus('ti-circle-check', `${employees.length} emp · ${bikes.length} bikes`, 'var(--teal)');
-  } else {
-    setStatus('ti-database-off', 'Cache empty', 'var(--amber)');
-  }
-}
-
-/* ═══════════════════════════════════════════════
-   INIT
-═══════════════════════════════════════════════ */
 async function init() {
   await loadInitialData();
   window.addEventListener('message', e => {
-    if(!e.data) return;
-    if(e.data.type==='ap-theme' && e.data.theme) { applyTheme(e.data.theme); }
-    if(e.data.type==='ap-cache-updated')          { loadInitialData(); }
+    if (!e.data) return;
+    if (e.data.type === 'ap-theme' && e.data.theme) document.documentElement.setAttribute('data-theme', e.data.theme);
+    if (e.data.type === 'ap-cache-updated') loadInitialData();
   });
-  setInterval(async ()=>{
+
+  // ── Background poll — re-read the real employee cache every 30s ──
+  setInterval(async () => {
     try {
-      const empRows  = await _fleetRead('ap2_employee');
-      const bikeRows = await _fleetRead('ap2_bike');
-      if(empRows.length)  { const p=empRows.map((r,i)=>normaliseEmp(r,i)).filter(Boolean);  if(p.length) employees=p; }
-      if(bikeRows.length) { const p=bikeRows.map((r,i)=>normaliseBike(r,i)).filter(Boolean); if(p.length) bikes=p; }
-    } catch(e){ /* silent */ }
+      const empRows = await _fleetRead(FLEET_KEY_EMP);
+      const parsed = empRows.map((r,i) => normaliseEmp(r,i)).filter(Boolean);
+      if (parsed.length) {
+        employees = parsed;
+        const statusEl = document.getElementById('cache-status');
+        if (statusEl) {
+          statusEl.style.color = 'var(--teal)';
+          statusEl.innerHTML = `<i class="ti ti-circle-check" style="font-size:13px;"></i> ${employees.length} employees · ${bikes.length} bikes registered`;
+        }
+      }
+    } catch(e) { /* cache may still be empty — leave last known state */ }
   }, 30000);
 }
 
