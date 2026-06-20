@@ -345,6 +345,23 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 <script>
 'use strict';
 
+/* ═══════════════════════════════════════════════════════════════════════
+ *  GOOGLE SHEETS SYNC — paste your deployed Apps Script Web App URL below.
+ *
+ *  How to get this URL:
+ *    1. Open script.google.com → New Project
+ *    2. Paste in the contents of appsScript.gs (provided separately)
+ *    3. Deploy → New deployment → type: Web app
+ *       - Execute as: Me
+ *       - Who has access: Anyone
+ *    4. Copy the resulting URL (ends in /exec) and paste it below.
+ *
+ *  Until a real URL is pasted here, the portal still works fully offline —
+ *  documents save to local IndexedDB — but will NOT appear in Google Sheets.
+ * ═══════════════════════════════════════════════════════════════════════ */
+const SHEETS_WEBAPP_URL = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+const SHEETS_SYNC_ENABLED = SHEETS_WEBAPP_URL.startsWith('https://script.google.com/');
+
 const EMP_DOC_TYPES = [
   { key:'contract',      label:'Contract',       icon:'ti-file-text'       },
   { key:'visa',          label:'Visa',            icon:'ti-globe'           },
@@ -914,15 +931,17 @@ async function submitDoc(mode, docType, docLabel) {
   gsStatus.className='gs-status loading';
   gsStatus.innerHTML=`<i class="ti ti-loader spinner"></i> Reading file…`;
 
+  let txnId, record, targetStoreKey, localSaveOk = false;
+
   try {
     const base64 = await fileToBase64(file);
     const isPdf  = file.type === 'application/pdf';
-    const txnId  = genTxnId();
-    const record = { txnId, entityId, docType, fileName: file.name, fileType: isPdf?'pdf':'image', mimeType: file.type, fileData: base64, expiry, uploadedAt: new Date().toISOString() };
+    txnId  = genTxnId();
+    record = { txnId, entityId, docType, fileName: file.name, fileType: isPdf?'pdf':'image', mimeType: file.type, fileData: base64, expiry, uploadedAt: new Date().toISOString() };
 
     gsStatus.innerHTML=`<i class="ti ti-loader spinner"></i> Saving to local store…`;
 
-    const targetStoreKey = mode === 'emp' ? 'portal_emp_docs' : 'portal_bike_docs';
+    targetStoreKey = mode === 'emp' ? 'portal_emp_docs' : 'portal_bike_docs';
     const targetMap = mode === 'emp' ? empDocs : bikeDocs;
 
     if(!targetMap[entityId]) targetMap[entityId] = {};
@@ -931,26 +950,100 @@ async function submitDoc(mode, docType, docLabel) {
 
     await idbSet(targetStoreKey, targetMap);
 
-    // ── Verify the write actually persisted by reading it back ──
-    gsStatus.innerHTML=`<i class="ti ti-loader spinner"></i> Verifying save…`;
+    // ── Verify the local write actually persisted by reading it back ──
+    gsStatus.innerHTML=`<i class="ti ti-loader spinner"></i> Verifying local save…`;
     const verify = await idbGet(targetStoreKey);
     const verifyRecs = verify?.[entityId]?.[docType] || [];
     const found = verifyRecs.find(r => r.txnId === txnId);
     if (!found) {
       throw new Error('Write completed but verification read-back did not find the record — storage may be full or restricted (e.g. private/incognito mode)');
     }
-
-    gsStatus.className='gs-status success';
-    gsStatus.innerHTML=`<i class="ti ti-circle-check"></i> Saved & verified · TXN: ${txnId}`;
-    toast(`${docLabel} uploaded and saved successfully`);
-
-    setTimeout(() => { if(mode==='emp') openEmpDocType(docType); else openBikeDocType(docType); }, 900);
+    localSaveOk = true;
   } catch(err) {
     gsStatus.className='gs-status error';
-    gsStatus.innerHTML=`<i class="ti ti-alert-circle"></i> Save failed: ${err.message}`;
+    gsStatus.innerHTML=`<i class="ti ti-alert-circle"></i> Local save failed: ${err.message}`;
     toast('Upload failed: '+err.message,'error');
-    console.error('[docPortal] submitDoc error:', err);
+    console.error('[docPortal] local save error:', err);
+    return;
   }
+
+  // ── Local save succeeded. Now attempt Google Sheets sync. ──
+  if (!SHEETS_SYNC_ENABLED) {
+    gsStatus.className='gs-status success';
+    gsStatus.innerHTML=`<i class="ti ti-circle-check"></i> Saved locally · TXN: ${txnId} <span style="opacity:.75;font-weight:500;">— Sheets sync not configured (see SHEETS_WEBAPP_URL in code)</span>`;
+    toast(`${docLabel} saved locally (Sheets sync off)`);
+    setTimeout(() => { if(mode==='emp') openEmpDocType(docType); else openBikeDocType(docType); }, 1200);
+    return;
+  }
+
+  gsStatus.className='gs-status loading';
+  gsStatus.innerHTML=`<i class="ti ti-loader spinner"></i> Syncing to Google Sheets…`;
+
+  try {
+    await syncDocToSheets(mode, record);
+    gsStatus.className='gs-status success';
+    gsStatus.innerHTML=`<i class="ti ti-circle-check"></i> Saved & synced to Sheets · TXN: ${txnId}`;
+    toast(`${docLabel} uploaded and synced to Google Sheets`);
+  } catch(err) {
+    // Local copy is safe even though Sheets sync failed — say so clearly.
+    gsStatus.className='gs-status error';
+    gsStatus.innerHTML=`<i class="ti ti-alert-circle"></i> Saved locally, but Sheets sync failed: ${err.message}`;
+    toast('Saved locally — Sheets sync failed: '+err.message, 'error');
+    console.error('[docPortal] sheets sync error:', err);
+  }
+
+  setTimeout(() => { if(mode==='emp') openEmpDocType(docType); else openBikeDocType(docType); }, 1200);
+}
+
+/* ══ GOOGLE SHEETS SYNC ══
+ *  POSTs the document record (including base64 file data) to the Apps Script
+ *  Web App, which decodes it, saves the file to Drive, and logs a row in the
+ *  EmpDocuments / BikeDocuments sheet. See appsScript.gs for the receiving code.
+ * ═══════════════════════════════════════════════════════════════════════ */
+async function syncDocToSheets(mode, record) {
+  if (!SHEETS_SYNC_ENABLED) throw new Error('Sheets sync URL not configured');
+
+  const payload = {
+    action:     'saveDoc',
+    sheetName:  mode === 'emp' ? 'EmpDocuments' : 'BikeDocuments',
+    txnId:      record.txnId,
+    entityId:   record.entityId,
+    docType:    record.docType,
+    fileName:   record.fileName,
+    fileType:   record.fileType,
+    mimeType:   record.mimeType,
+    fileData:   record.fileData,
+    expiry:     record.expiry,
+    uploadedAt: record.uploadedAt,
+  };
+
+  let res;
+  try {
+    res = await fetch(SHEETS_WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids CORS preflight on Apps Script
+      body: JSON.stringify(payload),
+    });
+  } catch(networkErr) {
+    throw new Error('Network error reaching Apps Script — check the URL and your internet connection');
+  }
+
+  if (!res.ok) {
+    throw new Error(`Apps Script responded with HTTP ${res.status}`);
+  }
+
+  let data;
+  try {
+    data = await res.json();
+  } catch(parseErr) {
+    throw new Error('Apps Script returned a non-JSON response — check the deployment is set to "Anyone" access and redeployed after edits');
+  }
+
+  if (data.status !== 'ok') {
+    throw new Error(data.message || 'Apps Script returned an error status');
+  }
+
+  return data;
 }
 
 function previewDoc(rec, docLabel, mode) {
