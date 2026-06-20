@@ -541,12 +541,6 @@ img,svg{max-width:100%;height:auto;}
         </div>
       </div>
       <div class="section-actions">
-        <button class="tb-btn" id="btn-sync" onclick="syncSheets()">
-          <span id="sync-icon-wrap" class="ico">
-            <svg id="sync-svg" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          </span>
-          <span id="sync-label">Sync Sheets</span>
-        </button>
         <button class="tb-btn success" onclick="exportCSV()">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export CSV
@@ -864,8 +858,7 @@ img,svg{max-width:100%;height:auto;}
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
 
-const _AP2_CACHE_KEY = 'ap2_finQue';
-const CACHE_TTL    = 3 * 60 * 1000;
+const _AP2_CACHE_KEY = 'ap2_master';
 
 // ── IndexedDB helpers ────────────────────────────────────────
 function _getDB(){
@@ -882,24 +875,6 @@ async function _idbGet(key){
     const tx=db.transaction('datasets','readonly');
     const req=tx.objectStore('datasets').get(key);
     req.onsuccess=e=>res(e.target.result??null);
-    req.onerror=e=>rej(e.target.error);
-  });
-}
-async function _idbSet(key,value){
-  const db=await _getDB();
-  return new Promise((res,rej)=>{
-    const tx=db.transaction('datasets','readwrite');
-    const req=tx.objectStore('datasets').put(value,key);
-    req.onsuccess=()=>res();
-    req.onerror=e=>rej(e.target.error);
-  });
-}
-async function _idbDel(key){
-  const db=await _getDB();
-  return new Promise((res,rej)=>{
-    const tx=db.transaction('datasets','readwrite');
-    const req=tx.objectStore('datasets').delete(key);
-    req.onsuccess=()=>res();
     req.onerror=e=>rej(e.target.error);
   });
 }
@@ -984,16 +959,13 @@ function refToDate(ref){
 }
 
 // ── CACHE ────────────────────────────────────────────────────
-async function saveCache(data){try{await _idbSet(_AP2_CACHE_KEY,{ts:Date.now(),data});}catch(e){}}
 async function loadCacheData(){
   try{
     const entry=await _idbGet(_AP2_CACHE_KEY);
-    if(!entry||!entry.ts)return null;
-    if(Date.now()-entry.ts>CACHE_TTL)return null;
+    if(!entry||!entry.ts||!entry.data)return null;
     return{data:entry.data,age:Math.round((Date.now()-entry.ts)/1000)};
   }catch(e){return null;}
 }
-async function clearCache(){try{await _idbDel(_AP2_CACHE_KEY);}catch(e){}}
 
 function updateCacheInfo(age,fresh){
   const el=document.getElementById('cache-info');if(!el)return;
@@ -1017,56 +989,49 @@ const SVG={
   eye:`<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
 };
 
-// ── LOAD DATA ────────────────────────────────────────────────
-async function loadData(forceRefresh=false){
+// ── LOAD DATA (cache-only, no API) ───────────────────────────
+async function loadData(){
   setSyncLoading(true);
-
-  if(!forceRefresh){
-    const cached = await loadCacheData();
-    if(cached){
-      processFetchedData(cached.data);
-      setSyncLoading(false);
-      updateCacheInfo(cached.age,false);
-      return;
-    }
-  } else {
-    await clearCache();
-  }
-
   showSkeletons(5);
 
-  try{
-	const res = await fetch(`${API_BASE}?type=employee&t=${Date.now()}`,{ cache: 'no-store' });
-    const data = await res.json();
-
-    const rows = Array.isArray(data) ? data : (data.data || []);
-
-    await saveCache(rows);
-
-    processFetchedData(rows);
-
-    updateCacheInfo(0,true);
-
-    showToast(
-      'Loaded ' +
-      rows.filter(r =>
-        String(r[COL.REQ_STATUS] || '').toLowerCase() === 'approved'
-      ).length +
-      ' approved records',
-      'ok'
-    );
-
-  }catch(err){
-    console.error('[loadData]',err);
-
-    showToast('Could not load data — check network','error');
-
-    document.getElementById('approved-tbody').innerHTML=`<tr><td colspan="7"><div class="empty-state">
-      <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 10px;display:block;opacity:.3;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <p>Network error loading data</p><small>Check console for details</small></div></td></tr>`;
+  const cached = await loadCacheData();
+  if(cached){
+    processFetchedData(cached.data);
+    updateCacheInfo(cached.age,false);
+    setSyncLoading(false);
+    return;
   }
 
-  setSyncLoading(false);
+  // No cache yet — wait for it to appear, then load instantly.
+  showWaitingForCache();
+  await _waitForCacheAndLoad();
+}
+
+let _waitingForCache=false;
+async function _waitForCacheAndLoad(){
+  if(_waitingForCache)return;
+  _waitingForCache=true;
+  const poll=async()=>{
+    const cached=await loadCacheData();
+    if(cached){
+      _waitingForCache=false;
+      processFetchedData(cached.data);
+      updateCacheInfo(cached.age,false);
+      setSyncLoading(false);
+      return true;
+    }
+    return false;
+  };
+  if(await poll())return;
+  const interval=setInterval(async()=>{
+    if(await poll())clearInterval(interval);
+  },1000);
+}
+
+function showWaitingForCache(){
+  document.getElementById('approved-tbody').innerHTML=`<tr><td colspan="6"><div class="empty-state">
+    <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 10px;display:block;opacity:.3;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <p>Waiting for cached data…</p><small>This view will load automatically once data is available.</small></div></td></tr>`;
 }
 
 
@@ -1074,10 +1039,9 @@ async function loadData(forceRefresh=false){
 function processFetchedData(rows){
 
   allRows = rows.filter(r => {
-    const status = String(r[COL.REQ_STATUS] || '').trim().toLowerCase();
-    const colO = String(r[14] || '').trim(); // Column O (Amount)
+    const status = String(r[COL.REQ_STATUS] || '').trim().toLowerCase(); // Column N
 
-    return status === 'approved' && colO === '';
+    return status === 'approved';
   });
 
   applyFilters();
@@ -1339,14 +1303,9 @@ document.getElementById('modal-detail').addEventListener('click',e=>{
 
 // ── SYNC / EXPORT ────────────────────────────────────────────
 function setSyncLoading(on){
-  const btn=document.getElementById('btn-sync'),lbl=document.getElementById('sync-label');
   const ico=document.getElementById('sync-icon-wrap');
-  btn.disabled=on;
-  lbl.textContent=on?'Syncing…':'Sync Sheets';
-  ico.style.animation=on?'pulse-spin .7s linear infinite':'none';
+  if(ico)ico.style.animation=on?'pulse-spin .7s linear infinite':'none';
 }
-
-async function syncSheets(){await clearCache();await loadData(true);}
 
 function exportCSV(){
   if(!filteredRows.length){showToast('No data to export','warn');return;}
@@ -1506,6 +1465,17 @@ function applyBulkMapping(){
     if(!amount)errors.push('Invalid amount');if(!disbDate)warns.push('No disb date');
     return{sheetRef,empId,amount,disbDate,tbUname,rowIdx:i+1,errors,warns};
   });
+  // Flag duplicate REF IDs within the uploaded file (case-insensitive, ignores blanks)
+  const refCounts={};
+  bulkMapped.forEach(r=>{
+    const key=r.sheetRef.toLowerCase();
+    if(!key)return;
+    refCounts[key]=(refCounts[key]||0)+1;
+  });
+  bulkMapped.forEach(r=>{
+    const key=r.sheetRef.toLowerCase();
+    if(key&&refCounts[key]>1)r.errors.push('Duplicate REF in file');
+  });
   renderBulkPreview();
 }
 
@@ -1611,8 +1581,6 @@ function resetBulkUpload(){
   document.getElementById('bulk-step4').style.display='none';
   document.getElementById('bulk-file-input').value='';
 }
-
-(async()=>{await loadData();})();
 
 // ESC closes drawer
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('bulk-drawer').classList.contains('open'))toggleBulkPanel();});
