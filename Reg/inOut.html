@@ -2025,87 +2025,107 @@ function renderEmpHistoryTable(){
   }
 
   const assetTypeFilter=isBike?'bike':isSim?'sim':'inventory';
-  const colSpan=isSim?8:7;
 
-  const records=(state.checkinout||[]).filter(r=>
-    (r.EmpID||r.EID||'')===(eid)&&(r.AssetType||'').toLowerCase()===assetTypeFilter
+  // Format ISO date nicely: "02 Jun 2026 22:30"
+  function fmtDate(iso){
+    if(!iso) return '<span style="color:var(--text3);">—</span>';
+    try{
+      const d=new Date(iso);
+      if(isNaN(d)) return '<span style="color:var(--text3);">—</span>';
+      const date=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+      const time=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      return `<span class="mono" style="font-size:11px;">${date} ${time}</span>`;
+    }catch(e){return '<span style="color:var(--text3);">—</span>';}
+  }
+
+  // Prefer cioView records (pre-paired, proper ISO dates, has active flag)
+  const cioRecs=(state.cioViewRecords||[]).filter(r=>
+    String(r.empId||'')===(eid)&&(r.itemType||'').toLowerCase()===assetTypeFilter
   );
 
-  if(!records.length){
-    tbody.innerHTML=`<tr><td colspan="${colSpan}" style="text-align:center;padding:28px;color:var(--text3);font-size:12px;">
-      No ${tab} history found for this employee.</td></tr>`;
+  if(cioRecs.length){
+    if(isBike){
+      thead.innerHTML=`<tr>
+        <th style="width:36px;">#</th>
+        <th style="width:110px;">Bike ID</th>
+        <th style="width:40px;">Seq</th>
+        <th style="width:165px;">Check Out</th>
+        <th style="width:165px;">Check In</th>
+        <th style="width:76px;">Status</th>
+      </tr>`;
+    } else if(isSim){
+      thead.innerHTML=`<tr>
+        <th style="width:36px;">#</th>
+        <th style="width:120px;">SIM ID</th>
+        <th style="width:40px;">Seq</th>
+        <th style="width:165px;">Check Out</th>
+        <th style="width:165px;">Check In</th>
+        <th style="width:76px;">Status</th>
+      </tr>`;
+    } else {
+      thead.innerHTML=`<tr>
+        <th style="width:36px;">#</th>
+        <th style="width:150px;">Item</th>
+        <th style="width:40px;">Seq</th>
+        <th style="width:165px;">Check Out</th>
+        <th style="width:165px;">Check In</th>
+        <th style="width:76px;">Status</th>
+      </tr>`;
+    }
+    const sorted=[...cioRecs].sort((a,b)=>{
+      if(a.active&&!b.active) return -1;
+      if(!a.active&&b.active) return 1;
+      return (b.checkOutDate||'').localeCompare(a.checkOutDate||'');
+    });
+    tbody.innerHTML=sorted.map((r,i)=>`<tr class="fade-in">
+      <td style="color:var(--text3);font-size:11px;text-align:center;">${i+1}</td>
+      <td><span class="mono" style="font-size:12px;font-weight:700;color:var(--${isBike?'orange':isSim?'purple':'teal'});">${esc(r.item||'—')}</span></td>
+      <td style="text-align:center;"><span class="badge gray" style="font-size:10px;">#${r.seq||1}</span></td>
+      <td>${fmtDate(r.checkOutDate||null)}</td>
+      <td>${fmtDate(r.checkInDate||null)}</td>
+      <td>${r.active
+        ?'<span class="badge amber" style="font-size:10px;">Still Out</span>'
+        :'<span class="badge green" style="font-size:10px;">Returned</span>'}</td>
+    </tr>`).join('')||`<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--text3);font-size:12px;">No ${tab} history found.</td></tr>`;
     return;
   }
 
-  // Group by asset ID and pair Check Out → Check In chronologically
+  // Fallback: raw checkinout log
+  const records=(state.checkinout||[]).filter(r=>
+    (r.EmpID||r.EID||'')===(eid)&&(r.AssetType||'').toLowerCase()===assetTypeFilter
+  );
+  if(!records.length){
+    tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--text3);font-size:12px;">No ${tab} history found for this employee.</td></tr>`;
+    return;
+  }
   const byAsset={};
-  records.forEach(r=>{
-    const aid=r.AssetID||'misc';
-    if(!byAsset[aid]) byAsset[aid]=[];
-    byAsset[aid].push(r);
-  });
+  records.forEach(r=>{ const aid=r.AssetID||'misc'; if(!byAsset[aid]) byAsset[aid]=[]; byAsset[aid].push(r); });
   const pairs=[];
   Object.entries(byAsset).forEach(([assetId,evts])=>{
-    const sorted=evts.slice().sort((a,b)=>(a.Timestamp||'').localeCompare(b.Timestamp||''));
+    const asc=evts.slice().sort((a,b)=>(a.Timestamp||'').localeCompare(b.Timestamp||''));
     let pending=null;
-    sorted.forEach(r=>{
+    asc.forEach(r=>{
       const act=(r.Action||'').toLowerCase();
-      if(act.includes('out')){
-        if(pending) pairs.push({out:pending,in:null,assetId});
-        pending=r;
-      } else if(act.includes('in')&&pending){
-        pairs.push({out:pending,in:r,assetId});
-        pending=null;
-      } else if(act.includes('in')&&!pending){
-        pairs.push({out:null,in:r,assetId});
-      }
+      if(act.includes('out')){ if(pending) pairs.push({out:pending,in:null,assetId}); pending=r; }
+      else if(act.includes('in')&&pending){ pairs.push({out:pending,in:r,assetId}); pending=null; }
+      else if(act.includes('in')&&!pending){ pairs.push({out:null,in:r,assetId}); }
     });
     if(pending) pairs.push({out:pending,in:null,assetId});
   });
   pairs.sort((a,b)=>((b.out||b.in||{}).Timestamp||'').localeCompare((a.out||a.in||{}).Timestamp||''));
-
-  const outCell=p=>p.out
-    ?`<span class="badge green" style="font-size:10px;">\u2197\u00a0Out</span>\u00a0<span class="mono" style="font-size:11px;">${(p.out.Timestamp||'').slice(0,16)}</span>`
-    :'<span style="color:var(--text3);">\u2014</span>';
-  const inCell=p=>p.in
-    ?`<span class="badge red" style="font-size:10px;">\u2199\u00a0In</span>\u00a0<span class="mono" style="font-size:11px;">${(p.in.Timestamp||'').slice(0,16)}</span>`
-    :'<span style="color:var(--text3);">\u2014</span>';
-  const statusCell=p=>(p.out&&!p.in)
-    ?'<span class="badge amber" style="font-size:10px;">Still\u00a0Out</span>'
-    :'<span class="badge green" style="font-size:10px;">Returned</span>';
-  const detailBtn=r=>`<button class="tb-btn icon-only sm" onclick='openCioDetail(${JSON.stringify(JSON.stringify(r))})' title="Detail">
-    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-  </button>`;
-
   tbody.innerHTML=pairs.map((p,i)=>{
-    const ref=p.out||p.in;
-    const aid=p.assetId||'\u2014';
-    if(isBike){
-      const bk=(state.bikes||[]).find(b=>b.BikeID===aid)||{};
-      return `<tr class="fade-in">
-        <td style="color:var(--text3);font-size:11px;text-align:center;">${i+1}</td>
-        <td><span class="mono" style="font-size:12px;font-weight:700;color:var(--orange);">${esc(aid)}</span></td>
-        <td><span style="font-size:12px;">${esc(bk.PlateNo||'\u2014')}</span></td>
-        <td>${outCell(p)}</td><td>${inCell(p)}</td><td>${statusCell(p)}</td><td>${detailBtn(ref)}</td>
-      </tr>`;
-    } else if(isSim){
-      const sm=(state.sims||[]).find(s=>(s.SimID||s.ID)===aid)||{};
-      return `<tr class="fade-in">
-        <td style="color:var(--text3);font-size:11px;text-align:center;">${i+1}</td>
-        <td><span class="mono" style="font-size:12px;font-weight:700;color:var(--purple);">${esc(aid)}</span></td>
-        <td><span class="mono" style="font-size:12px;">${esc(sm.Number||'\u2014')}</span></td>
-        <td><span style="font-size:12px;">${esc(sm.Network||'\u2014')}</span></td>
-        <td>${outCell(p)}</td><td>${inCell(p)}</td><td>${statusCell(p)}</td><td>${detailBtn(ref)}</td>
-      </tr>`;
-    } else {
-      // Inventory — aid may be comma-separated items e.g. "Helmet, ThermalBox"
-      const pills=aid.split(',').map(s=>`<span class="badge amber" style="font-size:10px;">${esc(s.trim())}</span>`).join(' ');
-      return `<tr class="fade-in">
-        <td style="color:var(--text3);font-size:11px;text-align:center;">${i+1}</td>
-        <td><div style="display:flex;flex-wrap:wrap;gap:3px;">${pills}</div></td>
-        <td>${outCell(p)}</td><td>${inCell(p)}</td><td>${statusCell(p)}</td><td>${detailBtn(ref)}</td>
-      </tr>`;
-    }
+    const aid=p.assetId||'—';
+    const status=(p.out&&!p.in)
+      ?'<span class="badge amber" style="font-size:10px;">Still Out</span>'
+      :'<span class="badge green" style="font-size:10px;">Returned</span>';
+    return `<tr class="fade-in">
+      <td style="color:var(--text3);font-size:11px;text-align:center;">${i+1}</td>
+      <td><span class="mono" style="font-size:12px;font-weight:700;">${esc(aid)}</span></td>
+      <td style="text-align:center;">—</td>
+      <td>${p.out?fmtDate(p.out.Timestamp):'<span style="color:var(--text3);">—</span>'}</td>
+      <td>${p.in?fmtDate(p.in.Timestamp):'<span style="color:var(--text3);">—</span>'}</td>
+      <td>${status}</td>
+    </tr>`;
   }).join('');
 }
 
@@ -2772,32 +2792,28 @@ function renderAvailableView(){
       `<span class="badge ${badgeColor[type]||'green'}" style="margin-left:6px;" id="av-avail-count">0</span>`;
   }
 
-  // ── EMPLOYEE: active riders with no bike AND no SIM assigned ──
+  // ── EMPLOYEE: active riders with no bike AND no SIM assigned — show only EmpID + Name ──
   if(type==='employee'){
     if(thead) thead.innerHTML=`<tr>
-      <th style="width:75px;">Emp ID</th>
-      <th style="width:190px;">Name</th>
-      <th style="width:120px;">Phone</th>
-      <th style="width:90px;">HR Status</th>
-      <th style="width:80px;">Bike</th>
-      <th style="width:80px;">SIM</th>
-      <th style="width:90px;">Available</th>
+      <th style="width:110px;">Emp ID</th>
+      <th>Name</th>
     </tr>`;
+    // Filter: no bike AND no SIM assigned (completely unassigned)
     const items=(state.employees||[]).filter(e=>{
       const eid=e.EmpID||e.EID||'';
       const master=(state.masterMap||{})[eid]||{};
-      const hasBike=!!(master.bike)||(state.bikes||[]).some(b=>(b.AssignedTo||'')===eid);
-      const hasSim=!!(master.sim)||(state.sims||[]).some(s=>(s.AssignedTo||'')===eid);
-      if(hasBike&&hasSim) return false; // fully assigned — skip
+      const hasBike=(master.bikes&&master.bikes.length>0)||!!(master.bike)||(state.bikes||[]).some(b=>(b.AssignedTo||'')===eid);
+      const hasSim=(master.sims&&master.sims.length>0)||!!(master.sim)||(state.sims||[]).some(s=>(s.AssignedTo||'')===eid);
+      if(hasBike||hasSim) return false; // has any asset — not available
       if(q){
-        const hay=(eid+(e.Name||'')+(e.Phone||'')).toLowerCase();
+        const hay=(eid+(e.Name||'')).toLowerCase();
         if(!hay.includes(q)) return false;
       }
       return true;
     });
     if(countEl) countEl.textContent=items.length;
     if(!items.length){
-      tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><p>No unassigned employees${q?' matching search':''}</p></div></td></tr>`;
+      tbody.innerHTML=`<tr><td colspan="2"><div class="empty-state"><p>No available employees${q?' matching search':''}</p></div></td></tr>`;
       renderPagination('av-avail-ctrl','av-avail-info',0,_avAvailPage,_avAvailRpp,'avAvailGoToPage');
       return;
     }
@@ -2805,25 +2821,14 @@ function renderAvailableView(){
     const page=items.slice(start,start+_avAvailRpp);
     tbody.innerHTML=page.map(e=>{
       const eid=e.EmpID||e.EID||'—';
-      const masterRow=(state.masterMap||{})[eid]||{};
-      const hasBike=!!(masterRow.bike)||(state.bikes||[]).some(b=>(b.AssignedTo||'')===eid);
-      const hasSim=!!(masterRow.sim)||(state.sims||[]).some(s=>(s.AssignedTo||'')===eid);
-      const st=e.Status||'Active';
-      const avail=!hasBike&&!hasSim?'No Bike & SIM':!hasBike?'No Bike':'No SIM';
-      const availColor=!hasBike&&!hasSim?'red':'amber';
       return `<tr class="fade-in">
-        <td><span class="mono" style="font-size:11.5px;font-weight:700;">${esc(eid)}</span></td>
+        <td><span class="mono" style="font-size:12px;font-weight:700;">${esc(eid)}</span></td>
         <td>
-          <div style="display:flex;align-items:center;gap:7px;">
+          <div style="display:flex;align-items:center;gap:8px;">
             <div class="avatar-sm" style="background:${strColor(e.Name||'')};">${initials(e.Name||'?')}</div>
-            <span style="font-size:12px;font-weight:500;">${esc(e.Name||'—')}</span>
+            <span style="font-size:13px;font-weight:500;">${esc(e.Name||'—')}</span>
           </div>
         </td>
-        <td><span class="mono" style="font-size:11px;color:var(--text2);">${esc(e.Phone||'—')}</span></td>
-        <td><span class="badge ${st.toLowerCase()==='active'?'green':'gray'}" style="font-size:10px;">${esc(st)}</span></td>
-        <td>${hasBike?'<span class="badge orange" style="font-size:10px;">Assigned</span>':'<span class="badge red" style="font-size:10px;">None</span>'}</td>
-        <td>${hasSim?'<span class="badge purple" style="font-size:10px;">Assigned</span>':'<span class="badge red" style="font-size:10px;">None</span>'}</td>
-        <td><span class="badge ${availColor}" style="font-size:10px;">${esc(avail)}</span></td>
       </tr>`;
     }).join('');
     renderPagination('av-avail-ctrl','av-avail-info',items.length,_avAvailPage,_avAvailRpp,'avAvailGoToPage');
@@ -3625,14 +3630,17 @@ function renderCoItemsPanel(type, eid){
   let hasLocked=false;
   let options=[];
 
-  // Build set of all assigned bike/SIM IDs from CIO log (authoritative)
+  // Build set of all assigned bike/SIM IDs from masterMap full arrays (cioView-backed)
   const allAssignedBikes=new Set();
   const allAssignedSims=new Set();
-  Object.values(state.masterMap||{}).forEach(a=>{ if(a.bike) allAssignedBikes.add(a.bike); if(a.sim) allAssignedSims.add(a.sim); });
+  Object.values(state.masterMap||{}).forEach(a=>{
+    (a.bikes||[]).forEach(id=>allAssignedBikes.add(id));
+    (a.sims||[]).forEach(id=>allAssignedSims.add(id));
+    if(a.bike) allAssignedBikes.add(a.bike);
+    if(a.sim) allAssignedSims.add(a.sim);
+  });
   (state.bikes||[]).forEach(b=>{ if((b.AssignedTo||'').trim()) allAssignedBikes.add(b.BikeID); });
   (state.sims||[]).forEach(s=>{ if((s.AssignedTo||'').trim()) allAssignedSims.add(s.SimID||s.ID); });
-  // Also scan CIO log for currently-out items
-  const logAssigned=_getAllAssignedItems('__all__');  // pass special key handled below
 
   if(type==='Bike'){
     // Any bike appearing as "out" in any employee's log is assigned
