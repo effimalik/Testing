@@ -1057,7 +1057,7 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
         <!-- Left: item type buttons, Right: available items dropdown -->
         <div style="display:flex;gap:10px;align-items:flex-start;">
           <!-- Type selector -->
-          <div style="display:flex;flex-direction:column;gap:5px;min-width:96px;">
+          <div style="display:flex;flex-direction:column;gap:5px;min-width:110px;width:110px;">
             <button class="asset-type-btn" id="co-type-Bike" onclick="selectCoType('Bike')">
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 0 0-1 1v6H8l-3.5-5H4a1 1 0 0 0 0 2h.5l3.5 5H14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/></svg>
               Bike
@@ -1851,7 +1851,8 @@ function updateSummaryCards(){
   const simsAssigned=(state.sims||[]).filter(s=>(s.AssignedTo||'').trim()!=='').length;
 
   // Today's check-ins/outs
-  const todayRec=(state.checkinout||[]).filter(r=>(r.Timestamp||r.Date||'').startsWith(today));
+  const todayStr=new Date().toISOString().slice(0,10);
+  const todayRec=(state.checkinout||[]).filter(r=>(r.Timestamp||r.Date||'').startsWith(todayStr));
   const todayIn=todayRec.filter(r=>(r.Action||'').includes('In')).length;
   const todayOut=todayRec.filter(r=>(r.Action||'').includes('Out')).length;
 
@@ -2245,7 +2246,7 @@ function renderAssetCard(cfg){
       <div class="avatar-sm" style="background:${strColor(riderName)};width:22px;height:22px;font-size:9px;">${initials(riderName)}</div>
       <div class="cs">
         <span class="cs-main">${esc(riderName)}</span>
-        <span class="cs-sub">${esc(eid)}${cfg.outTs?' · out '+esc(cfg.outTs.slice(0,16)):''}</span>
+        <span class="cs-sub">${esc(eid)}${cfg.outTs?' · '+fmtDT(cfg.outTs).replace(/<[^>]*>/g,''):''}</span>
       </div>
     </div>`:''}
   </div>`;
@@ -2270,8 +2271,6 @@ function renderHistoryRows(pairs, tbodyId, search){
     const r=p.out||p.in;
     const riderName=r.RiderName||r.Name||'';
     const eid=r.EID||r.EmpID||'—';
-    const outTs=p.out?(p.out.Timestamp||'').slice(0,16):'—';
-    const inTs=p.in?(p.in.Timestamp||'').slice(0,16):'—';
     return `<tr class="fade-in">
       <td>
         <div style="display:flex;align-items:center;gap:7px;">
@@ -2283,8 +2282,8 @@ function renderHistoryRows(pairs, tbodyId, search){
         </div>
       </td>
       <td><span class="mono cs-main">${esc(p.assetId||'—')}</span></td>
-      <td>${p.out?`<span class="badge green" style="font-size:10px;margin-right:4px;">↗ Out</span><span class="mono cs-sub">${outTs}</span>`:'<span style="color:var(--text3);">—</span>'}</td>
-      <td>${p.in?`<span class="badge red" style="font-size:10px;margin-right:4px;">↙ In</span><span class="mono cs-sub">${inTs}</span>`:'<span class="badge amber" style="font-size:10px;">Still Out</span>'}</td>
+      <td>${p.out?`<span class="badge green" style="font-size:10px;margin-right:4px;">↗ Out</span>${fmtDT(p.out.Timestamp)}`:'<span style="color:var(--text3);">—</span>'}</td>
+      <td>${p.in?`<span class="badge red" style="font-size:10px;margin-right:4px;">↙ In</span>${fmtDT(p.in.Timestamp)}`:'<span class="badge amber" style="font-size:10px;">Still Out</span>'}</td>
       <td>
         <button class="tb-btn icon-only sm" onclick='openCioDetail(${JSON.stringify(JSON.stringify(r))})' title="View details">
           <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -2580,12 +2579,13 @@ function renderBikeHistTable(){
     if(countEl) countEl.textContent=rows.length+' records';
     const page=rows.slice(0,rpp);
     tbody.innerHTML=page.map(r=>`<tr class="fade-in">
-      <td><span class="mono" style="font-weight:600;">${esc(r.bikeId)}</span></td>
+      <td><span class="mono" style="font-size:12px;font-weight:700;color:var(--orange);">${esc(r.bikeId)}</span></td>
       <td><div class="cs"><span class="cs-main">${esc(r.name)}</span><span class="cs-sub">${esc(String(r.empId))}</span></div></td>
-      <td><span class="badge gray" style="font-size:10px;">#${r.seq}</span></td>
-      <td style="font-size:11px;color:var(--text2);">${r.checkOutTs?new Date(r.checkOutTs).toLocaleString():'—'}</td>
-      <td style="font-size:11px;color:var(--text2);">${r.checkInTs?new Date(r.checkInTs).toLocaleString():'<span style="color:var(--orange);font-weight:600;">Out</span>'}</td>
-    </tr>`).join('')||'<tr><td colspan="5"><div class="empty-state"><p>No bike history</p></div></td></tr>';
+      <td style="text-align:center;"><span class="badge gray" style="font-size:10px;">#${r.seq}</span></td>
+      <td>${fmtDT(r.checkOutDate||r.checkOutTs||null)}</td>
+      <td>${r.checkInDate||r.checkInTs?fmtDT(r.checkInDate||r.checkInTs):'<span class="badge amber" style="font-size:10px;">Still Out</span>'}</td>
+      <td>${r.active?'<span class="badge amber" style="font-size:10px;">Still Out</span>':'<span class="badge green" style="font-size:10px;">Returned</span>'}</td>
+    </tr>`).join('')||'<tr><td colspan="6"><div class="empty-state"><p>No bike history</p></div></td></tr>';
     return;
   }
 
@@ -2646,8 +2646,6 @@ function renderBikeHistTable(){
     const rider=r.RiderName||r.Name||'—';
     const eid=r.EID||r.EmpID||'—';
     const plate=bikeObj.PlateNo||'—';
-    const outTs=p.out?(p.out.Timestamp||'').slice(0,16):'—';
-    const inTs=p.in?(p.in.Timestamp||'').slice(0,16):'—';
     const stillOut=p.out&&!p.in;
     return `<tr class="fade-in">
       <td style="color:var(--text3);font-size:11px;text-align:center;">${start+i+1}</td>
@@ -2659,12 +2657,9 @@ function renderBikeHistTable(){
           <div><div style="font-size:12px;font-weight:500;">${esc(rider)}</div><div class="mono" style="font-size:10px;color:var(--text3);">${esc(eid)}</div></div>
         </div>
       </td>
-      <td>${p.out?`<span class="badge green" style="font-size:10px;">↗&nbsp;Out</span>&nbsp;<span class="mono" style="font-size:11px;">${outTs}</span>`:'<span style="color:var(--text3);">—</span>'}</td>
-      <td>${p.in?`<span class="badge red" style="font-size:10px;">↙&nbsp;In</span>&nbsp;<span class="mono" style="font-size:11px;">${inTs}</span>`:'<span style="color:var(--text3);">—</span>'}</td>
-      <td>${stillOut?`<span class="badge amber" style="font-size:10px;">Still&nbsp;Out</span>`:`<span class="badge green" style="font-size:10px;">Returned</span>`}</td>
-      <td><button class="tb-btn icon-only sm" onclick='openCioDetail(${JSON.stringify(JSON.stringify(r))})' title="Detail">
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-      </button></td>
+      <td>${p.out?fmtDT(p.out.Timestamp):'<span style="color:var(--text3);">—</span>'}</td>
+      <td>${p.in?fmtDT(p.in.Timestamp):'<span style="color:var(--text3);">—</span>'}</td>
+      <td>${stillOut?'<span class="badge amber" style="font-size:10px;">Still Out</span>':'<span class="badge green" style="font-size:10px;">Returned</span>'}</td>
     </tr>`;
   }).join('');
   renderPagination('bike-hist-ctrl','bike-hist-info',filtered.length,_bikeHistPage,rpp,'bikeHistGoToPage');
@@ -2693,12 +2688,13 @@ function renderSimHistTable(){
     if(countEl) countEl.textContent=rows.length+' records';
     const page=rows.slice(0,rpp);
     tbody.innerHTML=page.map(r=>`<tr class="fade-in">
-      <td><span class="mono" style="font-weight:600;">${esc(r.simId)}</span></td>
+      <td><span class="mono" style="font-size:12px;font-weight:700;color:var(--purple);">${esc(r.simId)}</span></td>
       <td><div class="cs"><span class="cs-main">${esc(r.name)}</span><span class="cs-sub">${esc(String(r.empId))}</span></div></td>
-      <td><span class="badge gray" style="font-size:10px;">#${r.seq}</span></td>
-      <td style="font-size:11px;color:var(--text2);">${r.checkOutTs?new Date(r.checkOutTs).toLocaleString():'—'}</td>
-      <td style="font-size:11px;color:var(--text2);">${r.checkInTs?new Date(r.checkInTs).toLocaleString():'<span style="color:var(--orange);font-weight:600;">Out</span>'}</td>
-    </tr>`).join('')||'<tr><td colspan="5"><div class="empty-state"><p>No SIM history</p></div></td></tr>';
+      <td style="text-align:center;"><span class="badge gray" style="font-size:10px;">#${r.seq}</span></td>
+      <td>${fmtDT(r.checkOutDate||r.checkOutTs||null)}</td>
+      <td>${r.checkInDate||r.checkInTs?fmtDT(r.checkInDate||r.checkInTs):'<span class="badge amber" style="font-size:10px;">Still Out</span>'}</td>
+      <td>${r.active?'<span class="badge amber" style="font-size:10px;">Still Out</span>':'<span class="badge green" style="font-size:10px;">Returned</span>'}</td>
+    </tr>`).join('')||'<tr><td colspan="6"><div class="empty-state"><p>No SIM history</p></div></td></tr>';
     return;
   }
 
@@ -2758,8 +2754,6 @@ function renderSimHistTable(){
     const eid=r.EID||r.EmpID||'—';
     const simNum=simObj.Number||'—';
     const network=simObj.Network||'—';
-    const outTs=p.out?(p.out.Timestamp||'').slice(0,16):'—';
-    const inTs=p.in?(p.in.Timestamp||'').slice(0,16):'—';
     const stillOut=p.out&&!p.in;
     return `<tr class="fade-in">
       <td style="color:var(--text3);font-size:11px;text-align:center;">${start+i+1}</td>
@@ -2772,12 +2766,9 @@ function renderSimHistTable(){
           <div><div style="font-size:12px;font-weight:500;">${esc(rider)}</div><div class="mono" style="font-size:10px;color:var(--text3);">${esc(eid)}</div></div>
         </div>
       </td>
-      <td>${p.out?`<span class="badge green" style="font-size:10px;">↗&nbsp;Out</span>&nbsp;<span class="mono" style="font-size:11px;">${outTs}</span>`:'<span style="color:var(--text3);">—</span>'}</td>
-      <td>${p.in?`<span class="badge red" style="font-size:10px;">↙&nbsp;In</span>&nbsp;<span class="mono" style="font-size:11px;">${inTs}</span>`:'<span style="color:var(--text3);">—</span>'}</td>
-      <td>${stillOut?`<span class="badge amber" style="font-size:10px;">Still&nbsp;Out</span>`:`<span class="badge green" style="font-size:10px;">Returned</span>`}</td>
-      <td><button class="tb-btn icon-only sm" onclick='openCioDetail(${JSON.stringify(JSON.stringify(r))})' title="Detail">
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-      </button></td>
+      <td>${p.out?fmtDT(p.out.Timestamp):'<span style="color:var(--text3);">—</span>'}</td>
+      <td>${p.in?fmtDT(p.in.Timestamp):'<span style="color:var(--text3);">—</span>'}</td>
+      <td>${stillOut?'<span class="badge amber" style="font-size:10px;">Still Out</span>':'<span class="badge green" style="font-size:10px;">Returned</span>'}</td>
     </tr>`;
   }).join('');
   renderPagination('sim-hist-ctrl','sim-hist-info',filtered.length,_simHistPage,rpp,'simHistGoToPage');
@@ -2826,6 +2817,7 @@ function renderAvailableView(){
       <th style="width:120px;">Phone</th>
       <th style="width:85px;">HR Status</th>
       <th style="width:90px;">CO Exc.</th>
+      <th style="width:80px;">Status</th>
     </tr>`;
     const items=(state.employees||[]).filter(e=>{
       const eid=e.EmpID||e.EID||'';
@@ -2842,7 +2834,7 @@ function renderAvailableView(){
     const realCountEl=document.getElementById('av-avail-count');
     if(realCountEl) realCountEl.textContent=items.length;
     if(!items.length){
-      tbody.innerHTML=`<tr><td colspan="5"><div class="empty-state"><p>No available employees${q?' matching search':''}</p></div></td></tr>`;
+      tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><p>No available employees${q?' matching search':''}</p></div></td></tr>`;
       renderPagination('av-avail-ctrl','av-avail-info',0,_avAvailPage,_avAvailRpp,'avAvailGoToPage');
       return;
     }
@@ -2863,6 +2855,7 @@ function renderAvailableView(){
         <td><span class="mono" style="font-size:11px;color:var(--text2);">${esc(e.Phone||'—')}</span></td>
         <td><span class="badge ${st.toLowerCase()==='active'?'green':'gray'}" style="font-size:10px;">${esc(st)}</span></td>
         <td><span style="font-size:11px;color:var(--text2);">${esc(coExc)}</span></td>
+        <td><span class="badge green" style="font-size:10px;">Available</span></td>
       </tr>`;
     }).join('');
     renderPagination('av-avail-ctrl','av-avail-info',items.length,_avAvailPage,_avAvailRpp,'avAvailGoToPage');
@@ -2903,7 +2896,7 @@ function renderAvailableView(){
       <td><span style="font-size:12px;">${esc(b.PlateNo||'—')}</span></td>
       <td><span style="font-size:12px;">${esc(((b.Make||'')+(b.Model&&b.Model!==b.Make?' '+b.Model:'')).trim()||'—')}</span></td>
       <td><span style="font-size:12px;">${esc(b.Emirate||'—')}</span></td>
-      <td><span class="mono" style="font-size:11px;">${esc(b.MulkiyaExpiry||'—')}</span></td>
+      <td>${fmtDT(b.MulkiyaExpiry||null)}</td>
       <td><span class="badge green" style="font-size:10px;">Available</span></td>
     </tr>`).join('');
     renderPagination('av-avail-ctrl','av-avail-info',items.length,_avAvailPage,_avAvailRpp,'avAvailGoToPage');
@@ -3132,6 +3125,18 @@ function applyEmpFilter(){
   empPage=1;renderEmpTable();
 }
 function clearEmpFilter(){document.getElementById('emp-search').value='';document.getElementById('emp-status').value='';applyEmpFilter();}
+
+// Global date/time formatter — handles ISO, epoch ms, raw strings
+function fmtDT(raw){
+  if(!raw) return '<span style="color:var(--text3);">—</span>';
+  try{
+    const d=new Date(raw);
+    if(isNaN(d)) return '<span style="color:var(--text3);">—</span>';
+    const date=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    const time=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    return `<span class="mono" style="font-size:11px;">${date} ${time}</span>`;
+  }catch(e){return '<span style="color:var(--text3);">—</span>';}
+}
 
 function getAssignedBike(eid){
   return (state.bikes||[]).find(b=>(b.AssignedTo||'')===(eid||''));
@@ -3451,7 +3456,7 @@ function openNewCheckinModal(){
     .filter(e=>(e.Status||'Active').toLowerCase()==='active')
     .map(e=>({
       value: e.EmpID||e.EID,
-      label: (e.Name||(e.EmpID||e.EID)) + (e.EmpID?' ['+e.EmpID+']':'')
+      label: (e.EmpID||e.EID) + ' - ' + (e.Name||e.EmpID||e.EID)
     }));
   sdSetOptions('rider',riderOptions);
   document.getElementById('rider-info-panel').classList.remove('visible');
