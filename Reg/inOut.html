@@ -1910,7 +1910,8 @@ function cioRppChange(){
 
 function renderCheckinTable(){
   const tbody=document.getElementById('cio-card-grid');
-  document.getElementById('cio-count-badge').textContent=ciFiltered.length+' employees';
+  const ciCountBadge=document.getElementById('cio-count-badge');
+  if(ciCountBadge) ciCountBadge.textContent=ciFiltered.length;
   if(!ciFiltered.length){
     tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state"><p>No employees found</p><small>${(state.employees||[]).length?'Adjust filters.':'Sync sheets or load demo data.'}</small></div></td></tr>`;
     renderPagination('cio-page-ctrl','cio-page-info',0,ciPage,ciRpp,'ciGoToPage');
@@ -2180,7 +2181,8 @@ function applyAssetSearch(){
 function clearAssetSearch(){
   document.getElementById('asset-search').value='';
   _assetSearch='';
-  renderAssetPanel();
+  if(_assetView==='available') renderAvailableView();
+  else renderAssetPanel();
 }
 
 // Build paired checkout/checkin groups from CIO log for a given asset type
@@ -2469,6 +2471,8 @@ let _bikeHistPage=1; let _simHistPage=1;
 function setViewType(type){
   _viewType=type;
   _assetSubTab=type;
+  // Remember selection for current view
+  if(_lastViewType) _lastViewType[_assetView]=type;
   const validTypes=['employee','bike','sim'];
   _syncTypePills(validTypes, type);
   if(_assetView==='available'){
@@ -2486,6 +2490,9 @@ function setViewType(type){
   else if(type==='sim'){_simHistPage=1;renderSimHistTable();}
 }
 
+// Remember last selected type per view
+const _lastViewType={available:'employee',history:'employee'};
+
 function setAssetView(view){
   _assetView=view;
   // Nav button active state
@@ -2499,17 +2506,15 @@ function setAssetView(view){
   if(el_hist) el_hist.style.display=(view==='history')?'':'none';
   if(el_avail) el_avail.style.display=(view==='available')?'':'none';
 
+  const validTypes=['employee','bike','sim'];
+  // Restore last selected type for this view
+  _viewType=_lastViewType[view]||'employee';
+  if(!validTypes.includes(_viewType)) _viewType='employee';
+  _syncTypePills(validTypes,_viewType);
+
   if(view==='available'){
-    // Available only supports employee / bike / sim
-    const validAvail=['employee','bike','sim'];
-    if(!validAvail.includes(_viewType)) _viewType='employee';
-    _syncTypePills(validAvail,_viewType);
     renderAvailableView();
   } else {
-    // History supports employee / bike / sim
-    const validHist=['employee','bike','sim'];
-    if(!validHist.includes(_viewType)) _viewType='employee';
-    _syncTypePills(validHist,_viewType);
     renderAssetPanel();
   }
 }
@@ -2795,7 +2800,6 @@ function renderAvailableView(){
   const type=_assetSubTab||_viewType||'employee';
   const thead=document.getElementById('av-avail-thead');
   const tbody=document.getElementById('av-avail-grid');
-  const countEl=document.getElementById('av-avail-count');
   // Update title dynamically
   const titleLabel={employee:'Available Employees',bike:'Available Bikes',sim:'Available SIMs'};
   const titleEl=document.querySelector('#av-panel-available .data-table-title');
@@ -2809,31 +2813,36 @@ function renderAvailableView(){
     const badgeColor={employee:'purple',bike:'orange',sim:'purple'};
     titleEl.innerHTML=(iconMap[type]||iconMap.bike)+
       `<span style="margin-left:6px;">${labelMap[type]||'Available'}</span>`+
-      `<span class="badge ${badgeColor[type]||'green'}" style="margin-left:6px;" id="av-avail-count">0</span>`;
+      `<span class="badge ${badgeColor[type]||'green'}" style="margin-left:6px;" id="av-avail-count">…</span>`;
   }
+  // Re-query countEl after innerHTML rewrite (element was replaced)
+  const countEl=document.getElementById('av-avail-count');
 
-  // ── EMPLOYEE: active riders with no bike AND no SIM assigned — show only EmpID + Name ──
+  // ── EMPLOYEE: active riders with no bike AND no SIM assigned ──
   if(type==='employee'){
     if(thead) thead.innerHTML=`<tr>
-      <th style="width:110px;">Emp ID</th>
-      <th>Name</th>
+      <th style="width:90px;">Emp ID</th>
+      <th style="width:170px;">Name</th>
+      <th style="width:120px;">Phone</th>
+      <th style="width:85px;">HR Status</th>
+      <th style="width:90px;">CO Exc.</th>
     </tr>`;
-    // Filter: no bike AND no SIM assigned (completely unassigned)
     const items=(state.employees||[]).filter(e=>{
       const eid=e.EmpID||e.EID||'';
       const master=(state.masterMap||{})[eid]||{};
       const hasBike=(master.bikes&&master.bikes.length>0)||!!(master.bike)||(state.bikes||[]).some(b=>(b.AssignedTo||'')===eid);
       const hasSim=(master.sims&&master.sims.length>0)||!!(master.sim)||(state.sims||[]).some(s=>(s.AssignedTo||'')===eid);
-      if(hasBike||hasSim) return false; // has any asset — not available
+      if(hasBike||hasSim) return false;
       if(q){
-        const hay=(eid+(e.Name||'')).toLowerCase();
+        const hay=(eid+(e.Name||'')+(e.Phone||'')).toLowerCase();
         if(!hay.includes(q)) return false;
       }
       return true;
     });
-    if(countEl) countEl.textContent=items.length;
+    const realCountEl=document.getElementById('av-avail-count');
+    if(realCountEl) realCountEl.textContent=items.length;
     if(!items.length){
-      tbody.innerHTML=`<tr><td colspan="2"><div class="empty-state"><p>No available employees${q?' matching search':''}</p></div></td></tr>`;
+      tbody.innerHTML=`<tr><td colspan="5"><div class="empty-state"><p>No available employees${q?' matching search':''}</p></div></td></tr>`;
       renderPagination('av-avail-ctrl','av-avail-info',0,_avAvailPage,_avAvailRpp,'avAvailGoToPage');
       return;
     }
@@ -2841,14 +2850,19 @@ function renderAvailableView(){
     const page=items.slice(start,start+_avAvailRpp);
     tbody.innerHTML=page.map(e=>{
       const eid=e.EmpID||e.EID||'—';
+      const st=e.Status||e.HR_Status||'Active';
+      const coExc=e.COExclusion||e.CO_Exclusion||e.Exclusion||'—';
       return `<tr class="fade-in">
         <td><span class="mono" style="font-size:12px;font-weight:700;">${esc(eid)}</span></td>
         <td>
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="avatar-sm" style="background:${strColor(e.Name||'')};">${initials(e.Name||'?')}</div>
-            <span style="font-size:13px;font-weight:500;">${esc(e.Name||'—')}</span>
+            <span style="font-size:12px;font-weight:500;">${esc(e.Name||'—')}</span>
           </div>
         </td>
+        <td><span class="mono" style="font-size:11px;color:var(--text2);">${esc(e.Phone||'—')}</span></td>
+        <td><span class="badge ${st.toLowerCase()==='active'?'green':'gray'}" style="font-size:10px;">${esc(st)}</span></td>
+        <td><span style="font-size:11px;color:var(--text2);">${esc(coExc)}</span></td>
       </tr>`;
     }).join('');
     renderPagination('av-avail-ctrl','av-avail-info',items.length,_avAvailPage,_avAvailRpp,'avAvailGoToPage');
@@ -2875,7 +2889,8 @@ function renderAvailableView(){
       }
       return true;
     });
-    if(countEl) countEl.textContent=items.length;
+    const bikeCountEl=document.getElementById('av-avail-count');
+    if(bikeCountEl) bikeCountEl.textContent=items.length;
     if(!items.length){
       tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><p>No available bikes${q?' matching search':''}</p></div></td></tr>`;
       renderPagination('av-avail-ctrl','av-avail-info',0,_avAvailPage,_avAvailRpp,'avAvailGoToPage');
@@ -2911,7 +2926,8 @@ function renderAvailableView(){
       }
       return true;
     });
-    if(countEl) countEl.textContent=items.length;
+    const simCountEl=document.getElementById('av-avail-count');
+    if(simCountEl) simCountEl.textContent=items.length;
     if(!items.length){
       tbody.innerHTML=`<tr><td colspan="4"><div class="empty-state"><p>No available SIMs${q?' matching search':''}</p></div></td></tr>`;
       renderPagination('av-avail-ctrl','av-avail-info',0,_avAvailPage,_avAvailRpp,'avAvailGoToPage');
