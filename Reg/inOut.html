@@ -3619,8 +3619,24 @@ function addInventoryItems(){
 }
 
 function renderCoSection(eid){
-  // Build full assigned item list from CIO log (supports multiple per type)
+  // Build full assigned item list from masterMap (cioView-backed) + live bike/SIM state fallback
   const assigned=_getAllAssignedItems(eid);
+
+  // Also check live bike/SIM AssignedTo as an additional fallback for items missed by masterMap
+  (state.bikes||[]).forEach(b=>{
+    if((b.AssignedTo||'')===eid&&!assigned.some(it=>it.type==='Bike'&&it.id===b.BikeID)){
+      const meta=b.Model||b.PlateNo||'';
+      assigned.push({type:'Bike',id:b.BikeID,meta});
+    }
+  });
+  (state.sims||[]).forEach(s=>{
+    const sid=s.SimID||s.ID;
+    if((s.AssignedTo||'')===eid&&!assigned.some(it=>it.type==='SIM'&&it.id===sid)){
+      const meta=s.Network||s.Number||'';
+      assigned.push({type:'SIM',id:sid,meta});
+    }
+  });
+
   const assignedTypes=new Set(assigned.map(it=>it.type.toLowerCase()));
 
   // Lock buttons for types that already have items checked out; clear for others
@@ -3805,7 +3821,22 @@ function renderCiSection(eid){
   const list=document.getElementById('checkin-items-list');
   document.getElementById('checkin-confirm-box').style.display='none';
   _checkinPending=null;
+  // Get assigned items from masterMap (cioView-backed) first
   const items=_getAllAssignedItems(eid);
+
+  // Fallback: also check live bike/SIM AssignedTo for items not yet in masterMap
+  (state.bikes||[]).forEach(b=>{
+    if((b.AssignedTo||'')===eid&&!items.some(it=>it.type==='Bike'&&it.id===b.BikeID)){
+      items.push({type:'Bike',id:b.BikeID,meta:b.Model||b.PlateNo||'',obj:b});
+    }
+  });
+  (state.sims||[]).forEach(s=>{
+    const sid=s.SimID||s.ID;
+    if((s.AssignedTo||'')===eid&&!items.some(it=>it.type==='SIM'&&it.id===sid)){
+      items.push({type:'SIM',id:sid,meta:s.Network||s.Number||'',obj:s});
+    }
+  });
+
   if(!items.length){
     list.innerHTML='<div style="text-align:center;padding:20px 0;color:var(--text3);font-size:13px;">No items currently assigned to this rider.</div>';
     return;
@@ -3894,8 +3925,24 @@ function renderSwapSection(eid){
   const list=document.getElementById('swap-assigned-list');
   document.getElementById('swap-new-section').style.display='none';
   _swapSelectedOld=null;
-  // Use full CIO log to get ALL assigned items (multiple bikes/SIMs supported)
-  const items=_getAllAssignedItems(eid).filter(it=>it.type==='Bike'||it.type==='SIM');
+  // Get all assigned items from masterMap (cioView-backed)
+  const allItems=_getAllAssignedItems(eid);
+
+  // Fallback: also check live bike/SIM AssignedTo for items not in masterMap
+  (state.bikes||[]).forEach(b=>{
+    if((b.AssignedTo||'')===eid&&!allItems.some(it=>it.type==='Bike'&&it.id===b.BikeID)){
+      allItems.push({type:'Bike',id:b.BikeID,meta:b.Model||b.PlateNo||''});
+    }
+  });
+  (state.sims||[]).forEach(s=>{
+    const sid=s.SimID||s.ID;
+    if((s.AssignedTo||'')===eid&&!allItems.some(it=>it.type==='SIM'&&it.id===sid)){
+      allItems.push({type:'SIM',id:sid,meta:s.Network||s.Number||''});
+    }
+  });
+
+  // Swap only supports Bike and SIM
+  const items=allItems.filter(it=>it.type==='Bike'||it.type==='SIM');
   if(!items.length){
     list.innerHTML='<div style="text-align:center;padding:20px 0;color:var(--text3);font-size:13px;">No items assigned to this rider to swap.</div>';
     return;
@@ -3930,10 +3977,13 @@ function selectSwapOld(idx){
   document.getElementById('swap-current-type').textContent=_swapSelectedOld.type;
   document.getElementById('swap-current-id').textContent=_swapSelectedOld.id;
   // Populate searchable replacement dropdown (same type, available only)
-  // Build assigned sets from masterMap (authoritative) + live AssignedTo as fallback
+  // Build assigned sets from masterMap (authoritative, using full arrays) + live AssignedTo as fallback
   const assignedBikes=new Set();
   const assignedSims=new Set();
   Object.values(state.masterMap||{}).forEach(a=>{
+    // Use full arrays if available, fall back to single values
+    (a.bikes||[]).forEach(id=>assignedBikes.add(id));
+    (a.sims||[]).forEach(id=>assignedSims.add(id));
     if(a.bike) assignedBikes.add(a.bike);
     if(a.sim) assignedSims.add(a.sim);
   });
@@ -3942,13 +3992,23 @@ function selectSwapOld(idx){
 
   let replOptions=[];
   if(_swapSelectedOld.type==='Bike'){
+    // Exclude ALL assigned bikes (globally) except the one being returned (which becomes available)
     replOptions=(state.bikes||[])
-      .filter(b=>!assignedBikes.has(b.BikeID)&&b.BikeID!==_swapSelectedOld.id)
-      .map(b=>({value:b.BikeID,label:b.BikeID}));
+      .filter(b=>{
+        if(b.BikeID===_swapSelectedOld.id) return false; // item being returned — not a replacement
+        if(assignedBikes.has(b.BikeID)&&b.BikeID!==_swapSelectedOld.id) return false; // assigned to someone else
+        return true;
+      })
+      .map(b=>({value:b.BikeID,label:b.BikeID+(b.PlateNo?' · '+b.PlateNo:'')}));
   }else if(_swapSelectedOld.type==='SIM'){
     replOptions=(state.sims||[])
-      .filter(s=>!assignedSims.has(s.SimID||s.ID)&&(s.SimID||s.ID)!==_swapSelectedOld.id)
-      .map(s=>({value:s.SimID||s.ID,label:s.SimID||s.ID}));
+      .filter(s=>{
+        const sid=s.SimID||s.ID;
+        if(sid===_swapSelectedOld.id) return false; // item being returned — not a replacement
+        if(assignedSims.has(sid)&&sid!==_swapSelectedOld.id) return false; // assigned to someone else
+        return true;
+      })
+      .map(s=>({value:s.SimID||s.ID,label:(s.SimID||s.ID)+(s.Number?' · '+s.Number:'')}));
   }
   sdSetOptions('swapnew',replOptions);
   document.getElementById('swap-new-section').style.display='';
