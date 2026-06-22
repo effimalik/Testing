@@ -1055,9 +1055,9 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
         <!-- Existing assigned items (locked) -->
         <div id="co-existing-list" style="display:none;margin-bottom:8px;"></div>
         <!-- Left: item type buttons, Right: available items dropdown -->
-        <div style="display:flex;gap:10px;align-items:flex-start;">
+        <div style="display:flex;gap:14px;align-items:flex-start;">
           <!-- Type selector -->
-          <div style="display:flex;flex-direction:column;gap:5px;min-width:110px;width:110px;">
+          <div style="display:flex;flex-direction:column;gap:6px;min-width:110px;width:110px;flex-shrink:0;">
             <button class="asset-type-btn" id="co-type-Bike" onclick="selectCoType('Bike')">
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 0 0-1 1v6H8l-3.5-5H4a1 1 0 0 0 0 2h.5l3.5 5H14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/></svg>
               Bike
@@ -1074,42 +1074,8 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
               Inventory
             </button>
-            <!-- Company panel (inline, shown when Company type selected) -->
-            <div id="co-company-inline" style="display:none;margin-top:6px;">
-              <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Select Company</div>
-              <select class="form-select" id="co-company-select" style="font-size:12px;padding:5px 8px;">
-                <option value="">— Pick Company —</option>
-                <option value="Noon">Noon</option>
-                <option value="Talabat">Talabat</option>
-                <option value="Deliveroo">Deliveroo</option>
-                <option value="NawNaw">NawNaw</option>
-              </select>
-              <button class="tb-btn sm success" onclick="addCompanyItem()" style="width:100%;margin-top:5px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Add Company
-              </button>
-            </div>
-            <!-- Inventory panel (inline, shown when Inventory type selected) -->
-            <div id="co-inventory-inline" style="display:none;margin-top:6px;">
-              <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Select Inventory</div>
-              <div style="display:flex;flex-direction:column;gap:4px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 9px;">
-                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;">
-                  <input type="checkbox" id="inv-helmet" value="Helmet" style="accent-color:var(--teal);width:13px;height:13px;"> Helmet
-                </label>
-                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;">
-                  <input type="checkbox" id="inv-thermalbox" value="ThermalBox" style="accent-color:var(--teal);width:13px;height:13px;"> ThermalBox
-                </label>
-                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;">
-                  <input type="checkbox" id="inv-uniform" value="Uniform" style="accent-color:var(--teal);width:13px;height:13px;"> Uniform
-                </label>
-              </div>
-              <button class="tb-btn sm success" onclick="addInventoryItems()" style="width:100%;margin-top:5px;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Add Inventory
-              </button>
-            </div>
           </div>
-          <!-- Available items for selected type -->
+          <!-- Available items for selected type (Bike/SIM dropdown, or Company/Inventory pickers) -->
           <div style="flex:1;min-width:0;">
             <div id="co-items-panel" style="display:none;">
               <div id="co-type-label" style="font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;"></div>
@@ -1130,6 +1096,40 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
               <button class="tb-btn sm success" onclick="addCoItem()" style="width:100%;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Add Item
+              </button>
+            </div>
+            <!-- Company panel (shown when Company type selected) -->
+            <div id="co-company-inline" style="display:none;">
+              <div style="font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Select Company</div>
+              <select class="form-select" id="co-company-select" style="margin-bottom:6px;">
+                <option value="">— Pick Company —</option>
+                <option value="Noon">Noon</option>
+                <option value="Talabat">Talabat</option>
+                <option value="Deliveroo">Deliveroo</option>
+                <option value="NawNaw">NawNaw</option>
+              </select>
+              <button class="tb-btn sm success" onclick="addCompanyItem()" style="width:100%;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Company
+              </button>
+            </div>
+            <!-- Inventory panel (shown when Inventory type selected) -->
+            <div id="co-inventory-inline" style="display:none;">
+              <div style="font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Select Inventory</div>
+              <div style="display:flex;flex-direction:column;gap:6px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:9px 11px;margin-bottom:6px;">
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;">
+                  <input type="checkbox" id="inv-helmet" value="Helmet" style="accent-color:var(--teal);width:13px;height:13px;"> Helmet
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;">
+                  <input type="checkbox" id="inv-thermalbox" value="ThermalBox" style="accent-color:var(--teal);width:13px;height:13px;"> ThermalBox
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;">
+                  <input type="checkbox" id="inv-uniform" value="Uniform" style="accent-color:var(--teal);width:13px;height:13px;"> Uniform
+                </label>
+              </div>
+              <button class="tb-btn sm success" onclick="addInventoryItems()" style="width:100%;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Inventory
               </button>
             </div>
             <div id="co-items-empty" style="font-size:12px;color:var(--text3);padding:10px 0;">← Select an item type</div>
@@ -1193,7 +1193,7 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
           <div class="swap-arrow">↓ Replace with ↓</div>
           <div style="font-size:10.5px;color:var(--text3);margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Select replacement (available only):</div>
           <!-- Searchable swap replacement dropdown -->
-          <div class="sd-wrap" id="sd-swapnew-wrap" style="margin-bottom:4px;">
+          <div class="sd-wrap" id="sd-swapnew-wrap" style="margin-bottom:8px;">
             <button type="button" class="sd-trigger" id="sd-swapnew-trigger" onclick="sdToggle('swapnew')">
               <span class="sd-trigger-text placeholder" id="sd-swapnew-label">— Select Replacement —</span>
               <svg class="sd-chevron" id="sd-swapnew-chevron" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
@@ -3235,8 +3235,11 @@ const GFORM_FIELDS={
   assetDetail:'entry.1835291401' // sim number / bike number / inventory name / yes/no
 };
 
-function genRefId(){
-  const n=new Date();
+function genRefId(offsetMs){
+  const n=new Date(Date.now()+(offsetMs||0));
+  return genRefIdFromDate(n);
+}
+function genRefIdFromDate(n){
   return 'REF-'+n.getFullYear()+String(n.getMonth()+1).padStart(2,'0')+String(n.getDate()).padStart(2,'0')+
     'T'+String(n.getHours()).padStart(2,'0')+String(n.getMinutes()).padStart(2,'0')+
     String(n.getSeconds()).padStart(2,'0')+String(n.getMilliseconds()).padStart(3,'0');
@@ -3999,7 +4002,7 @@ function selectSwapOld(idx){
         if(assignedBikes.has(b.BikeID)&&b.BikeID!==_swapSelectedOld.id) return false; // assigned to someone else
         return true;
       })
-      .map(b=>({value:b.BikeID,label:b.BikeID+(b.PlateNo?' · '+b.PlateNo:'')}));
+      .map(b=>({value:b.BikeID,label:b.BikeID}));
   }else if(_swapSelectedOld.type==='SIM'){
     replOptions=(state.sims||[])
       .filter(s=>{
@@ -4008,7 +4011,7 @@ function selectSwapOld(idx){
         if(assignedSims.has(sid)&&sid!==_swapSelectedOld.id) return false; // assigned to someone else
         return true;
       })
-      .map(s=>({value:s.SimID||s.ID,label:(s.SimID||s.ID)+(s.Number?' · '+s.Number:'')}));
+      .map(s=>({value:s.SimID||s.ID,label:s.SimID||s.ID}));
   }
   sdSetOptions('swapnew',replOptions);
   document.getElementById('swap-new-section').style.display='';
@@ -4095,11 +4098,16 @@ async function submitCheckin(){
     const newAlreadyAssigned=allItems.some(it=>it.type===oldType&&it.id===newId);
     if(newAlreadyAssigned){showToast(newId+' is already assigned to another rider','error');return;}
 
-    const recIn={Timestamp:ts,RefID:makeRef(),RiderName:rider?rider.Name:'Unknown',EmpID:riderEid,
+    // Check-Out ID generated exactly 2ms after Check-In ID to guarantee uniqueness
+    const _swapBaseTs=new Date();
+    const checkInRefId=genRefIdFromDate(_swapBaseTs);
+    const checkOutRefId=genRefIdFromDate(new Date(_swapBaseTs.getTime()+2));
+
+    const recIn={Timestamp:ts,RefID:checkInRefId,RiderName:rider?rider.Name:'Unknown',EmpID:riderEid,
       RiderID:rider?rider.RiderID||'':'',Company:rider?rider.Company||'':'',
       AssetType:oldType,AssetID:oldId,Action:'Check In',Condition:condition,Notes:notes,CheckedBy:checkedBy};
 
-    const recOut={Timestamp:ts,RefID:makeRef(),RiderName:rider?rider.Name:'Unknown',EmpID:riderEid,
+    const recOut={Timestamp:ts,RefID:checkOutRefId,RiderName:rider?rider.Name:'Unknown',EmpID:riderEid,
       RiderID:rider?rider.RiderID||'':'',Company:rider?rider.Company||'':'',
       AssetType:oldType,AssetID:newId,Action:'Check Out',Condition:condition,Notes:notes,CheckedBy:checkedBy};
 
