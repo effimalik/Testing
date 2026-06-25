@@ -193,6 +193,27 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 @keyframes spin{to{transform:rotate(360deg);}}
 .spinner{animation:spin 1s linear infinite;display:inline-flex;}
 
+/* ── Doc Log ── */
+.log-filter-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:var(--radius);border:1.5px solid var(--border2);background:var(--surface2);color:var(--text2);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .16s;}
+.log-filter-btn i{font-size:14px;}
+.log-filter-btn:hover{border-color:var(--accent);color:var(--accent);}
+.log-filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 0 10px var(--accent-glow);}
+.log-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.log-table th{padding:10px 14px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid var(--border);background:var(--bg3);cursor:pointer;white-space:nowrap;position:sticky;top:0;z-index:2;}
+.log-table th:hover{color:var(--accent);}
+.log-table td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.log-table tbody tr:hover{background:var(--surface2);}
+.log-table .txn-mono{font-family:var(--mono);font-size:11px;color:var(--accent);}
+.log-table .portal-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;}
+.log-table .portal-badge.emp{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(88,166,255,.25);}
+.log-table .portal-badge.bike{background:var(--orange-dim);color:var(--orange);border:1px solid rgba(240,136,62,.25);}
+.log-table .doc-link-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:var(--radius);background:var(--accent-dim);color:var(--accent);border:1px solid rgba(88,166,255,.25);font-size:11px;font-weight:600;cursor:pointer;text-decoration:none;transition:all .15s;}
+.log-table .doc-link-btn:hover{background:var(--accent);color:#fff;}
+.log-table .doc-link-btn.local{background:var(--teal-dim);color:var(--teal);border-color:rgba(57,211,83,.25);}
+.log-table .doc-link-btn.local:hover{background:var(--teal);color:#fff;}
+.log-stat-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--surface);font-size:11.5px;font-weight:600;color:var(--text2);}
+.log-stat-chip i{font-size:14px;}
+
 @media(max-width:900px){
   .doc-sidebar{width:90px;}
   .doc-side-btn span{font-size:9.5px;}
@@ -229,6 +250,9 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
     </button>
     <button class="tab-btn" id="tab-bike-btn" onclick="switchTab('bike')">
       <i class="ti ti-motorbike"></i><span>Bike Documents</span>
+    </button>
+    <button class="tab-btn" id="tab-log-btn" onclick="switchTab('log')">
+      <i class="ti ti-table"></i><span>Doc Log</span>
     </button>
   </div>
 
@@ -335,6 +359,76 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
     </div>
   </div>
 
+  <!-- DOC LOG TAB -->
+  <div class="tab-panel" id="tab-log" style="display:none;flex-direction:column;gap:14px;flex:1;min-height:0;">
+
+    <!-- Filter bar -->
+    <div class="selector-bar" style="gap:14px;flex-wrap:wrap;">
+      <div class="field">
+        <label>Portal Type</label>
+        <div style="display:flex;gap:6px;">
+          <button class="log-filter-btn active" id="log-filter-emp" onclick="setLogPortal('emp')"><i class="ti ti-user-check"></i> Employee</button>
+          <button class="log-filter-btn" id="log-filter-bike" onclick="setLogPortal('bike')"><i class="ti ti-motorbike"></i> Bike</button>
+          <button class="log-filter-btn" id="log-filter-all" onclick="setLogPortal('all')"><i class="ti ti-stack-2"></i> All</button>
+        </div>
+      </div>
+      <div class="field" id="log-id-field" style="display:none;">
+        <label id="log-id-label">Employee</label>
+        <div class="search-dropdown-wrap" style="width:240px;">
+          <input class="search-dropdown-input" id="log-id-search" type="text" placeholder="All — or type to filter…" autocomplete="off"
+            oninput="filterLogIdDropdown(this.value)" onfocus="openLogIdDropdown()" onblur="setTimeout(()=>closeLogIdDropdown(),180)"/>
+          <div class="dropdown-list" id="log-id-dropdown"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Doc Type</label>
+        <select class="search-dropdown-input" id="log-doctype-filter" onchange="renderLogTable()" style="width:180px;cursor:pointer;">
+          <option value="">All Types</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Expiry Status</label>
+        <select class="search-dropdown-input" id="log-expiry-filter" onchange="renderLogTable()" style="width:150px;cursor:pointer;">
+          <option value="">All</option>
+          <option value="red">Expired</option>
+          <option value="amber">Expiring Soon</option>
+          <option value="teal">Valid</option>
+        </select>
+      </div>
+      <div class="field" style="margin-left:auto;">
+        <label>&nbsp;</label>
+        <button class="btn btn-ghost btn-sm" onclick="refreshLogCache()" title="Reload from ap2_docLog cache"><i class="ti ti-refresh"></i> Refresh</button>
+      </div>
+    </div>
+
+    <!-- Summary strip -->
+    <div id="log-summary" style="display:flex;gap:10px;flex-wrap:wrap;flex-shrink:0;"></div>
+
+    <!-- Table -->
+    <div style="flex:1;min-height:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;">
+      <div style="overflow-x:auto;overflow-y:auto;flex:1;">
+        <table class="log-table" id="log-table">
+          <thead>
+            <tr>
+              <th onclick="sortLog('txnId')">Transaction ID <i class="ti ti-selector" style="font-size:11px;opacity:.5;"></i></th>
+              <th onclick="sortLog('portal')">Portal <i class="ti ti-selector" style="font-size:11px;opacity:.5;"></i></th>
+              <th onclick="sortLog('entityId')">ID <i class="ti ti-selector" style="font-size:11px;opacity:.5;"></i></th>
+              <th onclick="sortLog('entityName')">Name / Plate <i class="ti ti-selector" style="font-size:11px;opacity:.5;"></i></th>
+              <th onclick="sortLog('docType')">Doc Type <i class="ti ti-selector" style="font-size:11px;opacity:.5;"></i></th>
+              <th>Doc Link</th>
+              <th onclick="sortLog('expiry')">Exp Date <i class="ti ti-selector" style="font-size:11px;opacity:.5;"></i></th>
+              <th onclick="sortLog('uploadedAt')">Uploaded <i class="ti ti-selector" style="font-size:11px;opacity:.5;"></i></th>
+            </tr>
+          </thead>
+          <tbody id="log-tbody">
+            <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text3);"><i class="ti ti-loader spinner" style="font-size:20px;display:block;margin-bottom:8px;"></i> Loading log…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="log-footer" style="padding:10px 16px;border-top:1px solid var(--border);font-size:11.5px;color:var(--text3);display:flex;align-items:center;gap:10px;flex-shrink:0;"></div>
+    </div>
+  </div>
+
 </div>
 
 <div class="toast" id="toast" role="alert">
@@ -359,7 +453,7 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
  *  Until a real URL is pasted here, the portal still works fully offline —
  *  documents save to local IndexedDB — but will NOT appear in Google Sheets.
  * ═══════════════════════════════════════════════════════════════════════ */
-const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzXyK7QH7MHCAHPrY3AN0COpvUxDCnSSND5eM0OOhaoHd5v-3OX9RpPok8ChPtREwlsqw/exec';
+const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyhdEeSqKnsV_EANDHxjXBlpx9PjFYL1UQpD77PQ7bEWcCiohuD45Rp9Fd3tu-s0DeMTQ/exec';
 const SHEETS_SYNC_ENABLED = SHEETS_WEBAPP_URL.startsWith('https://script.google.com/');
 
 const EMP_DOC_TYPES = [
@@ -557,8 +651,11 @@ function toast(msg, type='success') {
 function switchTab(tab) {
   document.getElementById('tab-emp').style.display  = tab==='emp'  ? 'flex' : 'none';
   document.getElementById('tab-bike').style.display = tab==='bike' ? 'flex' : 'none';
+  document.getElementById('tab-log').style.display  = tab==='log'  ? 'flex' : 'none';
   document.getElementById('tab-emp-btn').classList.toggle('active', tab==='emp');
   document.getElementById('tab-bike-btn').classList.toggle('active', tab==='bike');
+  document.getElementById('tab-log-btn').classList.toggle('active', tab==='log');
+  if (tab === 'log') { buildLogDocTypeOptions(); renderLogTable(); }
 }
 
 async function loadInitialData() {
@@ -607,6 +704,13 @@ async function loadInitialData() {
   } else {
     setStatus('ti-alert-triangle', 'Employee cache unavailable — see tooltip', 'var(--amber)',
       `${empErrMsg}\n\nOpen the main fleet app (allEmp.html) in THIS SAME browser/tab group first — it writes to IndexedDB "ap2_fleet_cache" which this portal then reads. This portal cannot create that data itself.`);
+  }
+
+  // ── Load Doc Log (cache + local merge) ──
+  try {
+    await buildLogRows();
+  } catch(e) {
+    console.warn('[docPortal] buildLogRows failed:', e.message);
   }
 }
 
@@ -1075,6 +1179,290 @@ function previewDoc(rec, docLabel, mode) {
 }
 
 function closePreview(mode) { document.getElementById(mode+'-preview-panel').classList.remove('open'); }
+
+/* ══════════════════════════════════════════════════════════════════════
+ *  DOC LOG — reads from ap2_docLog cache (same IDB as fleet cache)
+ *  and also merges in locally-stored portal_emp_docs / portal_bike_docs.
+ *  Columns: Transaction ID | Portal | ID | Doc Type | Doc Link | Exp Date
+ * ════════════════════════════════════════════════════════════════════════ */
+const FLEET_KEY_DOC_LOG = 'ap2_docLog';
+
+let logRows      = [];      // flat array of all log records
+let logSortKey   = 'uploadedAt';
+let logSortAsc   = false;
+let logPortal    = 'all';   // 'emp' | 'bike' | 'all'
+let logSelId     = '';      // '' = all IDs
+
+/* ── Load the ap2_docLog cache from IDB ── */
+async function loadDocLog() {
+  let cached = [];
+  try {
+    const rows = await _fleetRead(FLEET_KEY_DOC_LOG);
+    cached = rows.map(r => normaliseLogRow(r)).filter(Boolean);
+  } catch(e) {
+    // Cache miss — will fall back to locally stored docs only
+    console.warn('[docLog] ap2_docLog cache not found:', e.message);
+  }
+  return cached;
+}
+
+function normaliseLogRow(r) {
+  if (!r) return null;
+  const _s = v => (v !== null && v !== undefined && v !== '') ? String(v).trim() : '';
+  if (Array.isArray(r)) {
+    // Skip header rows
+    const first = _s(r[0]).toLowerCase();
+    if (first === 'transaction id' || first === 'txnid' || first === 'txn id') return null;
+    const txnId = _s(r[0]); if (!txnId) return null;
+    return { txnId, portal: _s(r[1]).toLowerCase() || 'emp', entityId: _s(r[2]), docType: _s(r[3]), docLink: _s(r[4]), expiry: _s(r[5]), uploadedAt: _s(r[6]) || '' };
+  }
+  // Object row
+  const txnId = _s(r['Transaction ID'] || r['txnId'] || r['TxnId'] || r['txn_id']); if (!txnId) return null;
+  const portal = (_s(r['Portal'] || r['portal'] || '')).toLowerCase() || 'emp';
+  return {
+    txnId,
+    portal: portal.includes('bike') ? 'bike' : 'emp',
+    entityId: _s(r['ID'] || r['entityId'] || r['entity_id'] || r['Emp ID'] || r['Bike ID'] || ''),
+    docType:  _s(r['Doc Type'] || r['docType'] || r['doc_type'] || ''),
+    docLink:  _s(r['Doc Link'] || r['docLink'] || r['doc_link'] || r['File Link'] || ''),
+    expiry:   _s(r['Exp Date']  || r['expiry'] || r['Expiry Date'] || r['ExpiryDate'] || ''),
+    uploadedAt: _s(r['Uploaded'] || r['uploadedAt'] || r['Upload Date'] || ''),
+  };
+}
+
+/* Build log rows from BOTH the cache AND local portal docs */
+async function buildLogRows() {
+  const cached = await loadDocLog();
+
+  // Also flatten local docs into the same format
+  const local = [];
+
+  Object.entries(empDocs).forEach(([empId, byType]) => {
+    Object.entries(byType).forEach(([docType, recs]) => {
+      recs.forEach(rec => {
+        local.push({
+          txnId:     rec.txnId,
+          portal:    'emp',
+          entityId:  empId,
+          docType:   docType,
+          docLink:   null, // local base64 — use preview
+          _localRec: rec,
+          expiry:    rec.expiry || '',
+          uploadedAt: rec.uploadedAt || '',
+        });
+      });
+    });
+  });
+
+  Object.entries(bikeDocs).forEach(([bikeId, byType]) => {
+    Object.entries(byType).forEach(([docType, recs]) => {
+      recs.forEach(rec => {
+        local.push({
+          txnId:     rec.txnId,
+          portal:    'bike',
+          entityId:  bikeId,
+          docType:   docType,
+          docLink:   null,
+          _localRec: rec,
+          expiry:    rec.expiry || '',
+          uploadedAt: rec.uploadedAt || '',
+        });
+      });
+    });
+  });
+
+  // Merge: cached takes priority; deduplicate by txnId
+  const seen = new Set();
+  const merged = [];
+  [...cached, ...local].forEach(r => {
+    if (seen.has(r.txnId)) return;
+    seen.add(r.txnId);
+    merged.push(r);
+  });
+
+  logRows = merged;
+}
+
+async function refreshLogCache() {
+  toast('Refreshing log…');
+  await buildLogRows();
+  buildLogDocTypeOptions();
+  renderLogTable();
+  toast('Log refreshed');
+}
+
+/* ── Friendly doc type label ── */
+function docTypeLabel(key) {
+  const all = [...EMP_DOC_TYPES, ...BIKE_DOC_TYPES];
+  const found = all.find(d => d.key === key);
+  return found ? found.label : key.replace(/_/g,' ').replace(/\b\w/g, c=>c.toUpperCase());
+}
+
+/* ── Build doc-type filter dropdown from current portal filter ── */
+function buildLogDocTypeOptions() {
+  const sel = document.getElementById('log-doctype-filter');
+  const prev = sel.value;
+  const types = logPortal === 'emp'  ? EMP_DOC_TYPES :
+                logPortal === 'bike' ? BIKE_DOC_TYPES :
+                [...EMP_DOC_TYPES, ...BIKE_DOC_TYPES];
+  sel.innerHTML = '<option value="">All Types</option>' +
+    types.map(t => `<option value="${t.key}">${t.label}</option>`).join('');
+  if (prev) sel.value = prev;
+}
+
+/* ── Portal filter buttons ── */
+function setLogPortal(p) {
+  logPortal = p;
+  logSelId = '';
+  document.getElementById('log-id-search').value = '';
+  ['emp','bike','all'].forEach(k => document.getElementById('log-filter-'+k).classList.toggle('active', k===p));
+  // Update ID label
+  const lbl = document.getElementById('log-id-label');
+  lbl.textContent = p==='bike' ? 'Bike' : 'Employee';
+  document.getElementById('log-id-field').style.display = p==='all' ? 'none' : 'flex';
+  buildLogDocTypeOptions();
+  renderLogTable();
+}
+
+/* ── Log ID search dropdown ── */
+function filterLogIdDropdown(q) {
+  const list = document.getElementById('log-id-dropdown');
+  const lq = q.toLowerCase().trim();
+  if (!lq) { logSelId=''; list.classList.remove('open'); renderLogTable(); return; }
+  const source = logPortal === 'bike' ? bikes : employees;
+  const hits = source.filter(e => String(e.id).toLowerCase().includes(lq) || (e.name||e.plate||'').toLowerCase().includes(lq)).slice(0,12);
+  if (!hits.length) {
+    list.innerHTML = '<div class="dropdown-item" style="color:var(--text3);">No matches</div>';
+  } else {
+    list.innerHTML = hits.map(e => {
+      const label = e.name || e.plate || e.id;
+      const hl = v => String(v).replace(new RegExp(`(${lq.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<em>$1</em>');
+      return `<div class="dropdown-item" onmousedown="selectLogId('${e.id}')">
+        <div class="dname">${hl(label)}</div><div class="did">ID: ${hl(String(e.id))}</div>
+      </div>`;
+    }).join('');
+  }
+  list.classList.add('open');
+}
+function openLogIdDropdown() { filterLogIdDropdown(document.getElementById('log-id-search').value); }
+function closeLogIdDropdown() { document.getElementById('log-id-dropdown').classList.remove('open'); }
+function selectLogId(id) {
+  logSelId = String(id);
+  const source = logPortal==='bike' ? bikes : employees;
+  const e = source.find(x => String(x.id) === logSelId);
+  document.getElementById('log-id-search').value = e ? `${e.id} — ${e.name||e.plate||''}` : id;
+  closeLogIdDropdown();
+  renderLogTable();
+}
+
+/* ── Sort ── */
+let _logSortDir = {};
+function sortLog(key) {
+  if (logSortKey === key) { logSortAsc = !logSortAsc; }
+  else { logSortKey = key; logSortAsc = true; }
+  renderLogTable();
+}
+
+/* ── Resolve entity name from employees/bikes arrays ── */
+function entityName(row) {
+  if (row.portal === 'emp') {
+    const e = employees.find(x => String(x.id) === String(row.entityId));
+    return e ? e.name : '—';
+  } else {
+    const b = bikes.find(x => String(x.id) === String(row.entityId));
+    return b ? (b.plate || b.id) : '—';
+  }
+}
+
+/* ── Render the table ── */
+function renderLogTable() {
+  const tbody = document.getElementById('log-tbody');
+  const footer = document.getElementById('log-footer');
+  const summary = document.getElementById('log-summary');
+  if (!tbody) return;
+
+  const dtFilter  = document.getElementById('log-doctype-filter')?.value || '';
+  const expFilter = document.getElementById('log-expiry-filter')?.value  || '';
+
+  let rows = logRows.filter(r => {
+    if (logPortal !== 'all' && r.portal !== logPortal) return false;
+    if (logSelId  && String(r.entityId) !== logSelId)  return false;
+    if (dtFilter  && r.docType !== dtFilter)            return false;
+    if (expFilter) {
+      const s = r.expiry ? expiryStatus(r.expiry).status : 'gray';
+      if (s !== expFilter) return false;
+    }
+    return true;
+  });
+
+  // Sort
+  rows = [...rows].sort((a, b) => {
+    let va = a[logSortKey] || '', vb = b[logSortKey] || '';
+    if (logSortKey === 'expiry' || logSortKey === 'uploadedAt') {
+      va = va ? new Date(va).getTime() : 0;
+      vb = vb ? new Date(vb).getTime() : 0;
+    }
+    if (va < vb) return logSortAsc ? -1 : 1;
+    if (va > vb) return logSortAsc ?  1 : -1;
+    return 0;
+  });
+
+  // Summary chips
+  const total   = rows.length;
+  const expired = rows.filter(r => r.expiry && expiryStatus(r.expiry).status==='red').length;
+  const expiring= rows.filter(r => r.expiry && expiryStatus(r.expiry).status==='amber').length;
+  const valid   = rows.filter(r => r.expiry && expiryStatus(r.expiry).status==='teal').length;
+  summary.innerHTML = `
+    <div class="log-stat-chip"><i class="ti ti-files" style="color:var(--accent);"></i> ${total} record${total!==1?'s':''}</div>
+    ${expired  ? `<div class="log-stat-chip" style="color:var(--red);border-color:rgba(248,81,73,.3);background:var(--red-dim);"><i class="ti ti-alert-circle"></i> ${expired} Expired</div>`:''}
+    ${expiring ? `<div class="log-stat-chip" style="color:var(--amber);border-color:rgba(227,179,65,.3);background:var(--amber-dim);"><i class="ti ti-clock-alert"></i> ${expiring} Expiring Soon</div>`:''}
+    ${valid    ? `<div class="log-stat-chip" style="color:var(--teal);border-color:rgba(57,211,83,.3);background:var(--teal-dim);"><i class="ti ti-circle-check"></i> ${valid} Valid</div>`:''}
+  `;
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text3);font-size:13px;"><i class="ti ti-search-off" style="font-size:26px;display:block;margin-bottom:8px;opacity:.4;"></i> No records match the current filters</td></tr>`;
+    footer.textContent = '';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r => {
+    const portalBadge = r.portal === 'bike'
+      ? `<span class="portal-badge bike"><i class="ti ti-motorbike" style="font-size:10px;"></i> Bike</span>`
+      : `<span class="portal-badge emp"><i class="ti ti-user-check" style="font-size:10px;"></i> Employee</span>`;
+
+    const name = entityName(r);
+
+    const dtLabel = docTypeLabel(r.docType);
+
+    let linkHtml;
+    if (r._localRec) {
+      // Local doc — open preview
+      linkHtml = `<button class="doc-link-btn local" onclick='previewDoc(${JSON.stringify(r._localRec)}, "${dtLabel}", "${r.portal}")'><i class="ti ti-eye" style="font-size:12px;"></i> Preview</button>`;
+    } else if (r.docLink && r.docLink.startsWith('http')) {
+      linkHtml = `<a class="doc-link-btn" href="${r.docLink}" target="_blank" rel="noopener"><i class="ti ti-external-link" style="font-size:12px;"></i> Open</a>`;
+    } else {
+      linkHtml = `<span style="color:var(--text3);font-size:11px;">—</span>`;
+    }
+
+    const exp = r.expiry ? expiryStatus(r.expiry) : {status:'gray',label:'—'};
+    const expHtml = r.expiry
+      ? `<span style="color:var(--${exp.status});font-size:12px;font-weight:600;">${fmtDate(r.expiry)}</span><br><span style="font-size:10px;color:var(--${exp.status});opacity:.8;">${exp.label}</span>`
+      : `<span style="color:var(--text3);font-size:11px;">—</span>`;
+
+    return `<tr>
+      <td><span class="txn-mono">${r.txnId}</span></td>
+      <td>${portalBadge}</td>
+      <td><span style="font-family:var(--mono);font-size:11.5px;">${r.entityId}</span></td>
+      <td style="font-weight:600;font-size:12.5px;">${name}</td>
+      <td>${dtLabel}</td>
+      <td>${linkHtml}</td>
+      <td>${expHtml}</td>
+      <td style="color:var(--text3);font-size:11px;">${fmtDate(r.uploadedAt)}</td>
+    </tr>`;
+  }).join('');
+
+  footer.innerHTML = `<i class="ti ti-table" style="font-size:14px;"></i> Showing <strong>${rows.length}</strong> of <strong>${logRows.length}</strong> total records`;
+}
 
 async function init() {
   await loadInitialData();
