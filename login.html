@@ -14,9 +14,9 @@
   The login flow here is self-contained: it does NOT call Auth.isAuthenticated()
   before the user clicks — only after a successful server response.
 -->
-<script src="https://effimalik.github.io/Testing/shared/auth.js?v=5"></script>
-<script src="https://effimalik.github.io/Testing/shared/dataLayer.js?v=5"></script>
-<!-- <script src="https://effimalik.github.io/Testing/shared/devPre.js"></script> -->
+<script src="https://effimalik.github.io/Test/shared/auth.js?v=5"></script>
+<script src="https://effimalik.github.io/Test/shared/dataLayer.js?v=5"></script>
+<!-- <script src="https://effimalik.github.io/Test/shared/devPre.js"></script> -->
 
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -365,12 +365,13 @@ body::after{
    Keep in sync with auth.js and Code.gs CFG block
 ═══════════════════════════════════════════════════ */
 const CONFIG = {
-  API_BASE         : 'https://script.google.com/macros/s/AKfycbwYHHEKEe2gBdgaAnplfWum-NbQioqS8Lrz1RIp83t45ciTM_u2dk3eWTfa0xbkoQpVbQ/exec',
+  API_BASE         : 'https://script.google.com/macros/s/AKfycbym4nntllJyqg6_9paii8X-PDk5zT5SY-XPjMbMaI2S9whTNk2KykMGiGd3EmkepUcyLw/exec',
+  // API_BASE         : 'https://script.google.com/macros/s/AKfycby1_PVgu0xrKKx--Kx4GA6xqN3Emb6MrE9Z1Sxa62yG7EGZm8Xe5uzV1022vBvL2KxOmg/exec',
   GOOGLE_CLIENT_ID : '743775120253-lr54jgst59jqr5s61vc3i4o3rnfn596a.apps.googleusercontent.com',
 };
 
   
-const ALLOWED_ORIGIN = 'https://effimalik.github.io/Testing/';
+const ALLOWED_ORIGIN = 'https://effimalik.github.io/Test/';
 const DEFAULT_PAGE   = ALLOWED_ORIGIN + 'index.html';
 
 /* ═══════════════════════════════════════════════════

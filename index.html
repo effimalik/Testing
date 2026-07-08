@@ -7,10 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
-<script src="https://effimalik.github.io/Testing/shared/auth.js?v=5"></script>
-<script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
-<script src="https://effimalik.github.io/Testing/shared/cioView.js"></script>
-<!-- <script src="https://effimalik.github.io/Testing/shared/devPre.js"></script> -->
+<script src="https://effimalik.github.io/Test/shared/auth.js?v=5"></script>
+<script src="https://effimalik.github.io/Test/shared/dataLayer.js"></script>
+<script src="https://effimalik.github.io/Test/shared/cioView.js"></script>
+<!-- <script src="https://effimalik.github.io/Test/shared/devPre.js"></script> -->
 
 <!-- ═══════════════════════════════════════════════════════════════
      AP2 IDB Bridge — all data served from IndexedDB via AdminPro
@@ -359,6 +359,10 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 .tb-sc.bike:hover{background:var(--teal);color:#fff;}
 .tb-sc.adv{color:var(--amber);border-color:rgba(227,179,65,.3);background:var(--amber-dim);}
 .tb-sc.adv:hover{background:var(--amber);color:#0d1117;}
+.tb-sc.doc{color:var(--red);border-color:rgba(248,81,73,.3);background:var(--red-dim);}
+.tb-sc.doc:hover{background:var(--red);color:#fff;}
+.tb-sc.sim{color:var(--purple);border-color:rgba(163,113,247,.3);background:var(--purple-dim);}
+.tb-sc.sim:hover{background:var(--purple);color:#fff;}
 
 .tb-gap{flex:1;min-width:4px;}
 
@@ -882,8 +886,12 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
           <i class="ti ti-motorbike"></i><span> Add Bike</span>
         </button>
         <button class="tb-sc sim"
-          onclick="loadPage('Reg/docPortal.html',null,'Add Sim','ti-device-sim','New sim','var(--amber-dim)','var(--amber)')">
+          onclick="loadPage('Reg/addSim.html',null,'Add Sim','ti-device-sim','New sim','var(--purple-dim)','var(--purple)')">
           <i class="ti ti-device-sim"></i><span> Add Sim</span>
+        </button>
+        <button class="tb-sc doc"
+          onclick="loadPage('Reg/docPortal.html',null,'Add Documents','ti-file-plus','Upload new document','var(--red-dim)','var(--red)')">
+          <i class="ti ti-file-plus"></i><span> Add Doc</span>
         </button>
       </div>
 
@@ -951,24 +959,36 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
     <!-- ICON BAR — never hides, always scrollable -->
     <nav id="icon-bar" aria-label="Navigation">
       <div class="ib-divider"></div>
-      <button class="ib-btn active" id="ib-emp" onclick="ibOpen('ib-emp',this)" title="Employees">
+      
+		<button class="ib-btn active" id="ib-emp" onclick="ibOpen('ib-emp',this)" title="Employees">
         <i class="ti ti-users"></i><span class="ib-tip">Employees</span>
       </button>
-      <button class="ib-btn" id="ib-bike" onclick="ibOpen('ib-bike',this)" title="Bike Fleet">
+      
+		<button class="ib-btn" id="ib-bike" onclick="ibOpen('ib-bike',this)" title="Bike Fleet">
         <i class="ti ti-motorbike"></i><span class="ib-tip">Bike Fleet</span>
       </button>
-      <button class="ib-btn" id="ib-sim" onclick="ibOpen('ib-sim',this)" title="SIM Cards">
+      
+		<button class="ib-btn" id="ib-sim" onclick="ibOpen('ib-sim',this)" title="SIM Cards">
        <i class="ti ti-device-sim"></i><span class="ib-tip">SIM Cards</span>
-		
-
       </button>
+		
       <button class="ib-btn" id="ib-adv" onclick="ibOpen('ib-adv',this)" title="Advance Salary">
         <i class="ti ti-cash"></i><span class="ib-tip">Advance Salary</span>
       </button>
-      <button class="ib-btn" id="ib-docs" onclick="ibOpen('ib-docs',this)" title="Expiring Docs">
-        <i class="ti ti-file-alert"></i><span class="ib-tip">Expiring Docs</span>
+		
+      <button class="ib-btn" id="ib-docs" onclick="ibOpen('ib-docs',this)" title="Document">
+        <i class="ti ti-file-description"></i><span class="ib-tip">Document</span>
       </button>
+
+      <button class="ib-btn" id="ib-payroll" onclick="ibOpen('ib-payroll',this)" title="Payroll">
+        <i class="ti ti-report-money"></i><span class="ib-tip">Payroll</span>
+      </button>
+
       <div class="ib-spacer"></div>
+
+      <button class="ib-btn" id="ib-admin" onclick="ibOpen('ib-admin',this)" title="Admin">
+        <i class="ti ti-settings"></i><span class="ib-tip">Admin</span>
+      </button>
     </nav>
 
     <!-- SUB BAR -->
@@ -1267,30 +1287,52 @@ const SECTIONS = {
     ],
   },
 
-// 'ib-docportal': {
-//   icon:'ti-folder-open', label:'Doc Portal',
-//   pageLabel:'Doc Portal', pageSub:'Document uploads',
-//   pillBg:'var(--teal-dim)', pillColor:'var(--teal)', pillIcon:'ti-folder-open',
-//   permKey: 'ap2_docLog',
-//   groups:[
-//     { label:'Documents', items:[
-//       { label:'Doc Log',       file:'Reg/docLog.html',    icon:'ti-list',   sub:'All uploaded documents'      },
-//       { label:'Upload Doc',    file:'Reg/uploadDoc.html', icon:'ti-upload', sub:'Upload new document'         },
-//       { label:'Expiring Docs', file:'Reg/docExp.html',    icon:'ti-file-x', sub:'Expiring documents', badge:true },
-//     ]},
-//   ],
-// },
-
 	
   'ib-docs': {
-    icon:'ti-file-alert', label:'Expiring Docs',
-    pageLabel:'Expiring Docs', pageSub:'Document tracker',
-    pillBg:'var(--red-dim)', pillColor:'var(--red)', pillIcon:'ti-file-alert',
+    icon:'ti-file-description', label:'Document',
+    pageLabel:'Document', pageSub:'Document manager',
+    pillBg:'var(--red-dim)', pillColor:'var(--red)', pillIcon:'ti-file-description',
     permKey: null,   // section always shown if at least one child item is permitted
     groups:[
+      { label:'Directory', items:[
+        { label:'Add Documents', file:'Reg/docPortal.html', icon:'ti-file-plus', sub:'Upload new document' },
+      ]},
       { label:'Expiry Tracker', items:[
-        { label:'Employee Docs', file:'pages/empExp.html', icon:'ti-users',     sub:'Visa · EID · Labour', badge:true, permKey:'ap2_employee' },
-        { label:'Bike Docs',     file:'pages/bikExp.html', icon:'ti-motorbike', sub:'Mulkiya · Insurance',  badge:true, permKey:'ap2_bike'     },
+        { label:'Employee Docs', file:'Reg/salik.html', icon:'ti-users',     sub:'Visa · EID · Labour', badge:true, permKey:'ap2_employee' },
+        { label:'Bike Docs',     file:'Reg/dedEngine.html', icon:'ti-motorbike', sub:'Mulkiya · Insurance',  badge:true, permKey:'ap2_bike'     },
+        { label:'SIM Pkg Docs',  file:'Reg/userAdmin.html', icon:'ti-device-sim', sub:'SIM package expiry', badge:true, permKey:'ap2_loginData'  },
+		{ label:'SIM Pkg Docs',  file:'Reg/dedPivot.html', icon:'ti-device-sim', sub:'SIM package expiry', badge:true, permKey:'ap2_loginData'  },
+		{ label:'SIM Pkg Docs',  file:'Reg/userAdmin.html', icon:'ti-device-sim', sub:'SIM package expiry', badge:true, permKey:'ap2_loginData'  },
+		{ label:'SIM Pkg Docs',  file:'Reg/userAdmin.html', icon:'ti-device-sim', sub:'SIM package expiry', badge:true, permKey:'ap2_loginData'  },
+		{ label:'SIM Pkg Docs',  file:'Reg/userAdmin.html', icon:'ti-device-sim', sub:'SIM package expiry', badge:true, permKey:'ap2_loginData'  },
+
+      ]},
+    ],
+  },
+
+  'ib-payroll': {
+    icon:'ti-report-money', label:'Payroll',
+    pageLabel:'Payroll', pageSub:'Payroll & deductions',
+    pillBg:'var(--orange-dim)', pillColor:'var(--orange)', pillIcon:'ti-report-money',
+    permKey: 'ap2_dedLog',
+    groups:[
+      { label:'Payroll', items:[
+        { label:'Salik',       file:'Reg/salik.html',    icon:'ti-road',       sub:'Toll charges'        },
+        { label:'Bike Fine',   file:'Reg/accLog.html', icon:'ti-ticket',     sub:'Traffic fines'       },
+        { label:'Deductions',  file:'Reg/dedEngine.html', icon:'ti-wallet-off', sub:'Salary deductions'  },
+      ]},
+    ],
+  },
+
+  'ib-admin': {
+    icon:'ti-settings', label:'Admin',
+    pageLabel:'Admin', pageSub:'System administration',
+    pillBg:'var(--surface2)', pillColor:'var(--text)', pillIcon:'ti-settings',
+    permKey: 'ap2_loginData',
+    groups:[
+      { label:'Admin', items:[
+        { label:'User Management', file:'Reg/userAdmin.html', icon:'ti-user-cog', sub:'Manage user access' },
+        { label:'Audit Logs',      file:'Reg/userAdmin.html', icon:'ti-history',  sub:'System activity log' },
       ]},
     ],
   },
@@ -1355,6 +1397,7 @@ function _applyPermissions() {
   const shortcutGates = [
     { sel: '.tb-sc.emp',  permKey: 'ap2_employee' },
     { sel: '.tb-sc.bike', permKey: 'ap2_bike'     },
+    { sel: '.tb-sc.sim',  permKey: 'ap2_sim'      },
     { sel: '.tb-sc.adv',  permKey: 'ap2_master'   },
   ];
   for (const { sel, permKey } of shortcutGates) {
@@ -1615,16 +1658,16 @@ function closeThemeDropdown() {
     const raw = sessionStorage.getItem('ap_session');
     if (!raw) {
       console.warn('[index] auth.js not loaded and no session found — redirecting');
-      window.location.replace('https://effimalik.github.io/Testing/login.html');
+      window.location.replace('https://effimalik.github.io/Test/login.html');
       return;
     }
     const s = JSON.parse(raw);
     if (!s || !s.sessionId || !s.token || !s.email) {
-      window.location.replace('https://effimalik.github.io/Testing/login.html');
+      window.location.replace('https://effimalik.github.io/Test/login.html');
     }
   } catch (e) {
     console.error('[sessionGuard] Error — redirecting to be safe:', e);
-    window.location.replace('https://effimalik.github.io/Testing/login.html');
+    window.location.replace('https://effimalik.github.io/Test/login.html');
   }
 })();
 
@@ -1635,7 +1678,7 @@ function signOut() {
   } else {
     // Fallback if auth.js failed to load
     sessionStorage.removeItem('ap_session');
-    window.location.replace('https://effimalik.github.io/Testing/login.html');
+    window.location.replace('https://effimalik.github.io/Test/login.html');
   }
 }
 
