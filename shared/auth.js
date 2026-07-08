@@ -23,8 +23,8 @@
   const INACTIVITY_TTL   = 30 * 60 * 1000;   // 30 min idle
   const ABSOLUTE_TTL     = 8  * 60 * 60 * 1000; // 8 hr hard limit
   const SERVER_CHECK_INT = 5  * 60 * 1000;    // server ping every 5 min
-  const ALLOWED_ORIGIN   = 'https://effimalik.github.io/Testing/';
- const API_BASE = 'https://script.google.com/macros/s/AKfycbwYHHEKEe2gBdgaAnplfWum-NbQioqS8Lrz1RIp83t45ciTM_u2dk3eWTfa0xbkoQpVbQ/exec';
+  const ALLOWED_ORIGIN   = 'https://effimalik.github.io/Test/';
+ const API_BASE = 'https://script.google.com/macros/s/AKfycbym4nntllJyqg6_9paii8X-PDk5zT5SY-XPjMbMaI2S9whTNk2KykMGiGd3EmkepUcyLw/exec';
      
 
 

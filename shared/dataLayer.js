@@ -41,9 +41,15 @@
   /* ─────────────────────────────────────────
      CONFIG — must match auth.js API_BASE
   ───────────────────────────────────────── */
-  const API_BASE = 'https://script.google.com/macros/s/AKfycbwYHHEKEe2gBdgaAnplfWum-NbQioqS8Lrz1RIp83t45ciTM_u2dk3eWTfa0xbkoQpVbQ/exec';
+  // const API_BASE = 'https://script.google.com/macros/s/AKfycby1_PVgu0xrKKx--Kx4GA6xqN3Emb6MrE9Z1Sxa62yG7EGZm8Xe5uzV1022vBvL2KxOmg/exec';
+   const API_BASE = 'https://script.google.com/macros/s/AKfycbym4nntllJyqg6_9paii8X-PDk5zT5SY-XPjMbMaI2S9whTNk2KykMGiGd3EmkepUcyLw/exec';
 
   const CACHE_PREFIX = 'ap2_';
+
+  // Dataset keys that intentionally return a multi-sheet object
+  // instead of a flat array. Add to this only when a backend handler
+  // genuinely needs to bundle multiple sheets in one response.
+  const OBJECT_SHAPE_DATASETS = new Set(['ap2_loginData']);
 
   /* ─────────────────────────────────────────
      LOGOUT CLEANUP
@@ -506,16 +512,34 @@
         throw new Error(`[DataLayer] ${dsKey} API error: ${msg}`);
       }
 
-      const data = _normaliseRows(json);
+      let data;
 
-      if (!Array.isArray(data) || data.length === 0) {
-        console.warn(`[DataLayer] ${dsKey}: empty response — not caching`);
-        throw new Error(`[DataLayer] ${dsKey}: empty or invalid data received`);
+      if (OBJECT_SHAPE_DATASETS.has(dsKey)) {
+        // Special case: combo payload, not a flat row array.
+        // Validate it has the expected sub-keys with array values.
+        if (!json || typeof json !== 'object' || Array.isArray(json)) {
+          throw new Error(`[DataLayer] ${dsKey}: expected object payload, got ${Array.isArray(json) ? 'array' : typeof json}`);
+        }
+        const hasAnyData = Object.values(json).some(v => Array.isArray(v) && v.length > 0);
+        if (!hasAnyData) {
+          console.warn(`[DataLayer] ${dsKey}: empty response — not caching`);
+          throw new Error(`[DataLayer] ${dsKey}: empty or invalid data received`);
+        }
+        data = json; // store as-is, no row normalisation
+      } else {
+        // Standard contract: flat array of rows.
+        data = _normaliseRows(json);
+        if (!Array.isArray(data) || data.length === 0) {
+          console.warn(`[DataLayer] ${dsKey}: empty response — not caching`);
+          throw new Error(`[DataLayer] ${dsKey}: empty or invalid data received`);
+        }
       }
 
       _cache.set(dsKey, data);
       const elapsed = Math.round(performance.now() - t0);
-      console.log(`[DataLayer] ${dsKey}: cached ${data.length} rows (${elapsed} ms)`);
+      console.log(`[DataLayer] ${dsKey}: cached`,
+        Array.isArray(data) ? `${data.length} rows` : Object.keys(data).map(k => `${k}:${data[k].length}`).join(', '),
+        `(${elapsed} ms)`);
       return data;
     })();
 
