@@ -771,7 +771,7 @@
         if (ageMs !== Infinity) {
           const d = new Date(Date.now() - ageMs);
           lastSync = d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })
-            + ', ' + d.toLocaleDateString([], { day:'2-digit', month:'short' });
+            + ', ' + d.toLocaleDaTestingring([], { day:'2-digit', month:'short' });
         }
 
         const rowCount  = (entry && Array.isArray(entry.data)) ? entry.data.length : null;
