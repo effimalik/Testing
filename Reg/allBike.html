@@ -7,10 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
-<script src="https://effimalik.github.io/Test/shared/auth.js"></script>
-<script src="https://effimalik.github.io/Test/shared/code.js"></script>
-<script src="https://effimalik.github.io/Test/shared/dataLayer.js"></script>
-<script src="https://effimalik.github.io/Test/shared/devPre.js"></script>
+<script src="https://effimalik.github.io/Testinging/shared/auth.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/code.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/devPre.js"></script>
 
 <style>
 /* ── Reset ── */
@@ -459,9 +459,9 @@ function isExpired(d)  { return daysUntil(d) < 0; }
 function isExpiring(d) { const n = daysUntil(d); return n >= 0 && n <= WARN_DAYS; }
 function hasDate(d)    { return d && String(d).trim().length > 0; }
 
-function computeDoc(dateStr) {
-  if (!dateStr || String(dateStr).trim() === '') return { date: null, status: 'expired', color: 'red' };
-  const d = String(dateStr).trim();
+function computeDoc(daTestingr) {
+  if (!daTestingr || String(daTestingr).trim() === '') return { date: null, status: 'expired', color: 'red' };
+  const d = String(daTestingr).trim();
   if (isExpired(d))  return { date: d, status: 'expired',  color: 'red'   };
   if (isExpiring(d)) return { date: d, status: 'expiring', color: 'amber' };
   return               { date: d, status: 'valid',    color: 'teal'  };
@@ -478,9 +478,9 @@ function fleetAvailable(b) {
   return (b.status || '').toLowerCase().trim() === 'available';
 }
 
-function fmtDateStr(d) {
+function fmtDaTestingr(d) {
   if (!d) return null;
-  try { return new Date(d).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); } catch { return d; }
+  try { return new Date(d).toLocaleDaTestingring('en-GB', { day:'2-digit', month:'short', year:'numeric' }); } catch { return d; }
 }
 
 /* ═══════════ IDB — SINGLE SOURCE: ap2_bike in ap2_fleet_cache ═══════════ */
@@ -648,7 +648,7 @@ function getFilteredBikes(list) {
 /* ═══════════ ROW BUILDER ═══════════ */
 function _docDot(doc, label) {
   const color = doc.status === 'valid' ? 'var(--teal)' : doc.status === 'expiring' ? 'var(--amber)' : 'var(--red)';
-  const tip   = `${label}: ${doc.date ? (fmtDateStr(doc.date) || doc.date) : 'missing'}`;
+  const tip   = `${label}: ${doc.date ? (fmtDaTestingr(doc.date) || doc.date) : 'missing'}`;
   return `<span title="${tip}" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0;"></span>`;
 }
 
@@ -920,7 +920,7 @@ function viewBike(bikeId) {
 function _renderBikeDetail(bike) {
   function fmtD(d) {
     if (!d) return '<span style="color:var(--text3);">—</span>';
-    try { return new Date(d).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); } catch { return d; }
+    try { return new Date(d).toLocaleDaTestingring('en-GB', { day:'2-digit', month:'short', year:'numeric' }); } catch { return d; }
   }
   function exCard(label, docObj) {
     const s   = docObj?.status || 'expired';
