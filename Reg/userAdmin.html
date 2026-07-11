@@ -1006,7 +1006,7 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
    All READ data comes from the ap2_loginData IDB cache populated
    by dataLayer.js exactly as ap2_employee does in allEmp.html.
 ═══════════════════════════════════════════════════════ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyc4KWKFLSgT6pzLDW4sJpQCc8Ogveco_vZO1ngo4jp6k5igZoNalDxuklKv540aTZq/exec'; // ← paste your GAS URL here (needed for saves only)
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbym4nntllJyqg6_9paii8X-PDk5zT5SY-XPjMbMaI2S9whTNk2KykMGiGd3EmkepUcyLw/exec'; // ← paste your GAS URL here (needed for saves only)
 
 /* ═══════════════════════════════════════════════════════
    IDB CONFIG — mirrors allEmp.html exactly
@@ -1725,7 +1725,11 @@ function _buildPermGroups(container, email) {
       const apiKey   = existing ? (existing.apiKey   || ds.apiKey)   : ds.apiKey;
       const paramKey = existing ? (existing.paramKey || ds.paramKey) : ds.paramKey;
       const ttl      = existing ? (existing.ttl      || ds.ttl)      : ds.ttl;
-      const access   = _parseAccessStr(paramKey);
+      // Existing grant → decode its real bits. Freshly toggled-on for the
+      // first time → always start view-only; add/editDelete must be
+      // opted into explicitly rather than inherited from the catalogue
+      // default (which may reflect some other user's fuller grant).
+      const access = existing ? _parseAccessStr(paramKey) : { view: true, add: false, editDelete: false };
       const cardId = `pcard-${container.id}-${ds.key.replace(/[^a-z0-9]/gi,'_')}`;
 
       return `<div class="perm-row ${isOn ? 'on' : ''}" id="${cardId}">
