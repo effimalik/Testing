@@ -1,0 +1,592 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://effimalik.github.io/Test/shared/auth.js"></script>
+<script src="https://effimalik.github.io/Test/shared/code.js"></script>
+<script src="https://effimalik.github.io/Test/shared/dataLayer.js"></script>
+<script src="https://effimalik.github.io/Test/shared/devPre.js"></script>
+<script src="https://effimalik.github.io/Test/shared/cioView.js"></script>
+<style>
+  :root{
+    --bg:#F5F6F8; --surface:#FFFFFF; --ink:#151A23; --ink-soft:#5B6472; --border:#E2E5EA;
+    --navy:#10243E; --navy-soft:#1B3A5C; --teal:#1E7F73; --teal-soft:#E6F2EF;
+    --amber:#B8722C; --amber-soft:#FBF0E4; --red:#B4432F; --red-soft:#FBE7E4; --radius:8px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;}
+  .app{max-width:1220px;margin:0 auto;padding:28px 24px 80px;}
+  header.top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px;padding-bottom:18px;border-bottom:2px solid var(--navy);}
+  header.top .brand{display:flex;align-items:baseline;gap:12px;}
+  header.top h1{font-family:'Space Grotesk',sans-serif;font-size:22px;letter-spacing:-0.01em;margin:0;color:var(--navy);}
+  header.top .tag{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);background:var(--surface);border:1px solid var(--border);padding:3px 8px;border-radius:4px;}
+  header.top .stamp{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--teal);border:1.5px solid var(--teal);padding:4px 10px;border-radius:4px;transform:rotate(-2deg);font-weight:600;letter-spacing:.04em;}
+
+  nav.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);}
+  nav.tabs button{font-size:14px;font-weight:500;color:var(--ink-soft);background:none;border:none;padding:10px 16px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;}
+  nav.tabs button.active{color:var(--navy);border-bottom-color:var(--navy);font-weight:600;}
+  nav.tabs button:hover{color:var(--navy);}
+  section.tab{display:none;} section.tab.active{display:block;}
+
+  .grid2{display:grid;grid-template-columns:360px 1fr;gap:20px;align-items:start;}
+  @media (max-width:860px){.grid2{grid-template-columns:1fr;}}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+  .card h2{font-family:'Space Grotesk',sans-serif;font-size:15px;margin:0 0 14px;color:var(--navy);}
+  .card + .card{margin-top:20px;}
+
+  label{display:block;font-size:12px;color:var(--ink-soft);margin:10px 0 4px;font-weight:500;}
+  label:first-of-type{margin-top:0;}
+  input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:'Inter',sans-serif;font-size:13.5px;background:#fff;color:var(--ink);}
+  input:focus,select:focus{outline:2px solid var(--teal);outline-offset:1px;border-color:var(--teal);}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .hint{font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
+  .error{color:var(--red);font-size:12px;margin-top:6px;}
+
+  button.btn{font-weight:600;font-size:13px;padding:9px 16px;border-radius:6px;border:none;cursor:pointer;}
+  button.btn-primary{background:var(--navy);color:#fff;}
+  button.btn-primary:hover{background:var(--navy-soft);}
+  button.btn-ghost{background:none;border:1px solid var(--border);color:var(--ink-soft);}
+  button.btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
+  .btn-row{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;}
+  .small-btn{font-size:11px;padding:4px 8px;border-radius:5px;border:1px solid var(--border);background:#fff;color:var(--ink-soft);cursor:pointer;}
+  .small-btn:hover{color:var(--red);border-color:var(--red);}
+  .import-drop{border:1.5px dashed var(--border);border-radius:8px;padding:16px;text-align:center;font-size:12.5px;color:var(--ink-soft);}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);border-bottom:1px solid var(--border);padding:8px 10px;font-weight:600;}
+  td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:#FAFBFC;}
+  .empty{color:var(--ink-soft);font-size:13px;padding:24px 4px;text-align:center;}
+
+  .badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;}
+  .badge-active{background:var(--teal-soft);color:var(--teal);border:1px solid var(--teal);}
+  .badge-expired{background:var(--red-soft);color:var(--red);border:1px solid var(--red);}
+  .badge-missing{background:#EEF0F3;color:var(--ink-soft);border:1px solid var(--border);}
+  .badge-fallback{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber);transform:rotate(-1deg);display:inline-block;}
+  .badge-type{background:#EEF0F3;color:var(--ink-soft);}
+
+  .mode-row{display:flex;gap:8px;margin-bottom:18px;}
+  .mode-btn{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;padding:10px 20px;border-radius:7px;border:1.5px solid var(--border);background:#fff;color:var(--ink-soft);cursor:pointer;letter-spacing:.03em;}
+  .mode-btn.active{border-color:var(--navy);background:var(--navy);color:#fff;}
+  .mode-btn:hover:not(.active){border-color:var(--navy);color:var(--navy);}
+
+  .filters{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:end;}
+  .filters > div{min-width:150px;}
+  .filters label{margin-top:0;}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>WPS Account Resolver</h1>
+      <span class="tag">EID · AccType · validity engine</span>
+    </div>
+    <span class="stamp">AUDIT-READY</span>
+  </header>
+
+  <nav class="tabs">
+    <button data-tab="import" class="active">Import &amp; Add</button>
+    <button data-tab="resolver">Resolver</button>
+    <button data-tab="log">Full Log</button>
+  </nav>
+
+  <!-- IMPORT & ADD -->
+  <section class="tab active" id="tab-import">
+    <div class="grid2">
+      <div class="card">
+        <h2>Add a record</h2>
+        <label>EID</label>
+        <select id="r-eid"></select>
+        <div class="hint">List is cached from your ap2_employee upload (right panel). Shows EmpID – Name, stores only the EmpID.</div>
+        <label>AccType</label>
+        <select id="r-acctype">
+          <option value="WPS">WPS</option>
+          <option value="Salary">Salary</option>
+          <option value="Advance">Advance</option>
+          <option value="Personal">Personal</option>
+          <option value="Other">Other</option>
+        </select>
+        <label>Account No</label>
+        <input id="r-accno" class="mono" placeholder="IBAN / card / account number">
+        <label>AddDetail</label>
+        <input id="r-adddetail" placeholder="bank name, branch, etc.">
+        <label>Comment</label>
+        <input id="r-comment" placeholder="free text note">
+        <label>StartDate</label>
+        <input id="r-start" type="date">
+        <label>ExpDate <span class="hint">(blank = no expiry)</span></label>
+        <input id="r-exp" type="date">
+        <div id="r-error" class="error"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="r-save">Add record</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Employee master (ap2_employee)</h2>
+        <p class="hint" style="margin-top:0;">
+          Cache your employee list here — columns <span class="mono">EmpID, Name</span>. Once cached, the EID dropdown on the left shows "EmpID – Name" but only ever stores the EmpID. This stays cached in the browser until you replace or clear it.
+        </p>
+        <div class="import-drop">
+          <input type="file" id="emp-csv-file" accept=".csv" style="margin-bottom:8px;">
+          <div class="btn-row" style="justify-content:center;">
+            <button class="btn btn-primary" id="emp-csv-import">Cache list</button>
+            <button class="btn btn-ghost" id="emp-csv-template">Download template</button>
+            <button class="btn btn-ghost" id="emp-clear">Clear cache</button>
+          </div>
+        </div>
+        <div id="emp-csv-error" class="error"></div>
+        <div id="emp-summary" class="hint" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="card">
+        <h2>Bulk import (CSV)</h2>
+        <p class="hint" style="margin-top:0;">
+          Upload a file with columns exactly: <span class="mono">EID, AccType, Account No, AddDetail, Comment, StartDate, ExpDate</span>. Dates as YYYY-MM-DD. Existing rows are never overwritten — every import just adds new records, so history stays intact.
+        </p>
+        <div class="import-drop">
+          <input type="file" id="csv-file" accept=".csv" style="margin-bottom:8px;">
+          <div class="btn-row" style="justify-content:center;">
+            <button class="btn btn-primary" id="csv-import">Import CSV</button>
+            <button class="btn btn-ghost" id="csv-template">Download template</button>
+          </div>
+        </div>
+        <div id="csv-error" class="error"></div>
+
+        <h2 style="margin-top:22px;">Records loaded</h2>
+        <div id="import-summary" class="hint"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESOLVER -->
+  <section class="tab" id="tab-resolver">
+    <div class="card">
+      <h2>Which account is active right now?</h2>
+      <p class="hint" style="margin-top:0;">
+        Pick a mode. <strong>WPS</strong> and <strong>Salary</strong> show only that type, only if currently valid. <strong>Advance</strong> shows the Advance (override) account if valid — if it's missing or expired, it falls back to that EID's Salary account. Anything with no valid account for the mode is skipped here (it's still in the Full Log).
+      </p>
+      <div class="mode-row">
+        <button class="mode-btn active" data-mode="WPS">WPS</button>
+        <button class="mode-btn" data-mode="Salary">Salary</button>
+        <button class="mode-btn" data-mode="Advance">Advance</button>
+      </div>
+      <div id="resolver-table"></div>
+    </div>
+
+    <div class="card">
+      <h2>Status overview — all types, all EIDs</h2>
+      <p class="hint" style="margin-top:0;">Reference view: current status per EID across all three types, regardless of which mode is selected above.</p>
+      <div id="status-table"></div>
+    </div>
+  </section>
+
+  <!-- FULL LOG -->
+  <section class="tab" id="tab-log">
+    <div class="card">
+      <div class="toolbar">
+        <h2 style="margin:0;">Full log</h2>
+        <button class="btn btn-ghost" id="export-csv">Export CSV</button>
+      </div>
+      <div class="filters">
+        <div>
+          <label>EID</label>
+          <select id="f-eid"><option value="">All</option></select>
+        </div>
+        <div>
+          <label>AccType</label>
+          <select id="f-acctype"><option value="">All</option></select>
+        </div>
+        <div>
+          <label>Status</label>
+          <select id="f-status">
+            <option value="">All</option>
+            <option value="active">Active only</option>
+            <option value="expired">Expired only</option>
+          </select>
+        </div>
+      </div>
+      <div id="log-table"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+let RECORDS = [];
+let EMPLOYEES = [];
+let loaded = false;
+let currentMode = 'WPS';
+
+function uid(){ return 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function esc(s){ return (s??'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function normType(t){ return (t||'').trim().toUpperCase(); }
+function nameForEid(eid){ const e = EMPLOYEES.find(x=>x.empid===eid); return e ? e.name : ''; }
+
+function isActive(r){
+  const t = todayISO();
+  if(r.expDate && r.expDate < t) return false;
+  if(r.startDate && r.startDate > t) return false;
+  return true;
+}
+
+async function loadData(){
+  try{
+    const res = await window.storage.get('wps-resolver-records');
+    if(res && res.value){ RECORDS = JSON.parse(res.value); }
+  }catch(e){ /* nothing saved yet */ }
+  try{
+    const res2 = await window.storage.get('wps-employee-master');
+    if(res2 && res2.value){ EMPLOYEES = JSON.parse(res2.value); }
+  }catch(e){ /* nothing cached yet */ }
+  loaded = true;
+  renderAll();
+}
+async function saveData(){
+  try{ await window.storage.set('wps-resolver-records', JSON.stringify(RECORDS)); }
+  catch(e){ console.error('Storage error', e); alert('Could not save — please try again.'); }
+}
+async function saveEmployees(){
+  try{ await window.storage.set('wps-employee-master', JSON.stringify(EMPLOYEES)); }
+  catch(e){ console.error('Storage error', e); alert('Could not save employee cache — please try again.'); }
+}
+
+// ---------- TABS ----------
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('section.tab').forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    renderAll();
+  });
+});
+
+// ---------- EMPLOYEE MASTER (ap2_employee) ----------
+function refreshEidSelect(){
+  const sel = document.getElementById('r-eid');
+  const cur = sel.value;
+  if(EMPLOYEES.length){
+    const sorted = EMPLOYEES.slice().sort((a,b)=> a.empid.localeCompare(b.empid));
+    sel.innerHTML = '<option value="">Select employee…</option>' +
+      sorted.map(e=>`<option value="${esc(e.empid)}">${esc(e.empid)} – ${esc(e.name)}</option>`).join('');
+  } else {
+    sel.innerHTML = '<option value="">Upload employee list first (right panel)</option>';
+  }
+  if([...sel.options].some(o=>o.value===cur)) sel.value = cur;
+}
+
+function refreshEmpSummary(){
+  document.getElementById('emp-summary').textContent = EMPLOYEES.length
+    ? `${EMPLOYEES.length} employee(s) cached.`
+    : 'No employee list cached yet.';
+}
+
+document.getElementById('emp-csv-template').addEventListener('click', ()=>{
+  const blob = new Blob(['EmpID,Name\n40231,Amir Farooq\n40232,Sana Iqbal'], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='ap2_employee-template.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('emp-csv-import').addEventListener('click', async ()=>{
+  const fileInput = document.getElementById('emp-csv-file');
+  const errEl = document.getElementById('emp-csv-error');
+  errEl.textContent = '';
+  if(!fileInput.files.length){ errEl.textContent = 'Choose a CSV file first.'; return; }
+  const text = await fileInput.files[0].text();
+  let rows;
+  try{ rows = parseCSV(text); } catch(e){ errEl.textContent = 'Could not read that file as CSV.'; return; }
+  if(!rows.length){ errEl.textContent = 'No rows found in the file.'; return; }
+
+  let added = 0, updated = 0;
+  rows.forEach(row=>{
+    const empid = (row.empid||'').trim();
+    const name = (row.name||'').trim();
+    if(!empid) return;
+    const existing = EMPLOYEES.find(e=>e.empid===empid);
+    if(existing){ existing.name = name; updated++; }
+    else{ EMPLOYEES.push({ empid, name }); added++; }
+  });
+  await saveEmployees();
+  fileInput.value = '';
+  refreshEidSelect();
+  refreshEmpSummary();
+  renderAll();
+  alert(`Cached ${added} new employee(s), updated ${updated} existing.`);
+});
+
+document.getElementById('emp-clear').addEventListener('click', async ()=>{
+  if(!confirm('Clear the cached employee list? Existing account records are unaffected.')) return;
+  EMPLOYEES = [];
+  await saveEmployees();
+  refreshEidSelect();
+  refreshEmpSummary();
+  renderAll();
+});
+
+// ---------- ADD RECORD ----------
+document.getElementById('r-save').addEventListener('click', async ()=>{
+  const eid = document.getElementById('r-eid').value.trim();
+  const accType = document.getElementById('r-acctype').value;
+  const accountNo = document.getElementById('r-accno').value.trim();
+  const addDetail = document.getElementById('r-adddetail').value.trim();
+  const comment = document.getElementById('r-comment').value.trim();
+  const startDate = document.getElementById('r-start').value;
+  const expDate = document.getElementById('r-exp').value;
+  const errEl = document.getElementById('r-error');
+  if(!eid){ errEl.textContent = 'EID is required.'; return; }
+  if(!accountNo){ errEl.textContent = 'Account No is required.'; return; }
+  errEl.textContent = '';
+  RECORDS.push({ id: uid(), eid, accType, accountNo, addDetail, comment, startDate, expDate });
+  ['r-eid','r-accno','r-adddetail','r-comment','r-start','r-exp'].forEach(id=>document.getElementById(id).value='');
+  await saveData();
+  renderAll();
+});
+
+// ---------- CSV IMPORT ----------
+function parseCSV(text){
+  const lines = text.replace(/\r/g,'').split('\n').filter(l=>l.trim().length);
+  if(!lines.length) return [];
+  const splitLine = (line)=>{
+    const out=[]; let cur=''; let inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c = line[i];
+      if(c==='"'){ inQ=!inQ; continue; }
+      if(c===',' && !inQ){ out.push(cur); cur=''; continue; }
+      cur+=c;
+    }
+    out.push(cur);
+    return out.map(s=>s.trim());
+  };
+  const header = splitLine(lines[0]).map(h=>h.toLowerCase().replace(/\s+/g,''));
+  return lines.slice(1).map(line=>{
+    const cells = splitLine(line);
+    const row = {};
+    header.forEach((h,i)=> row[h]=cells[i] ?? '');
+    return row;
+  });
+}
+
+document.getElementById('csv-template').addEventListener('click', ()=>{
+  const header = 'EID,AccType,Account No,AddDetail,Comment,StartDate,ExpDate';
+  const r1 = '40231,WPS,AE070331234567890123456,Emirates NBD,Primary WPS account,2026-01-01,';
+  const r2 = '40231,Advance,AE07033123456789ADVANCE,Emirates NBD,July advance,2026-07-01,2026-07-16';
+  const blob = new Blob([[header,r1,r2].join('\n')], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='wps-resolver-template.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('csv-import').addEventListener('click', async ()=>{
+  const fileInput = document.getElementById('csv-file');
+  const errEl = document.getElementById('csv-error');
+  errEl.textContent = '';
+  if(!fileInput.files.length){ errEl.textContent = 'Choose a CSV file first.'; return; }
+  const text = await fileInput.files[0].text();
+  let rows;
+  try{ rows = parseCSV(text); } catch(e){ errEl.textContent = 'Could not read that file as CSV.'; return; }
+  if(!rows.length){ errEl.textContent = 'No rows found in the file.'; return; }
+
+  let added = 0;
+  rows.forEach(row=>{
+    const eid = (row.eid||'').trim();
+    const accountNo = (row.accountno||'').trim();
+    if(!eid || !accountNo) return;
+    RECORDS.push({
+      id: uid(), eid,
+      accType: (row.acctype||'').trim() || 'Other',
+      accountNo,
+      addDetail: (row.adddetail||'').trim(),
+      comment: (row.comment||'').trim(),
+      startDate: (row.startdate||'').trim(),
+      expDate: (row.expdate||'').trim()
+    });
+    added++;
+  });
+  await saveData();
+  renderAll();
+  fileInput.value = '';
+  alert(`Imported ${added} record(s).`);
+});
+
+function removeRecord(id){
+  if(!confirm('Remove this record permanently? It will also disappear from the Full Log.')) return;
+  RECORDS = RECORDS.filter(r=>r.id!==id);
+  saveData().then(renderAll);
+}
+
+// ---------- RESOLVER LOGIC ----------
+function distinctEIDs(){
+  return [...new Set(RECORDS.map(r=>r.eid))].sort();
+}
+function recordsFor(eid, type){
+  return RECORDS.filter(r=> r.eid===eid && normType(r.accType)===type);
+}
+function latestActive(eid, type){
+  const matches = recordsFor(eid, type).filter(isActive);
+  if(!matches.length) return null;
+  matches.sort((a,b)=> (b.startDate||'').localeCompare(a.startDate||''));
+  return matches[0];
+}
+function statusFor(eid, type){
+  const all = recordsFor(eid, type);
+  if(!all.length) return 'missing';
+  return latestActive(eid, type) ? 'active' : 'expired';
+}
+function resolve(eid, mode){
+  if(mode === 'WPS'){
+    const rec = latestActive(eid, 'WPS');
+    return rec ? { rec, usedType:'WPS' } : null;
+  }
+  if(mode === 'Salary'){
+    const rec = latestActive(eid, 'SALARY');
+    return rec ? { rec, usedType:'Salary' } : null;
+  }
+  if(mode === 'Advance'){
+    let rec = latestActive(eid, 'ADVANCE');
+    if(rec) return { rec, usedType:'Advance' };
+    rec = latestActive(eid, 'SALARY');
+    if(rec) return { rec, usedType:'Salary (fallback)' };
+    return null;
+  }
+  return null;
+}
+
+document.querySelectorAll('.mode-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMode = btn.dataset.mode;
+    renderResolver();
+  });
+});
+
+function renderResolver(){
+  const el = document.getElementById('resolver-table');
+  const eids = distinctEIDs();
+  const rows = [];
+  eids.forEach(eid=>{
+    const result = resolve(eid, currentMode);
+    if(!result) return; // skip — no valid account for this mode
+    const r = result.rec;
+    const fallback = result.usedType.includes('fallback');
+    rows.push(`<tr>
+      <td class="mono">${esc(eid)}</td>
+      <td>${esc(nameForEid(eid)||'—')}</td>
+      <td>${fallback ? `<span class="badge badge-fallback">${esc(result.usedType)}</span>` : `<span class="badge badge-type">${esc(result.usedType)}</span>`}</td>
+      <td class="mono">${esc(r.accountNo)}</td>
+      <td>${esc(r.addDetail||'—')}</td>
+      <td>${esc(r.comment||'—')}</td>
+      <td class="mono">${esc(r.startDate||'—')} → ${esc(r.expDate||'no expiry')}</td>
+      <td><span class="badge badge-active">ACTIVE</span></td>
+    </tr>`);
+  });
+  if(!rows.length){ el.innerHTML = `<div class="empty">No EID currently has a valid ${esc(currentMode)} account.</div>`; return; }
+  el.innerHTML = `<table><thead><tr>
+    <th>EID</th><th>Name</th><th>Used as</th><th>Account No</th><th>AddDetail</th><th>Comment</th><th>Validity</th><th>Status</th>
+  </tr></thead><tbody>${rows.join('')}</tbody></table>`;
+}
+
+function statusBadge(s){
+  if(s==='active') return '<span class="badge badge-active">ACTIVE</span>';
+  if(s==='expired') return '<span class="badge badge-expired">EXPIRED</span>';
+  return '<span class="badge badge-missing">—</span>';
+}
+
+function renderStatusTable(){
+  const el = document.getElementById('status-table');
+  const eids = distinctEIDs();
+  if(!eids.length){ el.innerHTML = '<div class="empty">No records yet.</div>'; return; }
+  const rows = eids.map(eid=>`<tr>
+    <td class="mono">${esc(eid)}</td>
+    <td>${esc(nameForEid(eid)||'—')}</td>
+    <td>${statusBadge(statusFor(eid,'WPS'))}</td>
+    <td>${statusBadge(statusFor(eid,'SALARY'))}</td>
+    <td>${statusBadge(statusFor(eid,'ADVANCE'))}</td>
+  </tr>`).join('');
+  el.innerHTML = `<table><thead><tr><th>EID</th><th>Name</th><th>WPS</th><th>Salary</th><th>Advance</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// ---------- FULL LOG ----------
+function refreshLogFilters(){
+  const eidSel = document.getElementById('f-eid');
+  const curEid = eidSel.value;
+  eidSel.innerHTML = '<option value="">All</option>' + distinctEIDs().map(e=>{
+    const nm = nameForEid(e);
+    return `<option value="${esc(e)}">${esc(e)}${nm ? ' – ' + esc(nm) : ''}</option>`;
+  }).join('');
+  eidSel.value = curEid;
+
+  const typeSel = document.getElementById('f-acctype');
+  const curType = typeSel.value;
+  const types = [...new Set(RECORDS.map(r=>r.accType).filter(Boolean))].sort();
+  typeSel.innerHTML = '<option value="">All</option>' + types.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  typeSel.value = curType;
+}
+['f-eid','f-acctype','f-status'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', renderLog);
+});
+
+function renderLog(){
+  const eidF = document.getElementById('f-eid').value;
+  const typeF = document.getElementById('f-acctype').value;
+  const statusF = document.getElementById('f-status').value;
+
+  let rows = RECORDS.filter(r=>{
+    if(eidF && r.eid !== eidF) return false;
+    if(typeF && r.accType !== typeF) return false;
+    if(statusF === 'active' && !isActive(r)) return false;
+    if(statusF === 'expired' && isActive(r)) return false;
+    return true;
+  });
+
+  const el = document.getElementById('log-table');
+  if(!rows.length){ el.innerHTML = '<div class="empty">No records match these filters.</div>'; return; }
+  const html = rows.map(r=>`<tr>
+    <td class="mono">${esc(r.eid)}</td>
+    <td>${esc(nameForEid(r.eid)||'—')}</td>
+    <td><span class="badge badge-type">${esc(r.accType)}</span></td>
+    <td class="mono">${esc(r.accountNo)}</td>
+    <td>${esc(r.addDetail||'—')}</td>
+    <td>${esc(r.comment||'—')}</td>
+    <td class="mono">${esc(r.startDate||'—')}</td>
+    <td class="mono">${esc(r.expDate||'no expiry')}</td>
+    <td>${isActive(r) ? '<span class="badge badge-active">ACTIVE</span>' : '<span class="badge badge-expired">EXPIRED</span>'}</td>
+    <td><button class="small-btn" onclick="removeRecord('${r.id}')">Remove</button></td>
+  </tr>`).join('');
+  el.innerHTML = `<table><thead><tr>
+    <th>EID</th><th>Name</th><th>AccType</th><th>Account No</th><th>AddDetail</th><th>Comment</th><th>StartDate</th><th>ExpDate</th><th>Status</th><th></th>
+  </tr></thead><tbody>${html}</tbody></table>`;
+}
+
+document.getElementById('export-csv').addEventListener('click', ()=>{
+  const header = ['EID','AccType','Account No','AddDetail','Comment','StartDate','ExpDate','Status'];
+  const lines = [header.join(',')];
+  RECORDS.forEach(r=>{
+    const row = [r.eid, r.accType, r.accountNo, r.addDetail, r.comment, r.startDate, r.expDate, isActive(r)?'ACTIVE':'EXPIRED']
+      .map(v => `"${(v??'').toString().replace(/"/g,'""')}"`);
+    lines.push(row.join(','));
+  });
+  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='wps-full-log.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ---------- RENDER ALL ----------
+function renderAll(){
+  if(!loaded) return;
+  document.getElementById('import-summary').textContent = `${RECORDS.length} record(s) on file across ${distinctEIDs().length} EID(s).`;
+  refreshEidSelect();
+  refreshEmpSummary();
+  renderResolver();
+  renderStatusTable();
+  refreshLogFilters();
+  renderLog();
+}
+
+loadData();
+</script>
