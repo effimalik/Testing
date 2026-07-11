@@ -1344,10 +1344,15 @@ let sidebarVisible = true;
 let subHideTimer = null;
 
 /* The Permissions sheet/session stores each granted dataset as an info
-   object (e.g. { label, apiKey, paramKey, ttlMs }), not a boolean — a key
-   is "permitted" simply by being present (and not explicitly disabled). */
+   object: { label, apiKey, paramKey:'type', ttlMs, access:{view,add,editDelete} }.
+   Nav visibility is gated on the VIEW bit specifically — a dataset present
+   with add/editDelete but no view shouldn't show up in the nav. Legacy
+   boolean shape (perms[key] === true) is still treated as view-only. */
 function _hasPerm(perms, key) {
-  return !!(perms && perms[key]);
+  if (!perms || !perms[key]) return false;
+  const p = perms[key];
+  if (p === true) return true;
+  return !!(p.access && p.access.view === true);
 }
 
 /* ══ PERMISSIONS — show/hide nav buttons based on Permissions sheet ══
