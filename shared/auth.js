@@ -24,7 +24,7 @@
   const ABSOLUTE_TTL     = 8  * 60 * 60 * 1000; // 8 hr hard limit
   const SERVER_CHECK_INT = 5  * 60 * 1000;    // server ping every 5 min
   const ALLOWED_ORIGIN   = 'https://effimalik.github.io/Testing/';
- const API_BASE = 'https://script.google.com/macros/s/AKfycbytcc-_oezvvbz-sy2-KGB-LucpvukdJKfDsb1sWIu9FizWHcJOXoplRXnaTB6bONlb/exec';
+ const API_BASE = 'https://script.google.com/macros/s/AKfycbym4nntllJyqg6_9paii8X-PDk5zT5SY-XPjMbMaI2S9whTNk2KykMGiGd3EmkepUcyLw/exec';
      
 
 
@@ -356,15 +356,36 @@
     },
 
     /**
-     * hasPermission(portal) — quick boolean check for a single portal.
-     * Returns true if the user has access, false if denied or no perms loaded.
+     * hasPermission(portal) — quick boolean check for a single portal's
+     * VIEW access. Returns true if the user can view it, false if denied,
+     * missing, or no perms loaded (fail-closed).
      * portal: 'ap2_employee' | 'ap2_bike' | 'ap2_master' | 'ap2_recovery' | 'ap2_approvedSheet' | 'ap2_cioLog'
      */
     hasPermission(portal) {
       try {
         const perms = this.getPermissions();
-        if (!perms) return false; // fail-closed: no perms = no access
-        return perms[portal] === true;
+        if (!perms || !perms[portal]) return false; // fail-closed: no perms = no access
+        const p = perms[portal];
+        if (p === true) return true; // legacy boolean shape
+        return !!(p.access && p.access.view === true);
+      } catch { return false; }
+    },
+
+    /**
+     * canDo(portal, action) — granular check against the ParamKey bits
+     * ("view-add-editDelete", e.g. "1-1-0") decoded server-side.
+     * action: 'view' | 'add' | 'editDelete'
+     * Returns false (fail-closed) if perms aren't loaded or the bit isn't set.
+     * Use this to show/hide Add / Edit / Delete buttons in page modules —
+     * hasPermission() only tells you whether the portal is visible at all.
+     */
+    canDo(portal, action) {
+      try {
+        const perms = this.getPermissions();
+        if (!perms || !perms[portal]) return false;
+        const p = perms[portal];
+        if (p === true) return action === 'view'; // legacy boolean = view-only
+        return !!(p.access && p.access[action] === true);
       } catch { return false; }
     },
 

@@ -42,7 +42,7 @@
      CONFIG — must match auth.js API_BASE
   ───────────────────────────────────────── */
   // const API_BASE = 'https://script.google.com/macros/s/AKfycby1_PVgu0xrKKx--Kx4GA6xqN3Emb6MrE9Z1Sxa62yG7EGZm8Xe5uzV1022vBvL2KxOmg/exec';
-   const API_BASE = 'https://script.google.com/macros/s/AKfycbytcc-_oezvvbz-sy2-KGB-LucpvukdJKfDsb1sWIu9FizWHcJOXoplRXnaTB6bONlb/exec';
+   const API_BASE = 'https://script.google.com/macros/s/AKfycbym4nntllJyqg6_9paii8X-PDk5zT5SY-XPjMbMaI2S9whTNk2KykMGiGd3EmkepUcyLw/exec';
 
   const CACHE_PREFIX = 'ap2_';
 
@@ -838,6 +838,7 @@
         apiKey   : ds.apiKey,
         paramKey : ds.paramKey,
         ttlMs    : ds.ttlMs,
+        access   : ds.access,
       }));
     },
 
