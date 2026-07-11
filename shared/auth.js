@@ -24,7 +24,7 @@
   const ABSOLUTE_TTL     = 8  * 60 * 60 * 1000; // 8 hr hard limit
   const SERVER_CHECK_INT = 5  * 60 * 1000;    // server ping every 5 min
   const ALLOWED_ORIGIN   = 'https://effimalik.github.io/Testing/';
- const API_BASE = 'https://script.google.com/macros/s/AKfycbym4nntllJyqg6_9paii8X-PDk5zT5SY-XPjMbMaI2S9whTNk2KykMGiGd3EmkepUcyLw/exec';
+ const API_BASE = 'https://script.google.com/macros/s/AKfycbytcc-_oezvvbz-sy2-KGB-LucpvukdJKfDsb1sWIu9FizWHcJOXoplRXnaTB6bONlb/exec';
      
 
 
