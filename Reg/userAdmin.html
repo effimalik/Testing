@@ -232,6 +232,27 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .switch input:checked + .slider-sw { background: var(--teal); }
 .switch input:checked + .slider-sw::before { transform: translateX(16px); }
 
+/* ══ V/A/E access-bit toggle buttons (replaces old free-text ParamKey field) ══ */
+.vae-toggle { display: flex; gap: 4px; }
+.vae-btn {
+  width: 27px; height: 24px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--bg2); color: var(--text3); font-family: var(--mono);
+  font-size: 10.5px; font-weight: 700; cursor: pointer; transition: all .14s;
+  display: flex; align-items: center; justify-content: center; letter-spacing: 0;
+}
+.vae-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
+.vae-btn.on { background: var(--teal-dim); color: var(--teal); border-color: rgba(57,211,83,.4); }
+.vae-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ══ Read-only V/A/E badges — Permissions Sheet tab ══ */
+.vae-badges { display: inline-flex; gap: 3px; }
+.vae-badge {
+  width: 20px; height: 18px; border-radius: 4px; font-family: var(--mono);
+  font-size: 9.5px; font-weight: 700; display: inline-flex; align-items: center;
+  justify-content: center; background: var(--bg3); color: var(--text3); border: 1px solid var(--border);
+}
+.vae-badge.on { background: var(--teal-dim); color: var(--teal); border-color: rgba(57,211,83,.35); }
+
 /* ══ Permission cards grid ══ */
 .perm-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -1588,7 +1609,7 @@ function renderPermissionsSheet() {
       <td data-label="Dataset" style="font-family:var(--mono);font-size:11.5px;">${_esc(row.dataset)}</td>
       <td data-label="Label">${_esc(row.label)}</td>
       <td data-label="ApiKey" style="font-family:var(--mono);font-size:11.5px;">${_esc(row.apiKey)}</td>
-      <td data-label="ParamKey" style="font-family:var(--mono);font-size:11.5px;">${_esc(row.paramKey)}</td>
+      <td data-label="ParamKey" style="font-family:var(--mono);font-size:11.5px;">${_accessBadges(row.paramKey)}</td>
       <td data-label="TTL" style="font-family:var(--mono);font-size:11.5px;"><span>${_esc(row.ttl)} <span style="color:var(--text3);">(${_msToLabel(row.ttl)})</span></span></td>
     </tr>`).join('');
   _renderPaginationBar('perms', total, ui);
@@ -1650,6 +1671,41 @@ function _logLocal(action, targetEmail, details) {
 }
 
 /* ═══════════════════════════════════════════════════════
+   ACCESS BITS — "1|1|1" (view|add|editDelete) stored in the
+   Permissions sheet's ParamKey column. Pipe-delimited so Sheets
+   doesn't auto-format it as a date the way "1-1-1" did.
+═══════════════════════════════════════════════════════ */
+function _parseAccessStr(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (s) {
+    const parts = s.includes('|') ? s.split('|') : (s.includes('-') ? s.split('-') : null);
+    if (parts && parts.length === 3) {
+      return {
+        view       : parts[0].trim() === '1',
+        add        : parts[1].trim() === '1',
+        editDelete : parts[2].trim() === '1',
+      };
+    }
+  }
+  // Empty or legacy non-bit value (e.g. old "type"/"action") — default to view-only
+  // rather than silently granting nothing, so a freshly-toggled-on card is usable.
+  return { view: true, add: false, editDelete: false };
+}
+
+function _accessStrFromBits(view, add, editDelete) {
+  return `${view ? '1' : '0'}|${add ? '1' : '0'}|${editDelete ? '1' : '0'}`;
+}
+
+function _accessBadges(raw) {
+  const a = _parseAccessStr(raw);
+  return `<span class="vae-badges">
+    <span class="vae-badge ${a.view ? 'on' : ''}" title="View">V</span>
+    <span class="vae-badge ${a.add ? 'on' : ''}" title="Add">A</span>
+    <span class="vae-badge ${a.editDelete ? 'on' : ''}" title="Edit / Delete">E</span>
+  </span>`;
+}
+
+/* ═══════════════════════════════════════════════════════
    PERMISSION CARDS BUILDER — grouped by category
    Shared by the Approve modal and the Profile drawer.
    container: DOM element to inject grouped sections into
@@ -1669,6 +1725,7 @@ function _buildPermGroups(container, email) {
       const apiKey   = existing ? (existing.apiKey   || ds.apiKey)   : ds.apiKey;
       const paramKey = existing ? (existing.paramKey || ds.paramKey) : ds.paramKey;
       const ttl      = existing ? (existing.ttl      || ds.ttl)      : ds.ttl;
+      const access   = _parseAccessStr(paramKey);
       const cardId = `pcard-${container.id}-${ds.key.replace(/[^a-z0-9]/gi,'_')}`;
 
       return `<div class="perm-row ${isOn ? 'on' : ''}" id="${cardId}">
@@ -1677,7 +1734,13 @@ function _buildPermGroups(container, email) {
           <div class="perm-row-sub">${_esc(ds.key)}</div>
           <div class="perm-row-fields" style="${isOn ? '' : 'display:none;'}" id="${cardId}-fields">
             <div class="perm-field"><input type="text" value="${_esc(apiKey)}" data-field="apiKey" data-dskey="${ds.key}" placeholder="ApiKey" ${isOn ? '' : 'disabled'} /></div>
-            <div class="perm-field"><input type="text" value="${_esc(paramKey)}" data-field="paramKey" data-dskey="${ds.key}" placeholder="ParamKey" ${isOn ? '' : 'disabled'} /></div>
+            <div class="perm-field">
+              <div class="vae-toggle" data-dskey="${ds.key}">
+                <button type="button" class="vae-btn ${access.view ? 'on' : ''}" data-bit="view" title="View" ${isOn ? '' : 'disabled'} onclick="toggleVaeBit(this)">V</button>
+                <button type="button" class="vae-btn ${access.add ? 'on' : ''}" data-bit="add" title="Add" ${isOn ? '' : 'disabled'} onclick="toggleVaeBit(this)">A</button>
+                <button type="button" class="vae-btn ${access.editDelete ? 'on' : ''}" data-bit="editDelete" title="Edit / Delete" ${isOn ? '' : 'disabled'} onclick="toggleVaeBit(this)">E</button>
+              </div>
+            </div>
             <div class="perm-field">
               <select data-field="ttl" data-dskey="${ds.key}" ${isOn ? '' : 'disabled'}>${_ttlSelectOptions(ttl)}</select>
             </div>
@@ -1699,6 +1762,11 @@ function _buildPermGroups(container, email) {
   }).join('');
 }
 
+function toggleVaeBit(btn) {
+  if (btn.disabled) return;
+  btn.classList.toggle('on');
+}
+
 function togglePermCard(chk) {
   const card   = document.getElementById(chk.dataset.card);
   const fields = document.getElementById(chk.dataset.card + '-fields');
@@ -1706,7 +1774,7 @@ function togglePermCard(chk) {
   card.classList.toggle('on', on);
   if (fields) {
     fields.style.display = on ? '' : 'none';
-    fields.querySelectorAll('input, select').forEach(inp => inp.disabled = !on);
+    fields.querySelectorAll('input, select, button.vae-btn').forEach(inp => inp.disabled = !on);
   }
 }
 
@@ -1717,8 +1785,11 @@ function _collectPerms(container) {
     const chk = card.querySelector('input[type=checkbox]');
     if (!chk || !chk.checked) return;
     const dsKey = chk.dataset.dskey;
-    const apiKey   = card.querySelector('[data-field="apiKey"]')?.value   || '';
-    const paramKey = card.querySelector('[data-field="paramKey"]')?.value || 'type';
+    const apiKey = card.querySelector('[data-field="apiKey"]')?.value || '';
+    const view       = card.querySelector('.vae-btn[data-bit="view"]')?.classList.contains('on')       || false;
+    const add        = card.querySelector('.vae-btn[data-bit="add"]')?.classList.contains('on')        || false;
+    const editDelete = card.querySelector('.vae-btn[data-bit="editDelete"]')?.classList.contains('on') || false;
+    const paramKey = _accessStrFromBits(view, add, editDelete);
     const ttl      = Number(card.querySelector('[data-field="ttl"]')?.value || 900000);
     const ds = _datasets.find(d => d.key === dsKey);
     result.push({ dataset: dsKey, label: ds?.label || dsKey, apiKey, paramKey, ttl });
