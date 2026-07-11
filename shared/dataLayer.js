@@ -170,14 +170,17 @@
 
   /**
    * Reads Auth.getPermissions() and maps each entry to a normalised
-   * dataset config. Only datasets explicitly granted are included.
+   * dataset config. Only datasets with the VIEW bit granted are included
+   * — add/editDelete bits don't unlock caching/fetching on their own,
+   * they're read separately (see Auth.canDo) to gate write UI/actions.
    *
    * Auth.getPermissions() must return the rich server shape:
-   *   { "ap2_employee": { label, apiKey, paramKey, ttlMs }, … }
+   *   { "ap2_employee": { label, apiKey, paramKey:'type', ttlMs,
+   *                        access:{ view, add, editDelete } }, … }
    *
    * Backwards-compat: if a value is `true` (old boolean shape) the
-   * dataset key is included but with minimal defaults so the system
-   * degrades gracefully rather than breaking entirely.
+   * dataset key is included with minimal defaults (view-only) so the
+   * system degrades gracefully rather than breaking entirely.
    */
   function _buildDatasets() {
     const perms = window.Auth && window.Auth.getPermissions
@@ -194,27 +197,45 @@
     for (const [key, val] of Object.entries(perms)) {
       if (!val) continue; // skip explicit false / null
 
+      let entry;
+
       if (val === true) {
-        // Legacy boolean-only permission — include with minimal defaults
-        // so pages don't crash, but log a warning so the sheet can be updated.
+        // Legacy boolean-only permission — treat as view-only, log a warning.
         console.warn(`[DataLayer] "${key}" has boolean permission — update Permissions sheet to include Label/ApiKey/ParamKey/TTL(ms)`);
-        result[key] = {
+        entry = {
           label    : key,
           apiKey   : key.replace(/^ap2_/, ''),  // best-effort fallback
           paramKey : 'type',
           ttlMs    : 5 * 60 * 1000,             // 5-minute default
+          access   : { view: true, add: false, editDelete: false },
         };
       } else if (typeof val === 'object' && val.apiKey) {
-        // Rich shape from server — use as-is with safe defaults for any missing fields
-        result[key] = {
+        // Rich shape from server — use as-is with safe defaults for any missing fields.
+        // Fail closed: a missing/malformed `access` block grants nothing.
+        const a = (val.access && typeof val.access === 'object') ? val.access : {};
+        entry = {
           label    : String(val.label    || key),
           apiKey   : String(val.apiKey),
           paramKey : String(val.paramKey || 'type'),
           ttlMs    : Number(val.ttlMs)   || 5 * 60 * 1000,
+          access   : {
+            view       : a.view       === true,
+            add        : a.add        === true,
+            editDelete : a.editDelete === true,
+          },
         };
       } else {
         console.warn(`[DataLayer] "${key}" has unrecognised permission shape — skipping`, val);
+        continue;
       }
+
+      // View is what unlocks fetching/caching this dataset at all.
+      if (!entry.access.view) {
+        console.log(`[DataLayer] "${key}" has no view access — excluded from DATASETS`);
+        continue;
+      }
+
+      result[key] = entry;
     }
 
     DATASETS = result;
