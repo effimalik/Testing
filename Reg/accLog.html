@@ -1,11 +1,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://effimalik.github.io/Test/shared/auth.js"></script>
-<script src="https://effimalik.github.io/Test/shared/code.js"></script>
-<script src="https://effimalik.github.io/Test/shared/dataLayer.js"></script>
-<script src="https://effimalik.github.io/Test/shared/devPre.js"></script>
-<script src="https://effimalik.github.io/Test/shared/cioView.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/auth.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/code.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/devPre.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/cioView.js"></script>
 <style>
   :root{
     --bg:#F5F6F8; --surface:#FFFFFF; --ink:#151A23; --ink-soft:#5B6472; --border:#E2E5EA;
@@ -425,7 +425,7 @@ function distinctEIDs(){
 function recordsFor(eid, type){
   return RECORDS.filter(r=> r.eid===eid && normType(r.accType)===type);
 }
-function latestActive(eid, type){
+function laTestingActive(eid, type){
   const matches = recordsFor(eid, type).filter(isActive);
   if(!matches.length) return null;
   matches.sort((a,b)=> (b.startDate||'').localeCompare(a.startDate||''));
@@ -434,21 +434,21 @@ function latestActive(eid, type){
 function statusFor(eid, type){
   const all = recordsFor(eid, type);
   if(!all.length) return 'missing';
-  return latestActive(eid, type) ? 'active' : 'expired';
+  return laTestingActive(eid, type) ? 'active' : 'expired';
 }
 function resolve(eid, mode){
   if(mode === 'WPS'){
-    const rec = latestActive(eid, 'WPS');
+    const rec = laTestingActive(eid, 'WPS');
     return rec ? { rec, usedType:'WPS' } : null;
   }
   if(mode === 'Salary'){
-    const rec = latestActive(eid, 'SALARY');
+    const rec = laTestingActive(eid, 'SALARY');
     return rec ? { rec, usedType:'Salary' } : null;
   }
   if(mode === 'Advance'){
-    let rec = latestActive(eid, 'ADVANCE');
+    let rec = laTestingActive(eid, 'ADVANCE');
     if(rec) return { rec, usedType:'Advance' };
-    rec = latestActive(eid, 'SALARY');
+    rec = laTestingActive(eid, 'SALARY');
     if(rec) return { rec, usedType:'Salary (fallback)' };
     return null;
   }
