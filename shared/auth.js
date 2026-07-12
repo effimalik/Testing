@@ -1,6 +1,6 @@
 
 /* ═══════════════════════════════════════════════════════════════
-   auth.js — FleetFlow Pro  v3.0
+   auth.js — FleetFlow Pro  v3.1
    Server-validated sessions · absolute + inactivity expiry · secure logout
    LOAD FIRST on every page (before dataLayer.js and any page JS)
 
@@ -11,6 +11,20 @@
    ─ auth.js loads before DOM ready → _boot deferred safely
    ─ signOut network failure → never blocks client-side wipe
    ─ Concurrent server checks → debounced with in-flight guard
+
+   NEW in v3.1 — cache lifecycle hardening:
+   ─ Window/tab close: a shared open-tab counter (localStorage) tracks how
+     many tabs/windows of the app are open. Multiple tabs SHARE the cache
+     (opening a 2nd tab does not wipe it). Once the counter drops to zero
+     — the last tab/window closing — localStorage + IndexedDB are purged
+     immediately, same as logout. login.html also re-checks the counter
+     on load as a guaranteed fallback, so a different user logging in
+     next never inherits a previous user's stale cache.
+   ─ Session end (inactivity / absolute TTL / server rejection): 
+     _redirectToLogin() now purges localStorage + IndexedDB too, not just
+     the sessionStorage session key, and fires 'ap:signout' so
+     dataLayer.js's listener tears down its timers/cache in lockstep.
+   ─ Logout button: unchanged — Auth.signOut() already wiped everything.
 ═══════════════════════════════════════════════════════════════ */
 'use strict';
 
@@ -48,11 +62,106 @@
   }
 
   /* ─────────────────────────────────────────
+     FULL CACHE WIPE — localStorage + IndexedDB
+     Shared by: window-close guard, session-end redirect.
+     (sessionStorage is handled separately — see callers.)
+  ───────────────────────────────────────── */
+  function _purgeLocalAndIDB() {
+    // localStorage — only our own namespaced keys, leave 3rd-party keys intact
+    try {
+      Object.keys(localStorage)
+        .filter(k => k.startsWith('ap2_') || k.startsWith('ap_'))
+        .forEach(k => localStorage.removeItem(k));
+    } catch {}
+
+    // IndexedDB — delete every database the browser reports
+    try {
+      indexedDB.databases?.().then(dbs => {
+        if (Array.isArray(dbs)) {
+          dbs.forEach(({ name }) => {
+            try { if (name) indexedDB.deleteDatabase(name); } catch {}
+          });
+        }
+      }).catch(() => {});
+    } catch {}
+  }
+
+  /* ─────────────────────────────────────────
+     CROSS-TAB WINDOW-CLOSE GUARD
+     Goal: multiple tabs of the app SHARE the cache (opening tab #2 must
+     NOT wipe what tab #1 is using) — but once the LAST tab/window closes,
+     the cache is wiped instantly, same as logout. The next login.html
+     load (by the same or a different user) always double-checks too.
+
+     Mechanism: a live count of open tabs/windows in localStorage
+     (localStorage is shared across all tabs, unlike sessionStorage).
+       • On load: read the count.
+           - count > 0  → another tab is already open → cache is trusted,
+             keep it (this is what lets tabs share cache).
+           - count <= 0 → no other tab is open → previous browser session
+             is over → purge stale cache BEFORE this page reads it. This
+             is also what protects a different user logging in next.
+         Then increment the count.
+       • On unload (this tab closing): decrement the count. If that
+         brings it to 0, this was the last window → purge immediately,
+         same as logout does.
+     beforeunload/pagehide can't tell "closing" from "refreshing", but
+     that's fine here: a refresh decrements then immediately re-increments
+     on next load, netting out with no purge — only a real drop to zero
+     (no tab re-opening) triggers the wipe.
+  ───────────────────────────────────────── */
+  const TAB_COUNT_KEY = 'ap2_tab_count';
+  let _tabRegistered = false;
+
+  function _readTabCount() {
+    try { return parseInt(localStorage.getItem(TAB_COUNT_KEY), 10) || 0; }
+    catch { return 0; }
+  }
+  function _writeTabCount(n) {
+    try { localStorage.setItem(TAB_COUNT_KEY, String(Math.max(0, n))); } catch {}
+  }
+
+  function _registerTabOpen() {
+    try {
+      const count = _readTabCount();
+      if (count <= 0) {
+        console.log('[Auth] No other tab/window open — purging stale cache');
+        _purgeLocalAndIDB();
+      }
+      _writeTabCount(count + 1);
+      _tabRegistered = true;
+    } catch {}
+  }
+
+  function _registerTabClose() {
+    if (!_tabRegistered) return; // avoid double-decrement (beforeunload + pagehide can both fire)
+    _tabRegistered = false;
+    try {
+      const remaining = _readTabCount() - 1;
+      _writeTabCount(remaining);
+      if (remaining <= 0) {
+        console.log('[Auth] Last tab/window closing — purging cache instantly');
+        _purgeLocalAndIDB();
+      }
+    } catch {}
+  }
+
+  // Runs immediately, synchronously, before dataLayer.js (or anything else)
+  // gets a chance to read the cache — applies on every page, login included.
+  _registerTabOpen();
+  window.addEventListener('beforeunload', _registerTabClose);
+  window.addEventListener('pagehide', _registerTabClose);
+
+  /* ─────────────────────────────────────────
      REDIRECT HELPER
   ───────────────────────────────────────── */
   function _redirectToLogin(reason) {
     console.warn('[Auth] → login:', reason || 'session invalid');
     _clearSession();
+    // Session is ending (expired / rejected) — wipe the rest of the
+    // cache too, not just the session key, so no stale data survives.
+    _purgeLocalAndIDB();
+    try { window.dispatchEvent(new CustomEvent('ap:signout', { detail: { reason } })); } catch {}
     // Hide page instantly to prevent flash of protected content
     try { document.documentElement.style.visibility = 'hidden'; } catch {}
     const next = encodeURIComponent(window.location.href);

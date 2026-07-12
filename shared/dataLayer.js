@@ -57,8 +57,11 @@
        • IndexedDB store (all ap2_ entries)
        • sessionStorage (entire namespace)
        • localStorage   (ap2_ prefixed keys only — leave 3rd-party keys intact)
-     Called automatically when Auth fires a 'ap:signout' event, and exposed
-     as AdminPro.clearAllStorage() for manual call from logout buttons.
+     Called automatically when Auth fires a 'ap:signout' event — auth.js
+     (v3.1+) fires this both on explicit signOut() and on session-end
+     redirects (inactivity / absolute TTL / server rejection) — and
+     exposed as AdminPro.clearAllStorage() for manual call from logout
+     buttons.
   ───────────────────────────────────────── */
   async function _clearAllStorageOnLogout() {
     // 1. Clear entire IDB store
