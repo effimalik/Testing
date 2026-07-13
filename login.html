@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FleetFlow Pro — Sign In</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%2358a6ff'/%3E%3Cstop offset='100%25' stop-color='%231f6feb'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Cpath d='M14 40h4l3-9h13l4 9h4l-6-19a3 3 0 0 0-2.8-2H23a3 3 0 0 0-2.8 2z' fill='none' stroke='white' stroke-width='3' stroke-linejoin='round' stroke-linecap='round'/%3E%3Ccircle cx='23' cy='42' r='3.4' fill='white'/%3E%3Ccircle cx='39' cy='42' r='3.4' fill='white'/%3E%3C/svg%3E"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+
+<!--
+  LOAD ORDER MATTERS:
+  auth.js is loaded FIRST — but on login.html it skips all session guards.
+  The login flow here is self-contained: it does NOT call Auth.isAuthenticated()
+  before the user clicks — only after a successful server response.
+-->
+<script src="https://effimalik.github.io/Testing/shared/auth.js?v=6"></script>
+<script src="https://effimalik.github.io/Testing/shared/dataLayer.js?v=6"></script>
+<!-- <script src="https://effimalik.github.io/Testing/shared/devPre.js"></script> -->
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
+:root,[data-theme="dark"]{
+  --bg:#0a0e16;--bg2:#131a26;--bg3:#1a2333;
+  --surface:#171f2e;--surface2:#212b3d;
+  --border:#26304533;--border-solid:#263045;--border2:#3a4763;
+  --text:#eaf0fb;--text2:#8f9dbb;--text3:#5f6c8a;
+
+  --live:#4f9dff;--live-dim:rgba(79,157,255,.12);--live-glow:rgba(79,157,255,.32);
+  --sandbox:#f5a623;--sandbox-dim:rgba(245,166,35,.12);--sandbox-glow:rgba(245,166,35,.32);
+  --teal:#2fd6a6;--teal-dim:rgba(47,214,166,.12);
+  --amber:#f5a623;--amber-dim:rgba(245,166,35,.12);
+  --red:#ff5c72;--red-dim:rgba(255,92,114,.12);
+  --purple:#a682ff;--purple-dim:rgba(166,130,255,.12);
+
+  --display:'Space Grotesk',sans-serif;
+  --font:'Sora',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+  --shadow-lg:0 20px 60px rgba(0,0,0,.55),0 2px 8px rgba(0,0,0,.35);
+  --radius:18px;
+}
+
+html,body{
+  min-height:100%;width:100%;
+  font-family:var(--font);
+  background:var(--bg);
+  color:var(--text);
+  font-size:14px;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;overflow-y:auto;
+}
+
+/* ── Ambient backdrop: dispatch-grid + radar sweep, evokes a fleet ops console ── */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(79,157,255,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79,157,255,.05) 1px, transparent 1px);
+  background-size:44px 44px;
+  pointer-events:none;z-index:0;
+}
+body::after{
+  content:'';position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 70% 50% at 18% -8%, rgba(79,157,255,.10) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 45% at 100% 100%, rgba(245,166,35,.06) 0%, transparent 60%);
+  pointer-events:none;z-index:0;
+}
+
+/* ── Top bar ── */
+.topbar{
+  position:fixed;top:0;left:0;right:0;
+  height:52px;background:var(--bg2);
+  border-bottom:1px solid var(--border-solid);
+  display:flex;align-items:center;
+  padding:0 20px;gap:12px;z-index:100;
+}
+.topbar::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--live) 0%,var(--purple) 40%,var(--sandbox) 100%);
+  opacity:.8;
+}
+.tb-logo{
+  width:32px;height:32px;
+  background:linear-gradient(135deg,var(--live) 0%,#1f6feb 100%);
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:15px;
+  box-shadow:0 0 14px var(--live-glow),0 2px 4px rgba(0,0,0,.3);
+  flex-shrink:0;
+}
+.tb-name{font-family:var(--display);font-size:13px;font-weight:700;color:var(--text);letter-spacing:-.01em;}
+.tb-sub{font-size:10px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-top:1px;}
+.tb-spacer{flex:1;}
+.tb-clock{
+  display:flex;align-items:center;gap:6px;
+  padding:0 10px;height:28px;border-radius:6px;
+  background:var(--bg3);border:1px solid var(--border-solid);
+}
+.tb-clock i{font-size:12px;color:var(--teal);}
+.tb-time{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text);letter-spacing:.04em;}
+.tb-sep{width:1px;height:12px;background:var(--border2);}
+.tb-date{font-size:10.5px;color:var(--text2);}
+
+@media (max-width:560px){
+  .tb-sub{display:none;}
+  .tb-clock{padding:0 8px;gap:5px;}
+  .tb-date{display:none;}
+  .tb-sep{display:none;}
+}
+@media (max-width:400px){
+  .topbar{padding:0 12px;gap:9px;}
+  .tb-name{font-size:12px;}
+  .tb-time{font-size:11px;}
+}
+
+/* ── Page / card shell ── */
+.page{
+  position:relative;min-height:100vh;width:100%;
+  display:flex;align-items:center;justify-content:center;
+  padding:80px 16px 28px;z-index:10;box-sizing:border-box;
+}
+.card{
+  width:100%;max-width:452px;
+  background:linear-gradient(180deg,var(--bg2) 0%,var(--surface) 100%);
+  border:1px solid var(--border-solid);
+  border-radius:var(--radius);
+  padding:30px 30px 26px;
+  box-shadow:var(--shadow-lg);
+  position:relative;overflow:hidden;
+  animation:cardIn .5s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes cardIn{
+  from{opacity:0;transform:translateY(20px) scale(.97);}
+  to{opacity:1;transform:translateY(0) scale(1);}
+}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--live-glow),transparent);
+}
+@media (max-width:480px){
+  .page{padding:68px 10px 20px;}
+  .card{padding:22px 18px 20px;border-radius:14px;}
+}
+
+.card-head{display:flex;align-items:flex-start;gap:13px;margin-bottom:20px;}
+.card-icon{
+  width:46px;height:46px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--live) 0%,#1f6feb 100%);
+  border-radius:13px;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:21px;
+  box-shadow:0 0 20px var(--live-glow),0 4px 12px rgba(0,0,0,.3);
+}
+.card-eyebrow{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:3px;}
+.card-title{font-family:var(--display);font-size:19px;font-weight:700;color:var(--text);letter-spacing:-.01em;}
+
+/* ── Segmented tab switch: Live Access vs Sandbox Demo ── */
+.mode-switch{
+  position:relative;display:grid;grid-template-columns:1fr 1fr;
+  background:var(--bg3);border:1px solid var(--border-solid);
+  border-radius:12px;padding:4px;margin-bottom:20px;gap:4px;
+}
+.mode-tab{
+  position:relative;z-index:2;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  height:38px;border-radius:9px;border:none;background:transparent;
+  font-family:var(--font);font-size:12.5px;font-weight:600;color:var(--text3);
+  cursor:pointer;transition:color .2s;
+}
+.mode-tab i{font-size:15px;}
+.mode-tab.active{color:#0a0e16;}
+.mode-tab[data-mode="live"].active{color:#fff;}
+.mode-thumb{
+  position:absolute;top:4px;left:4px;
+  width:calc(50% - 6px);height:38px;border-radius:9px;
+  background:linear-gradient(135deg,var(--live) 0%,#1f6feb 100%);
+  box-shadow:0 0 16px var(--live-glow);
+  transition:transform .28s cubic-bezier(.65,0,.35,1),background .28s;
+  z-index:1;
+}
+.mode-thumb.to-sandbox{
+  transform:translateX(calc(100% + 6px));
+  background:linear-gradient(135deg,var(--sandbox) 0%,#c9820f 100%);
+  box-shadow:0 0 16px var(--sandbox-glow);
+}
+
+.panel{display:none;animation:panelIn .32s cubic-bezier(.22,1,.36,1) both;}
+.panel.show{display:block;}
+@keyframes panelIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+.panel-copy{font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:16px;}
+.panel-copy strong{color:var(--text);font-weight:600;}
+
+/* ── Google button ── */
+.btn-google{
+  width:100%;height:46px;
+  display:flex;align-items:center;justify-content:center;gap:11px;
+  border-radius:11px;border:1px solid var(--border2);
+  background:var(--surface2);color:var(--text);
+  font-family:var(--font);font-size:13.5px;font-weight:600;
+  cursor:pointer;transition:all .18s;position:relative;overflow:hidden;
+}
+.btn-google:hover:not(:disabled){
+  border-color:var(--live);
+  box-shadow:0 0 18px var(--live-glow),0 2px 8px rgba(0,0,0,.3);
+  transform:translateY(-1px);
+}
+.btn-google:active:not(:disabled){transform:translateY(0);box-shadow:none;}
+.btn-google:disabled{opacity:.45;cursor:not-allowed;transform:none!important;box-shadow:none!important;}
+.g-icon{width:20px;height:20px;flex-shrink:0;}
+
+/* ── Sandbox email form ── */
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.03em;margin-bottom:7px;}
+.field-input-wrap{position:relative;}
+.field-input-wrap i{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);pointer-events:none;transition:color .15s;}
+.field input{
+  width:100%;height:46px;padding:0 14px 0 40px;
+  background:var(--bg3);border:1px solid var(--border2);border-radius:11px;
+  color:var(--text);font-family:var(--font);font-size:13px;
+  transition:border-color .15s,box-shadow .15s;
+}
+.field input::placeholder{color:var(--text3);}
+.field input:focus{outline:none;border-color:var(--sandbox);box-shadow:0 0 0 3px var(--sandbox-dim);}
+.field input:focus + i,.field-input-wrap:has(input:focus) i{color:var(--sandbox);}
+.field-error{font-size:11px;color:var(--red);margin-top:6px;display:none;align-items:center;gap:5px;}
+.field-error.show{display:flex;}
+.field.invalid input{border-color:var(--red);}
+
+.btn-sandbox{
+  width:100%;height:46px;
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  border-radius:11px;border:1px solid rgba(245,166,35,.4);
+  background:linear-gradient(135deg,var(--sandbox) 0%,#c9820f 100%);
+  color:#1a1305;font-family:var(--font);font-size:13.5px;font-weight:700;
+  cursor:pointer;transition:all .18s;position:relative;overflow:hidden;
+}
+.btn-sandbox:hover:not(:disabled){box-shadow:0 0 20px var(--sandbox-glow),0 3px 10px rgba(0,0,0,.3);transform:translateY(-1px);}
+.btn-sandbox:active:not(:disabled){transform:translateY(0);}
+.btn-sandbox:disabled{opacity:.5;cursor:not-allowed;transform:none!important;box-shadow:none!important;}
+
+.sandbox-note{
+  display:flex;gap:9px;align-items:flex-start;margin-top:14px;
+  padding:11px 13px;border-radius:10px;
+  background:var(--sandbox-dim);border:1px solid rgba(245,166,35,.22);
+}
+.sandbox-note i{font-size:14px;color:var(--sandbox);flex-shrink:0;margin-top:1px;}
+.sandbox-note p{font-size:11.5px;color:var(--text2);line-height:1.55;}
+
+/* ── Generic click ripple (material-style) ── */
+.ripple-btn{position:relative;overflow:hidden;}
+.ink-ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.32);transform:scale(0);pointer-events:none;animation:inkRipple .55s ease-out forwards;}
+@keyframes inkRipple{to{transform:scale(2.6);opacity:0;}}
+
+/* ══════════════════════════════════════════════════════
+   FLOW VIEW — the dispatch-radar progress gauge
+   Signature element: a 5-tick radial gauge (styled like a
+   vehicle instrument cluster) that fills as each step of
+   verification completes, with a ripple pulse on the tick
+   currently being processed.
+══════════════════════════════════════════════════════ */
+.flow-view{display:none;}
+.flow-view.show{display:block;animation:panelIn .3s cubic-bezier(.22,1,.36,1) both;}
+
+.gauge-wrap{
+  position:relative;width:172px;height:172px;margin:6px auto 6px;
+}
+.gauge-wrap svg{width:100%;height:100%;transform:rotate(-90deg);}
+.gauge-track{fill:none;stroke:var(--border-solid);stroke-width:8;}
+.gauge-arc{
+  fill:none;stroke:url(#gaugeGrad);stroke-width:8;stroke-linecap:round;
+  stroke-dasharray:472.7;stroke-dashoffset:472.7;
+  transition:stroke-dashoffset .55s cubic-bezier(.22,1,.36,1);
+}
+.gauge-center{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.gauge-pct{font-family:var(--mono);font-size:30px;font-weight:600;color:var(--text);letter-spacing:-.02em;}
+.gauge-pct::after{content:'%';font-size:16px;color:var(--text3);margin-left:1px;}
+.gauge-cap{font-size:9.5px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-top:3px;text-align:center;padding:0 18px;}
+
+.gauge-tick{
+  position:absolute;width:30px;height:30px;margin:-15px 0 0 -15px;
+  border-radius:50%;background:var(--bg3);border:1.5px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text3);font-size:13px;
+  transition:background .2s,border-color .2s,color .2s,box-shadow .2s;
+}
+.gauge-tick[data-step="1"]{left:50%;top:9%;}
+.gauge-tick[data-step="2"]{left:89%;top:37.3%;}
+.gauge-tick[data-step="3"]{left:74.1%;top:83.15%;}
+.gauge-tick[data-step="4"]{left:25.9%;top:83.15%;}
+.gauge-tick[data-step="5"]{left:11%;top:37.3%;}
+.gauge-tick.done{background:var(--teal-dim);border-color:var(--teal);color:var(--teal);}
+.gauge-tick.fail{background:var(--red-dim);border-color:var(--red);color:var(--red);}
+.gauge-tick.active{background:var(--live-dim);border-color:var(--live);color:var(--live);box-shadow:0 0 10px var(--live-glow);}
+.mode-sandbox-active .gauge-tick.active{background:var(--sandbox-dim);border-color:var(--sandbox);color:var(--sandbox);box-shadow:0 0 10px var(--sandbox-glow);}
+
+/* Ripple rings only on the tick currently processing */
+.gauge-tick.active::before,.gauge-tick.active::after{
+  content:'';position:absolute;inset:0;border-radius:50%;
+  border:1.5px solid var(--live);
+  animation:tickRipple 1.4s cubic-bezier(.22,.72,.36,1) infinite;
+}
+.mode-sandbox-active .gauge-tick.active::before,.mode-sandbox-active .gauge-tick.active::after{border-color:var(--sandbox);}
+.gauge-tick.active::after{animation-delay:.55s;}
+@keyframes tickRipple{0%{transform:scale(1);opacity:.7;}100%{transform:scale(2.4);opacity:0;}}
+
+.flow-status{text-align:center;margin-top:10px;}
+.flow-title{font-family:var(--display);font-size:15.5px;font-weight:700;color:var(--text);margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:7px;}
+.flow-title i{font-size:15px;}
+.flow-title.loading i{animation:spin .9s linear infinite;color:var(--live);}
+.mode-sandbox-active .flow-title.loading i{color:var(--sandbox);}
+.flow-title.success i{color:var(--teal);}
+.flow-title.error i{color:var(--red);}
+@keyframes spin{to{transform:rotate(360deg);}}
+.flow-sub{font-size:12px;color:var(--text2);line-height:1.55;min-height:17px;}
+
+.flow-cancel{
+  display:block;margin:16px auto 0;background:none;border:none;
+  font-family:var(--font);font-size:11.5px;color:var(--text3);
+  cursor:pointer;text-decoration:underline;text-underline-offset:2px;
+}
+.flow-cancel:hover{color:var(--text2);}
+
+/* ── Card footer ── */
+.card-footer{
+  margin-top:20px;padding-top:15px;border-top:1px solid var(--border-solid);
+  display:flex;align-items:center;gap:8px;
+}
+.card-footer i{font-size:13px;color:var(--text3);}
+.card-footer p{font-size:11px;color:var(--text3);line-height:1.5;}
+
+/* ── FedCM fallback button ── */
+#google-button-container{margin-top:14px;display:none;flex-direction:column;gap:8px;}
+#google-button-container.show{display:flex;}
+#google-button-container p{font-size:11.5px;color:var(--text3);text-align:center;}
+
+/* ══════════════════════════════════════════════════════
+   OVERLAYS — Access Denied / Sandbox Pending
+══════════════════════════════════════════════════════ */
+.overlay{
+  position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+  background:rgba(10,14,22,.78);backdrop-filter:blur(5px);z-index:1000;padding:20px;
+}
+.overlay.show{display:flex;}
+.overlay-card{
+  max-width:400px;width:100%;
+  background:var(--bg2);border:1px solid var(--border-solid);border-radius:16px;
+  padding:30px;text-align:center;animation:cardIn .3s ease both;
+}
+.overlay-icon{
+  width:56px;height:56px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;margin:0 auto 18px;
+}
+.overlay-title{font-family:var(--display);font-size:17px;font-weight:700;color:var(--text);margin-bottom:8px;}
+.overlay-chip-wrap{margin-bottom:14px;}
+.overlay-chip{
+  display:inline-block;padding:5px 11px;border-radius:7px;
+  background:var(--surface2);border:1px solid var(--border2);
+  font-family:var(--mono);font-size:12px;color:var(--text);
+}
+.overlay-msg{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:22px;}
+.overlay-actions{display:flex;flex-direction:column;gap:8px;}
+.btn-outline{
+  width:100%;height:42px;border-radius:10px;border:1px solid var(--border2);
+  background:var(--surface);color:var(--text2);
+  font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;
+  transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-outline:hover{border-color:var(--live);color:var(--live);}
+.btn-outline.warn:hover{border-color:var(--sandbox);color:var(--sandbox);}
+
+.overlay-icon.tone-red{background:var(--red-dim);border:1px solid rgba(255,92,114,.3);color:var(--red);}
+.overlay-icon.tone-amber{background:var(--sandbox-dim);border:1px solid rgba(245,166,35,.3);color:var(--sandbox);}
+.overlay-icon.tone-teal{background:var(--teal-dim);border:1px solid rgba(47,214,166,.3);color:var(--teal);}
+
+@media (max-width:380px){
+  .btn-google,.btn-sandbox{height:44px;font-size:12.5px;}
+  .gauge-wrap{width:150px;height:150px;}
+  .gauge-pct{font-size:26px;}
+}
+@media (prefers-reduced-motion: reduce){
+  .gauge-tick.active::before,.gauge-tick.active::after,.mode-thumb,.gauge-arc{animation:none!important;transition:none!important;}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="tb-logo"><i class="ti ti-truck"></i></div>
+  <div>
+    <div class="tb-name">FleetFlow Pro</div>
+    <div class="tb-sub">HR &amp; Fleet Management</div>
+  </div>
+  <div class="tb-spacer"></div>
+  <div class="tb-clock">
+    <i class="ti ti-clock"></i>
+    <span class="tb-time" id="tb-time">00:00:00</span>
+    <div class="tb-sep"></div>
+    <span class="tb-date" id="tb-date"></span>
+  </div>
+</header>
+
+<!-- LOGIN CARD -->
+<div class="page">
+  <div class="card" id="login-card">
+
+    <div class="card-head">
+      <div class="card-icon" id="card-icon"><i class="ti ti-shield-lock"></i></div>
+      <div>
+        <div class="card-eyebrow" id="card-eyebrow">Fleet Ops Access</div>
+        <div class="card-title" id="card-title">Sign in to FleetFlow Pro</div>
+      </div>
+    </div>
+
+    <!-- LIVE / SANDBOX segmented switch -->
+    <div class="mode-switch" role="tablist" aria-label="Sign-in mode">
+      <div class="mode-thumb" id="mode-thumb"></div>
+      <button class="mode-tab active" id="tab-live" data-mode="live" role="tab" aria-selected="true" onclick="switchMode('live')">
+        <i class="ti ti-broadcast"></i> Live Access
+      </button>
+      <button class="mode-tab" id="tab-sandbox" data-mode="sandbox" role="tab" aria-selected="false" onclick="switchMode('sandbox')">
+        <i class="ti ti-flask"></i> Sandbox Demo
+      </button>
+    </div>
+
+    <!-- LIVE PANEL -->
+    <div class="panel show" id="panel-live">
+      <p class="panel-copy">Only <strong>pre-approved Google accounts</strong> can access live fleet data. Your email is verified against the access database automatically after sign-in.</p>
+
+      <button class="btn-google ripple-btn" id="btn-google" onclick="startGoogleLogin()">
+        <svg class="g-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <!-- FedCM fallback: rendered Google Sign-In button (shown if one-tap fails) -->
+      <div id="google-button-container">
+        <p>One-tap not available — use the button below:</p>
+        <div id="g-btn-render"></div>
+      </div>
+    </div>
+
+    <!-- SANDBOX PANEL -->
+    <div class="panel" id="panel-sandbox">
+      <p class="panel-copy">Try FleetFlow Pro with <strong>sample data</strong>. Enter your email once — new requests need a quick admin approval, pre-approved emails get in instantly.</p>
+
+      <div class="field" id="demo-field">
+        <label for="demo-email">Work email</label>
+        <div class="field-input-wrap">
+          <i class="ti ti-mail"></i>
+          <input type="email" id="demo-email" placeholder="you@company.com" autocomplete="email" onkeydown="if(event.key==='Enter'){event.preventDefault();startSandboxRequest();}"/>
+        </div>
+        <div class="field-error" id="demo-email-error"><i class="ti ti-alert-circle"></i><span>Enter a valid email address.</span></div>
+      </div>
+
+      <button class="btn-sandbox ripple-btn" id="btn-sandbox" onclick="startSandboxRequest()">
+        <i class="ti ti-flask"></i> Request Sandbox Access
+      </button>
+
+      <div class="sandbox-note">
+        <i class="ti ti-info-circle"></i>
+        <p>Every request is logged with a timestamp and reviewed by an admin. Approved emails are remembered for next time.</p>
+      </div>
+    </div>
+
+    <!-- PROCESSING FLOW — dispatch-radar gauge, shared by both modes -->
+    <div class="flow-view" id="flow-view">
+      <div class="gauge-wrap">
+        <svg viewBox="0 0 160 160">
+          <defs>
+            <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--live)" id="gaugeGradStart"/>
+              <stop offset="100%" stop-color="#1f6feb" id="gaugeGradEnd"/>
+            </linearGradient>
+          </defs>
+          <circle class="gauge-track" cx="80" cy="80" r="75.24"/>
+          <circle class="gauge-arc" id="gauge-arc" cx="80" cy="80" r="75.24"/>
+        </svg>
+        <div class="gauge-center">
+          <div class="gauge-pct" id="gauge-pct">0</div>
+          <div class="gauge-cap" id="gauge-cap">Starting…</div>
+        </div>
+        <div class="gauge-tick" data-step="1"><i class="ti ti-plug-connected"></i></div>
+        <div class="gauge-tick" data-step="2"><i class="ti ti-user-check"></i></div>
+        <div class="gauge-tick" data-step="3"><i class="ti ti-server-2"></i></div>
+        <div class="gauge-tick" data-step="4"><i class="ti ti-shield-check"></i></div>
+        <div class="gauge-tick" data-step="5"><i class="ti ti-rocket"></i></div>
+      </div>
+      <div class="flow-status">
+        <div class="flow-title loading" id="flow-title"><i class="ti ti-loader-2"></i><span id="flow-title-text">Connecting</span></div>
+        <div class="flow-sub" id="flow-sub">Loading the sign-in library…</div>
+      </div>
+      <button class="flow-cancel" id="flow-cancel" onclick="cancelFlow()">Cancel and go back</button>
+    </div>
+
+    <div class="card-footer">
+      <i class="ti ti-lock"></i>
+      <p>Restricted to authorised personnel only. Unauthorised access attempts are logged.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ACCESS DENIED OVERLAY -->
+<div class="overlay" id="denied-overlay">
+  <div class="overlay-card">
+    <div class="overlay-icon tone-red" id="denied-icon"><i class="ti ti-shield-x" id="denied-icon-i"></i></div>
+    <div class="overlay-title" id="denied-title">Access Denied</div>
+    <div class="overlay-chip-wrap" id="denied-chip-wrap" style="display:none;">
+      <span class="overlay-chip" id="denied-chip"></span>
+    </div>
+    <div class="overlay-msg" id="denied-msg">Your account is not authorised to access this system.</div>
+    <div class="overlay-actions">
+      <button class="btn-outline" onclick="resetToLive()">
+        <i class="ti ti-refresh"></i> Try a Different Account
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SANDBOX PENDING / STATUS OVERLAY -->
+<div class="overlay" id="sandbox-overlay">
+  <div class="overlay-card">
+    <div class="overlay-icon tone-amber" id="sandbox-icon"><i class="ti ti-clock-hour-4" id="sandbox-icon-i"></i></div>
+    <div class="overlay-title" id="sandbox-title">Request Submitted</div>
+    <div class="overlay-chip-wrap">
+      <span class="overlay-chip" id="sandbox-chip"></span>
+    </div>
+    <div class="overlay-msg" id="sandbox-msg">Your request has been logged. An admin has been notified and will review your email for sandbox access.</div>
+    <div class="overlay-actions">
+      <button class="btn-outline warn" onclick="recheckSandbox()">
+        <i class="ti ti-refresh"></i> Check Approval Again
+      </button>
+      <button class="btn-outline" onclick="resetToSandbox()">
+        <i class="ti ti-mail"></i> Use a Different Email
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════
+   CONFIG — single source of truth
+   Keep in sync with auth.js and Code.gs CFG block
+═══════════════════════════════════════════════════ */
+const CONFIG = {
+  API_BASE         : 'https://script.google.com/macros/s/AKfycbyc4KWKFLSgT6pzLDW4sJpQCc8Ogveco_vZO1ngo4jp6k5igZoNalDxuklKv540aTZq/exec',
+  // API_BASE         : 'https://script.google.com/macros/s/AKfycby1_PVgu0xrKKx--Kx4GA6xqN3Emb6MrE9Z1Sxa62yG7EGZm8Xe5uzV1022vBvL2KxOmg/exec',
+  GOOGLE_CLIENT_ID : '743775120253-lr54jgst59jqr5s61vc3i4o3rnfn596a.apps.googleusercontent.com',
+};
+
+const ALLOWED_ORIGIN = 'https://effimalik.github.io/Testing/';
+const DEFAULT_PAGE   = ALLOWED_ORIGIN + 'index.html';
+
+/* ═══════════════════════════════════════════════════
+   CLOCK
+═══════════════════════════════════════════════════ */
+(function tick(){
+  const now = new Date();
+  const p   = n => String(n).padStart(2, '0');
+  const t   = document.getElementById('tb-time');
+  const d   = document.getElementById('tb-date');
+  if (t) t.textContent = `${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`;
+  if (d) {
+    const days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    d.textContent = `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+  }
+  setTimeout(tick, 1000);
+})();
+
+/* ═══════════════════════════════════════════════════
+   SKIP LOGIN IF ALREADY AUTHENTICATED
+═══════════════════════════════════════════════════ */
+(function checkExistingSession() {
+  try {
+    if (window.Auth && typeof window.Auth.getCredentials === 'function') {
+      const creds = window.Auth.getCredentials();
+      if (creds && creds.sessionId && creds.token) {
+        console.log('[Login] Existing valid session detected — redirecting...');
+        doRedirect();
+      }
+    }
+  } catch (e) {
+    console.warn('[Login] checkExistingSession error (safe to ignore):', e.message);
+  }
+})();
+
+function doRedirect() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const next   = decodeURIComponent(params.get('next') || '');
+    if (next && next.startsWith(ALLOWED_ORIGIN) && !next.includes('login.html')) {
+      window.location.replace(next);
+    } else {
+      window.location.replace(DEFAULT_PAGE);
+    }
+  } catch {
+    window.location.replace(DEFAULT_PAGE);
+  }
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ═══════════════════════════════════════════════════
+   MODE SWITCH — Live Access vs Sandbox Demo
+   Purely a UI concern; each mode drives its own flow.
+═══════════════════════════════════════════════════ */
+let currentMode = 'live';
+function switchMode(mode) {
+  if (mode === currentMode) return;
+  currentMode = mode;
+
+  const thumb   = document.getElementById('mode-thumb');
+  const tabLive = document.getElementById('tab-live');
+  const tabSbx  = document.getElementById('tab-sandbox');
+  const pLive   = document.getElementById('panel-live');
+  const pSbx    = document.getElementById('panel-sandbox');
+  const icon    = document.getElementById('card-icon');
+  const eyebrow = document.getElementById('card-eyebrow');
+  const title   = document.getElementById('card-title');
+  const card    = document.getElementById('login-card');
+
+  const toSandbox = mode === 'sandbox';
+  thumb.classList.toggle('to-sandbox', toSandbox);
+  tabLive.classList.toggle('active', !toSandbox);
+  tabSbx.classList.toggle('active', toSandbox);
+  tabLive.setAttribute('aria-selected', String(!toSandbox));
+  tabSbx.setAttribute('aria-selected', String(toSandbox));
+  pLive.classList.toggle('show', !toSandbox);
+  pSbx.classList.toggle('show', toSandbox);
+  card.classList.toggle('mode-sandbox-active', toSandbox);
+
+  if (toSandbox) {
+    icon.style.background = 'linear-gradient(135deg,var(--sandbox) 0%,#c9820f 100%)';
+    icon.style.boxShadow  = '0 0 20px var(--sandbox-glow),0 4px 12px rgba(0,0,0,.3)';
+    icon.innerHTML = '<i class="ti ti-flask"></i>';
+    eyebrow.textContent = 'Sandbox Environment';
+    title.textContent   = 'Try the Sandbox Demo';
+  } else {
+    icon.style.background = 'linear-gradient(135deg,var(--live) 0%,#1f6feb 100%)';
+    icon.style.boxShadow  = '0 0 20px var(--live-glow),0 4px 12px rgba(0,0,0,.3)';
+    icon.innerHTML = '<i class="ti ti-shield-lock"></i>';
+    eyebrow.textContent = 'Fleet Ops Access';
+    title.textContent   = 'Sign in to FleetFlow Pro';
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   GSI LOADER — lazy, idempotent
+═══════════════════════════════════════════════════ */
+let _gsiLoaded = false;
+function loadGSI() {
+  return new Promise((resolve, reject) => {
+    if (window.google && window.google.accounts) { _gsiLoaded = true; resolve(); return; }
+    if (_gsiLoaded) { resolve(); return; }
+    const s   = document.createElement('script');
+    s.src     = 'https://accounts.google.com/gsi/client';
+    s.async   = true;
+    s.defer   = true;
+    s.onload  = () => { _gsiLoaded = true; resolve(); };
+    s.onerror = () => reject(new Error('Failed to load Google Sign-In. Check your network connection.'));
+    document.head.appendChild(s);
+  });
+}
+
+/* ═══════════════════════════════════════════════════
+   GET GOOGLE ID TOKEN
+═══════════════════════════════════════════════════ */
+function getGoogleIdToken() {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+
+    function settle(type, value) {
+      if (settled) return;
+      settled = true;
+      if (type === 'ok')     resolve(value);
+      else                   reject(value);
+    }
+
+    function onCredential(response) {
+      if (response && response.credential) {
+        settle('ok', response.credential);
+      } else {
+        settle('err', { type: 'auth_error', message: 'Google did not return credentials.' });
+      }
+    }
+
+    google.accounts.id.initialize({
+      client_id            : CONFIG.GOOGLE_CLIENT_ID,
+      callback             : onCredential,
+      ux_mode              : 'popup',
+      use_fedcm_for_prompt : true,
+      use_fedcm_for_button : true,
+      cancel_on_tap_outside: false,
+    });
+
+    google.accounts.id.prompt(notification => {
+      if (settled) return;
+
+      const isSkipped      = notification.isSkippedMoment   ? notification.isSkippedMoment()   : false;
+      const isDismissed    = notification.isDismissedMoment ? notification.isDismissedMoment() : false;
+      const isNotDisplayed = notification.isNotDisplayed    ? notification.isNotDisplayed()    : false;
+
+      if (isNotDisplayed || isSkipped) {
+        _showFallbackButton(onCredential, reject);
+        return;
+      }
+
+      if (isDismissed && !settled) {
+        const reason = notification.getDismissedReason ? notification.getDismissedReason() : 'dismissed';
+        if (reason === 'credential_returned') return;
+        settle('err', { type: 'user_cancel', message: 'Sign-in was cancelled.' });
+      }
+    });
+  });
+}
+
+function _showFallbackButton(onCredential, onReject) {
+  const container = document.getElementById('google-button-container');
+  const target    = document.getElementById('g-btn-render');
+  if (!container || !target) return;
+
+  google.accounts.id.initialize({
+    client_id            : CONFIG.GOOGLE_CLIENT_ID,
+    callback             : onCredential,
+    ux_mode              : 'popup',
+    use_fedcm_for_button : true,
+    cancel_on_tap_outside: false,
+  });
+
+  google.accounts.id.renderButton(target, {
+    type         : 'standard',
+    shape        : 'rectangular',
+    theme        : 'outline',
+    text         : 'signin_with',
+    size         : 'large',
+    width        : '340',
+    logo_alignment: 'left',
+  });
+
+  container.classList.add('show');
+  cancelFlow();
+  switchMode('live');
+  setFlowSub('One-tap sign-in is not available in this browser. Use the Google button below to continue.');
+}
+
+/* ═══════════════════════════════════════════════════
+   SEND TOKEN TO APPS SCRIPT — Content-Type: text/plain
+   avoids CORS preflight
+═══════════════════════════════════════════════════ */
+async function verifyWithAppsScript(idToken) {
+  const controller  = new AbortController();
+  const timeoutId   = setTimeout(() => controller.abort(), 30_000);
+
+  try {
+    const res = await fetch(CONFIG.API_BASE, {
+      method  : 'POST',
+      headers : { 'Content-Type': 'text/plain' },
+      body    : JSON.stringify({ type: 'login', token: idToken }),
+      signal  : controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) throw new Error('Server returned HTTP ' + res.status + '. Please try again.');
+
+    const text = await res.text();
+    try { return JSON.parse(text); }
+    catch {
+      console.error('[Login] Non-JSON response from server:', text.substring(0, 200));
+      throw new Error('Server returned an unexpected response. Please try again.');
+    }
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') throw new Error('Request timed out (30s). Check your connection and try again.');
+    throw e;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   SEND SANDBOX REQUEST TO APPS SCRIPT
+   Backend contract (add this "type" to your doPost switch):
+     Request  → { type:'demoAccessRequest', email }
+     Response → { allowed:bool, status:'approved'|'pending'|'denied',
+                   reason, sessionId, token, email, name, role, permissions }
+   The handler should log { Timestamp, Email, Status } to a sheet,
+   matching rows already in your log (e.g. "20/05/2026 04:53:33,
+   afan@gmail.com, approved") and only return allowed:true once a
+   row for that email has Status = "approved".
+═══════════════════════════════════════════════════ */
+async function requestSandboxAccess(email) {
+  const controller = new AbortController();
+  const timeoutId  = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const res = await fetch(CONFIG.API_BASE, {
+      method  : 'POST',
+      headers : { 'Content-Type': 'text/plain' },
+      body    : JSON.stringify({ type: 'demoAccessRequest', email: email }),
+      signal  : controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) throw new Error('Server returned HTTP ' + res.status + '. Please try again.');
+    const text = await res.text();
+    try { return JSON.parse(text); }
+    catch {
+      console.error('[Sandbox] Non-JSON response from server:', text.substring(0, 200));
+      throw new Error('Server returned an unexpected response. Please try again.');
+    }
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') throw new Error('Request timed out (30s). Check your connection and try again.');
+    throw e;
+  }
+}
+
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+/* ═══════════════════════════════════════════════════
+   DISPATCH-RADAR GAUGE — shared progress UI
+═══════════════════════════════════════════════════ */
+const GAUGE_CIRC = 472.75; // 2 * PI * 75.24
+let gaugeState = { pct: 0 };
+
+function setGaugePercent(target, cap) {
+  const arc = document.getElementById('gauge-arc');
+  if (arc) arc.style.strokeDashoffset = GAUGE_CIRC * (1 - target / 100);
+  if (cap) { const c = document.getElementById('gauge-cap'); if (c) c.textContent = cap; }
+  const pctEl = document.getElementById('gauge-pct');
+  if (window.gsap && pctEl) {
+    gsap.to(gaugeState, {
+      pct: target, duration: .6, ease: 'power2.out',
+      onUpdate: () => { pctEl.textContent = Math.round(gaugeState.pct); },
+    });
+  } else if (pctEl) {
+    gaugeState.pct = target;
+    pctEl.textContent = Math.round(target);
+  }
+}
+function setTick(n, state) {
+  const el = document.querySelector('.gauge-tick[data-step="' + n + '"]');
+  if (!el) return;
+  el.classList.remove('active', 'done', 'fail');
+  if (state) el.classList.add(state);
+}
+function resetGauge() {
+  ['1','2','3','4','5'].forEach(n => setTick(n, ''));
+  gaugeState.pct = 0;
+  const arc = document.getElementById('gauge-arc');
+  if (arc) arc.style.strokeDashoffset = GAUGE_CIRC;
+  const pctEl = document.getElementById('gauge-pct');
+  if (pctEl) pctEl.textContent = '0';
+  const c = document.getElementById('gauge-cap');
+  if (c) c.textContent = 'Starting…';
+}
+function setFlowStatus(text, sub, tone) {
+  const t  = document.getElementById('flow-title');
+  const tt = document.getElementById('flow-title-text');
+  const s  = document.getElementById('flow-sub');
+  if (!t) return;
+  t.classList.remove('loading', 'success', 'error');
+  t.classList.add(tone || 'loading');
+  const iconMap = { loading: 'ti-loader-2', success: 'ti-circle-check', error: 'ti-alert-circle' };
+  const i = t.querySelector('i');
+  if (i) i.className = 'ti ' + (iconMap[tone] || 'ti-loader-2');
+  if (tt) tt.textContent = text;
+  if (s)  s.textContent  = sub || '';
+}
+function setFlowSub(sub) { const s = document.getElementById('flow-sub'); if (s) s.textContent = sub; }
+
+function showFlow() {
+  document.getElementById('panel-live').classList.remove('show');
+  document.getElementById('panel-sandbox').classList.remove('show');
+  document.getElementById('flow-view').classList.add('show');
+}
+function hideFlow() {
+  document.getElementById('flow-view').classList.remove('show');
+  if (currentMode === 'sandbox') document.getElementById('panel-sandbox').classList.add('show');
+  else document.getElementById('panel-live').classList.add('show');
+}
+function reenableButtons() {
+  const g = document.getElementById('btn-google');  if (g) g.disabled = false;
+  const s = document.getElementById('btn-sandbox'); if (s) s.disabled = false;
+}
+
+let flowToken = 0;
+function cancelFlow() {
+  flowToken++;
+  hideFlow();
+  resetGauge();
+  reenableButtons();
+  try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.cancel(); } catch {}
+}
+
+/* ═══════════════════════════════════════════════════
+   OVERLAY CONTROLS
+═══════════════════════════════════════════════════ */
+function showDenied(email, msg, title, iconClass, isWarning) {
+  const icon  = document.getElementById('denied-icon');
+  const iconI = document.getElementById('denied-icon-i');
+  const t     = document.getElementById('denied-title');
+  const m     = document.getElementById('denied-msg');
+  const cw    = document.getElementById('denied-chip-wrap');
+  const chip  = document.getElementById('denied-chip');
+
+  if (iconI) iconI.className = 'ti ' + (iconClass || 'ti-shield-x');
+  if (icon) { icon.classList.remove('tone-red', 'tone-amber'); icon.classList.add(isWarning ? 'tone-amber' : 'tone-red'); }
+  if (t) t.textContent = title || 'Access Denied';
+  if (m) m.textContent = msg   || 'Contact your administrator.';
+  if (cw) cw.style.display = email ? 'block' : 'none';
+  if (chip && email) chip.textContent = email;
+  document.getElementById('denied-overlay').classList.add('show');
+}
+function resetToLive() {
+  document.getElementById('denied-overlay').classList.remove('show');
+  document.getElementById('sandbox-overlay').classList.remove('show');
+  hideFlow(); resetGauge(); reenableButtons();
+  const fbCont = document.getElementById('google-button-container');
+  if (fbCont) fbCont.classList.remove('show');
+  try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.cancel(); } catch {}
+  switchMode('live');
+}
+
+let lastSandboxEmail = '';
+function showSandboxOverlay(email, reason, tone, title, iconClass) {
+  const icon  = document.getElementById('sandbox-icon');
+  const iconI = document.getElementById('sandbox-icon-i');
+  if (icon)  { icon.classList.remove('tone-amber', 'tone-red', 'tone-teal'); icon.classList.add(tone || 'tone-amber'); }
+  if (iconI) iconI.className = 'ti ' + (iconClass || 'ti-clock-hour-4');
+  document.getElementById('sandbox-title').textContent = title || 'Request Submitted';
+  document.getElementById('sandbox-chip').textContent  = email;
+  document.getElementById('sandbox-msg').textContent   = reason || 'Your request has been logged. An admin has been notified and will review your email for sandbox access.';
+  document.getElementById('sandbox-overlay').classList.add('show');
+}
+function resetToSandbox() {
+  document.getElementById('sandbox-overlay').classList.remove('show');
+  document.getElementById('denied-overlay').classList.remove('show');
+  hideFlow(); resetGauge(); reenableButtons();
+  switchMode('sandbox');
+  const input = document.getElementById('demo-email');
+  if (input) { input.value = ''; input.focus(); }
+}
+function recheckSandbox() {
+  document.getElementById('sandbox-overlay').classList.remove('show');
+  const input = document.getElementById('demo-email');
+  if (input) input.value = lastSandboxEmail;
+  startSandboxRequest();
+}
+
+/* ═══════════════════════════════════════════════════
+   MATERIAL-STYLE CLICK RIPPLE — purely cosmetic
+═══════════════════════════════════════════════════ */
+document.addEventListener('click', function (e) {
+  const btn = e.target.closest('.ripple-btn');
+  if (!btn || btn.disabled) return;
+  const rect = btn.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  const ink  = document.createElement('span');
+  ink.className = 'ink-ripple';
+  ink.style.width  = ink.style.height = size + 'px';
+  ink.style.left   = (e.clientX - rect.left - size / 2) + 'px';
+  ink.style.top    = (e.clientY - rect.top  - size / 2) + 'px';
+  btn.appendChild(ink);
+  ink.addEventListener('animationend', () => ink.remove());
+});
+
+/* ═══════════════════════════════════════════════════
+   LIVE LOGIN FLOW (Google) — mirrors the gauge above
+═══════════════════════════════════════════════════ */
+async function startGoogleLogin() {
+  const myToken = ++flowToken;
+  const btn = document.getElementById('btn-google');
+  if (btn) btn.disabled = true;
+  resetGauge(); showFlow();
+
+  setTick(1, 'active');
+  setFlowStatus('Connecting to Google', 'Loading the sign-in library…', 'loading');
+  setGaugePercent(12, 'Connecting');
+
+  try {
+    await loadGSI();
+  } catch (e) {
+    if (myToken !== flowToken) return;
+    setTick(1, 'fail');
+    setFlowStatus('Connection Failed', e.message || 'Could not load Google Sign-In. Check your internet connection and try again.', 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  if (myToken !== flowToken) return;
+  setTick(1, 'done'); setGaugePercent(20, 'Connected');
+
+  setTick(2, 'active');
+  setFlowStatus('Retrieving Your Account', 'Waiting for your Google credential…', 'loading');
+  setGaugePercent(32, 'Authenticating');
+  let idToken = null;
+
+  try {
+    idToken = await getGoogleIdToken();
+  } catch (e) {
+    if (myToken !== flowToken) return;
+    if (e && e.type === 'user_cancel') { resetToLive(); return; }
+    setTick(2, 'fail');
+    setFlowStatus('Sign-In Failed', (e && e.message) || 'Google sign-in failed. Please try again.', 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  if (myToken !== flowToken) return;
+
+  const fbCont = document.getElementById('google-button-container');
+  if (fbCont) fbCont.classList.remove('show');
+  setTick(2, 'done'); setGaugePercent(45, 'Verified');
+
+  setTick(3, 'active');
+  setFlowStatus('Checking Access Database', 'Verifying with FleetFlow servers…', 'loading');
+  setGaugePercent(58, 'Checking');
+  let result = null;
+
+  try {
+    result = await verifyWithAppsScript(idToken);
+  } catch (e) {
+    if (myToken !== flowToken) return;
+    setTick(3, 'fail');
+    setFlowStatus('Server Error', (e && e.message) || 'Could not reach the verification server. Please try again.', 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  if (myToken !== flowToken) return;
+  setTick(3, 'done'); setGaugePercent(70, 'Validating');
+
+  setTick(4, 'active');
+  await sleep(300);
+  if (myToken !== flowToken) return;
+
+  if (!result || !result.allowed) {
+    setTick(4, 'fail');
+    setFlowStatus('Access Denied', 'This account is not authorised.', 'error');
+    setGaugePercent(70, 'Denied');
+    await sleep(300);
+    if (myToken !== flowToken) return;
+    hideFlow();
+    showDenied(
+      result && result.email  ? result.email  : null,
+      result && result.reason ? result.reason : 'Your account is not authorised to access FleetFlow Pro. Contact your administrator.',
+      result && result.title  ? result.title  : 'Access Denied',
+      result && result.status === 'inactive' ? 'ti-user-off' : 'ti-shield-x',
+      result && result.status === 'inactive'
+    );
+    if (btn) btn.disabled = false;
+    return;
+  }
+  setTick(4, 'done'); setGaugePercent(85, 'Approved');
+
+  setTick(5, 'active');
+  setFlowStatus('Access Granted', 'Opening FleetFlow Pro…', 'success');
+  setGaugePercent(96, 'Launching');
+  await sleep(500);
+  if (myToken !== flowToken) return;
+
+  if (!result.sessionId || !result.token || !result.email) {
+    setTick(5, 'fail');
+    setFlowStatus('Session Error',
+      'Server response is missing required fields: ' +
+      (!result.sessionId ? 'sessionId ' : '') +
+      (!result.token     ? 'token '     : '') +
+      (!result.email     ? 'email'      : '') +
+      '. Please contact your administrator.', 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+  let sessionCreated = false;
+  try {
+    sessionCreated = window.Auth && window.Auth.createSession({
+      sessionId   : result.sessionId,
+      token       : result.token,
+      email       : result.email,
+      name        : result.name || result.email,
+      role        : result.role || 'User',
+      permissions : result.permissions || null,
+    });
+  } catch (e) {
+    console.error('[Login] Auth.createSession threw:', e.message);
+    sessionCreated = false;
+  }
+
+  if (!sessionCreated) {
+    setTick(5, 'fail');
+    setFlowStatus('Session Error', 'Could not create a local session. Try using a different browser or disable private/incognito mode (sessionStorage must be available).', 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+  setTick(5, 'done'); setGaugePercent(100, 'Ready');
+  setFlowStatus('Preparing Portal', 'Loading your workspace…', 'loading');
+  await sleep(300);
+
+  try {
+    if (window.Auth && typeof window.Auth.fetchPermissions === 'function') {
+      await window.Auth.fetchPermissions();
+    }
+  } catch (_) {
+    console.warn('[Login] fetchPermissions failed — will retry on index.html');
+  }
+
+  setFlowSub('Pre-loading data…');
+  if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
+    try {
+      await AdminPro.warmIfEmpty();
+      console.log('[Login] Data pre-loaded into cache — index.html will be instant');
+    } catch (e) {
+      console.warn('[Login] warmIfEmpty failed (non-fatal):', e.message);
+    }
+  }
+
+  doRedirect();
+}
+
+/* ═══════════════════════════════════════════════════
+   SANDBOX DEMO FLOW — email request → admin approval
+   Distinct color language (amber) and distinct backend
+   call ('demoAccessRequest') from the Live flow above.
+═══════════════════════════════════════════════════ */
+async function startSandboxRequest() {
+  const input = document.getElementById('demo-email');
+  const field = document.getElementById('demo-field');
+  const err   = document.getElementById('demo-email-error');
+  const email = (input.value || '').trim();
+
+  if (!validateEmail(email)) {
+    field.classList.add('invalid');
+    err.classList.add('show');
+    input.focus();
+    return;
+  }
+  field.classList.remove('invalid');
+  err.classList.remove('show');
+  lastSandboxEmail = email;
+
+  const myToken = ++flowToken;
+  const btn = document.getElementById('btn-sandbox');
+  if (btn) btn.disabled = true;
+  resetGauge(); showFlow();
+
+  setTick(1, 'active');
+  setFlowStatus('Validating Email', 'Checking the address format…', 'loading');
+  setGaugePercent(15, 'Validating');
+  await sleep(300);
+  if (myToken !== flowToken) return;
+  setTick(1, 'done'); setGaugePercent(28, 'Valid');
+
+  setTick(2, 'active');
+  setFlowStatus('Logging Request', 'Saving your request to the access sheet…', 'loading');
+  setGaugePercent(42, 'Logging');
+  let result = null;
+
+  try {
+    result = await requestSandboxAccess(email);
+  } catch (e) {
+    if (myToken !== flowToken) return;
+    setTick(2, 'fail');
+    setFlowStatus('Server Error', (e && e.message) || 'Could not reach the verification server. Please try again.', 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  if (myToken !== flowToken) return;
+  setTick(2, 'done'); setGaugePercent(56, 'Logged');
+
+  setTick(3, 'active');
+  setFlowStatus('Checking Approval Status', 'Looking up admin approval…', 'loading');
+  setGaugePercent(68, 'Checking');
+  await sleep(350);
+  if (myToken !== flowToken) return;
+
+  const status = result && result.status;
+  if (!result || status !== 'approved') {
+    setTick(3, 'done'); setGaugePercent(68, 'Pending');
+    setTick(4, 'fail');
+    hideFlow();
+    if (btn) btn.disabled = false;
+    if (status === 'denied') {
+      showSandboxOverlay(
+        email,
+        (result && result.reason) || 'This email was reviewed and denied sandbox access. Contact your administrator.',
+        'tone-red', 'Request Denied', 'ti-shield-x'
+      );
+    } else {
+      showSandboxOverlay(
+        email,
+        (result && result.reason) || 'Your request has been logged with a timestamp. An admin will review this email and approve sandbox access — try again once approved.',
+        'tone-amber', 'Awaiting Admin Approval', 'ti-clock-hour-4'
+      );
+    }
+    return;
+  }
+  setTick(3, 'done'); setGaugePercent(78, 'Approved');
+
+  setTick(4, 'active');
+  setFlowStatus('Creating Session', 'Setting up your sandbox session…', 'loading');
+  setGaugePercent(88, 'Creating');
+  await sleep(350);
+  if (myToken !== flowToken) return;
+
+  if (!result.sessionId || !result.token || !result.email) {
+    setTick(4, 'fail');
+    setFlowStatus('Session Error', 'Sandbox server response is missing required fields. Please contact your administrator.', 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+  let sessionCreated = false;
+  try {
+    sessionCreated = window.Auth && window.Auth.createSession({
+      sessionId   : result.sessionId,
+      token       : result.token,
+      email       : result.email,
+      name        : result.name || (email + ' (Sandbox)'),
+      role        : result.role || 'Sandbox',
+      permissions : result.permissions || null,
+    });
+  } catch (e) {
+    console.error('[Sandbox] Auth.createSession threw:', e.message);
+    sessionCreated = false;
+  }
+
+  if (!sessionCreated) {
+    setTick(4, 'fail');
+    setFlowStatus('Session Error', 'Could not create a local session. Try a different browser or disable private/incognito mode.', 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  setTick(4, 'done'); setGaugePercent(94, 'Ready');
+
+  setTick(5, 'active');
+  setFlowStatus('Access Granted', 'Opening Sandbox…', 'success');
+  setGaugePercent(100, 'Launching');
+  await sleep(500);
+  if (myToken !== flowToken) return;
+  setTick(5, 'done');
+
+  setFlowStatus('Preparing Sandbox', 'Loading sample workspace…', 'loading');
+  try {
+    if (window.Auth && typeof window.Auth.fetchPermissions === 'function') {
+      await window.Auth.fetchPermissions();
+    }
+  } catch (_) {
+    console.warn('[Sandbox] fetchPermissions failed — will retry on index.html');
+  }
+
+  setFlowSub('Pre-loading sample data…');
+  if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
+    try { await AdminPro.warmIfEmpty(); }
+    catch (e) { console.warn('[Sandbox] warmIfEmpty failed (non-fatal):', e.message); }
+  }
+
+  doRedirect();
+}
+</script>
+</body>
+</html>
