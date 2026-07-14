@@ -455,17 +455,16 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 #icon-bar{
   width:var(--icon-bar-w);
   min-width:var(--icon-bar-w);
-  background:var(--bg2);border:1px solid var(--border);
+  height:100%;
+  background:var(--bg2);
+  border-right:1px solid var(--border);
   display:flex;flex-direction:column;align-items:center;
   padding:10px 0;gap:4px;
   flex-shrink:0;z-index:110;position:relative;
   overflow-y:auto;overflow-x:hidden;
   scrollbar-width:none;
-  align-self:center;
-  max-height:calc(100% - 20px);
-  margin:10px 0 10px 10px;
-  border-radius:20px;
-  box-shadow:var(--shadow-md);
+  margin:0;
+  border-radius:0;
   transition:background .2s,border-color .2s;
 }
 #icon-bar::-webkit-scrollbar{display:none;}
@@ -1362,6 +1361,7 @@ const SECTIONS = {
 
 let activeSection = null;
 let flyoutOpen = false;
+let _sbAutoHideTimer = null;
 let sidebarVisible = true;
 let _flyoutOutsideHandler = null;
 
@@ -1494,8 +1494,19 @@ function _onFlyoutReposition() {
   _positionFlyout(activeBtn);
 }
 
+/* Auto-hide: sub-bar closes 3s after the mouse leaves it (or the icon-bar).
+   Re-entering either the sub-bar or the icon-bar cancels the countdown, so
+   hovering inside the sub-bar keeps its items showing indefinitely. */
+function _resetSbAutoHide() {
+  if (_sbAutoHideTimer) clearTimeout(_sbAutoHideTimer);
+  _sbAutoHideTimer = setTimeout(closeFlyout, 3000);
+}
+function _onSbLeave() { _resetSbAutoHide(); }
+function _onSbEnter() { if (_sbAutoHideTimer) { clearTimeout(_sbAutoHideTimer); _sbAutoHideTimer = null; } }
+
 function closeFlyout() {
   const sb = document.getElementById('sub-bar');
+  const ib = document.getElementById('icon-bar');
   if (!sb) return;
   sb.classList.remove('open');
   sb.setAttribute('aria-hidden', 'true');
@@ -1503,6 +1514,11 @@ function closeFlyout() {
   if (_flyoutOutsideHandler) { document.removeEventListener('click', _flyoutOutsideHandler); _flyoutOutsideHandler = null; }
   document.removeEventListener('keydown', _flyoutEscHandler);
   window.removeEventListener('resize', _onFlyoutReposition);
+  sb.removeEventListener('mouseleave', _onSbLeave);
+  sb.removeEventListener('mouseenter', _onSbEnter);
+  ib?.removeEventListener('mouseleave', _onSbLeave);
+  ib?.removeEventListener('mouseenter', _onSbEnter);
+  if (_sbAutoHideTimer) { clearTimeout(_sbAutoHideTimer); _sbAutoHideTimer = null; }
 }
 
 function _flyoutEscHandler(e) { if (e.key === 'Escape') closeFlyout(); }
@@ -1558,6 +1574,19 @@ function ibOpen(id, btn) {
   setTimeout(() => document.addEventListener('click', _flyoutOutsideHandler), 0);
   document.addEventListener('keydown', _flyoutEscHandler);
   window.addEventListener('resize', _onFlyoutReposition);
+
+  // Auto-hide on hover-out; hovering inside the sub-bar (or the icon-bar)
+  // cancels the countdown so items remain showing while hovered.
+  const ib = document.getElementById('icon-bar');
+  sb.removeEventListener('mouseleave', _onSbLeave);
+  sb.removeEventListener('mouseenter', _onSbEnter);
+  sb.addEventListener('mouseleave', _onSbLeave);
+  sb.addEventListener('mouseenter', _onSbEnter);
+  ib?.removeEventListener('mouseleave', _onSbLeave);
+  ib?.removeEventListener('mouseenter', _onSbEnter);
+  ib?.addEventListener('mouseleave', _onSbLeave);
+  ib?.addEventListener('mouseenter', _onSbEnter);
+  _resetSbAutoHide();
 
   // Auto-load the first item of the first group into the main frame
   // This ensures data is visible immediately without a manual click
