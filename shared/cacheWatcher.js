@@ -3,15 +3,26 @@
    ───────────────────────────────────────────────────────────────────────
    ONE watchman for the whole app, instead of every page having its own.
 
-   What it does:
-   - Opens the shared IndexedDB (ap2_fleet_cache / datasets) ONCE.
-   - Checks every dataset key on a single timer (every 30s).
-   - Whenever a key's data actually changes, it tells every open child
-     page (iframe) about it via postMessage — same message shape the
-     pages already listen for: { type: 'ap-cache-updated', key: '...' }.
-   - Pages no longer need their own setInterval polling loop — they just
-     keep their existing `window.addEventListener('message', ...)` and
-     react when told.
+   TWO ways it detects changes — used together:
+
+   1. INSTANT (preferred): whoever writes/deletes/restores cache data
+      calls AP2CacheWatcher.notifyNow('ap2_employee') right after doing
+      it. Zero delay — the table updates the same moment the write
+      happens. This should be added inside dataLayer.js at every place
+      it saves, deletes, or restores a dataset.
+
+   2. FAST FALLBACK POLL: a safety net that checks every ~1.5s in case
+      something changes the cache WITHOUT calling notifyNow (a raw IDB
+      edit, another browser tab, a manual restore, etc). This also
+      catches a key being DELETED, not just changed.
+
+   Either path ends the same way: it tells every open child page
+   (iframe) via postMessage — same shape pages already listen for:
+     { type: 'ap-cache-updated', key: '...' }
+
+   Pages no longer need their own setInterval polling loop — they just
+   keep their existing `window.addEventListener('message', ...)` and
+   react when told.
 
    How to use it in index.html:
      <script src="cacheWatcher.js"></script>
@@ -21,19 +32,20 @@
        });
      </script>
 
-   If dataLayer.js writes fresh data and wants to notify immediately
-   (instead of waiting up to 30s for the next poll), it can call:
+   How to wire the instant path into dataLayer.js — call this right
+   after any successful save/delete/restore of a dataset:
      AP2CacheWatcher.notifyNow('ap2_employee');
    ═══════════════════════════════════════════════════════════════════════ */
 
 (function (global) {
   const _IDB_NAME   = 'ap2_fleet_cache';
   const _IDB_STORE  = 'datasets';
-  const POLL_MS     = 30000;
+  const POLL_MS     = 1500;   // fast fallback — instant path above should normally win
 
   let _idbConn      = null;
   let _getFrames    = () => [];   // function supplied by index.html to find child iframes
   let _fingerprints = {};         // key -> lightweight snapshot used to detect change
+  let _knownKeys    = new Set();  // every key ever seen, so deletions can be detected
   let _pollTimer    = null;
   let _started      = false;
 
@@ -87,15 +99,27 @@
 
   async function _checkAll() {
     try {
-      const db   = await _getDB();
-      const keys = await _allKeys(db);
-      for (const key of keys) {
+      const db          = await _getDB();
+      const currentKeys = await _allKeys(db);
+      const currentSet  = new Set(currentKeys);
+
+      // ── Check every key that currently exists — new data or changed data ──
+      for (const key of currentKeys) {
         const rec = await _getRecord(db, key);
         const fp  = _fingerprint(rec);
         if (_fingerprints[key] !== undefined && _fingerprints[key] !== fp) {
-          _broadcast(key);
+          _broadcast(key); // data changed (or just appeared for the first time after being empty)
         }
         _fingerprints[key] = fp;
+        _knownKeys.add(key);
+      }
+
+      // ── Check for keys that existed before but are now GONE (cache deleted) ──
+      for (const key of _knownKeys) {
+        if (!currentSet.has(key) && _fingerprints[key] !== undefined) {
+          delete _fingerprints[key];
+          _broadcast(key); // tell pages so they can show "no data" state immediately
+        }
       }
     } catch (e) {
       console.warn('[cacheWatcher] check failed:', e.message);
