@@ -719,11 +719,57 @@ function normaliseRow(r, i) {
 
   
 
-/* ═══════════ CACHE — via shared cacheWatcher.js (no page-local IDB code) ═══════════ */
+/* ═══════════ CACHE — via shared cacheWatcher.js, with a safe fallback ═══════════
+   If cacheWatcher.js fails to load or load in time (blocked, 404, iPad
+   caching a stale/broken copy, etc.) this page must NOT throw and must
+   NOT stop the rest of this script from running — that's what was
+   causing the login-redirect side effect. So: if AP2CacheWatcher isn't
+   there, build a tiny local stand-in with the same shape, using the
+   page's own direct (timeout-guarded) IndexedDB read as a fallback.
+   ════════════════════════════════════════════════════════════════════════ */
 const _AP2_CACHE_KEY = 'ap2_employee';
 
+if (typeof window.AP2CacheWatcher === 'undefined') {
+  console.warn('[allEmp] cacheWatcher.js did not load — using local fallback');
+  window.AP2CacheWatcher = (function () {
+    const _IDB_NAME = 'ap2_fleet_cache', _IDB_STORE = 'datasets';
+    let _conn = null;
+    function _open() {
+      if (_conn) return Promise.resolve(_conn);
+      return new Promise((res, rej) => {
+        let done = false;
+        const req = indexedDB.open(_IDB_NAME);
+        const t = setTimeout(() => { if (!done) { done = true; rej(new Error('idb-open-timeout')); } }, 2000);
+        req.onsuccess = e => { if (!done) { done = true; clearTimeout(t); _conn = e.target.result; res(_conn); } };
+        req.onerror   = e => { if (!done) { done = true; clearTimeout(t); rej(e.target.error); } };
+      });
+    }
+    return {
+      init() {},
+      subscribe() { return () => {}; }, // no cross-page notifications available in fallback mode
+      notifyNow() {},
+      getStatus() { return { healthy: false, mode: 'local-fallback', lastError: 'cacheWatcher.js not loaded' }; },
+      async readKey(key) {
+        try {
+          const db  = await _open();
+          const rec = await new Promise((res, rej) => {
+            const r = db.transaction(_IDB_STORE, 'readonly').objectStore(_IDB_STORE).get(key);
+            r.onsuccess = () => res(r.result || null);
+            r.onerror   = () => rej(r.error);
+          });
+          return (rec && Array.isArray(rec.data) && rec.data.length) ? rec.data : null;
+        } catch (e) {
+          console.warn('[allEmp] fallback read failed:', e.message);
+          return null;
+        }
+      }
+    };
+  })();
+}
+
 // Thin wrapper kept so the rest of this file doesn't need to change —
-// actual read now lives once, centrally, in cacheWatcher.js.
+// actual read lives centrally in cacheWatcher.js when it's available,
+// or in the fallback above when it isn't.
 async function _readCache() {
   return AP2CacheWatcher.readKey(_AP2_CACHE_KEY);
 }
@@ -754,7 +800,7 @@ async function loadEmployees() {
       if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;color:var(--text3);">
         <i class="ti ti-database-off" style="font-size:26px;display:block;margin-bottom:8px;"></i>
         No data in cache yet. Data will appear automatically once
-        <code style="font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:4px;">Employee Data</code> is populated.
+        <code style="font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:4px;">ap2_employee</code> is populated.
       </td></tr>`;
     }
   } catch (err) {
@@ -790,8 +836,12 @@ async function _applyFromIDB() {
   }
 }
 
-AP2CacheWatcher.init();
-AP2CacheWatcher.subscribe(() => { _applyFromIDB(); });
+try {
+  AP2CacheWatcher.init();
+  AP2CacheWatcher.subscribe(() => { _applyFromIDB(); });
+} catch (e) {
+  console.warn('[allEmp] cacheWatcher wiring failed, continuing without live updates:', e.message);
+}
 
 /* ═══════════ FILTER / TABLE ═══════════ */
 function calcOverall(ex) {
