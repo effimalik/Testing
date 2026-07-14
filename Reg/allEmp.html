@@ -12,6 +12,7 @@
 <script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/devPre.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/cioView.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/cacheWatcher.js"></script>
 
 <style>
 /* ── Reset ── */
@@ -718,32 +719,13 @@ function normaliseRow(r, i) {
 
   
 
-/* ═══════════ CACHE — IndexedDB only ═══════════ */
+/* ═══════════ CACHE — via shared cacheWatcher.js (no page-local IDB code) ═══════════ */
 const _AP2_CACHE_KEY = 'ap2_employee';
 
-const _IDB_NAME  = 'ap2_fleet_cache';
-const _IDB_STORE = 'datasets';
-
-let _idbConn = null;
-function _getDB() {
-  if (_idbConn) return Promise.resolve(_idbConn);
-  return new Promise((res, rej) => {
-    const req = indexedDB.open(_IDB_NAME);
-    req.onsuccess = e => { _idbConn = e.target.result; res(_idbConn); };
-    req.onerror   = e => rej(e.target.error);
-  });
-}
-
+// Thin wrapper kept so the rest of this file doesn't need to change —
+// actual read now lives once, centrally, in cacheWatcher.js.
 async function _readCache() {
-  const db  = await _getDB();
-  const rec = await new Promise((res, rej) => {
-    const req = db.transaction(_IDB_STORE, 'readonly')
-                  .objectStore(_IDB_STORE).get(_AP2_CACHE_KEY);
-    req.onsuccess = () => res(req.result || null);
-    req.onerror   = () => rej(req.error);
-  });
-  if (!rec || !Array.isArray(rec.data) || !rec.data.length) return null;
-  return rec.data;
+  return AP2CacheWatcher.readKey(_AP2_CACHE_KEY);
 }
 
 /* ═══════════ LOAD — Stream-Query → Memory-Hoist → Slice → Virtual-Scroll ═══════════
@@ -751,6 +733,8 @@ async function _readCache() {
    2. Memory-Hoist:   Normalised result array lives in JS RAM as `employees` for zero-latency sort/filter.
    3. Slice (50):     renderEmpTable takes first SLICE_SZ block; user can page through blocks.
    4. Virtual-Scroll: Only VS_ROWS (20) <tr> elements exist in the DOM at any time.
+   Used ONLY for the very first paint — nothing is on screen yet, so a
+   brief spinner here is fine (there's nothing to blink relative to).
    ════════════════════════════════════════════════════════════════════════════════════ */
 async function loadEmployees() {
   const tbody = document.getElementById('emp-tbody');
@@ -761,14 +745,10 @@ async function loadEmployees() {
     </div></td></tr>`;
 
   try {
-    // ── SINGLE SOURCE: ap2_employee key in ap2_fleet_cache IndexedDB ──
     const rows = await _readCache();
 
     if (rows && rows.length) {
-      // ── MEMORY-HOIST: normalise into plain JS objects, hold in RAM ──
       employees = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
-
-      // ── SLICE + VIRTUAL-SCROLL: renderEmpTable handles both ──
       renderEmpTable(employees);
     } else {
       if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;color:var(--text3);">
@@ -786,36 +766,32 @@ async function loadEmployees() {
   }
 }
 
-/* ═══════════ BACKGROUND CACHE WATCHER
-   Polls every 30 s and on ap-cache-updated messages.
-   Reads ap2_employee from IndexedDB and re-renders the table.
+/* ═══════════ SILENT REFRESH — every update AFTER the first paint goes through here.
+   No spinner, no tbody wipe unless data is genuinely gone — so nothing blinks.
+   Subscribed to cacheWatcher.js, which fires this on ANY of:
+     - this page's own fast poll detecting a change or deletion
+     - an instant notifyNow() call from wherever the data was written
+     - a broadcast relayed down from the parent shell (index.html)
    ════════════════════════════════════════════════════════════════════════ */
-(function() {
-  let _debounce = null;
-  async function _applyFromIDB() {
-    try {
-      // Single source: ap2_employee in ap2_fleet_cache IndexedDB
-      const rows = await _readCache();
-      if (!rows || !rows.length) return;
-      const fresh = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
-      if (!fresh.length) return;
-      // Memory-Hoist: replace hoisted array and re-render
-      employees = fresh;
+async function _applyFromIDB() {
+  try {
+    const rows = await _readCache();
+    if (rows && rows.length) {
+      employees = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
       renderEmpTable(employees);
-    } catch (e) {
-      console.warn('[allEmp] background refresh error:', e.message);
+    } else if (employees && employees.length) {
+      // Cache was cleared/deleted — reflect that immediately instead of
+      // leaving stale rows on screen.
+      employees = [];
+      renderEmpTable(employees);
     }
+  } catch (e) {
+    console.warn('[allEmp] silent refresh error:', e.message);
   }
+}
 
-  // Debounce: coalesce multiple rapid cache-updated events into one re-render
-  function _debouncedApply() {
-    if (_debounce) clearTimeout(_debounce);
-    _debounce = setTimeout(_applyFromIDB, 200);
-  }
-
-  setInterval(_applyFromIDB, 30000);
-  window.addEventListener('ap-cache-updated', _debouncedApply);
-})();
+AP2CacheWatcher.init();
+AP2CacheWatcher.subscribe(() => { _applyFromIDB(); });
 
 /* ═══════════ FILTER / TABLE ═══════════ */
 function calcOverall(ex) {
@@ -1746,19 +1722,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-/* Listen for messages from parent index.html */
+/* Listen for messages from parent index.html
+   (Cache-updated messages are now handled internally by cacheWatcher.js,
+   which forwards them straight to our AP2CacheWatcher.subscribe() callback —
+   no need to listen for that type here anymore.) */
 window.addEventListener('message', (e) => {
   if (!e.data) return;
-  // Cache updated — silently re-read + re-render, NO spinner / NO blink.
-  // (Only falls back to the spinner-loading path on very first page load,
-  // when there's nothing on screen yet to preserve.)
-  if (e.data.type === 'ap-cache-updated') {
-    if (employees && employees.length) {
-      window.dispatchEvent(new Event('ap-cache-updated')); // hands off to silent _applyFromIDB
-    } else {
-      loadEmployees();
-    }
-  }
   // Instant theme sync — parent pushes on every theme change
   if (e.data.type === 'ap-theme' && e.data.theme) {
     document.documentElement.setAttribute('data-theme', e.data.theme);
