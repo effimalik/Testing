@@ -1141,6 +1141,14 @@ async function _gasPost(action, payload = {}) {
     await new Promise(r => setTimeout(r, 250));
     return { success: true, mock: true };
   }
+  // Writes must be authenticated the same way reads are (see dataLayer.js
+  // _fetchFromServer): the backend authorizes based on sessionId + token,
+  // not on anything client-side, so both must ride along on every POST.
+  const creds = window.Auth && window.Auth.getCredentials ? window.Auth.getCredentials() : null;
+  if (!creds || !creds.sessionId || !creds.token) {
+    throw new Error('No valid session — please log in again');
+  }
+
   const res = await fetch(GAS_URL, {
     method: 'POST',
     // IMPORTANT: do not set Content-Type: application/json here. That header
@@ -1151,7 +1159,7 @@ async function _gasPost(action, payload = {}) {
     // body via e.postData.contents and JSON.parses it, so nothing on the
     // Code.gs side needs to change.
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action, ...payload }),
+    body: JSON.stringify({ action, sessionId: creds.sessionId, token: creds.token, ...payload }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
