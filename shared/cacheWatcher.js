@@ -68,10 +68,45 @@
 
   function _getDB() {
     if (_idbConn) return Promise.resolve(_idbConn);
-    return new Promise((res, rej) => {
-      const req = indexedDB.open(_IDB_NAME);
-      req.onsuccess = e => { _idbConn = e.target.result; res(_idbConn); };
-      req.onerror   = e => rej(e.target.error);
+
+    // iOS Safari sometimes hangs indexedDB.open() forever when several frames
+    // open the same database at once (no error, no success — just silence).
+    // Guard with a timeout + one retry so we never wait on it forever.
+    function _attemptOpen(attempt) {
+      return new Promise((res, rej) => {
+        let settled = false;
+        const req = indexedDB.open(_IDB_NAME);
+
+        const timer = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          console.warn('[cacheWatcher] IDB open timed out (attempt ' + attempt + ') — retrying');
+          rej(new Error('idb-open-timeout'));
+        }, 2000);
+
+        req.onsuccess = e => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          _idbConn = e.target.result;
+          res(_idbConn);
+        };
+        req.onerror = e => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          rej(e.target.error);
+        };
+        req.onblocked = () => {
+          // another tab/frame is mid-upgrade — don't hang silently, surface it
+          console.warn('[cacheWatcher] IDB open blocked (attempt ' + attempt + ')');
+        };
+      });
+    }
+
+    return _attemptOpen(1).catch(() => _attemptOpen(2)).catch((e) => {
+      console.warn('[cacheWatcher] IDB open failed after retry:', e.message);
+      throw e;
     });
   }
 
