@@ -1749,9 +1749,15 @@ document.addEventListener('DOMContentLoaded', () => {
 /* Listen for messages from parent index.html */
 window.addEventListener('message', (e) => {
   if (!e.data) return;
-  // Cache updated — reload table from IndexedDB
+  // Cache updated — silently re-read + re-render, NO spinner / NO blink.
+  // (Only falls back to the spinner-loading path on very first page load,
+  // when there's nothing on screen yet to preserve.)
   if (e.data.type === 'ap-cache-updated') {
-    loadEmployees();
+    if (employees && employees.length) {
+      window.dispatchEvent(new Event('ap-cache-updated')); // hands off to silent _applyFromIDB
+    } else {
+      loadEmployees();
+    }
   }
   // Instant theme sync — parent pushes on every theme change
   if (e.data.type === 'ap-theme' && e.data.theme) {
