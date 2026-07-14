@@ -2,39 +2,55 @@
    cacheWatcher.js
    ───────────────────────────────────────────────────────────────────────
    ONE watchman for the whole app, instead of every page having its own.
+   Usable in TWO places, with the exact same file:
+     - The top shell (index.html) — watches + relays to all iframes.
+     - A leaf module page (allEmp.html, allBike.html, etc.) — watches its
+       own copy of the cache and reacts directly, no custom IDB code
+       needed in that page anymore.
 
    TWO ways it detects changes — used together:
 
    1. INSTANT (preferred): whoever writes/deletes/restores cache data
-      calls AP2CacheWatcher.notifyNow('ap2_employee') right after doing
-      it. Zero delay — the table updates the same moment the write
-      happens. This should be added inside dataLayer.js at every place
-      it saves, deletes, or restores a dataset.
+      calls AP2CacheWatcher.notifyNow(key) right after doing it — using
+      whatever key variable it just wrote (never typed by hand). Zero
+      delay — pages update the same moment the write happens.
 
    2. FAST FALLBACK POLL: a safety net that checks every ~1.5s in case
       something changes the cache WITHOUT calling notifyNow (a raw IDB
       edit, another browser tab, a manual restore, etc). This also
       catches a key being DELETED, not just changed.
 
-   Either path ends the same way: it tells every open child page
-   (iframe) via postMessage — same shape pages already listen for:
-     { type: 'ap-cache-updated', key: '...' }
+   Whatever detects a change, ALL of these fire, so it works the same
+   everywhere:
+     - Any local page.subscribe(callback) — called with the key that changed
+     - Any child iframes (only if this page passed getFrames — i.e. it's
+       the shell) — via postMessage: { type:'ap-cache-updated', key }
+     - If THIS page received that same postMessage from ITS parent, it's
+       forwarded to its own local subscribers too — so a leaf page reacts
+       whether the change was detected by itself or by the shell above it.
 
-   Pages no longer need their own setInterval polling loop — they just
-   keep their existing `window.addEventListener('message', ...)` and
-   react when told.
-
-   How to use it in index.html:
+   How to use it in index.html (the shell):
      <script src="cacheWatcher.js"></script>
      <script>
-       AP2CacheWatcher.init({
-         getFrames: () => document.querySelectorAll('iframe')
+       AP2CacheWatcher.init({ getFrames: () => document.querySelectorAll('iframe') });
+     </script>
+
+   How to use it in a leaf page (e.g. allEmp.html):
+     <script src="cacheWatcher.js"></script>
+     <script>
+       AP2CacheWatcher.init();                 // no getFrames needed — it's not relaying to anyone
+       AP2CacheWatcher.subscribe(() => {
+         // re-read + re-render silently, no spinner, no blink
        });
      </script>
 
+   Reading data without writing your own IDB boilerplate:
+     const rows = await AP2CacheWatcher.readKey('ap2_employee'); // array or null
+
    How to wire the instant path into dataLayer.js — call this right
-   after any successful save/delete/restore of a dataset:
-     AP2CacheWatcher.notifyNow('ap2_employee');
+   after any successful save/delete/restore of a dataset, using the
+   key variable already in scope there (never hardcoded):
+     AP2CacheWatcher.notifyNow(key);
    ═══════════════════════════════════════════════════════════════════════ */
 
 (function (global) {
@@ -48,6 +64,7 @@
   let _knownKeys    = new Set();  // every key ever seen, so deletions can be detected
   let _pollTimer    = null;
   let _started      = false;
+  let _subscribers  = [];         // local callbacks: fn(key)
 
   function _getDB() {
     if (_idbConn) return Promise.resolve(_idbConn);
@@ -86,15 +103,30 @@
     return len + '|' + first + '|' + last;
   }
 
+  // Public helper: read one dataset's array straight from IDB, no boilerplate needed in the page.
+  async function readKey(key) {
+    try {
+      const db  = await _getDB();
+      const rec = await _getRecord(db, key);
+      if (!rec || !Array.isArray(rec.data) || !rec.data.length) return null;
+      return rec.data;
+    } catch (e) {
+      console.warn('[cacheWatcher] readKey failed:', e.message);
+      return null;
+    }
+  }
+
   function _broadcast(key) {
+    // Tell any locally subscribed listeners on THIS page
+    _subscribers.forEach(fn => { try { fn(key); } catch (e) {} });
+
+    // Relay to child iframes, only relevant if this page passed getFrames (i.e. it's the shell)
     const frames = _getFrames() || [];
     frames.forEach(f => {
       try {
         f.contentWindow && f.contentWindow.postMessage({ type: 'ap-cache-updated', key }, '*');
       } catch (e) { /* ignore cross-origin / not-ready iframes */ }
     });
-    // Also fire locally in case the parent page itself needs to react
-    window.dispatchEvent(new CustomEvent('ap-cache-updated', { detail: { key } }));
   }
 
   async function _checkAll() {
@@ -135,6 +167,22 @@
     _checkAll().then(() => {
       _pollTimer = setInterval(_checkAll, POLL_MS);
     });
+
+    // If THIS page is itself inside an iframe and its parent (the shell) broadcasts
+    // a change, forward that to this page's own local subscribers too — so a leaf
+    // page reacts the same way whether it detected the change itself or was told.
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'ap-cache-updated') {
+        _subscribers.forEach(fn => { try { fn(e.data.key); } catch (err) {} });
+      }
+    });
+  }
+
+  // Register a callback to run whenever any dataset changes (change OR deletion).
+  // Returns an unsubscribe function.
+  function subscribe(fn) {
+    _subscribers.push(fn);
+    return () => { _subscribers = _subscribers.filter(f => f !== fn); };
   }
 
   // Manual trigger — call this right after a write so pages don't wait for the next poll
@@ -142,5 +190,5 @@
     _broadcast(key);
   }
 
-  global.AP2CacheWatcher = { init, notifyNow };
+  global.AP2CacheWatcher = { init, notifyNow, subscribe, readKey };
 })(window);
