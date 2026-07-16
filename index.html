@@ -11,7 +11,7 @@
 <script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/cioView.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/accessGuard.js"></script>
-<script src="https://effimalik.github.io/Testing/shared/cacheWatcher.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/cacheWatcher.js?v=1"></script>
 <!-- <script src="https://effimalik.github.io/Testing/shared/devPre.js"></script> -->
 
 <!-- ═══════════════════════════════════════════════════════════════
@@ -1827,6 +1827,8 @@ window.addEventListener('DOMContentLoaded', () => {
   populateUserChip();
   updateCacheHealthDot();
   setInterval(updateCacheHealthDot, 30000);
+
+  try { if (window.AP2CacheWatcher) AP2CacheWatcher.init(); } catch (e) { console.warn('[index] cacheWatcher init failed:', e.message); }
 
   // ── STEP 1: Apply permissions from session immediately (instant, no network) ──
   _applyPermissions();
