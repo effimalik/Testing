@@ -752,6 +752,11 @@ if (typeof window.AP2CacheWatcher === 'undefined') {
       async readKey(key) {
         try {
           const db  = await _open();
+          if (!db.objectStoreNames.contains(_IDB_STORE)) {
+            // Store doesn't exist yet — cache hasn't been warmed in this
+            // browser session yet. That's normal, not an error.
+            return null;
+          }
           const rec = await new Promise((res, rej) => {
             const r = db.transaction(_IDB_STORE, 'readonly').objectStore(_IDB_STORE).get(key);
             r.onsuccess = () => res(r.result || null);
@@ -759,6 +764,7 @@ if (typeof window.AP2CacheWatcher === 'undefined') {
           });
           return (rec && Array.isArray(rec.data) && rec.data.length) ? rec.data : null;
         } catch (e) {
+          if (e && e.name === 'NotFoundError') return null; // store not created yet — normal
           console.warn('[allEmp] fallback read failed:', e.message);
           return null;
         }
@@ -1127,14 +1133,40 @@ function _buildVS_block(block, total, blockIdx) {
     if (firstRow) ROW_H = Math.max(firstRow.getBoundingClientRect().height, 1);
   }
 
+  // Throttled to ONE read + ONE write per animation frame — not once per
+  // raw scroll event. Reading scrollTop right after a DOM write (or right
+  // before another one) forces the browser to do a synchronous layout
+  // recalculation — that's the "forced reflow" / slow rAF handler warning.
+  // Batching via rAF, and skipping duplicate calls within the same frame,
+  // removes that entirely. This matters on every OS, but shows up worst
+  // on iPad because Safari fires scroll events far more often mid-swipe.
+  let _scrollTicking = false;
   function _onScroll() {
-    const newStart = Math.floor(wrap.scrollTop / ROW_H);
-    if (Math.abs(newStart - _startIdx) >= 1) _paint(newStart);
+    if (_scrollTicking) return;
+    _scrollTicking = true;
+    requestAnimationFrame(() => {
+      const newStart = Math.floor(wrap.scrollTop / ROW_H); // read (layout)
+      if (Math.abs(newStart - _startIdx) >= 1) _paint(newStart); // write (DOM)
+      _scrollTicking = false;
+    });
   }
 
   wrap.addEventListener('scroll', _onScroll, { passive: true });
   _paint(0);
   requestAnimationFrame(_measureRowH); // measure after browser lays out the rows
+
+  // ── iPad/iOS Safari guard: a container sized with 100vh (or similar)
+  // can end up with 0 visible height when Safari's toolbar shows/hides —
+  // rows are correctly in the DOM, but there's no visible box to see them
+  // in. Detect that and force a usable height instead of silently
+  // rendering into nothing.
+  requestAnimationFrame(() => {
+    if (wrap.clientHeight < 40) {
+      console.warn('[allEmp] scroll container has near-zero height (' + wrap.clientHeight + 'px) — forcing a usable height');
+      wrap.style.height = Math.max(window.innerHeight - wrap.getBoundingClientRect().top - 16, 240) + 'px';
+      wrap.style.minHeight = '240px';
+    }
+  });
 
   _vsInstance = {
     destroy() { wrap.removeEventListener('scroll', _onScroll); }
