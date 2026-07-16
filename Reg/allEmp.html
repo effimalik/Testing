@@ -12,7 +12,7 @@
 <script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/devPre.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/cioView.js"></script>
-<script src="https://effimalik.github.io/Testing/shared/cacheWatcher.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/cacheWatcher.js?v=1"></script>
 
 <style>
 /* ── Reset ── */
@@ -1805,16 +1805,53 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* Listen for messages from parent index.html
-   (Cache-updated messages are now handled internally by cacheWatcher.js,
-   which forwards them straight to our AP2CacheWatcher.subscribe() callback —
-   no need to listen for that type here anymore.) */
+   ── PRIMARY data path on this page: the parent (index.html) already has
+   a working push system that has nothing to do with cacheWatcher.js:
+     - 'ap-cache-preload' : parent proactively pushes ALL cached datasets
+                            the moment they're ready (from its own memory
+                            — no IndexedDB read needed here at all)
+     - 'ap-cache-ready'   : parent's direct reply to our 'ap-cache-request'
+     - 'ap-cache-updated' : parent says something changed — ask it again
+   This sidesteps iPad's IndexedDB flakiness entirely for the common case
+   (page running inside the app). cacheWatcher.js / IndexedDB reads remain
+   as the fallback for when this page is opened standalone (no parent). */
 window.addEventListener('message', (e) => {
   if (!e.data) return;
+
+  // Parent proactively pushed everything it has — take our slice directly.
+  if (e.data.type === 'ap-cache-preload' && e.data.datasets) {
+    const rows = e.data.datasets[_AP2_CACHE_KEY];
+    if (Array.isArray(rows) && rows.length) {
+      employees = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
+      renderEmpTable(employees);
+    }
+  }
+
+  // Parent's direct reply to our own ap-cache-request below.
+  if (e.data.type === 'ap-cache-ready' && e.data.key === _AP2_CACHE_KEY) {
+    const rows = e.data.data;
+    if (Array.isArray(rows) && rows.length) {
+      employees = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
+      renderEmpTable(employees);
+    }
+  }
+
+  // Parent says something changed somewhere — ask it for our dataset again.
+  if (e.data.type === 'ap-cache-updated') {
+    try { window.parent.postMessage({ type: 'ap-cache-request', key: _AP2_CACHE_KEY }, '*'); } catch (err) {}
+  }
+
   // Instant theme sync — parent pushes on every theme change
   if (e.data.type === 'ap-theme' && e.data.theme) {
     document.documentElement.setAttribute('data-theme', e.data.theme);
   }
 });
+
+// Ask the parent for our data right away, in parallel with the IndexedDB
+// read in loadEmployees(). Whichever answers first wins — if there's no
+// parent (page opened standalone), this simply gets no reply and the
+// IndexedDB path (loadEmployees / cacheWatcher.js) still works on its own.
+try { window.parent.postMessage({ type: 'ap-cache-request', key: _AP2_CACHE_KEY }, '*'); } catch (e) {}
 </script>
 </body>
 </html>
