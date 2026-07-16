@@ -143,6 +143,11 @@
     const job = _dbQueue.then(async () => {
       try {
         const db  = await _getDB();
+        if (!db.objectStoreNames.contains(_IDB_STORE)) {
+          // Store doesn't exist yet — cache hasn't been warmed in this
+          // browser session yet. That's a normal state, not an error.
+          return null;
+        }
         const rec = await new Promise((res, rej) => {
           const req = db.transaction(_IDB_STORE, 'readonly').objectStore(_IDB_STORE).get(key);
           req.onsuccess = () => res(req.result || null);
@@ -152,6 +157,7 @@
         if (data) _memoryFallback[key] = data; // remember last good copy
         return data;
       } catch (e) {
+        if (e && e.name === 'NotFoundError') return null; // store not created yet — normal
         // Graceful degradation: IDB is misbehaving — serve last-known-good
         // data from memory instead of leaving the page blank.
         console.warn('[cacheWatcher] read failed for "' + key + '", using memory fallback:', e.message);
@@ -180,7 +186,8 @@
   async function _checkAll() {
     if (!_isTop) return;
     try {
-      const db          = await _getDB();
+      const db = await _getDB();
+      if (!db.objectStoreNames.contains(_IDB_STORE)) return; // nothing to check yet — normal
       const currentKeys = await _allKeys(db);
       const currentSet  = new Set(currentKeys);
 
