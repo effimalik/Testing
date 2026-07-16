@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FleetFlow Pro — Sign In</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%232554C7'/%3E%3Cstop offset='100%25' stop-color='%2312223f'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cpath d='M14 40 L28 26 L38 34 L50 20' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='50' cy='20' r='4' fill='white'/%3E%3C/svg%3E"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
+
+<!--
+  LOAD ORDER MATTERS:
+  auth.js is loaded FIRST — but on login.html it skips all session guards.
+  The login flow here is self-contained: it does NOT call Auth.isAuthenticated()
+  before the user clicks — only after a successful server response.
+-->
+<script src="https://effimalik.github.io/Testing/shared/auth.js?v=7"></script>
+<script src="https://effimalik.github.io/Testing/shared/dataLayer.js?v=7"></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
+:root{
+  /* ── Brand panel (left) ── */
+  --navy:      #0a1424;
+  --navy2:     #0f1d33;
+  --navy3:     #142842;
+  --brand-line:rgba(255,255,255,.10);
+
+  /* ── Content panel (right) ── */
+  --paper:     #ffffff;
+  --paper2:    #f7f8fa;
+  --ink:       #101828;
+  --ink2:      #475467;
+  --ink3:      #98a2b3;
+  --border:    #e4e7ec;
+  --border2:   #d0d5dd;
+
+  /* ── Accents ── */
+  --accent:      #2554c7;
+  --accent-dim:  #eaf0fd;
+  --accent-line: #4f7fe0;
+  --teal:        #12b5a6;
+  --success:     #12b76a;
+  --success-dim: #ecfdf3;
+  --warning:     #dc6803;
+  --warning-dim: #fffaeb;
+  --danger:      #d92d20;
+  --danger-dim:  #fef3f2;
+
+  --display:'Manrope',sans-serif;
+  --font:'Inter',sans-serif;
+  --shadow-card:0 2px 6px rgba(16,24,40,.04),0 20px 48px rgba(16,24,40,.10);
+  --radius:16px;
+}
+
+html,body{height:100%;width:100%;font-family:var(--font);color:var(--ink);font-size:14.5px;-webkit-font-smoothing:antialiased;}
+body{background:var(--paper2);}
+
+::selection{background:var(--accent-dim);color:var(--accent);}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px;}
+
+/* ══════════════════════════════════════════════════════
+   SHELL — split screen: brand panel + content panel
+══════════════════════════════════════════════════════ */
+.shell{min-height:100vh;width:100%;display:grid;grid-template-columns:minmax(0,480px) 1fr;}
+@media (max-width:920px){.shell{grid-template-columns:1fr;}}
+
+/* ── Brand panel ── */
+.brand{
+  position:relative;overflow:hidden;
+  background:linear-gradient(165deg,var(--navy) 0%,var(--navy2) 55%,var(--navy3) 100%);
+  color:#fff;display:flex;flex-direction:column;
+  padding:44px 44px 40px;
+}
+@media (max-width:920px){.brand{padding:28px 24px 120px;min-height:280px;}}
+@media (max-width:560px){.brand{padding:24px 20px 96px;min-height:230px;}}
+
+.brand-top{display:flex;align-items:center;gap:11px;position:relative;z-index:3;}
+.brand-mark{
+  width:36px;height:36px;border-radius:10px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent) 0%,#173a8c 100%);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 14px rgba(37,84,199,.45);
+}
+.brand-mark i{font-size:17px;color:#fff;}
+.brand-name{font-family:var(--display);font-size:16px;font-weight:800;letter-spacing:-.01em;line-height:1.1;}
+.brand-sub{font-size:10.5px;color:rgba(255,255,255,.5);letter-spacing:.08em;text-transform:uppercase;margin-top:2px;}
+
+.brand-mid{position:relative;z-index:3;margin-top:auto;padding-top:40px;}
+.brand-headline{font-family:var(--display);font-size:27px;font-weight:800;line-height:1.28;letter-spacing:-.015em;max-width:360px;}
+.brand-headline .accent{color:#8fb2ff;}
+.brand-copy{font-size:13.5px;color:rgba(255,255,255,.62);line-height:1.65;margin-top:14px;max-width:340px;}
+
+.brand-stats{display:flex;gap:28px;margin-top:32px;position:relative;z-index:3;}
+.bstat-num{font-family:var(--display);font-size:19px;font-weight:800;color:#fff;}
+.bstat-label{font-size:10.5px;color:rgba(255,255,255,.48);letter-spacing:.05em;text-transform:uppercase;margin-top:2px;}
+
+.brand-foot{position:relative;z-index:3;margin-top:36px;font-size:11.5px;color:rgba(255,255,255,.4);}
+
+/* ── Signature element: animated dispatch route across a map grid ── */
+.brand-scene{position:absolute;inset:0;z-index:1;pointer-events:none;}
+.brand-scene::before{
+  content:'';position:absolute;inset:0;
+  background-image:linear-gradient(var(--brand-line) 1px,transparent 1px),linear-gradient(90deg,var(--brand-line) 1px,transparent 1px);
+  background-size:38px 38px;
+  mask-image:radial-gradient(ellipse 90% 70% at 30% 60%, black 30%, transparent 78%);
+}
+.route-svg{position:absolute;left:-6%;right:-6%;bottom:6%;height:58%;z-index:2;}
+.route-path{fill:none;stroke:url(#routeGrad);stroke-width:2.4;stroke-linecap:round;stroke-dasharray:6 7;opacity:.55;}
+.route-node{fill:#0a1424;stroke:#8fb2ff;stroke-width:2;}
+.route-node.active{fill:#8fb2ff;}
+.route-dot{fill:#ffffff;filter:drop-shadow(0 0 6px rgba(143,178,255,.9));}
+@keyframes travel{ to{ offset-distance:100%; } }
+.route-dot-anim{offset-path:path('M8,150 C70,150 90,60 160,60 S 250,150 320,110 S 420,20 480,50');offset-rotate:0deg;animation:travel 9s linear infinite;}
+@media (prefers-reduced-motion:reduce){.route-dot-anim{animation:none;offset-distance:35%;}}
+
+/* ── Content panel (right) ── */
+.content{
+  display:flex;align-items:center;justify-content:center;
+  padding:32px 24px;background:var(--paper2);
+}
+.panel-inner{width:100%;max-width:380px;}
+
+.mobile-brand{display:none;align-items:center;gap:10px;margin-bottom:26px;}
+.mobile-brand .brand-mark{width:32px;height:32px;}
+.mobile-brand .brand-mark i{font-size:15px;}
+.mobile-brand span{font-family:var(--display);font-size:15px;font-weight:800;color:var(--ink);}
+@media (max-width:920px){.mobile-brand{display:flex;}}
+
+.card{
+  background:var(--paper);border:1px solid var(--border);border-radius:var(--radius);
+  padding:32px 30px 28px;box-shadow:var(--shadow-card);
+  animation:cardIn .45s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+@media (max-width:400px){.card{padding:26px 20px 22px;}}
+
+.card-eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
+.card-title{font-family:var(--display);font-size:22px;font-weight:800;color:var(--ink);letter-spacing:-.015em;}
+.card-desc{font-size:13px;color:var(--ink2);line-height:1.6;margin-top:8px;margin-bottom:26px;}
+.card-desc strong{color:var(--ink);font-weight:600;}
+
+/* ── Google button ── */
+.btn-google{
+  width:100%;height:48px;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  border-radius:10px;border:1px solid var(--border2);
+  background:#fff;color:var(--ink);
+  font-family:var(--font);font-size:14px;font-weight:600;
+  cursor:pointer;transition:all .15s;position:relative;overflow:hidden;
+}
+.btn-google:hover:not(:disabled){border-color:var(--ink3);box-shadow:0 1px 2px rgba(16,24,40,.05),0 0 0 4px var(--accent-dim);}
+.btn-google:active:not(:disabled){transform:translateY(1px);}
+.btn-google:disabled{opacity:.5;cursor:not-allowed;}
+.g-icon{width:19px;height:19px;flex-shrink:0;}
+
+#google-button-container{margin-top:12px;display:none;flex-direction:column;gap:8px;}
+#google-button-container.show{display:flex;}
+#google-button-container p{font-size:11.5px;color:var(--ink3);text-align:center;}
+
+.security-note{
+  display:flex;gap:9px;align-items:flex-start;margin-top:18px;
+  padding:12px 13px;border-radius:10px;
+  background:var(--paper2);border:1px solid var(--border);
+}
+.security-note i{font-size:14px;color:var(--ink3);flex-shrink:0;margin-top:1px;}
+.security-note p{font-size:11.5px;color:var(--ink2);line-height:1.55;}
+
+.card-footer{margin-top:22px;padding-top:16px;border-top:1px solid var(--border);}
+.card-footer p{font-size:11.5px;color:var(--ink3);line-height:1.6;text-align:center;}
+.card-footer a{color:var(--accent);text-decoration:none;font-weight:600;}
+.card-footer a:hover{text-decoration:underline;}
+
+/* Generic click ripple */
+.ripple-btn{position:relative;overflow:hidden;}
+.ink-ripple{position:absolute;border-radius:50%;background:rgba(37,84,199,.14);transform:scale(0);pointer-events:none;animation:inkRipple .55s ease-out forwards;}
+@keyframes inkRipple{to{transform:scale(2.6);opacity:0;}}
+
+/* ══════════════════════════════════════════════════════
+   VERIFY VIEW — linear progress + step row (replaces panel)
+══════════════════════════════════════════════════════ */
+.verify-view{display:none;}
+.verify-view.show{display:block;animation:panelIn .3s cubic-bezier(.22,1,.36,1) both;}
+@keyframes panelIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+.verify-head{display:flex;align-items:center;gap:11px;margin-bottom:20px;}
+.verify-spinner{
+  width:34px;height:34px;border-radius:50%;flex-shrink:0;
+  border:3px solid var(--accent-dim);border-top-color:var(--accent);
+  animation:spin .85s linear infinite;
+}
+.verify-spinner.success{border:none;background:var(--success-dim);display:flex;align-items:center;justify-content:center;animation:none;}
+.verify-spinner.success i{color:var(--success);font-size:18px;}
+.verify-spinner.error{border:none;background:var(--danger-dim);display:flex;align-items:center;justify-content:center;animation:none;}
+.verify-spinner.error i{color:var(--danger);font-size:18px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.verify-title{font-family:var(--display);font-size:15px;font-weight:700;color:var(--ink);}
+.verify-sub{font-size:12.5px;color:var(--ink2);margin-top:2px;line-height:1.5;}
+
+.progress-track{width:100%;height:6px;border-radius:99px;background:var(--border);overflow:hidden;margin-bottom:18px;}
+.progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent) 0%,var(--accent-line) 100%);width:0%;transition:width .5s cubic-bezier(.22,1,.36,1);}
+.progress-fill.error{background:var(--danger);}
+.progress-fill.success{background:var(--success);}
+
+.step-row{display:flex;justify-content:space-between;gap:4px;}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;}
+.step-dot{
+  width:22px;height:22px;border-radius:50%;
+  background:var(--paper2);border:1.5px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;color:var(--ink3);
+  transition:all .2s;
+}
+.step-dot.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+.step-dot.done{background:var(--success-dim);border-color:var(--success);color:var(--success);}
+.step-dot.fail{background:var(--danger-dim);border-color:var(--danger);color:var(--danger);}
+.step-label{font-size:9.5px;color:var(--ink3);font-weight:600;letter-spacing:.01em;line-height:1.3;}
+.step-dot.active + .step-label,.step-dot.done + .step-label{color:var(--ink2);}
+
+.verify-cancel{
+  display:block;margin:20px auto 0;background:none;border:none;
+  font-family:var(--font);font-size:11.5px;color:var(--ink3);
+  cursor:pointer;text-decoration:underline;text-underline-offset:2px;
+}
+.verify-cancel:hover{color:var(--ink2);}
+
+/* ══════════════════════════════════════════════════════
+   OVERLAYS — Access Denied / Access Requested
+══════════════════════════════════════════════════════ */
+.overlay{
+  position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+  background:rgba(16,24,40,.55);backdrop-filter:blur(3px);z-index:1000;padding:20px;
+}
+.overlay.show{display:flex;}
+.overlay-card{
+  max-width:400px;width:100%;background:var(--paper);border:1px solid var(--border);border-radius:16px;
+  padding:30px;text-align:center;animation:cardIn .3s ease both;box-shadow:var(--shadow-card);
+}
+.overlay-icon{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:23px;margin:0 auto 16px;}
+.overlay-icon.tone-red{background:var(--danger-dim);color:var(--danger);}
+.overlay-icon.tone-amber{background:var(--warning-dim);color:var(--warning);}
+.overlay-title{font-family:var(--display);font-size:17px;font-weight:800;color:var(--ink);margin-bottom:8px;}
+.overlay-chip-wrap{margin-bottom:14px;}
+.overlay-chip{display:inline-block;padding:5px 11px;border-radius:7px;background:var(--paper2);border:1px solid var(--border);font-size:12px;color:var(--ink);font-weight:600;}
+.overlay-msg{font-size:13px;color:var(--ink2);line-height:1.6;margin-bottom:22px;}
+.overlay-actions{display:flex;flex-direction:column;gap:8px;}
+.btn-outline{
+  width:100%;height:42px;border-radius:10px;border:1px solid var(--border2);
+  background:var(--paper);color:var(--ink2);font-family:var(--font);font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+.btn-solid{
+  width:100%;height:42px;border-radius:10px;border:none;
+  background:var(--accent);color:#fff;font-family:var(--font);font-size:13px;font-weight:700;
+  cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-solid:hover{background:#1e46ab;}
+
+@media (prefers-reduced-motion:reduce){
+  .verify-spinner{animation:none;}
+  .progress-fill{transition:none;}
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- BRAND PANEL -->
+  <aside class="brand">
+    <div class="brand-scene">
+      <svg class="route-svg" viewBox="0 0 480 170" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="routeGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#8fb2ff"/>
+            <stop offset="100%" stop-color="#12b5a6"/>
+          </linearGradient>
+        </defs>
+        <path class="route-path" d="M8,150 C70,150 90,60 160,60 S 250,150 320,110 S 420,20 480,50"/>
+        <circle class="route-node active" cx="8" cy="150" r="5"/>
+        <circle class="route-node" cx="160" cy="60" r="5"/>
+        <circle class="route-node" cx="320" cy="110" r="5"/>
+        <circle class="route-node" cx="480" cy="50" r="5"/>
+        <circle class="route-dot route-dot-anim" r="4.5"/>
+      </svg>
+    </div>
+
+    <div class="brand-top">
+      <div class="brand-mark"><i class="ti ti-route-2"></i></div>
+      <div>
+        <div class="brand-name">FleetFlow Pro</div>
+        <div class="brand-sub">HR &amp; Fleet Operations</div>
+      </div>
+    </div>
+
+    <div class="brand-mid">
+      <div class="brand-headline">One platform to run your <span class="accent">people</span> and your <span class="accent">fleet</span>.</div>
+      <p class="brand-copy">Sign in with your company Google account to reach live dispatch data, driver records, and approvals in one place.</p>
+      <div class="brand-stats">
+        <div>
+          <div class="bstat-num">24/7</div>
+          <div class="bstat-label">Live Visibility</div>
+        </div>
+        <div>
+          <div class="bstat-num">SSO</div>
+          <div class="bstat-label">Single Sign-On</div>
+        </div>
+        <div>
+          <div class="bstat-num">100%</div>
+          <div class="bstat-label">Access Logged</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="brand-foot">&copy; <span id="year"></span> FleetFlow Pro. All access attempts are recorded.</div>
+  </aside>
+
+  <!-- CONTENT PANEL -->
+  <main class="content">
+    <div class="panel-inner">
+
+      <div class="mobile-brand">
+        <div class="brand-mark"><i class="ti ti-route-2"></i></div>
+        <span>FleetFlow Pro</span>
+      </div>
+
+      <div class="card" id="login-card">
+
+        <!-- SIGN-IN VIEW -->
+        <div id="signin-view">
+          <div class="card-eyebrow">Fleet Operations Access</div>
+          <div class="card-title">Sign in to your account</div>
+          <p class="card-desc">Use your <strong>company Google account</strong> to continue. Access is limited to approved accounts and verified automatically after sign-in.</p>
+
+          <button class="btn-google ripple-btn" id="btn-google" onclick="startGoogleLogin()">
+            <svg class="g-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Continue with Google
+          </button>
+
+          <div id="google-button-container">
+            <p>One-tap isn't available in this browser — use the button below:</p>
+            <div id="g-btn-render"></div>
+          </div>
+
+          <div class="security-note">
+            <i class="ti ti-shield-lock"></i>
+            <p>Not approved yet? Signing in still works — your request is logged automatically and an administrator will review it. No separate request form needed.</p>
+          </div>
+
+          <div class="card-footer">
+            <p>Trouble signing in? <a href="mailto:support@fleetflowpro.example">Contact your administrator</a></p>
+          </div>
+        </div>
+
+        <!-- VERIFY VIEW — shown during the sign-in flow -->
+        <div class="verify-view" id="verify-view">
+          <div class="verify-head">
+            <div class="verify-spinner" id="verify-spinner"></div>
+            <div>
+              <div class="verify-title" id="verify-title">Connecting to Google</div>
+              <div class="verify-sub" id="verify-sub">Loading the sign-in library…</div>
+            </div>
+          </div>
+
+          <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+
+          <div class="step-row">
+            <div class="step">
+              <div class="step-dot" data-step="1"><i class="ti ti-plug-connected"></i></div>
+              <div class="step-label">Connect</div>
+            </div>
+            <div class="step">
+              <div class="step-dot" data-step="2"><i class="ti ti-user-check"></i></div>
+              <div class="step-label">Authenticate</div>
+            </div>
+            <div class="step">
+              <div class="step-dot" data-step="3"><i class="ti ti-server-2"></i></div>
+              <div class="step-label">Verify Access</div>
+            </div>
+            <div class="step">
+              <div class="step-dot" data-step="4"><i class="ti ti-rocket"></i></div>
+              <div class="step-label">Launch</div>
+            </div>
+          </div>
+
+          <button class="verify-cancel" id="verify-cancel" onclick="cancelFlow()">Cancel and go back</button>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<!-- ACCESS DENIED OVERLAY -->
+<div class="overlay" id="denied-overlay">
+  <div class="overlay-card">
+    <div class="overlay-icon tone-red" id="denied-icon"><i class="ti ti-shield-x" id="denied-icon-i"></i></div>
+    <div class="overlay-title" id="denied-title">Access Denied</div>
+    <div class="overlay-chip-wrap" id="denied-chip-wrap" style="display:none;">
+      <span class="overlay-chip" id="denied-chip"></span>
+    </div>
+    <div class="overlay-msg" id="denied-msg">Your account is not authorised to access this system.</div>
+    <div class="overlay-actions">
+      <button class="btn-outline" onclick="resetToSignIn()">
+        <i class="ti ti-refresh"></i> Try a Different Account
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ACCESS REQUEST PENDING OVERLAY -->
+<div class="overlay" id="pending-overlay">
+  <div class="overlay-card">
+    <div class="overlay-icon tone-amber"><i class="ti ti-clock-hour-4"></i></div>
+    <div class="overlay-title">Request Submitted</div>
+    <div class="overlay-chip-wrap">
+      <span class="overlay-chip" id="pending-chip"></span>
+    </div>
+    <div class="overlay-msg" id="pending-msg">We've logged your sign-in attempt and notified an administrator. You'll be able to sign in as soon as your account is approved.</div>
+    <div class="overlay-actions">
+      <button class="btn-solid" onclick="recheckLogin()">
+        <i class="ti ti-refresh"></i> Check Approval Again
+      </button>
+      <button class="btn-outline" onclick="resetToSignIn()">
+        <i class="ti ti-arrow-left"></i> Back to Sign In
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+document.getElementById('year').textContent = new Date().getFullYear();
+
+/* ═══════════════════════════════════════════════════
+   CONFIG — single source of truth
+   Keep in sync with auth.js and Code.gs CFG block
+═══════════════════════════════════════════════════ */
+const CONFIG = {
+  API_BASE         : 'https://script.google.com/macros/s/AKfycbycbQZJxXrGdSg3sa_id1XU7Bl9i_fEkdnbz_Vyw31h3uvn3vylk9VbS2dZo30ebjXb/exec',
+  GOOGLE_CLIENT_ID : '743775120253-lr54jgst59jqr5s61vc3i4o3rnfn596a.apps.googleusercontent.com',
+};
+
+const ALLOWED_ORIGIN = 'https://effimalik.github.io/Testing/';
+const DEFAULT_PAGE   = ALLOWED_ORIGIN + 'index.html';
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ═══════════════════════════════════════════════════
+   SKIP LOGIN IF ALREADY AUTHENTICATED
+═══════════════════════════════════════════════════ */
+(function checkExistingSession() {
+  try {
+    if (window.Auth && typeof window.Auth.getCredentials === 'function') {
+      const creds = window.Auth.getCredentials();
+      if (creds && creds.sessionId && creds.token) {
+        console.log('[Login] Existing valid session detected — redirecting...');
+        doRedirect();
+      }
+    }
+  } catch (e) {
+    console.warn('[Login] checkExistingSession error (safe to ignore):', e.message);
+  }
+})();
+
+function doRedirect() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const next   = decodeURIComponent(params.get('next') || '');
+    if (next && next.startsWith(ALLOWED_ORIGIN) && !next.includes('login.html')) {
+      window.location.replace(next);
+    } else {
+      window.location.replace(DEFAULT_PAGE);
+    }
+  } catch {
+    window.location.replace(DEFAULT_PAGE);
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   GSI LOADER — lazy, idempotent
+═══════════════════════════════════════════════════ */
+let _gsiLoaded = false;
+function loadGSI() {
+  return new Promise((resolve, reject) => {
+    if (window.google && window.google.accounts) { _gsiLoaded = true; resolve(); return; }
+    if (_gsiLoaded) { resolve(); return; }
+    const s   = document.createElement('script');
+    s.src     = 'https://accounts.google.com/gsi/client';
+    s.async   = true;
+    s.defer   = true;
+    s.onload  = () => { _gsiLoaded = true; resolve(); };
+    s.onerror = () => reject(new Error('Failed to load Google Sign-In. Check your network connection.'));
+    document.head.appendChild(s);
+  });
+}
+
+/* ═══════════════════════════════════════════════════
+   GET GOOGLE ID TOKEN
+═══════════════════════════════════════════════════ */
+function getGoogleIdToken() {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    function settle(type, value) {
+      if (settled) return;
+      settled = true;
+      if (type === 'ok') resolve(value); else reject(value);
+    }
+    function onCredential(response) {
+      if (response && response.credential) settle('ok', response.credential);
+      else settle('err', { type: 'auth_error', message: 'Google did not return credentials.' });
+    }
+
+    google.accounts.id.initialize({
+      client_id            : CONFIG.GOOGLE_CLIENT_ID,
+      callback             : onCredential,
+      ux_mode              : 'popup',
+      use_fedcm_for_prompt : true,
+      use_fedcm_for_button : true,
+      cancel_on_tap_outside: false,
+    });
+
+    google.accounts.id.prompt(notification => {
+      if (settled) return;
+      const isSkipped      = notification.isSkippedMoment   ? notification.isSkippedMoment()   : false;
+      const isDismissed    = notification.isDismissedMoment ? notification.isDismissedMoment() : false;
+      const isNotDisplayed = notification.isNotDisplayed    ? notification.isNotDisplayed()    : false;
+
+      if (isNotDisplayed || isSkipped) { _showFallbackButton(onCredential); return; }
+      if (isDismissed && !settled) {
+        const reason = notification.getDismissedReason ? notification.getDismissedReason() : 'dismissed';
+        if (reason === 'credential_returned') return;
+        settle('err', { type: 'user_cancel', message: 'Sign-in was cancelled.' });
+      }
+    });
+  });
+}
+
+function _showFallbackButton(onCredential) {
+  const container = document.getElementById('google-button-container');
+  const target    = document.getElementById('g-btn-render');
+  if (!container || !target) return;
+
+  google.accounts.id.initialize({
+    client_id            : CONFIG.GOOGLE_CLIENT_ID,
+    callback             : onCredential,
+    ux_mode              : 'popup',
+    use_fedcm_for_button : true,
+    cancel_on_tap_outside: false,
+  });
+
+  google.accounts.id.renderButton(target, {
+    type: 'standard', shape: 'rectangular', theme: 'outline',
+    text: 'signin_with', size: 'large', width: '320', logo_alignment: 'left',
+  });
+
+  container.classList.add('show');
+  cancelFlow();
+  setVerifySub('One-tap sign-in is not available in this browser. Use the Google button below to continue.');
+}
+
+/* ═══════════════════════════════════════════════════
+   SEND TOKEN TO APPS SCRIPT — Content-Type: text/plain
+   avoids CORS preflight
+═══════════════════════════════════════════════════ */
+async function verifyWithAppsScript(idToken) {
+  const controller = new AbortController();
+  const timeoutId  = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const res = await fetch(CONFIG.API_BASE, {
+      method : 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body   : JSON.stringify({ type: 'login', token: idToken }),
+      signal : controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) throw new Error('Server returned HTTP ' + res.status + '. Please try again.');
+    const text = await res.text();
+    try { return JSON.parse(text); }
+    catch {
+      console.error('[Login] Non-JSON response from server:', text.substring(0, 200));
+      throw new Error('Server returned an unexpected response. Please try again.');
+    }
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') throw new Error('Request timed out (30s). Check your connection and try again.');
+    throw e;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   PROGRESS UI HELPERS
+═══════════════════════════════════════════════════ */
+function setProgress(pct, tone) {
+  const fill = document.getElementById('progress-fill');
+  if (!fill) return;
+  fill.style.width = pct + '%';
+  fill.classList.remove('error', 'success');
+  if (tone) fill.classList.add(tone);
+}
+function resetProgress() {
+  setProgress(0, '');
+  document.querySelectorAll('.step-dot').forEach(d => d.classList.remove('active', 'done', 'fail'));
+  const sp = document.getElementById('verify-spinner');
+  if (sp) { sp.className = 'verify-spinner'; sp.innerHTML = ''; }
+}
+function setStep(n, state) {
+  const dot = document.querySelector(`.step-dot[data-step="${n}"]`);
+  if (!dot) return;
+  dot.classList.remove('active', 'done', 'fail');
+  dot.classList.add(state);
+}
+function setVerifyStatus(title, sub, tone) {
+  const t  = document.getElementById('verify-title');
+  const s  = document.getElementById('verify-sub');
+  const sp = document.getElementById('verify-spinner');
+  if (t) t.textContent = title;
+  if (s) s.textContent = sub || '';
+  if (sp) {
+    if (tone === 'success') { sp.className = 'verify-spinner success'; sp.innerHTML = '<i class="ti ti-check"></i>'; }
+    else if (tone === 'error') { sp.className = 'verify-spinner error'; sp.innerHTML = '<i class="ti ti-x"></i>'; }
+    else { sp.className = 'verify-spinner'; sp.innerHTML = ''; }
+  }
+}
+function setVerifySub(sub) { const s = document.getElementById('verify-sub'); if (s) s.textContent = sub; }
+
+function showVerify() {
+  document.getElementById('signin-view').style.display = 'none';
+  document.getElementById('verify-view').classList.add('show');
+}
+function hideVerify() {
+  document.getElementById('verify-view').classList.remove('show');
+  document.getElementById('signin-view').style.display = 'block';
+}
+function reenableButtons() {
+  const g = document.getElementById('btn-google'); if (g) g.disabled = false;
+}
+
+let flowToken = 0;
+function cancelFlow() {
+  flowToken++;
+  hideVerify();
+  resetProgress();
+  reenableButtons();
+  try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.cancel(); } catch {}
+}
+
+/* ═══════════════════════════════════════════════════
+   OVERLAY CONTROLS
+═══════════════════════════════════════════════════ */
+function showDenied(email, msg, title, iconClass) {
+  const iconI = document.getElementById('denied-icon-i');
+  const t     = document.getElementById('denied-title');
+  const m     = document.getElementById('denied-msg');
+  const cw    = document.getElementById('denied-chip-wrap');
+  const chip  = document.getElementById('denied-chip');
+  if (iconI) iconI.className = 'ti ' + (iconClass || 'ti-shield-x');
+  if (t) t.textContent = title || 'Access Denied';
+  if (m) m.textContent = msg   || 'Contact your administrator.';
+  if (cw) cw.style.display = email ? 'block' : 'none';
+  if (chip && email) chip.textContent = email;
+  document.getElementById('denied-overlay').classList.add('show');
+}
+
+function showPending(email, msg) {
+  document.getElementById('pending-chip').textContent = email || '';
+  document.getElementById('pending-msg').textContent  = msg || 'We\u2019ve logged your sign-in attempt and notified an administrator. You\u2019ll be able to sign in as soon as your account is approved.';
+  document.getElementById('pending-overlay').classList.add('show');
+}
+
+function resetToSignIn() {
+  document.getElementById('denied-overlay').classList.remove('show');
+  document.getElementById('pending-overlay').classList.remove('show');
+  hideVerify(); resetProgress(); reenableButtons();
+  const fbCont = document.getElementById('google-button-container');
+  if (fbCont) fbCont.classList.remove('show');
+  try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.cancel(); } catch {}
+}
+
+function recheckLogin() {
+  document.getElementById('pending-overlay').classList.remove('show');
+  startGoogleLogin();
+}
+
+/* ═══════════════════════════════════════════════════
+   MATERIAL-STYLE CLICK RIPPLE — purely cosmetic
+═══════════════════════════════════════════════════ */
+document.addEventListener('click', function (e) {
+  const btn = e.target.closest('.ripple-btn');
+  if (!btn || btn.disabled) return;
+  const rect = btn.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  const ink  = document.createElement('span');
+  ink.className = 'ink-ripple';
+  ink.style.width  = ink.style.height = size + 'px';
+  ink.style.left   = (e.clientX - rect.left - size / 2) + 'px';
+  ink.style.top    = (e.clientY - rect.top  - size / 2) + 'px';
+  btn.appendChild(ink);
+  ink.addEventListener('animationend', () => ink.remove());
+});
+
+/* ═══════════════════════════════════════════════════
+   LIVE LOGIN FLOW (Google)
+   Backend contract (unchanged from before):
+     Request  → { type:'login', token: idToken }
+     Response → { allowed, status:'approved'|'pending'|'denied'|'inactive',
+                   reason, title, sessionId, token, email, name, role, permissions }
+   NEW: when status === 'pending', the backend has auto-logged this
+   attempt to the requests sheet (email + name) for admin review —
+   there is no separate manual request form on this page any more.
+═══════════════════════════════════════════════════ */
+async function startGoogleLogin() {
+  const myToken = ++flowToken;
+  const btn = document.getElementById('btn-google');
+  if (btn) btn.disabled = true;
+  resetProgress(); showVerify();
+
+  setStep(1, 'active');
+  setVerifyStatus('Connecting to Google', 'Loading the sign-in library…');
+  setProgress(12);
+
+  try {
+    await loadGSI();
+  } catch (e) {
+    if (myToken !== flowToken) return;
+    setStep(1, 'fail');
+    setVerifyStatus('Connection Failed', e.message || 'Could not load Google Sign-In. Check your internet connection and try again.', 'error');
+    setProgress(12, 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  if (myToken !== flowToken) return;
+  setStep(1, 'done'); setProgress(25);
+
+  setStep(2, 'active');
+  setVerifyStatus('Retrieving Your Account', 'Waiting for your Google credential…');
+  setProgress(40);
+  let idToken = null;
+
+  try {
+    idToken = await getGoogleIdToken();
+  } catch (e) {
+    if (myToken !== flowToken) return;
+    if (e && e.type === 'user_cancel') { resetToSignIn(); return; }
+    setStep(2, 'fail');
+    setVerifyStatus('Sign-In Failed', (e && e.message) || 'Google sign-in failed. Please try again.', 'error');
+    setProgress(40, 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  if (myToken !== flowToken) return;
+
+  const fbCont = document.getElementById('google-button-container');
+  if (fbCont) fbCont.classList.remove('show');
+  setStep(2, 'done'); setProgress(55);
+
+  setStep(3, 'active');
+  setVerifyStatus('Checking Access', 'Verifying with FleetFlow servers…');
+  setProgress(70);
+  let result = null;
+
+  try {
+    result = await verifyWithAppsScript(idToken);
+  } catch (e) {
+    if (myToken !== flowToken) return;
+    setStep(3, 'fail');
+    setVerifyStatus('Server Error', (e && e.message) || 'Could not reach the verification server. Please try again.', 'error');
+    setProgress(70, 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  if (myToken !== flowToken) return;
+  setStep(3, 'done'); setProgress(82);
+
+  setStep(4, 'active');
+  await sleep(250);
+  if (myToken !== flowToken) return;
+
+  const status = result && result.status;
+
+  if (!result || !result.allowed) {
+    setStep(4, 'fail');
+
+    if (status === 'pending') {
+      setVerifyStatus('Request Logged', 'Awaiting administrator approval…');
+      setProgress(82, 'error');
+      await sleep(300);
+      if (myToken !== flowToken) return;
+      hideVerify();
+      showPending(result && result.email ? result.email : null, result && result.reason ? result.reason : null);
+      if (btn) btn.disabled = false;
+      return;
+    }
+
+    setVerifyStatus('Access Denied', 'This account is not authorised.', 'error');
+    setProgress(82, 'error');
+    await sleep(300);
+    if (myToken !== flowToken) return;
+    hideVerify();
+    showDenied(
+      result && result.email  ? result.email  : null,
+      result && result.reason ? result.reason : 'Your account is not authorised to access FleetFlow Pro. Contact your administrator.',
+      result && result.title  ? result.title  : 'Access Denied',
+      status === 'inactive' ? 'ti-user-off' : 'ti-shield-x'
+    );
+    if (btn) btn.disabled = false;
+    return;
+  }
+  setStep(4, 'done'); setProgress(92);
+
+  setVerifyStatus('Access Granted', 'Opening FleetFlow Pro…', 'success');
+  setProgress(100, 'success');
+  await sleep(450);
+  if (myToken !== flowToken) return;
+
+  if (!result.sessionId || !result.token || !result.email) {
+    setVerifyStatus('Session Error',
+      'Server response is missing required fields: ' +
+      (!result.sessionId ? 'sessionId ' : '') +
+      (!result.token     ? 'token '     : '') +
+      (!result.email     ? 'email'      : '') +
+      '. Please contact your administrator.', 'error');
+    setProgress(100, 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+  let sessionCreated = false;
+  try {
+    sessionCreated = window.Auth && window.Auth.createSession({
+      sessionId  : result.sessionId,
+      token      : result.token,
+      email      : result.email,
+      name       : result.name || result.email,
+      role       : result.role || 'User',
+      permissions: result.permissions || null,
+    });
+  } catch (e) {
+    console.error('[Login] Auth.createSession threw:', e.message);
+    sessionCreated = false;
+  }
+
+  if (!sessionCreated) {
+    setVerifyStatus('Session Error', 'Could not create a local session. Try using a different browser or disable private/incognito mode (sessionStorage must be available).', 'error');
+    setProgress(100, 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+  setVerifyStatus('Preparing Portal', 'Loading your workspace…');
+  await sleep(250);
+
+  try {
+    if (window.Auth && typeof window.Auth.fetchPermissions === 'function') {
+      await window.Auth.fetchPermissions();
+    }
+  } catch (_) {
+    console.warn('[Login] fetchPermissions failed — will retry on index.html');
+  }
+
+  setVerifySub('Pre-loading data…');
+  if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
+    try {
+      await AdminPro.warmIfEmpty();
+      console.log('[Login] Data pre-loaded into cache — index.html will be instant');
+    } catch (e) {
+      console.warn('[Login] warmIfEmpty failed (non-fatal):', e.message);
+    }
+  }
+
+  doRedirect();
+}
+</script>
+</body>
+</html>
