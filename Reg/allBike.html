@@ -11,6 +11,7 @@
 <script src="https://effimalik.github.io/Testing/shared/code.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/devPre.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/cacheWatcher.js?v=1"></script>
 
 <style>
 /* ── Reset ── */
@@ -483,31 +484,64 @@ function fmtDaTestingr(d) {
   try { return new Date(d).toLocaleDaTestingring('en-GB', { day:'2-digit', month:'short', year:'numeric' }); } catch { return d; }
 }
 
-/* ═══════════ IDB — SINGLE SOURCE: ap2_bike in ap2_fleet_cache ═══════════ */
+/* ═══════════ CACHE — via shared cacheWatcher.js, with a safe fallback ═══════════
+   If cacheWatcher.js fails to load or load in time (blocked, 404, iPad
+   caching a stale/broken copy, etc.) this page must NOT throw and must
+   NOT stop the rest of this script from running. So: if AP2CacheWatcher
+   isn't there, build a tiny local stand-in with the same shape, using
+   the page's own direct (timeout-guarded) IndexedDB read as a fallback.
+   ════════════════════════════════════════════════════════════════════════ */
 const _AP2_CACHE_KEY = 'ap2_bike';
-const _IDB_NAME      = 'ap2_fleet_cache';
-const _IDB_STORE     = 'datasets';
 
-let _idbConn = null;
-function _getDB() {
-  if (_idbConn) return Promise.resolve(_idbConn);
-  return new Promise((res, rej) => {
-    const req = indexedDB.open(_IDB_NAME);
-    req.onsuccess = e => { _idbConn = e.target.result; res(_idbConn); };
-    req.onerror   = e => rej(e.target.error);
-  });
+if (typeof window.AP2CacheWatcher === 'undefined') {
+  console.warn('[allBike] cacheWatcher.js did not load — using local fallback');
+  window.AP2CacheWatcher = (function () {
+    const _IDB_NAME = 'ap2_fleet_cache', _IDB_STORE = 'datasets';
+    let _conn = null;
+    function _open() {
+      if (_conn) return Promise.resolve(_conn);
+      return new Promise((res, rej) => {
+        let done = false;
+        const req = indexedDB.open(_IDB_NAME);
+        const t = setTimeout(() => { if (!done) { done = true; rej(new Error('idb-open-timeout')); } }, 2000);
+        req.onsuccess = e => { if (!done) { done = true; clearTimeout(t); _conn = e.target.result; res(_conn); } };
+        req.onerror   = e => { if (!done) { done = true; clearTimeout(t); rej(e.target.error); } };
+      });
+    }
+    return {
+      init() {},
+      subscribe() { return () => {}; }, // no cross-page notifications available in fallback mode
+      notifyNow() {},
+      getStatus() { return { healthy: false, mode: 'local-fallback', lastError: 'cacheWatcher.js not loaded' }; },
+      async readKey(key) {
+        try {
+          const db  = await _open();
+          if (!db.objectStoreNames.contains(_IDB_STORE)) {
+            // Store doesn't exist yet — cache hasn't been warmed in this
+            // browser session yet. That's normal, not an error.
+            return null;
+          }
+          const rec = await new Promise((res, rej) => {
+            const r = db.transaction(_IDB_STORE, 'readonly').objectStore(_IDB_STORE).get(key);
+            r.onsuccess = () => res(r.result || null);
+            r.onerror   = () => rej(r.error);
+          });
+          return (rec && Array.isArray(rec.data) && rec.data.length) ? rec.data : null;
+        } catch (e) {
+          if (e && e.name === 'NotFoundError') return null; // store not created yet — normal
+          console.warn('[allBike] fallback read failed:', e.message);
+          return null;
+        }
+      }
+    };
+  })();
 }
 
+// Thin wrapper kept so the rest of this file doesn't need to change —
+// actual read lives centrally in cacheWatcher.js when it's available,
+// or in the fallback above when it isn't.
 async function _readCache() {
-  const db  = await _getDB();
-  const rec = await new Promise((res, rej) => {
-    const req = db.transaction(_IDB_STORE, 'readonly')
-                  .objectStore(_IDB_STORE).get(_AP2_CACHE_KEY);
-    req.onsuccess = () => res(req.result || null);
-    req.onerror   = () => rej(req.error);
-  });
-  if (!rec || !Array.isArray(rec.data) || !rec.data.length) return null;
-  return rec.data;
+  return AP2CacheWatcher.readKey(_AP2_CACHE_KEY);
 }
 
 /* ═══════════ NORMALISE ROW ═══════════
@@ -598,33 +632,43 @@ async function loadBikes() {
   }
 }
 
-/* ═══════════ BACKGROUND CACHE WATCHER
-   Polls every 30 s and on ap-cache-updated messages.
-   Reads ap2_bike from IndexedDB and re-renders.
+/* ═══════════ SILENT REFRESH — every update AFTER the first paint goes through here.
+   No spinner, no tbody wipe unless data is genuinely gone — so nothing blinks.
+   Subscribed to cacheWatcher.js, which fires this on ANY of:
+     - this page's own fast poll (2s) detecting a change or deletion
+     - an instant notifyNow() call from wherever the data was written
+     - a broadcast relayed down from the parent shell (index.html)
    ════════════════════════════════════════════════════════════════════════ */
-(function() {
-  let _debounce = null;
-  async function _applyFromIDB() {
-    try {
-      const rows = await _readCache();
-      if (!rows || !rows.length) return;
-      const fresh = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
-      if (!fresh.length) return;
-      bikes = fresh;
+let _emptyReadStreak = 0; // guards against one flaky/transient empty read wiping good data
+async function _applyFromIDB() {
+  try {
+    const rows = await _readCache();
+    if (rows && rows.length) {
+      _emptyReadStreak = 0;
+      bikes = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
       renderBikeTable(bikes);
-    } catch (e) {
-      console.warn('[allBike] background refresh error:', e.message);
+    } else if (bikes && bikes.length) {
+      // Don't trust a single empty read — iPad's IndexedDB reads can be
+      // flaky/transient. Only treat it as a genuine deletion after seeing
+      // it twice in a row.
+      _emptyReadStreak++;
+      if (_emptyReadStreak >= 2) {
+        bikes = [];
+        renderBikeTable(bikes);
+        _emptyReadStreak = 0;
+      }
     }
+  } catch (e) {
+    console.warn('[allBike] background refresh error:', e.message);
   }
+}
 
-  function _debouncedApply() {
-    if (_debounce) clearTimeout(_debounce);
-    _debounce = setTimeout(_applyFromIDB, 200);
-  }
-
-  setInterval(_applyFromIDB, 30000);
-  window.addEventListener('ap-cache-updated', _debouncedApply);
-})();
+try {
+  AP2CacheWatcher.init();
+  AP2CacheWatcher.subscribe(() => { _applyFromIDB(); });
+} catch (e) {
+  console.warn('[allBike] cacheWatcher wiring failed, continuing without live updates:', e.message);
+}
 
 /* ═══════════ FILTER ═══════════ */
 function getFilteredBikes(list) {
@@ -1065,7 +1109,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-/* ── Message listener from parent index.html ── */
+/* ── Message listener from parent index.html ──
+   NOTE: 'ap-cache-updated' is NOT handled here anymore — cacheWatcher.js
+   already listens for that same message internally and relays it to our
+   subscribe() callback (_applyFromIDB), which refreshes silently with no
+   spinner/flicker. Calling loadBikes() again here would just re-trigger
+   the loading state redundantly. */
 window.addEventListener('message', (e) => {
   /* Validate origin — only accept messages from the same origin as the parent */
   if (!e.data) return;
@@ -1073,11 +1122,6 @@ window.addEventListener('message', (e) => {
       e.origin !== 'null' /* file:// */ &&
       !e.origin.startsWith('https://effimalik.github.io')) return;
 
-  /* Cache updated — reload from IDB */
-  if (e.data.type === 'ap-cache-updated') {
-    loadBikes();
-    return;
-  }
   /* Theme sync */
   if (e.data.type === 'ap-theme' && e.data.theme) {
     document.documentElement.setAttribute('data-theme', e.data.theme);
