@@ -790,7 +790,12 @@ async function _readCache() {
    ════════════════════════════════════════════════════════════════════════════════════ */
 async function loadEmployees() {
   const tbody = document.getElementById('emp-tbody');
-  if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px 16px;">
+  const alreadyHaveData = employees && employees.length;
+
+  // Only show the spinner if the screen is genuinely empty. If the parent's
+  // push already rendered good data (a faster path than this IndexedDB
+  // read), don't blink it away with a loading state.
+  if (tbody && !alreadyHaveData) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px 16px;">
     <div style="color:var(--text3);display:flex;flex-direction:column;align-items:center;gap:8px;">
       <i class="ti ti-loader" style="font-size:26px;animation:spin 1s linear infinite;display:inline-flex;"></i>
       <span style="font-size:12px;">Reading ap2_employee cache…</span>
@@ -798,23 +803,32 @@ async function loadEmployees() {
 
   try {
     const rows = await _readCache();
+    const fresh = (rows && rows.length) ? rows.map((r, i) => normaliseRow(r, i)).filter(Boolean) : [];
 
-    if (rows && rows.length) {
-      employees = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
+    if (fresh.length) {
+      // Good data — always safe to apply.
+      employees = fresh;
       renderEmpTable(employees);
-    } else {
+    } else if (!(employees && employees.length)) {
+      // Only show the empty state if we don't already have better data on
+      // screen from another source (e.g. the parent's push arrived first
+      // and this slower IndexedDB read simply found nothing new).
       if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;color:var(--text3);">
         <i class="ti ti-database-off" style="font-size:26px;display:block;margin-bottom:8px;"></i>
         No data in cache yet. Data will appear automatically once
         <code style="font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:4px;">ap2_employee</code> is populated.
       </td></tr>`;
     }
+    // else: this read found nothing, but we already have good data on
+    // screen from elsewhere — do nothing, leave it exactly as is.
   } catch (err) {
     console.error('[allEmp] loadEmployees error:', err);
-    if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px 16px;color:var(--red);">
-      <i class="ti ti-wifi-off" style="font-size:24px;display:block;margin-bottom:6px;"></i>
-      Failed to load employee data — ${err.message}
-    </td></tr>`;
+    if (!(employees && employees.length) && tbody) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px 16px;color:var(--red);">
+        <i class="ti ti-wifi-off" style="font-size:24px;display:block;margin-bottom:6px;"></i>
+        Failed to load employee data — ${err.message}
+      </td></tr>`;
+    }
   }
 }
 
@@ -825,17 +839,24 @@ async function loadEmployees() {
      - an instant notifyNow() call from wherever the data was written
      - a broadcast relayed down from the parent shell (index.html)
    ════════════════════════════════════════════════════════════════════════ */
+let _emptyReadStreak = 0; // guards against one flaky/transient empty read wiping good data
 async function _applyFromIDB() {
   try {
     const rows = await _readCache();
     if (rows && rows.length) {
+      _emptyReadStreak = 0;
       employees = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
       renderEmpTable(employees);
     } else if (employees && employees.length) {
-      // Cache was cleared/deleted — reflect that immediately instead of
-      // leaving stale rows on screen.
-      employees = [];
-      renderEmpTable(employees);
+      // Don't trust a single empty read — iPad's IndexedDB reads can be
+      // flaky/transient. Only treat it as a genuine deletion after seeing
+      // it twice in a row.
+      _emptyReadStreak++;
+      if (_emptyReadStreak >= 2) {
+        employees = [];
+        renderEmpTable(employees);
+        _emptyReadStreak = 0;
+      }
     }
   } catch (e) {
     console.warn('[allEmp] silent refresh error:', e.message);
