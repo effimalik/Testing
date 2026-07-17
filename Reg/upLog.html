@@ -656,7 +656,8 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
     <div class="table-card">
       <div class="table-toolbar">
         <div class="tt-search"><i class="ti ti-search"></i>
-          <input type="text" placeholder="Search email…" oninput="_setSearch('history', this.value)" />
+          <input type="text" list="history-email-list" placeholder="Search or select email…" oninput="_setSearch('history', this.value)" autocomplete="off" />
+          <datalist id="history-email-list"></datalist>
         </div>
         <div class="tt-filter">
           <select onchange="_setFilter('history','status',this.value)">
@@ -697,7 +698,8 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
     <div class="table-card">
       <div class="table-toolbar">
         <div class="tt-search"><i class="ti ti-search"></i>
-          <input type="text" placeholder="Search email or action…" oninput="_setSearch('logs', this.value)" />
+          <input type="text" list="logs-email-list" placeholder="Search or select email…" oninput="_setSearch('logs', this.value)" autocomplete="off" />
+          <datalist id="logs-email-list"></datalist>
         </div>
         <div class="tt-filter">
           <select onchange="_setFilter('logs','action',this.value)">
@@ -889,14 +891,12 @@ function _esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* Normalise a timestamp coming from ANY source — ISO string from the sheet,
-   a raw Date object, an Excel/Sheets date serial number, an epoch-ms number,
-   or a locale string from new Date().toLocaleString() — into one consistent
-   "17 Jul 2026 14:23" (date, single space, time) display. Falls back to the
-   raw value (escaped) if it truly can't be parsed, so nothing ever silently
-   disappears. */
-function _fmtDateTime(raw) {
-  if (raw === undefined || raw === null || raw === '') return '—';
+/* Shared parser: turns ANY raw timestamp — ISO string from the sheet, a raw
+   Date object, an Excel/Sheets date serial number, an epoch-ms number, or a
+   locale string from new Date().toLocaleString() — into { date, time } parts,
+   or null if it truly can't be parsed. */
+function _parseDateTimeParts(raw) {
+  if (raw === undefined || raw === null || raw === '') return null;
   let d = null;
   if (raw instanceof Date) {
     d = raw;
@@ -908,10 +908,33 @@ function _fmtDateTime(raw) {
     const parsed = new Date(s);
     d = isNaN(parsed.getTime()) ? null : parsed;
   }
-  if (!d || isNaN(d.getTime())) return _esc(raw);
-  const datePart = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  const timePart = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-  return `${datePart} ${timePart}`;
+  if (!d || isNaN(d.getTime())) return null;
+  return {
+    date: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+    time: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+  };
+}
+
+/* Single-line "17 Jul 2026 02:23 PM" — used wherever a plain string is
+   needed (modal fields, etc). Falls back to the raw value if unparseable. */
+function _fmtDateTime(raw) {
+  const p = _parseDateTimeParts(raw);
+  if (!p) return (raw === undefined || raw === null || raw === '') ? '—' : _esc(raw);
+  return `${p.date} ${p.time}`;
+}
+
+/* Two-line "date over time" markup for Timestamp table columns — date on
+   top, time underneath, clearly organized instead of one long string. */
+function _fmtDateTimeCell(raw) {
+  const p = _parseDateTimeParts(raw);
+  if (!p) {
+    const fallback = (raw === undefined || raw === null || raw === '') ? '—' : _esc(raw);
+    return `<span>${fallback}</span>`;
+  }
+  return `<div style="display:flex;flex-direction:column;gap:1px;line-height:1.35;">`
+       + `<span style="color:var(--text2);">${p.date}</span>`
+       + `<span style="color:var(--text3);font-size:10.5px;">${p.time}</span>`
+       + `</div>`;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1279,6 +1302,16 @@ function renderLoginReqs() {
 }
 _renderers.requests = renderLoginReqs;
 
+/* Fills a <datalist> with the unique, sorted set of emails found in the
+   given array — powers the searchable email dropdown on the History and
+   Activity Log toolbars. No-ops if the datalist isn't in this portal build. */
+function _fillEmailDatalist(id, emails) {
+  const dl = document.getElementById(id);
+  if (!dl) return;
+  const uniq = [...new Set(emails.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  dl.innerHTML = uniq.map(e => `<option value="${_esc(e)}"></option>`).join('');
+}
+
 /* ═══════════════════════════════════════════════════════
    RENDER: REQUEST HISTORY (approved + rejected, permanent)
 ═══════════════════════════════════════════════════════ */
@@ -1289,6 +1322,7 @@ function renderHistory() {
 
   let rows = _state.loginReqs.filter(r => r.status === 'approved' || r.status === 'rejected');
   document.getElementById('badge-history').textContent = rows.length || '0';
+  _fillEmailDatalist('history-email-list', rows.map(r => r.email));
 
   if (ui.status !== 'all') rows = rows.filter(r => r.status === ui.status);
   if (ui.search) {
@@ -1317,7 +1351,7 @@ function renderHistory() {
       ? `<span style="color:var(--text3);font-size:11.5px;font-family:var(--mono);">Registered</span>`
       : `<span style="color:var(--text3);font-size:11.5px;">—</span>`;
     return `<tr>
-      <td data-label="Timestamp" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);">${_fmtDateTime(ts)}</td>
+      <td data-label="Timestamp" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);">${_fmtDateTimeCell(ts)}</td>
       <td data-label="Email" style="font-family:var(--mono);font-size:12px;">${_esc(email)}</td>
       <td data-label="Status">${badge}</td>
       <td data-label="Reason">${reason}</td>
@@ -1448,6 +1482,7 @@ function renderLogs() {
   const ui = _ui.logs;
 
   let rows = [..._state.logs];
+  _fillEmailDatalist('logs-email-list', rows.flatMap(r => [r.adminEmail, r.targetEmail]));
   if (ui.action !== 'all') rows = rows.filter(r => r.action === ui.action);
   if (ui.search) {
     const q = ui.search.toLowerCase();
@@ -1468,7 +1503,7 @@ function renderLogs() {
   }
 
   tbody.innerHTML = pageRows.map(row => `<tr>
-      <td data-label="Timestamp" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);">${_fmtDateTime(row.timestamp)}</td>
+      <td data-label="Timestamp" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);">${_fmtDateTimeCell(row.timestamp)}</td>
       <td data-label="Admin" style="font-family:var(--mono);font-size:11.5px;">${_esc(row.adminEmail)}</td>
       <td data-label="Action">${_esc(row.action)}</td>
       <td data-label="Target" style="font-family:var(--mono);font-size:11.5px;">${_esc(row.targetEmail)}</td>
