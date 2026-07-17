@@ -604,7 +604,12 @@ function normaliseRow(r, i) {
    ════════════════════════════════════════════════════════════════════════ */
 async function loadBikes() {
   const tbody = document.getElementById('bike-tbody');
-  if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px 16px;">
+  const alreadyHaveData = bikes && bikes.length;
+
+  // Only show the spinner if the screen is genuinely empty. If the parent's
+  // push already rendered good data (a faster path than this IndexedDB
+  // read), don't blink it away with a loading state.
+  if (tbody && !alreadyHaveData) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px 16px;">
     <div style="color:var(--text3);display:flex;flex-direction:column;align-items:center;gap:8px;">
       <i class="ti ti-loader" style="font-size:26px;animation:spin 1s linear infinite;display:inline-flex;"></i>
       <span style="font-size:12px;">Reading ap2_bike cache…</span>
@@ -612,23 +617,32 @@ async function loadBikes() {
 
   try {
     const rows = await _readCache();
+    const fresh = (rows && rows.length) ? rows.map((r, i) => normaliseRow(r, i)).filter(Boolean) : [];
 
-    if (rows && rows.length) {
-      bikes = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
+    if (fresh.length) {
+      // Good data — always safe to apply.
+      bikes = fresh;
       renderBikeTable(bikes);
-    } else {
+    } else if (!(bikes && bikes.length)) {
+      // Only show the empty state if we don't already have better data on
+      // screen from another source (e.g. the parent's push arrived first
+      // and this slower IndexedDB read simply found nothing new).
       if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px 16px;color:var(--text3);">
         <i class="ti ti-database-off" style="font-size:26px;display:block;margin-bottom:8px;"></i>
         No data in cache yet. Data will appear automatically once
         <code style="font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:4px;">ap2_bike</code> is populated.
       </td></tr>`;
     }
+    // else: this read found nothing, but we already have good data on
+    // screen from elsewhere — do nothing, leave it exactly as is.
   } catch (err) {
     console.error('[allBike] loadBikes error:', err);
-    if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px 16px;color:var(--red);">
-      <i class="ti ti-wifi-off" style="font-size:24px;display:block;margin-bottom:6px;"></i>
-      Failed to load bike data — ${err.message}
-    </td></tr>`;
+    if (!(bikes && bikes.length) && tbody) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px 16px;color:var(--red);">
+        <i class="ti ti-wifi-off" style="font-size:24px;display:block;margin-bottom:6px;"></i>
+        Failed to load bike data — ${err.message}
+      </td></tr>`;
+    }
   }
 }
 
@@ -1110,11 +1124,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ── Message listener from parent index.html ──
-   NOTE: 'ap-cache-updated' is NOT handled here anymore — cacheWatcher.js
-   already listens for that same message internally and relays it to our
-   subscribe() callback (_applyFromIDB), which refreshes silently with no
-   spinner/flicker. Calling loadBikes() again here would just re-trigger
-   the loading state redundantly. */
+   PRIMARY data path on this page: the parent (index.html) already has a
+   working push system that has nothing to do with cacheWatcher.js:
+     - 'ap-cache-preload' : parent proactively pushes ALL cached datasets
+                            the moment they're ready (from its own memory
+                            — no IndexedDB read needed here at all)
+     - 'ap-cache-ready'   : parent's direct reply to our 'ap-cache-request'
+     - 'ap-cache-updated' : parent says something changed — ask it again
+   This sidesteps iPad's IndexedDB flakiness entirely for the common case
+   (page running inside the app). cacheWatcher.js / IndexedDB reads remain
+   as the fallback for when this page is opened standalone (no parent). */
 window.addEventListener('message', (e) => {
   /* Validate origin — only accept messages from the same origin as the parent */
   if (!e.data) return;
@@ -1126,7 +1145,38 @@ window.addEventListener('message', (e) => {
   if (e.data.type === 'ap-theme' && e.data.theme) {
     document.documentElement.setAttribute('data-theme', e.data.theme);
   }
+
+  // Parent proactively pushed everything it has — take our slice directly.
+  if (e.data.type === 'ap-cache-preload' && e.data.datasets) {
+    const rows = e.data.datasets[_AP2_CACHE_KEY];
+    if (Array.isArray(rows) && rows.length) {
+      bikes = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
+      renderBikeTable(bikes);
+    }
+  }
+
+  // Parent's direct reply to our own ap-cache-request below.
+  if (e.data.type === 'ap-cache-ready' && e.data.key === _AP2_CACHE_KEY) {
+    const rows = e.data.data;
+    if (Array.isArray(rows) && rows.length) {
+      bikes = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
+      renderBikeTable(bikes);
+    }
+  }
+
+  // Parent says something changed somewhere — ask it for our dataset again.
+  // (cacheWatcher.js also relays this to our subscribe() callback for the
+  // silent IndexedDB refresh path — the two are complementary, not redundant.)
+  if (e.data.type === 'ap-cache-updated') {
+    try { window.parent.postMessage({ type: 'ap-cache-request', key: _AP2_CACHE_KEY }, '*'); } catch (err) {}
+  }
 });
+
+// Ask the parent for our data right away, in parallel with the IndexedDB
+// read in loadBikes(). Whichever answers first wins — if there's no
+// parent (page opened standalone), this simply gets no reply and the
+// IndexedDB path (loadBikes / cacheWatcher.js) still works on its own.
+try { window.parent.postMessage({ type: 'ap-cache-request', key: _AP2_CACHE_KEY }, '*'); } catch (e) {}
 </script>
 </body>
 </html>
