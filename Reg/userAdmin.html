@@ -1303,18 +1303,20 @@ async function loadAll() {
       renderUsers();
       renderPermissionsSheet();
       renderLogs();
-    } else if (!alreadyHaveData) {
+    } else if (!_cacheReady) {
       // Only show the empty state if we don't already have better data on
       // screen from another source (e.g. the parent's push arrived first
-      // and this slower IndexedDB read simply found nothing new).
-      _cacheReady = false;
+      // and this slower IndexedDB read simply found nothing new). Checked
+      // LIVE here — not the alreadyHaveData snapshot taken before the
+      // await — because the parent's postMessage reply can set _cacheReady
+      // true WHILE this IndexedDB read was still in flight.
       _showNoCacheNotice();
     }
     // else: this read found nothing, but we already have good data on
     // screen from elsewhere — do nothing, leave it exactly as is.
   } catch (err) {
     console.error('[userAdmin] loadAll error:', err);
-    if (!alreadyHaveData) {
+    if (!_cacheReady) {
       toast('Failed to load from cache: ' + err.message, 'error');
     }
   }
