@@ -399,9 +399,9 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .table-toolbar {
   display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;
   padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-  background: var(--bg3); overflow-x: auto; -webkit-overflow-scrolling: touch;
+  background: var(--bg3); overflow: visible;
 }
-.tt-search { position: relative; flex: 1 1 180px; min-width: 120px; max-width: 280px; flex-shrink: 1; }
+.tt-search { position: relative; flex: 1 1 160px; min-width: 110px; max-width: 260px; flex-shrink: 1; }
 .tt-filter { flex: 0 0 auto; }
 .tt-filter select { min-width: 0; }
 .tt-daterange { flex: 0 0 auto; }
@@ -961,12 +961,37 @@ function _esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* Shared parser: turns ANY raw timestamp — ISO string from the sheet, a raw
-   Date object, an Excel/Sheets date serial number, an epoch-ms number, or a
-   locale string from new Date().toLocaleString() — into a real Date object,
-   or null if it truly can't be parsed. */
+/* This app's LoginReq/UserLog rows stamp timestamps as a bare 14-digit
+   DDMMYYYYHHMMSS number/string (no separators) — e.g. 18072026021216 means
+   18 Jul 2026, 02:12:16. It comes through as either a JS number or a numeric
+   string depending on how the sheet/IDB cache serialized it, so detect it
+   from the digit pattern before trying anything else. Returns null if the
+   14-digit shape doesn't decode to valid calendar/time components (so an
+   unrelated 14-digit number doesn't get silently misread as a date). */
+function _parseDdmmyyyyhhmmss(raw) {
+  const s = String(raw).trim();
+  const m = /^(\d{2})(\d{2})(\d{4})(\d{2})(\d{2})(\d{2})$/.exec(s);
+  if (!m) return null;
+  const [, dd, mm, yyyy, hh, mi, ss] = m.map(Number);
+  if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || hh > 23 || mi > 59 || ss > 59) return null;
+  const d = new Date(yyyy, mm - 1, dd, hh, mi, ss);
+  // Guard against e.g. 31 Feb rolling over into March — reject anything the
+  // Date constructor had to "correct".
+  if (d.getFullYear() !== yyyy || d.getMonth() !== mm - 1 || d.getDate() !== dd) return null;
+  return d;
+}
+
+/* Shared parser: turns ANY raw timestamp — this app's DDMMYYYYHHMMSS format,
+   an ISO string from the sheet, a raw Date object, an Excel/Sheets date
+   serial number, an epoch-ms number, or a locale string from
+   new Date().toLocaleString() — into a real Date object, or null if it
+   truly can't be parsed. */
 function _parseDate(raw) {
   if (raw === undefined || raw === null || raw === '') return null;
+
+  const ddmmyyyy = _parseDdmmyyyyhhmmss(raw);
+  if (ddmmyyyy) return ddmmyyyy;
+
   let d = null;
   if (raw instanceof Date) {
     d = raw;
@@ -1419,14 +1444,22 @@ const _combo = {
   logs:    { emails: [] },
 };
 
-/* Called from each renderer with the current unique, sorted set of emails
-   found in that table's data. Just updates the stored list — the panel
-   itself is only (re)built when it's open, so this never fights with
-   what the person is currently doing in the field. */
+/* Basic email shape check — used to keep the dropdown to real addresses only.
+   The Activity Log's Admin column can hold a sentinel value like "self"
+   instead of an address; that should never show up as a filter option. */
+const _EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/* Called from each renderer with the raw set of email-ish values found in
+   that table's data (may include duplicates and non-email sentinels like
+   "self"). Dedupes, drops anything that isn't a real email address, and
+   sorts. The panel itself is only (re)built when it's open, so this never
+   fights with what the person is currently doing in the field. */
 function _fillEmailDatalist(key, emails) {
   const input = document.getElementById(`${key}-email-input`);
   if (!input) return; // panel not present in this portal build
-  _combo[key].emails = [...new Set(emails.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const unique = [...new Set(emails.filter(Boolean).map(e => String(e).trim()))]
+    .filter(e => _EMAIL_RE.test(e));
+  _combo[key].emails = unique.sort((a, b) => a.localeCompare(b));
   const wrap = document.getElementById(`${key}-email-combo`);
   if (wrap && wrap.classList.contains('open')) _comboRenderPanel(key);
 }
