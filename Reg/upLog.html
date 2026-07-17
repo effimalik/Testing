@@ -397,22 +397,70 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 
 /* ══ Table toolbar: search + filters ══ */
 .table-toolbar {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;
   padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-  background: var(--bg3);
+  background: var(--bg3); overflow-x: auto; -webkit-overflow-scrolling: touch;
 }
-.tt-search { position: relative; flex: 1 1 200px; min-width: 140px; max-width: 320px; }
-.tt-search i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 14px; }
+.tt-search { position: relative; flex: 1 1 180px; min-width: 120px; max-width: 280px; flex-shrink: 1; }
+.tt-filter { flex: 0 0 auto; }
+.tt-filter select { min-width: 0; }
+.tt-daterange { flex: 0 0 auto; }
+.tt-count { flex-shrink: 0; }
+.tt-search i.ti-search { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 14px; }
 .tt-search input {
-  width: 100%; padding: 7px 10px 7px 30px; border-radius: var(--radius);
+  width: 100%; padding: 7px 30px 7px 30px; border-radius: var(--radius);
   border: 1px solid var(--border); background: var(--bg2); color: var(--text);
   font-family: var(--font); font-size: 12.5px; transition: border .16s, box-shadow .16s;
 }
 .tt-search input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+
+/* ══ Searchable email combobox (custom dropdown, not a native datalist) ══ */
+.combo-caret {
+  position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
+  color: var(--text3); font-size: 14px; pointer-events: none; transition: transform .14s;
+}
+.combo.open .combo-caret { transform: translateY(-50%) rotate(180deg); color: var(--accent); }
+.combo-panel {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20;
+  background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius);
+  box-shadow: var(--shadow-lg); max-height: 240px; overflow-y: auto;
+  display: none; padding: 4px;
+}
+.combo.open .combo-panel { display: block; }
+.combo-option {
+  padding: 7px 10px; border-radius: 6px; font-size: 12.5px; font-family: var(--mono);
+  color: var(--text); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.combo-option:hover, .combo-option.hl { background: var(--accent-dim); color: var(--accent); }
+.combo-option.combo-clear { font-family: var(--font); color: var(--text3); font-style: italic; }
+.combo-empty { padding: 10px; font-size: 12px; color: var(--text3); text-align: center; }
+
 .tt-filter select {
   padding: 7px 10px; border-radius: var(--radius); border: 1px solid var(--border);
   background: var(--bg2); color: var(--text); font-family: var(--font); font-size: 12px; cursor: pointer;
 }
+
+/* ══ Date range filter ══ */
+.tt-daterange {
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 6px; border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--bg2);
+}
+.tt-daterange i.ti-calendar { color: var(--text3); font-size: 14px; margin-left: 2px; }
+.tt-daterange input[type="date"] {
+  border: none; background: transparent; color: var(--text);
+  font-family: var(--font); font-size: 12px; padding: 3px 2px; cursor: pointer; color-scheme: dark;
+  max-width: 118px;
+}
+[data-theme="light"] .tt-daterange input[type="date"] { color-scheme: light; }
+.tt-daterange input[type="date"]:focus { outline: none; }
+.tt-daterange .dr-sep { color: var(--text3); font-size: 11px; }
+.tt-daterange .dr-clear {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 5px; color: var(--text3);
+  cursor: pointer; flex-shrink: 0; font-size: 12px; border: none; background: transparent;
+}
+.tt-daterange .dr-clear:hover { background: var(--surface2); color: var(--text); }
 .tt-spacer { flex: 1 1 auto; }
 .tt-count { font-size: 11px; color: var(--text3); white-space: nowrap; }
 
@@ -570,6 +618,8 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
   .tt-search { flex: 1 1 100%; max-width: none; }
   .tt-filter { flex: 1 1 100%; }
   .tt-filter select { width: 100%; }
+  .tt-daterange { flex: 1 1 100%; justify-content: space-between; }
+  .tt-daterange input[type="date"] { flex: 1 1 auto; max-width: none; min-width: 0; }
   .tt-spacer { display: none; }
   .tt-count { flex-basis: 100%; text-align: right; }
 
@@ -655,9 +705,12 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
     </div>
     <div class="table-card">
       <div class="table-toolbar">
-        <div class="tt-search"><i class="ti ti-search"></i>
-          <input type="text" list="history-email-list" placeholder="Search or select email…" oninput="_setSearch('history', this.value)" autocomplete="off" />
-          <datalist id="history-email-list"></datalist>
+        <div class="tt-search combo" id="history-email-combo">
+          <i class="ti ti-search"></i>
+          <input type="text" id="history-email-input" placeholder="Search or select email…" autocomplete="off"
+                 oninput="_comboOnInput('history')" onfocus="_comboOpen('history')" onclick="_comboOpen('history')" />
+          <i class="ti ti-chevron-down combo-caret"></i>
+          <div class="combo-panel" id="history-email-panel"></div>
         </div>
         <div class="tt-filter">
           <select onchange="_setFilter('history','status',this.value)">
@@ -665,6 +718,13 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
             <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>
           </select>
+        </div>
+        <div class="tt-daterange">
+          <i class="ti ti-calendar"></i>
+          <input type="date" id="history-date-from" title="From date" onchange="_setFilter('history','dateFrom',this.value)" />
+          <span class="dr-sep">–</span>
+          <input type="date" id="history-date-to" title="To date" onchange="_setFilter('history','dateTo',this.value)" />
+          <button class="dr-clear" title="Clear date filter" onclick="_clearDateFilter('history')"><i class="ti ti-x"></i></button>
         </div>
         <div class="tt-spacer"></div>
         <span class="tt-count" id="history-count"></span>
@@ -697,9 +757,12 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
     </div>
     <div class="table-card">
       <div class="table-toolbar">
-        <div class="tt-search"><i class="ti ti-search"></i>
-          <input type="text" list="logs-email-list" placeholder="Search or select email…" oninput="_setSearch('logs', this.value)" autocomplete="off" />
-          <datalist id="logs-email-list"></datalist>
+        <div class="tt-search combo" id="logs-email-combo">
+          <i class="ti ti-search"></i>
+          <input type="text" id="logs-email-input" placeholder="Search or select email…" autocomplete="off"
+                 oninput="_comboOnInput('logs')" onfocus="_comboOpen('logs')" onclick="_comboOpen('logs')" />
+          <i class="ti ti-chevron-down combo-caret"></i>
+          <div class="combo-panel" id="logs-email-panel"></div>
         </div>
         <div class="tt-filter">
           <select onchange="_setFilter('logs','action',this.value)">
@@ -710,6 +773,13 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
             <option value="Permission revoked">Permission revoked</option>
             <option value="User details updated">User details updated</option>
           </select>
+        </div>
+        <div class="tt-daterange">
+          <i class="ti ti-calendar"></i>
+          <input type="date" id="logs-date-from" title="From date" onchange="_setFilter('logs','dateFrom',this.value)" />
+          <span class="dr-sep">–</span>
+          <input type="date" id="logs-date-to" title="To date" onchange="_setFilter('logs','dateTo',this.value)" />
+          <button class="dr-clear" title="Clear date filter" onclick="_clearDateFilter('logs')"><i class="ti ti-x"></i></button>
         </div>
         <div class="tt-spacer"></div>
         <span class="tt-count" id="logs-count"></span>
@@ -893,9 +963,9 @@ function _esc(s) {
 
 /* Shared parser: turns ANY raw timestamp — ISO string from the sheet, a raw
    Date object, an Excel/Sheets date serial number, an epoch-ms number, or a
-   locale string from new Date().toLocaleString() — into { date, time } parts,
+   locale string from new Date().toLocaleString() — into a real Date object,
    or null if it truly can't be parsed. */
-function _parseDateTimeParts(raw) {
+function _parseDate(raw) {
   if (raw === undefined || raw === null || raw === '') return null;
   let d = null;
   if (raw instanceof Date) {
@@ -908,11 +978,39 @@ function _parseDateTimeParts(raw) {
     const parsed = new Date(s);
     d = isNaN(parsed.getTime()) ? null : parsed;
   }
-  if (!d || isNaN(d.getTime())) return null;
+  return (!d || isNaN(d.getTime())) ? null : d;
+}
+
+/* { date, time } display parts built on top of _parseDate — used by the
+   Timestamp column formatters below. */
+function _parseDateTimeParts(raw) {
+  const d = _parseDate(raw);
+  if (!d) return null;
   return {
     date: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
     time: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
   };
+}
+
+/* True if raw's date falls within [from, to] (both 'YYYY-MM-DD' strings from
+   an <input type="date">, either side optional). Compares calendar days in
+   the browser's local time zone, inclusive on both ends. Rows with an
+   unparseable timestamp are excluded once any date filter is active, rather
+   than silently included, so filtered results are never misleading. */
+function _inDateRange(raw, from, to) {
+  if (!from && !to) return true;
+  const d = _parseDate(raw);
+  if (!d) return false;
+  const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  if (from) {
+    const f = new Date(from + 'T00:00:00');
+    if (day < f) return false;
+  }
+  if (to) {
+    const t = new Date(to + 'T00:00:00');
+    if (day > t) return false;
+  }
+  return true;
 }
 
 /* Single-line "17 Jul 2026 02:23 PM" — used wherever a plain string is
@@ -1156,10 +1254,10 @@ function _showNoCacheNotice() {
 ═══════════════════════════════════════════════════════ */
 const _ui = {
   requests: { search: '', sort: { key: 'timestamp', dir: 'desc' }, page: 1, pageSize: 10 },
-  history:  { search: '', status: 'all', sort: { key: 'timestamp', dir: 'desc' }, page: 1, pageSize: 10 },
+  history:  { search: '', status: 'all', dateFrom: '', dateTo: '', sort: { key: 'timestamp', dir: 'desc' }, page: 1, pageSize: 10 },
   users:    { search: '', status: 'all', sort: { key: 'name', dir: 'asc' }, page: 1, pageSize: 10 },
   perms:    { search: '', sort: { key: 'email', dir: 'asc' }, page: 1, pageSize: 10 },
-  logs:     { search: '', action: 'all', sort: { key: 'timestamp', dir: 'desc' }, page: 1, pageSize: 10 },
+  logs:     { search: '', action: 'all', dateFrom: '', dateTo: '', sort: { key: 'timestamp', dir: 'desc' }, page: 1, pageSize: 10 },
 };
 const _renderers = {}; // table key -> render fn, wired up below
 
@@ -1174,6 +1272,16 @@ function _setSearch(tableKey, value) {
 }
 function _setFilter(tableKey, field, value) {
   _ui[tableKey][field] = value;
+  _ui[tableKey].page = 1;
+  _renderers[tableKey] && _renderers[tableKey]();
+}
+function _clearDateFilter(tableKey) {
+  _ui[tableKey].dateFrom = '';
+  _ui[tableKey].dateTo = '';
+  const fromEl = document.getElementById(`${tableKey}-date-from`);
+  const toEl = document.getElementById(`${tableKey}-date-to`);
+  if (fromEl) fromEl.value = '';
+  if (toEl) toEl.value = '';
   _ui[tableKey].page = 1;
   _renderers[tableKey] && _renderers[tableKey]();
 }
@@ -1302,15 +1410,92 @@ function renderLoginReqs() {
 }
 _renderers.requests = renderLoginReqs;
 
-/* Fills a <datalist> with the unique, sorted set of emails found in the
-   given array — powers the searchable email dropdown on the History and
-   Activity Log toolbars. No-ops if the datalist isn't in this portal build. */
-function _fillEmailDatalist(id, emails) {
-  const dl = document.getElementById(id);
-  if (!dl) return;
-  const uniq = [...new Set(emails.filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  dl.innerHTML = uniq.map(e => `<option value="${_esc(e)}"></option>`).join('');
+/* ═══════════════════════════════════════════════════════
+   SEARCHABLE EMAIL COMBOBOX (custom dropdown, not a native
+   datalist) — powers the email filter on History and Activity Log.
+═══════════════════════════════════════════════════════ */
+const _combo = {
+  history: { emails: [] },
+  logs:    { emails: [] },
+};
+
+/* Called from each renderer with the current unique, sorted set of emails
+   found in that table's data. Just updates the stored list — the panel
+   itself is only (re)built when it's open, so this never fights with
+   what the person is currently doing in the field. */
+function _fillEmailDatalist(key, emails) {
+  const input = document.getElementById(`${key}-email-input`);
+  if (!input) return; // panel not present in this portal build
+  _combo[key].emails = [...new Set(emails.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const wrap = document.getElementById(`${key}-email-combo`);
+  if (wrap && wrap.classList.contains('open')) _comboRenderPanel(key);
 }
+
+function _comboRenderPanel(key) {
+  const panel = document.getElementById(`${key}-email-panel`);
+  const input = document.getElementById(`${key}-email-input`);
+  if (!panel || !input) return;
+  const q = input.value.trim().toLowerCase();
+  const matches = q ? _combo[key].emails.filter(e => e.toLowerCase().includes(q)) : _combo[key].emails;
+
+  let html = '';
+  if (input.value.trim()) {
+    html += `<div class="combo-option combo-clear" onclick="_comboClear('${key}')"><i class="ti ti-x"></i> Clear filter</div>`;
+  }
+  if (!matches.length) {
+    html += `<div class="combo-empty">No matching emails</div>`;
+  } else {
+    html += matches.map(e =>
+      `<div class="combo-option" onclick="_comboSelect('${key}','${_esc(e).replace(/'/g, "\\'")}')">${_esc(e)}</div>`
+    ).join('');
+  }
+  panel.innerHTML = html;
+}
+
+function _comboOpen(key) {
+  const wrap = document.getElementById(`${key}-email-combo`);
+  if (!wrap) return;
+  document.querySelectorAll('.combo.open').forEach(w => { if (w !== wrap) w.classList.remove('open'); });
+  wrap.classList.add('open');
+  _comboRenderPanel(key);
+}
+
+function _comboClose(key) {
+  const wrap = document.getElementById(`${key}-email-combo`);
+  if (wrap) wrap.classList.remove('open');
+}
+
+function _comboOnInput(key) {
+  const input = document.getElementById(`${key}-email-input`);
+  _comboRenderPanel(key);
+  _setSearch(key, input ? input.value : '');
+}
+
+function _comboSelect(key, email) {
+  const input = document.getElementById(`${key}-email-input`);
+  if (input) input.value = email;
+  _comboClose(key);
+  _setSearch(key, email);
+}
+
+function _comboClear(key) {
+  const input = document.getElementById(`${key}-email-input`);
+  if (input) input.value = '';
+  _comboRenderPanel(key);
+  _setSearch(key, '');
+  input && input.focus();
+}
+
+// Close any open combobox panel when clicking outside it.
+document.addEventListener('click', (e) => {
+  document.querySelectorAll('.combo.open').forEach(wrap => {
+    if (!wrap.contains(e.target)) wrap.classList.remove('open');
+  });
+});
+// Escape closes the currently open panel too.
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') document.querySelectorAll('.combo.open').forEach(w => w.classList.remove('open'));
+});
 
 /* ═══════════════════════════════════════════════════════
    RENDER: REQUEST HISTORY (approved + rejected, permanent)
@@ -1322,9 +1507,10 @@ function renderHistory() {
 
   let rows = _state.loginReqs.filter(r => r.status === 'approved' || r.status === 'rejected');
   document.getElementById('badge-history').textContent = rows.length || '0';
-  _fillEmailDatalist('history-email-list', rows.map(r => r.email));
+  _fillEmailDatalist('history', rows.map(r => r.email));
 
   if (ui.status !== 'all') rows = rows.filter(r => r.status === ui.status);
+  if (ui.dateFrom || ui.dateTo) rows = rows.filter(r => _inDateRange(r.timestamp, ui.dateFrom, ui.dateTo));
   if (ui.search) {
     const q = ui.search.toLowerCase();
     rows = rows.filter(r => (r.email || '').toLowerCase().includes(q));
@@ -1482,8 +1668,9 @@ function renderLogs() {
   const ui = _ui.logs;
 
   let rows = [..._state.logs];
-  _fillEmailDatalist('logs-email-list', rows.flatMap(r => [r.adminEmail, r.targetEmail]));
+  _fillEmailDatalist('logs', rows.flatMap(r => [r.adminEmail, r.targetEmail]));
   if (ui.action !== 'all') rows = rows.filter(r => r.action === ui.action);
+  if (ui.dateFrom || ui.dateTo) rows = rows.filter(r => _inDateRange(r.timestamp, ui.dateFrom, ui.dateTo));
   if (ui.search) {
     const q = ui.search.toLowerCase();
     rows = rows.filter(r =>
