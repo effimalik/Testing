@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
+<script src="https://effimalik.github.io/Testing/shared/cacheWatcher.js?v=1"></script>
 
 <style>
 /* ═══ THEME ═══ */
@@ -531,10 +532,10 @@ function docTypeLabel(k){ const f=ALL_DOC_TYPES.find(d=>d.key===k); return f?f.l
 function isExpiryRequired(k){ const f=ALL_DOC_TYPES.find(d=>d.key===k); return f?f.expiryRequired:true; }
 
 /* ═══════════════════════════════════════════════════════
- *  IDB — FLEET CACHE (READ-ONLY)
- *  Mirrors allEmp.html EXACTLY:
- *    _getDB()        — indexedDB.open('ap2_fleet_cache'), no version
- *    _readCache(key) — returns full rec {ts,data,fingerprint} or null
+ *  CACHE — via shared cacheWatcher.js, with a safe fallback
+ *  Ditto allEmp.html / userAdmin.html: if cacheWatcher.js fails to load
+ *  (blocked, 404, iPad caching a stale/broken copy, etc.) this page must
+ *  NOT throw and must NOT stop the rest of this script from running.
  *  Store: 'datasets'
  *  Keys : ap2_employee | ap2_bike | ap2_docLog
  * ═══════════════════════════════════════════════════════ */
@@ -545,29 +546,80 @@ const _AP2_CACHE_KEY_LOG  = 'ap2_docLog';
 const _IDB_NAME  = 'ap2_fleet_cache';
 const _IDB_STORE = 'datasets';
 
-let _idbConn = null;
+if (typeof window.AP2CacheWatcher === 'undefined') {
+  console.warn('[docPortal] cacheWatcher.js did not load — using local fallback');
+  window.AP2CacheWatcher = (function () {
+    let _conn = null;
+    function _open() {
+      if (_conn) return Promise.resolve(_conn);
+      return new Promise((res, rej) => {
+        let done = false;
+        const req = indexedDB.open(_IDB_NAME);
+        const t = setTimeout(() => { if (!done) { done = true; rej(new Error('idb-open-timeout')); } }, 2000);
+        req.onsuccess = e => { if (!done) { done = true; clearTimeout(t); _conn = e.target.result; res(_conn); } };
+        req.onerror   = e => { if (!done) { done = true; clearTimeout(t); rej(e.target.error); } };
+      });
+    }
+    return {
+      init() {},
+      subscribe() { return () => {}; }, // no cross-page notifications in fallback mode
+      notifyNow() {},
+      getStatus() { return { healthy: false, mode: 'local-fallback', lastError: 'cacheWatcher.js not loaded' }; },
+      async readKey(key) {
+        try {
+          const db  = await _open();
+          if (!db.objectStoreNames.contains(_IDB_STORE)) return null;
+          const rec = await new Promise((res, rej) => {
+            const r = db.transaction(_IDB_STORE, 'readonly').objectStore(_IDB_STORE).get(key);
+            r.onsuccess = () => res(r.result || null);
+            r.onerror   = () => rej(r.error);
+          });
+          return (rec && rec.data) ? rec.data : null;
+        } catch (e) {
+          if (e && e.name === 'NotFoundError') return null;
+          console.warn('[docPortal] fallback read failed:', e.message);
+          return null;
+        }
+      }
+    };
+  })();
+}
 
-/* Identical to allEmp._getDB() */
-function _getDB(){
-  if(_idbConn) return Promise.resolve(_idbConn);
-  return new Promise((res,rej)=>{
-    const req = indexedDB.open(_IDB_NAME); // no version — open existing DB as-is
+/* cacheWatcher.js's readKey() gives back the data array only — but
+   docPortal also needs the write timestamp (rec.ts) to stamp ap2_docLog
+   rows and to show "Cached: …" in the doc preview panel. That field
+   isn't part of the shared watcher's public contract, so we grab it
+   with one lightweight direct IDB read alongside the watcher read. */
+let _idbConn = null;
+function _getDB() {
+  if (_idbConn) return Promise.resolve(_idbConn);
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(_IDB_NAME);
     req.onsuccess = e => { _idbConn = e.target.result; res(_idbConn); };
     req.onerror   = e => rej(e.target.error);
   });
 }
+async function _readRawTs(cacheKey) {
+  try {
+    const db = await _getDB();
+    if (!db.objectStoreNames.contains(_IDB_STORE)) return 0;
+    const rec = await new Promise((res, rej) => {
+      const req = db.transaction(_IDB_STORE, 'readonly').objectStore(_IDB_STORE).get(cacheKey);
+      req.onsuccess = () => res(req.result || null);
+      req.onerror   = () => rej(req.error);
+    });
+    return (rec && rec.ts) ? rec.ts : 0;
+  } catch (e) { return 0; }
+}
 
-/* Identical to allEmp._readCache() — returns {ts,data,fingerprint} or null */
-async function _readCache(cacheKey){
-  const db  = await _getDB();
-  const rec = await new Promise((res,rej)=>{
-    const req = db.transaction(_IDB_STORE,'readonly')
-                  .objectStore(_IDB_STORE).get(cacheKey);
-    req.onsuccess = () => res(req.result || null);
-    req.onerror   = () => rej(req.error);
-  });
-  if(!rec || !Array.isArray(rec.data) || !rec.data.length) return null;
-  return rec; // { ts, data[], fingerprint }
+/* Same call-site shape as before — { ts, data[] } or null — so every
+   loadInitialData()/loadDocLog()/_applyFromIDB() call below stays
+   untouched; only *how* the array is fetched has changed. */
+async function _readCache(cacheKey) {
+  const data = await AP2CacheWatcher.readKey(cacheKey);
+  if (!data || !Array.isArray(data) || !data.length) return null;
+  const ts = await _readRawTs(cacheKey);
+  return { ts, data };
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -747,15 +799,32 @@ function switchTab(t){
  *  LOAD — mirrors allEmp.loadEmployees() exactly
  *  _readCache() → Memory-Hoist → render
  * ═══════════════════════════════════════════════════════ */
+function _updateCacheStatus(){
+  const statusEl = document.getElementById('cache-status');
+  if(!statusEl) return;
+  if(employees.length||bikes.length){
+    statusEl.style.color = 'var(--teal)';
+    statusEl.title = '';
+    statusEl.innerHTML = `<i class="ti ti-circle-check" style="font-size:12px;"></i> ${employees.length} emp \xB7 ${bikes.length} bikes \xB7 ${logRows.length} docs`;
+  } else {
+    statusEl.style.color = 'var(--amber)';
+    statusEl.title = 'Open allEmp.html in this browser first to populate ap2_fleet_cache (ap2_employee + ap2_bike + ap2_docLog).';
+    statusEl.innerHTML = `<i class="ti ti-alert-triangle" style="font-size:12px;"></i> Fleet cache unavailable`;
+  }
+}
+
 async function loadInitialData(){
   const statusEl = document.getElementById('cache-status');
-  const setStatus = (icon,msg,color,title) => {
-    if(!statusEl) return;
-    statusEl.style.color = color || 'var(--text3)';
-    statusEl.title = title || '';
-    statusEl.innerHTML = `<i class="ti ${icon}" style="font-size:12px;${icon.includes('loader')?'animation:spin 1s linear infinite;':''}"></i> ${msg}`;
-  };
-  setStatus('ti-loader','Reading cache\u2026');
+  const alreadyHaveData = employees.length || bikes.length;
+
+  // Only show the loading spinner on the very first, empty-screen load.
+  // A background refresh finding the cache mid-write shouldn't blink the
+  // status line away from data that's already rendered.
+  if(!alreadyHaveData && statusEl){
+    statusEl.style.color = 'var(--text3)';
+    statusEl.title = '';
+    statusEl.innerHTML = `<i class="ti ti-loader" style="font-size:12px;animation:spin 1s linear infinite;"></i> Reading cache\u2026`;
+  }
 
   let empOk=false, bikeOk=false;
 
@@ -780,14 +849,12 @@ async function loadInitialData(){
   /* ── ap2_docLog \u2192 Memory-Hoist into logRows[] ── */
   await loadDocLog();
 
-  if(empOk||bikeOk){
-    setStatus('ti-circle-check',
-      `${employees.length} emp \xB7 ${bikes.length} bikes \xB7 ${logRows.length} docs`,
-      'var(--teal)');
-  } else {
-    setStatus('ti-alert-triangle','Fleet cache unavailable','var(--amber)',
-      'Open allEmp.html in this browser first to populate ap2_fleet_cache (ap2_employee + ap2_bike + ap2_docLog).');
+  if(!empOk && !bikeOk && alreadyHaveData){
+    // This read came up empty, but we already had good data on screen
+    // (e.g. from the parent's push arriving first) — leave it as is.
+    return;
   }
+  _updateCacheStatus();
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -806,47 +873,132 @@ async function loadDocLog(){
 }
 
 /* ═══════════════════════════════════════════════════════
- *  BACKGROUND CACHE WATCHER — mirrors allEmp IIFE exactly
- *  Polls every 30 s + debounces ap-cache-updated messages.
- *  Refreshes employees[], bikes[] AND logRows[] every tick.
+ *  SILENT REFRESH — every update AFTER the first paint goes through here.
+ *  No skeleton/status wipe unless data is genuinely gone.
+ *  Subscribed to cacheWatcher.js, which fires this on ANY of:
+ *    - this page's own fast poll detecting a change or deletion
+ *    - an instant notifyNow() call from wherever the data was written
+ *    - a broadcast relayed down from the parent shell (index.html)
+ *  Also keeps the emp/bike search DROPDOWN populated live: if it's open
+ *  when new data lands, it's re-filtered in place instead of going stale.
  * ═══════════════════════════════════════════════════════ */
-(function(){
-  let _debounce = null;
+let _emptyReadStreak = 0; // guards against one flaky/transient empty read wiping good data
 
-  async function _applyFromIDB(){
-    try{
-      const rec = await _readCache(_AP2_CACHE_KEY_EMP);
-      if(rec && rec.data.length){
-        const fresh = rec.data.map((r,i)=>normaliseEmp(r,i)).filter(Boolean);
-        if(fresh.length) employees = fresh;
-      }
-    }catch(e){ /* keep last known */ }
+function _refreshOpenDropdowns(){
+  ['emp','bike'].forEach(mode=>{
+    const list = document.getElementById(mode+'-dropdown');
+    if(list && list.classList.contains('open')){
+      filterDrop(mode, document.getElementById(mode+'-search').value);
+    }
+  });
+}
 
-    try{
-      const rec = await _readCache(_AP2_CACHE_KEY_BIKE);
-      if(rec && rec.data.length){
-        const fresh = rec.data.map((r,i)=>normaliseBike(r,i)).filter(Boolean);
-        if(fresh.length) bikes = fresh;
-      }
-    }catch(e){ /* keep last known */ }
+async function _applyFromIDB(){
+  let empOk=false, bikeOk=false;
 
-    await loadDocLog();
+  try{
+    const rec = await _readCache(_AP2_CACHE_KEY_EMP);
+    if(rec && rec.data.length){
+      const fresh = rec.data.map((r,i)=>normaliseEmp(r,i)).filter(Boolean);
+      if(fresh.length){ employees = fresh; empOk = true; }
+    }
+  }catch(e){ console.warn('[docPortal] emp refresh error:', e.message); }
 
-    const s = document.getElementById('cache-status');
-    if(s && employees.length){
-      s.style.color = 'var(--teal)';
-      s.innerHTML = `<i class="ti ti-circle-check" style="font-size:12px;"></i> ${employees.length} emp \xB7 ${bikes.length} bikes \xB7 ${logRows.length} docs`;
+  try{
+    const rec = await _readCache(_AP2_CACHE_KEY_BIKE);
+    if(rec && rec.data.length){
+      const fresh = rec.data.map((r,i)=>normaliseBike(r,i)).filter(Boolean);
+      if(fresh.length){ bikes = fresh; bikeOk = true; }
+    }
+  }catch(e){ console.warn('[docPortal] bike refresh error:', e.message); }
+
+  await loadDocLog();
+
+  if(empOk || bikeOk){
+    _emptyReadStreak = 0;
+  } else if(employees.length || bikes.length){
+    // Don't trust a single empty read — iPad's IndexedDB reads can be
+    // flaky/transient. Only treat it as a genuine cache clear after
+    // seeing it twice in a row.
+    _emptyReadStreak++;
+    if(_emptyReadStreak >= 2){
+      employees = []; bikes = [];
+      _emptyReadStreak = 0;
     }
   }
 
-  function _debouncedApply(){
-    if(_debounce) clearTimeout(_debounce);
-    _debounce = setTimeout(_applyFromIDB, 200);
+  _updateCacheStatus();
+  _refreshOpenDropdowns();
+}
+
+try {
+  AP2CacheWatcher.init();
+  AP2CacheWatcher.subscribe(() => { _applyFromIDB(); });
+} catch (e) {
+  console.warn('[docPortal] cacheWatcher wiring failed, continuing without live updates:', e.message);
+}
+
+/* Listen for messages from parent index.html
+   ── PRIMARY data path on this page: the parent (index.html) already has
+   a working push system that has nothing to do with cacheWatcher.js:
+     - 'ap-cache-preload' : parent proactively pushes ALL cached datasets
+                            the moment they're ready (from its own memory
+                            — no IndexedDB read needed here at all)
+     - 'ap-cache-ready'   : parent's direct reply to our 'ap-cache-request'
+     - 'ap-cache-updated' : parent says something changed — ask it again
+   This sidesteps iPad's IndexedDB flakiness entirely for the common case
+   (page running inside the app). cacheWatcher.js / IndexedDB reads remain
+   as the fallback for when this page is opened standalone (no parent). */
+function _applyPushedDataset(key, data, ts){
+  if(!data || !Array.isArray(data) || !data.length) return;
+  if(key === _AP2_CACHE_KEY_EMP){
+    const fresh = data.map((r,i)=>normaliseEmp(r,i)).filter(Boolean);
+    if(fresh.length) employees = fresh;
+  } else if(key === _AP2_CACHE_KEY_BIKE){
+    const fresh = data.map((r,i)=>normaliseBike(r,i)).filter(Boolean);
+    if(fresh.length) bikes = fresh;
+  } else if(key === _AP2_CACHE_KEY_LOG){
+    const fresh = data.map(r=>normaliseLogRow(r, ts || Date.now())).filter(Boolean);
+    if(fresh.length) logRows = fresh;
+  }
+  _updateCacheStatus();
+  _refreshOpenDropdowns();
+}
+
+window.addEventListener('message', (e) => {
+  if (!e.data) return;
+
+  // Parent proactively pushed everything it has — take our slice directly.
+  if (e.data.type === 'ap-cache-preload' && e.data.datasets) {
+    _applyPushedDataset(_AP2_CACHE_KEY_EMP,  e.data.datasets[_AP2_CACHE_KEY_EMP],  e.data.ts);
+    _applyPushedDataset(_AP2_CACHE_KEY_BIKE, e.data.datasets[_AP2_CACHE_KEY_BIKE], e.data.ts);
+    _applyPushedDataset(_AP2_CACHE_KEY_LOG,  e.data.datasets[_AP2_CACHE_KEY_LOG],  e.data.ts);
   }
 
-  setInterval(_applyFromIDB, 30000);
-  window.addEventListener('ap-cache-updated', _debouncedApply);
-})();
+  // Parent's direct reply to our own ap-cache-request below.
+  if (e.data.type === 'ap-cache-ready' && e.data.key) {
+    _applyPushedDataset(e.data.key, e.data.data, e.data.ts);
+  }
+
+  // Parent says something changed somewhere — ask it for our datasets again.
+  if (e.data.type === 'ap-cache-updated') {
+    [_AP2_CACHE_KEY_EMP, _AP2_CACHE_KEY_BIKE, _AP2_CACHE_KEY_LOG].forEach(key => {
+      try { window.parent.postMessage({ type: 'ap-cache-request', key }, '*'); } catch (err) {}
+    });
+  }
+
+  if (e.data.type === 'ap-theme' && e.data.theme) {
+    document.documentElement.setAttribute('data-theme', e.data.theme);
+  }
+});
+
+// Ask the parent for our data right away, in parallel with the IndexedDB
+// reads in loadInitialData(). Whichever answers first wins — if there's
+// no parent (page opened standalone), this simply gets no reply and the
+// IndexedDB path (loadInitialData / cacheWatcher.js) still works alone.
+[_AP2_CACHE_KEY_EMP, _AP2_CACHE_KEY_BIKE, _AP2_CACHE_KEY_LOG].forEach(key => {
+  try { window.parent.postMessage({ type: 'ap-cache-request', key }, '*'); } catch (e) {}
+});
 
 
 /* get all docs for entity+docType from logRows */
@@ -1562,11 +1714,6 @@ function wireDelegation(){
 async function init(){
   wireDelegation();
   await loadInitialData();
-  window.addEventListener('message',e=>{
-    if(!e.data)return;
-    if(e.data.type==='ap-theme'&&e.data.theme) document.documentElement.setAttribute('data-theme',e.data.theme);
-    if(e.data.type==='ap-cache-updated') loadInitialData();
-  });
   // Default log portal = all, show ID field hidden
   document.getElementById('log-filter-all').classList.add('active');
 }
