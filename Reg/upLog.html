@@ -406,15 +406,26 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .tt-filter select { min-width: 0; }
 .tt-daterange { flex: 0 0 auto; }
 .tt-count { flex-shrink: 0; }
-.tt-search i.ti-search { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 14px; }
-.tt-search input {
-  width: 100%; padding: 7px 30px 7px 30px; border-radius: var(--radius);
-  border: 1px solid var(--border); background: var(--bg2); color: var(--text);
-  font-family: var(--font); font-size: 12.5px; transition: border .16s, box-shadow .16s;
-}
-.tt-search input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
 
-/* ══ Searchable email combobox (custom dropdown, not a native datalist) ══ */
+/* ══ Searchable email combobox (custom dropdown, not a native datalist)
+   Click the trigger to open a real dropdown panel; the search box lives
+   INSIDE the panel, pinned to its top, with the option list scrolling
+   underneath it. ══ */
+.combo-trigger {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 7px 30px 7px 30px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--bg2); color: var(--text);
+  font-family: var(--font); font-size: 12.5px; cursor: pointer; text-align: left;
+  transition: border .16s, box-shadow .16s;
+}
+.combo-trigger:hover { border-color: var(--border2); }
+.combo.open .combo-trigger { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.combo-trigger i.ti-mail { color: var(--text3); font-size: 14px; flex-shrink: 0; }
+.combo-trigger-label {
+  flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--mono);
+}
+.combo-trigger-label.placeholder { font-family: var(--font); color: var(--text3); }
 .combo-caret {
   position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
   color: var(--text3); font-size: 14px; pointer-events: none; transition: transform .14s;
@@ -423,16 +434,28 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .combo-panel {
   position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20;
   background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius);
-  box-shadow: var(--shadow-lg); max-height: 240px; overflow-y: auto;
-  display: none; padding: 4px;
+  box-shadow: var(--shadow-lg); max-height: 280px;
+  display: none; flex-direction: column; overflow: hidden;
 }
-.combo.open .combo-panel { display: block; }
+.combo.open .combo-panel { display: flex; }
+.combo-search {
+  position: relative; flex-shrink: 0; padding: 6px; border-bottom: 1px solid var(--border);
+}
+.combo-search i.ti-search { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 13px; }
+.combo-search input {
+  width: 100%; padding: 6px 10px 6px 28px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--bg2); color: var(--text);
+  font-family: var(--font); font-size: 12.5px;
+}
+.combo-search input:focus { outline: none; border-color: var(--accent); }
+.combo-options { overflow-y: auto; padding: 4px; }
 .combo-option {
   padding: 7px 10px; border-radius: 6px; font-size: 12.5px; font-family: var(--mono);
   color: var(--text); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .combo-option:hover, .combo-option.hl { background: var(--accent-dim); color: var(--accent); }
 .combo-option.combo-clear { font-family: var(--font); color: var(--text3); font-style: italic; }
+.combo-option.selected { background: var(--accent-dim); color: var(--accent); font-weight: 600; }
 .combo-empty { padding: 10px; font-size: 12px; color: var(--text3); text-align: center; }
 
 .tt-filter select {
@@ -706,11 +729,19 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
     <div class="table-card">
       <div class="table-toolbar">
         <div class="tt-search combo" id="history-email-combo">
-          <i class="ti ti-search"></i>
-          <input type="text" id="history-email-input" placeholder="Search or select email…" autocomplete="off"
-                 oninput="_comboOnInput('history')" onfocus="_comboOpen('history')" onclick="_comboOpen('history')" />
+          <button type="button" class="combo-trigger" id="history-email-trigger" onclick="_comboToggle('history')">
+            <i class="ti ti-mail"></i>
+            <span class="combo-trigger-label placeholder" id="history-email-label">All emails</span>
+          </button>
           <i class="ti ti-chevron-down combo-caret"></i>
-          <div class="combo-panel" id="history-email-panel"></div>
+          <div class="combo-panel" id="history-email-panel">
+            <div class="combo-search">
+              <i class="ti ti-search"></i>
+              <input type="text" id="history-email-search" placeholder="Search email…" autocomplete="off"
+                     oninput="_comboFilter('history')" />
+            </div>
+            <div class="combo-options" id="history-email-options"></div>
+          </div>
         </div>
         <div class="tt-filter">
           <select onchange="_setFilter('history','status',this.value)">
@@ -758,11 +789,19 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
     <div class="table-card">
       <div class="table-toolbar">
         <div class="tt-search combo" id="logs-email-combo">
-          <i class="ti ti-search"></i>
-          <input type="text" id="logs-email-input" placeholder="Search or select email…" autocomplete="off"
-                 oninput="_comboOnInput('logs')" onfocus="_comboOpen('logs')" onclick="_comboOpen('logs')" />
+          <button type="button" class="combo-trigger" id="logs-email-trigger" onclick="_comboToggle('logs')">
+            <i class="ti ti-mail"></i>
+            <span class="combo-trigger-label placeholder" id="logs-email-label">All emails</span>
+          </button>
           <i class="ti ti-chevron-down combo-caret"></i>
-          <div class="combo-panel" id="logs-email-panel"></div>
+          <div class="combo-panel" id="logs-email-panel">
+            <div class="combo-search">
+              <i class="ti ti-search"></i>
+              <input type="text" id="logs-email-search" placeholder="Search email…" autocomplete="off"
+                     oninput="_comboFilter('logs')" />
+            </div>
+            <div class="combo-options" id="logs-email-options"></div>
+          </div>
         </div>
         <div class="tt-filter">
           <select onchange="_setFilter('logs','action',this.value)">
@@ -1436,12 +1475,15 @@ function renderLoginReqs() {
 _renderers.requests = renderLoginReqs;
 
 /* ═══════════════════════════════════════════════════════
-   SEARCHABLE EMAIL COMBOBOX (custom dropdown, not a native
-   datalist) — powers the email filter on History and Activity Log.
+   EMAIL DROPDOWN (real dropdown, not a live-typing search box)
+   — powers the email filter on History and Activity Log.
+   Click the trigger to open a panel; a search box pinned to the top
+   of that panel narrows the option list; clicking an option applies
+   the filter and closes the panel.
 ═══════════════════════════════════════════════════════ */
 const _combo = {
-  history: { emails: [] },
-  logs:    { emails: [] },
+  history: { emails: [], selected: '' },
+  logs:    { emails: [], selected: '' },
 };
 
 /* Basic email shape check — used to keep the dropdown to real addresses only.
@@ -1455,42 +1497,52 @@ const _EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
    sorts. The panel itself is only (re)built when it's open, so this never
    fights with what the person is currently doing in the field. */
 function _fillEmailDatalist(key, emails) {
-  const input = document.getElementById(`${key}-email-input`);
-  if (!input) return; // panel not present in this portal build
+  const trigger = document.getElementById(`${key}-email-trigger`);
+  if (!trigger) return; // panel not present in this portal build
   const unique = [...new Set(emails.filter(Boolean).map(e => String(e).trim()))]
     .filter(e => _EMAIL_RE.test(e));
   _combo[key].emails = unique.sort((a, b) => a.localeCompare(b));
   const wrap = document.getElementById(`${key}-email-combo`);
-  if (wrap && wrap.classList.contains('open')) _comboRenderPanel(key);
+  if (wrap && wrap.classList.contains('open')) _comboRenderOptions(key);
 }
 
-function _comboRenderPanel(key) {
-  const panel = document.getElementById(`${key}-email-panel`);
-  const input = document.getElementById(`${key}-email-input`);
-  if (!panel || !input) return;
-  const q = input.value.trim().toLowerCase();
+function _comboRenderOptions(key) {
+  const optionsEl = document.getElementById(`${key}-email-options`);
+  const searchEl = document.getElementById(`${key}-email-search`);
+  if (!optionsEl) return;
+  const q = (searchEl ? searchEl.value : '').trim().toLowerCase();
   const matches = q ? _combo[key].emails.filter(e => e.toLowerCase().includes(q)) : _combo[key].emails;
+  const selected = _combo[key].selected;
 
-  let html = '';
-  if (input.value.trim()) {
-    html += `<div class="combo-option combo-clear" onclick="_comboClear('${key}')"><i class="ti ti-x"></i> Clear filter</div>`;
-  }
+  let html = `<div class="combo-option combo-clear ${selected ? '' : 'selected'}" onclick="_comboSelect('${key}','')"><i class="ti ti-list"></i> All emails</div>`;
   if (!matches.length) {
     html += `<div class="combo-empty">No matching emails</div>`;
   } else {
     html += matches.map(e =>
-      `<div class="combo-option" onclick="_comboSelect('${key}','${_esc(e).replace(/'/g, "\\'")}')">${_esc(e)}</div>`
+      `<div class="combo-option ${e === selected ? 'selected' : ''}" onclick="_comboSelect('${key}','${_esc(e).replace(/'/g, "\\'")}')">${_esc(e)}</div>`
     ).join('');
   }
-  panel.innerHTML = html;
+  optionsEl.innerHTML = html;
 }
 
-function _comboOpen(key) {
+function _comboUpdateLabel(key) {
+  const label = document.getElementById(`${key}-email-label`);
+  if (!label) return;
+  const selected = _combo[key].selected;
+  label.textContent = selected || 'All emails';
+  label.classList.toggle('placeholder', !selected);
+}
+
+function _comboToggle(key) {
   const wrap = document.getElementById(`${key}-email-combo`);
   if (!wrap) return;
-  document.querySelectorAll('.combo.open').forEach(w => { if (w !== wrap) w.classList.remove('open'); });
+  if (wrap.classList.contains('open')) { _comboClose(key); return; }
+  document.querySelectorAll('.combo.open').forEach(w => w.classList.remove('open'));
   wrap.classList.add('open');
-  _comboRenderPanel(key);
+  const searchEl = document.getElementById(`${key}-email-search`);
+  if (searchEl) searchEl.value = '';
+  _comboRenderOptions(key);
+  if (searchEl) setTimeout(() => searchEl.focus(), 0);
 }
 
 function _comboClose(key) {
@@ -1498,28 +1550,20 @@ function _comboClose(key) {
   if (wrap) wrap.classList.remove('open');
 }
 
-function _comboOnInput(key) {
-  const input = document.getElementById(`${key}-email-input`);
-  _comboRenderPanel(key);
-  _setSearch(key, input ? input.value : '');
+/* Typing in the panel's own search box only narrows the visible option
+   list — it does NOT touch the table filter until an option is clicked. */
+function _comboFilter(key) {
+  _comboRenderOptions(key);
 }
 
 function _comboSelect(key, email) {
-  const input = document.getElementById(`${key}-email-input`);
-  if (input) input.value = email;
+  _combo[key].selected = email;
+  _comboUpdateLabel(key);
   _comboClose(key);
   _setSearch(key, email);
 }
 
-function _comboClear(key) {
-  const input = document.getElementById(`${key}-email-input`);
-  if (input) input.value = '';
-  _comboRenderPanel(key);
-  _setSearch(key, '');
-  input && input.focus();
-}
-
-// Close any open combobox panel when clicking outside it.
+// Close any open dropdown panel when clicking outside it.
 document.addEventListener('click', (e) => {
   document.querySelectorAll('.combo.open').forEach(wrap => {
     if (!wrap.contains(e.target)) wrap.classList.remove('open');
