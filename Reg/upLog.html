@@ -804,13 +804,8 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
           </div>
         </div>
         <div class="tt-filter">
-          <select onchange="_setFilter('logs','action',this.value)">
+          <select id="logs-action-filter" onchange="_setFilter('logs','action',this.value)">
             <option value="all">All actions</option>
-            <option value="Request approved">Approved</option>
-            <option value="Request rejected">Rejected</option>
-            <option value="Permission granted">Permission granted</option>
-            <option value="Permission revoked">Permission revoked</option>
-            <option value="User details updated">User details updated</option>
           </select>
         </div>
         <div class="tt-daterange">
@@ -1506,6 +1501,22 @@ function _fillEmailDatalist(key, emails) {
   if (wrap && wrap.classList.contains('open')) _comboRenderOptions(key);
 }
 
+/* Rebuilds the Action filter <select> from whatever unique action strings
+   actually appear in the log data — nothing hardcoded, so a brand-new
+   action type (e.g. added later on the backend) shows up automatically.
+   Keeps the person's current selection intact across re-renders instead of
+   silently resetting it back to "All actions". */
+function _fillActionFilter(key, actions) {
+  const select = document.getElementById(`${key}-action-filter`);
+  if (!select) return; // panel not present in this portal build
+  const unique = [...new Set(actions.filter(Boolean).map(a => String(a).trim()))]
+    .sort((a, b) => a.localeCompare(b));
+  const current = select.value || 'all';
+  select.innerHTML = `<option value="all">All actions</option>`
+    + unique.map(a => `<option value="${_esc(a)}">${_esc(a)}</option>`).join('');
+  select.value = unique.includes(current) || current === 'all' ? current : 'all';
+}
+
 function _comboRenderOptions(key) {
   const optionsEl = document.getElementById(`${key}-email-options`);
   const searchEl = document.getElementById(`${key}-email-search`);
@@ -1746,6 +1757,7 @@ function renderLogs() {
 
   let rows = [..._state.logs];
   _fillEmailDatalist('logs', rows.flatMap(r => [r.adminEmail, r.targetEmail]));
+  _fillActionFilter('logs', rows.map(r => r.action));
   if (ui.action !== 'all') rows = rows.filter(r => r.action === ui.action);
   if (ui.dateFrom || ui.dateTo) rows = rows.filter(r => _inDateRange(r.timestamp, ui.dateFrom, ui.dateTo));
   if (ui.search) {
