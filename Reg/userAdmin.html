@@ -536,9 +536,34 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
 /* ── Mobile: tables become stacked cards ── */
 @media (max-width: 760px) {
   .page { padding: 8px; }
-  .tab-bar { gap: 3px; margin-bottom: 10px; }
-  .tab-btn { padding: 8px 10px; font-size: 11.5px; }
-  .tab-btn i { font-size: 14px; }
+
+  /* Tab bar: icon-only pills, horizontally scrollable instead of wrapping */
+  .tab-bar {
+    gap: 6px; margin-bottom: 10px; flex-wrap: nowrap;
+    overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; padding-bottom: 2px; border-bottom: 1.5px solid var(--border);
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex: 0 0 auto; padding: 9px 12px; font-size: 11.5px;
+    border-radius: var(--radius); border-bottom: 1.5px solid transparent; bottom: 0;
+  }
+  .tab-btn.active { border-bottom-color: var(--accent); }
+  .tab-btn i { font-size: 17px; }
+  .tab-btn .tab-label { display: none; }
+  .tab-btn .tab-badge { font-size: 9px; padding: 1px 5px; }
+
+  /* Table row action buttons only: icon-only (label stays in the DOM for
+     screen readers + the title="" tooltip on tap-and-hold). Modal/drawer
+     buttons keep their text — those have room and need to be unambiguous. */
+  .data-table td.cell-action .tb-btn .tb-btn-label { display: none; }
+  .data-table td.cell-action .tb-btn { padding: 8px; gap: 0; }
+  .data-table td.cell-action .tb-btn.sm { padding: 7px; }
+  .data-table td.cell-action > div { gap: 8px; }
+  .data-table td.cell-action > div,
+  .data-table td.cell-action button { width: auto; }
+  .data-table td.cell-action { justify-content: flex-end; }
+
   .sec-header { margin-bottom: 10px; }
 
   .table-toolbar { gap: 8px; }
@@ -611,23 +636,23 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
 
   <!-- Tab bar -->
   <div class="tab-bar">
-    <button class="tab-btn active" data-tab="tab-loginreq" onclick="switchTab('tab-loginreq')">
-      <i class="ti ti-mail-check"></i> Requests Portal
+    <button class="tab-btn active" data-tab="tab-loginreq" title="Requests Portal" onclick="switchTab('tab-loginreq')">
+      <i class="ti ti-mail-check"></i> <span class="tab-label">Requests Portal</span>
       <span class="tab-badge" id="badge-loginreq">0</span>
     </button>
-    <button class="tab-btn" data-tab="tab-history" onclick="switchTab('tab-history')">
-      <i class="ti ti-history"></i> Request History
+    <button class="tab-btn" data-tab="tab-history" title="Request History" onclick="switchTab('tab-history')">
+      <i class="ti ti-history"></i> <span class="tab-label">Request History</span>
       <span class="tab-badge gray" id="badge-history">0</span>
     </button>
-    <button class="tab-btn" data-tab="tab-users" onclick="switchTab('tab-users')">
-      <i class="ti ti-users"></i> Users
+    <button class="tab-btn" data-tab="tab-users" title="Users" onclick="switchTab('tab-users')">
+      <i class="ti ti-users"></i> <span class="tab-label">Users</span>
       <span class="tab-badge accent" id="badge-users">0</span>
     </button>
-    <button class="tab-btn" data-tab="tab-permissions" onclick="switchTab('tab-permissions')">
-      <i class="ti ti-lock-access"></i> Permissions Sheet
+    <button class="tab-btn" data-tab="tab-permissions" title="Permissions Sheet" onclick="switchTab('tab-permissions')">
+      <i class="ti ti-lock-access"></i> <span class="tab-label">Permissions Sheet</span>
     </button>
-    <button class="tab-btn" data-tab="tab-logs" onclick="switchTab('tab-logs')">
-      <i class="ti ti-list-details"></i> Activity Log
+    <button class="tab-btn" data-tab="tab-logs" title="Activity Log" onclick="switchTab('tab-logs')">
+      <i class="ti ti-list-details"></i> <span class="tab-label">Activity Log</span>
     </button>
   </div>
 
@@ -1496,11 +1521,11 @@ function renderLoginReqs() {
     const actionBtn = alreadyUser
       ? `<span style="font-size:11.5px;color:var(--text3);font-family:var(--mono);">Already registered</span>`
       : `<div style="display:flex;gap:6px;justify-content:flex-end;">
-           <button class="tb-btn sm success" onclick="openActivateModal('${_esc(email)}','${_esc(ts)}')">
-             <i class="ti ti-check"></i> Approve
+           <button class="tb-btn sm success" title="Approve" onclick="openActivateModal('${_esc(email)}','${_esc(ts)}')">
+             <i class="ti ti-check"></i> <span class="tb-btn-label">Approve</span>
            </button>
-           <button class="tb-btn sm danger" onclick="openRejectModal('${_esc(email)}')">
-             <i class="ti ti-x"></i> Reject
+           <button class="tb-btn sm danger" title="Reject" onclick="openRejectModal('${_esc(email)}')">
+             <i class="ti ti-x"></i> <span class="tb-btn-label">Reject</span>
            </button>
          </div>`;
     return `<tr>
@@ -1548,7 +1573,7 @@ function renderHistory() {
     const reason = isApproved ? `<span style="color:var(--text3);">—</span>` : `<span class="reason-note" title="${_esc(row.reason)}">${_esc(row.reason || '—')}</span>`;
     const userExists = _state.users.some(u => u.email === email);
     const action = isApproved && userExists
-      ? `<button class="tb-btn sm" onclick="switchTab('tab-users'); openProfileDrawer('${_esc(email)}')"><i class="ti ti-user-circle"></i> View Profile</button>`
+      ? `<button class="tb-btn sm" title="View Profile" onclick="switchTab('tab-users'); openProfileDrawer('${_esc(email)}')"><i class="ti ti-user-circle"></i> <span class="tb-btn-label">View Profile</span></button>`
       : `<span style="color:var(--text3);font-size:11.5px;">—</span>`;
     return `<tr>
       <td data-label="Timestamp" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);">${_esc(ts)}</td>
