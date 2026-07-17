@@ -11,6 +11,8 @@
 <script src="https://effimalik.github.io/Testing/shared/code.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/devPre.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/cioView.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/cacheWatcher.js?v=1"></script>
 
 <style>
 /* ── Reset ── */
@@ -427,31 +429,65 @@ let currentFilter  = 'all';
 let _vsInstance    = null;
 let _panelId       = null;
 
-/* ═══════════ IDB — SINGLE SOURCE: ap2_sim in ap2_fleet_cache ═══════════ */
+/* ═══════════ CACHE — via shared cacheWatcher.js, with a safe fallback ═══════════
+   If cacheWatcher.js fails to load or load in time (blocked, 404, iPad
+   caching a stale/broken copy, etc.) this page must NOT throw and must
+   NOT stop the rest of this script from running — that's what was
+   causing the login-redirect side effect. So: if AP2CacheWatcher isn't
+   there, build a tiny local stand-in with the same shape, using the
+   page's own direct (timeout-guarded) IndexedDB read as a fallback.
+   ════════════════════════════════════════════════════════════════════════ */
 const _AP2_CACHE_KEY = 'ap2_sim';
-const _IDB_NAME      = 'ap2_fleet_cache';
-const _IDB_STORE     = 'datasets';
 
-let _idbConn = null;
-function _getDB() {
-  if (_idbConn) return Promise.resolve(_idbConn);
-  return new Promise((res, rej) => {
-    const req = indexedDB.open(_IDB_NAME);
-    req.onsuccess = e => { _idbConn = e.target.result; res(_idbConn); };
-    req.onerror   = e => rej(e.target.error);
-  });
+if (typeof window.AP2CacheWatcher === 'undefined') {
+  console.warn('[allSim] cacheWatcher.js did not load — using local fallback');
+  window.AP2CacheWatcher = (function () {
+    const _IDB_NAME = 'ap2_fleet_cache', _IDB_STORE = 'datasets';
+    let _conn = null;
+    function _open() {
+      if (_conn) return Promise.resolve(_conn);
+      return new Promise((res, rej) => {
+        let done = false;
+        const req = indexedDB.open(_IDB_NAME);
+        const t = setTimeout(() => { if (!done) { done = true; rej(new Error('idb-open-timeout')); } }, 2000);
+        req.onsuccess = e => { if (!done) { done = true; clearTimeout(t); _conn = e.target.result; res(_conn); } };
+        req.onerror   = e => { if (!done) { done = true; clearTimeout(t); rej(e.target.error); } };
+      });
+    }
+    return {
+      init() {},
+      subscribe() { return () => {}; }, // no cross-page notifications available in fallback mode
+      notifyNow() {},
+      getStatus() { return { healthy: false, mode: 'local-fallback', lastError: 'cacheWatcher.js not loaded' }; },
+      async readKey(key) {
+        try {
+          const db  = await _open();
+          if (!db.objectStoreNames.contains(_IDB_STORE)) {
+            // Store doesn't exist yet — cache hasn't been warmed in this
+            // browser session yet. That's normal, not an error.
+            return null;
+          }
+          const rec = await new Promise((res, rej) => {
+            const r = db.transaction(_IDB_STORE, 'readonly').objectStore(_IDB_STORE).get(key);
+            r.onsuccess = () => res(r.result || null);
+            r.onerror   = () => rej(r.error);
+          });
+          return (rec && Array.isArray(rec.data) && rec.data.length) ? rec.data : null;
+        } catch (e) {
+          if (e && e.name === 'NotFoundError') return null; // store not created yet — normal
+          console.warn('[allSim] fallback read failed:', e.message);
+          return null;
+        }
+      }
+    };
+  })();
 }
 
+// Thin wrapper kept so the rest of this file doesn't need to change —
+// actual read lives centrally in cacheWatcher.js when it's available,
+// or in the fallback above when it isn't.
 async function _readCache() {
-  const db  = await _getDB();
-  const rec = await new Promise((res, rej) => {
-    const req = db.transaction(_IDB_STORE, 'readonly')
-                  .objectStore(_IDB_STORE).get(_AP2_CACHE_KEY);
-    req.onsuccess = () => res(req.result || null);
-    req.onerror   = () => rej(req.error);
-  });
-  if (!rec || !Array.isArray(rec.data) || !rec.data.length) return null;
-  return rec.data;
+  return AP2CacheWatcher.readKey(_AP2_CACHE_KEY);
 }
 
 /* ═══════════ NORMALISE ROW ═══════════
@@ -487,10 +523,18 @@ function normaliseRow(r, i) {
   };
 }
 
-/* ═══════════ LOAD ═══════════ */
+/* ═══════════ LOAD — Stream-Query → Memory-Hoist → Slice → Virtual-Scroll ═══════════
+   Used ONLY for the very first paint — nothing is on screen yet, so a
+   brief spinner here is fine (there's nothing to blink relative to).
+   ════════════════════════════════════════════════════════════════════════════════════ */
 async function loadSims() {
   const tbody = document.getElementById('sim-tbody');
-  if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px 16px;">
+  const alreadyHaveData = sims && sims.length;
+
+  // Only show the spinner if the screen is genuinely empty. If the parent's
+  // push already rendered good data (a faster path than this IndexedDB
+  // read), don't blink it away with a loading state.
+  if (tbody && !alreadyHaveData) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px 16px;">
     <div style="color:var(--text3);display:flex;flex-direction:column;align-items:center;gap:8px;">
       <i class="ti ti-loader" style="font-size:26px;animation:spin 1s linear infinite;display:inline-flex;"></i>
       <span style="font-size:12px;">Reading ap2_sim cache…</span>
@@ -498,47 +542,72 @@ async function loadSims() {
 
   try {
     const rows = await _readCache();
-    if (rows && rows.length) {
-      sims = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
+    const fresh = (rows && rows.length) ? rows.map((r, i) => normaliseRow(r, i)).filter(Boolean) : [];
+
+    if (fresh.length) {
+      // Good data — always safe to apply.
+      sims = fresh;
       renderSimTable(sims);
-    } else {
+    } else if (!(sims && sims.length)) {
+      // Only show the empty state if we don't already have better data on
+      // screen from another source (e.g. the parent's push arrived first
+      // and this slower IndexedDB read simply found nothing new).
       if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px 16px;color:var(--text3);">
         <i class="ti ti-sim-card-off" style="font-size:26px;display:block;margin-bottom:8px;"></i>
         No data in cache yet. Data will appear automatically once
         <code style="font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:4px;">ap2_sim</code> is populated.
       </td></tr>`;
     }
+    // else: this read found nothing, but we already have good data on
+    // screen from elsewhere — do nothing, leave it exactly as is.
   } catch (err) {
     console.error('[allSim] loadSims error:', err);
-    if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px 16px;color:var(--red);">
-      <i class="ti ti-wifi-off" style="font-size:24px;display:block;margin-bottom:6px;"></i>
-      Failed to load SIM data — ${err.message}
-    </td></tr>`;
+    if (!(sims && sims.length) && tbody) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:30px 16px;color:var(--red);">
+        <i class="ti ti-wifi-off" style="font-size:24px;display:block;margin-bottom:6px;"></i>
+        Failed to load SIM data — ${err.message}
+      </td></tr>`;
+    }
   }
 }
 
-/* ═══════════ BACKGROUND CACHE WATCHER ═══════════ */
-(function() {
-  let _debounce = null;
-  async function _applyFromIDB() {
-    try {
-      const rows = await _readCache();
-      if (!rows || !rows.length) return;
-      const fresh = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
-      if (!fresh.length) return;
-      sims = fresh;
+/* ═══════════ SILENT REFRESH — every update AFTER the first paint goes through here.
+   No spinner, no tbody wipe unless data is genuinely gone — so nothing blinks.
+   Subscribed to cacheWatcher.js, which fires this on ANY of:
+     - this page's own fast poll detecting a change or deletion
+     - an instant notifyNow() call from wherever the data was written
+     - a broadcast relayed down from the parent shell (index.html)
+   ════════════════════════════════════════════════════════════════════════ */
+let _emptyReadStreak = 0; // guards against one flaky/transient empty read wiping good data
+async function _applyFromIDB() {
+  try {
+    const rows = await _readCache();
+    if (rows && rows.length) {
+      _emptyReadStreak = 0;
+      sims = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
       renderSimTable(sims);
-    } catch (e) {
-      console.warn('[allSim] background refresh error:', e.message);
+    } else if (sims && sims.length) {
+      // Don't trust a single empty read — iPad's IndexedDB reads can be
+      // flaky/transient. Only treat it as a genuine deletion after seeing
+      // it twice in a row.
+      _emptyReadStreak++;
+      if (_emptyReadStreak >= 2) {
+        sims = [];
+        renderSimTable(sims);
+        _emptyReadStreak = 0;
+      }
     }
+  } catch (e) {
+    console.warn('[allSim] silent refresh error:', e.message);
   }
-  function _debouncedApply() {
-    if (_debounce) clearTimeout(_debounce);
-    _debounce = setTimeout(_applyFromIDB, 200);
-  }
-  setInterval(_applyFromIDB, 30000);
-  window.addEventListener('ap-cache-updated', _debouncedApply);
-})();
+}
+
+try {
+  AP2CacheWatcher.init();
+  AP2CacheWatcher.subscribe(() => { _applyFromIDB(); });
+} catch (e) {
+  console.warn('[allSim] cacheWatcher wiring failed, continuing without live updates:', e.message);
+}
 
 /* ═══════════ STATUS HELPERS ═══════════ */
 function simStatusNorm(s) {
@@ -971,21 +1040,54 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-/* ── Message listener from parent index.html ── */
+/* Listen for messages from parent index.html
+   ── PRIMARY data path on this page: the parent (index.html) already has
+   a working push system that has nothing to do with cacheWatcher.js:
+     - 'ap-cache-preload' : parent proactively pushes ALL cached datasets
+                            the moment they're ready (from its own memory
+                            — no IndexedDB read needed here at all)
+     - 'ap-cache-ready'   : parent's direct reply to our 'ap-cache-request'
+     - 'ap-cache-updated' : parent says something changed — ask it again
+   This sidesteps iPad's IndexedDB flakiness entirely for the common case
+   (page running inside the app). cacheWatcher.js / IndexedDB reads remain
+   as the fallback for when this page is opened standalone (no parent). */
 window.addEventListener('message', (e) => {
   if (!e.data) return;
-  if (e.origin !== window.location.origin &&
-      e.origin !== 'null' &&
-      !e.origin.startsWith('https://effimalik.github.io')) return;
 
-  if (e.data.type === 'ap-cache-updated') {
-    loadSims();
-    return;
+  // Parent proactively pushed everything it has — take our slice directly.
+  if (e.data.type === 'ap-cache-preload' && e.data.datasets) {
+    const rows = e.data.datasets[_AP2_CACHE_KEY];
+    if (Array.isArray(rows) && rows.length) {
+      sims = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
+      renderSimTable(sims);
+    }
   }
+
+  // Parent's direct reply to our own ap-cache-request below.
+  if (e.data.type === 'ap-cache-ready' && e.data.key === _AP2_CACHE_KEY) {
+    const rows = e.data.data;
+    if (Array.isArray(rows) && rows.length) {
+      sims = rows.map((r, i) => normaliseRow(r, i)).filter(Boolean);
+      renderSimTable(sims);
+    }
+  }
+
+  // Parent says something changed somewhere — ask it for our dataset again.
+  if (e.data.type === 'ap-cache-updated') {
+    try { window.parent.postMessage({ type: 'ap-cache-request', key: _AP2_CACHE_KEY }, '*'); } catch (err) {}
+  }
+
+  // Instant theme sync — parent pushes on every theme change
   if (e.data.type === 'ap-theme' && e.data.theme) {
     document.documentElement.setAttribute('data-theme', e.data.theme);
   }
 });
+
+// Ask the parent for our data right away, in parallel with the IndexedDB
+// read in loadSims(). Whichever answers first wins — if there's no
+// parent (page opened standalone), this simply gets no reply and the
+// IndexedDB path (loadSims / cacheWatcher.js) still works on its own.
+try { window.parent.postMessage({ type: 'ap-cache-request', key: _AP2_CACHE_KEY }, '*'); } catch (e) {}
 </script>
 </body>
 </html>
