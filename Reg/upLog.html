@@ -1311,10 +1311,34 @@ async function loadAll() {
   // read), don't blink it away with a loading state.
   if (!alreadyHaveData) _renderAllSkeletons();
 
+  if (await _tryApplyCache()) return;
+
+  // First read came back empty. This page's script re-runs from scratch
+  // every time it's re-mounted (e.g. switching to another portal tab and
+  // back), which means this exact race replays every single time: the
+  // cache can still be a moment away from being (re)written when our very
+  // first read fires. A single empty read here is NOT proof there's no
+  // data — ditto the 2-strike guard _applyFromIDB() already uses for the
+  // same reason. So: keep the skeleton up and retry a few times instead
+  // of instantly flashing "no cache" over data that's about to arrive.
+  for (let attempt = 0; attempt < 6; attempt++) {
+    await new Promise(r => setTimeout(r, 300 + attempt * 200));
+    if (_cacheReady) return; // arrived via parent postMessage or cacheWatcher meanwhile
+    if (await _tryApplyCache()) return;
+  }
+
+  // Checked LIVE here — not the alreadyHaveData snapshot taken before the
+  // retries — because the parent's postMessage reply can set _cacheReady
+  // true at any point while we were retrying.
+  if (!_cacheReady) _showNoCacheNotice();
+}
+
+/* Single read-and-apply attempt, shared by the initial load and its
+   retries. Returns true if it successfully applied real data. */
+async function _tryApplyCache() {
   try {
     const data = await _readCache();
     if (data) {
-      // Good data — always safe to apply.
       _cacheReady = true;
       _normaliseState(data);
       renderLoginReqs();
@@ -1322,23 +1346,12 @@ async function loadAll() {
       renderUsers();
       renderPermissionsSheet();
       renderLogs();
-    } else if (!_cacheReady) {
-      // Only show the empty state if we don't already have better data on
-      // screen from another source (e.g. the parent's push arrived first
-      // and this slower IndexedDB read simply found nothing new). Checked
-      // LIVE here — not the alreadyHaveData snapshot taken before the
-      // await — because the parent's postMessage reply can set _cacheReady
-      // true WHILE this IndexedDB read was still in flight.
-      _showNoCacheNotice();
+      return true;
     }
-    // else: this read found nothing, but we already have good data on
-    // screen from elsewhere — do nothing, leave it exactly as is.
   } catch (err) {
     console.error('[userAdmin] loadAll error:', err);
-    if (!_cacheReady) {
-      toast('Failed to load from cache: ' + err.message, 'error');
-    }
   }
+  return false;
 }
 
 /* ═══════════════════════════════════════════════════════
