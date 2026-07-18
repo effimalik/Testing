@@ -525,8 +525,11 @@ tr.skeleton-row td { padding: 13px 14px; }
 tr.skeleton-row:hover td { background: transparent !important; }
 
 /* ══ Table fade-in on update ══ */
-@keyframes rowFadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
-tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
+/* Row fade-in animation removed — like allEmp.html, tables here are
+   re-rendered on every silent cache refresh (poll / search / filter),
+   so animating rows on every render made them flash/blink repeatedly
+   instead of just on first paint. Rows now render instantly, same as
+   allEmp.html's virtual-scroll rows. */
 
 /* ══ Status pill for request workflow ══ */
 .badge.gold { background: rgba(227,179,65,.18); color: #e3b341; border: 1px solid rgba(227,179,65,.35); }
@@ -771,7 +774,7 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
               <th style="text-align:right;">Action</th>
             </tr>
           </thead>
-          <tbody id="history-tbody" class="tbody-anim">
+          <tbody id="history-tbody">
           </tbody>
         </table>
       </div>
@@ -829,7 +832,7 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
               <th>Details</th>
             </tr>
           </thead>
-          <tbody id="logs-tbody" class="tbody-anim"></tbody>
+          <tbody id="logs-tbody"></tbody>
         </table>
       </div>
       <div class="pagination-bar" id="logs-pagination"></div>

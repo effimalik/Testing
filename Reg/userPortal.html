@@ -93,13 +93,19 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
   overflow: hidden;
 }
 
-/* ══ Tab bar ══ */
+/* ══ Tab bar — hosts the tabs AND the active tab's search/filter toolbar,
+   all in one row. Never wraps: if content doesn't fit, the row scrolls
+   horizontally instead (same escape valve already used for tabs alone). ══ */
 .tab-bar {
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 14px;
   border-bottom: 1.5px solid var(--border);
   padding-bottom: 0; margin-bottom: 14px; flex-shrink: 0;
-  flex-wrap: wrap; gap: 4px;
+  flex-wrap: nowrap;
+  overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.tab-bar::-webkit-scrollbar { display: none; }
+.tab-bar-tabs { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .tab-btn {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 9px 16px; border-radius: var(--radius) var(--radius) 0 0;
@@ -122,6 +128,12 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
   font-family: var(--mono);
 }
 .tab-badge.accent { background: var(--accent-dim); color: var(--accent); border-color: rgba(88,166,255,.25); }
+
+/* ── Toolbar area inside the tab bar — one .tt-panel per tab, only the
+   active one shown. Stays flexible so it shrinks before ever wrapping. ── */
+.tab-bar-toolbar { flex: 1 1 auto; min-width: 0; display: flex; justify-content: flex-end; padding: 5px 0; }
+.tt-panel { display: none; align-items: center; gap: 8px; min-width: 0; flex-wrap: nowrap; }
+.tt-panel.active { display: flex; }
 
 /* ══ Tab panels ══ */
 .tab-panel { display: none; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow: hidden; }
@@ -395,13 +407,9 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .segmented .seg-count { font-family: var(--mono); font-size: 10px; background: var(--bg3); padding: 1px 6px; border-radius: 100px; }
 .segmented button.active .seg-count { background: var(--accent-dim); color: var(--accent); }
 
-/* ══ Table toolbar: search + filters ══ */
-.table-toolbar {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-  background: var(--bg3);
-}
-.tt-search { position: relative; flex: 1 1 200px; min-width: 140px; max-width: 320px; }
+/* ══ Search + filters — now live inline inside the tab bar (.tt-panel).
+   Search shrinks first so the row never wraps; filters/count stay put. ══ */
+.tt-search { position: relative; flex: 1 1 130px; min-width: 70px; max-width: 220px; }
 .tt-search i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 14px; }
 .tt-search input {
   width: 100%; padding: 7px 10px 7px 30px; border-radius: var(--radius);
@@ -409,12 +417,23 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
   font-family: var(--font); font-size: 12.5px; transition: border .16s, box-shadow .16s;
 }
 .tt-search input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
-.tt-filter select {
-  padding: 7px 10px; border-radius: var(--radius); border: 1px solid var(--border);
-  background: var(--bg2); color: var(--text); font-family: var(--font); font-size: 12px; cursor: pointer;
+
+/* ══ Icon-only filter button group — sits inline with search, same row/line ══ */
+.tt-filter-group { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.tt-filter-btn {
+  width: 30px; height: 30px; flex-shrink: 0; padding: 0; border-radius: 50%;
+  border: 1.5px solid var(--border2); background: var(--bg2); color: var(--text3);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  font-size: 15px; line-height: 1; transition: all .16s;
 }
-.tt-spacer { flex: 1 1 auto; }
-.tt-count { font-size: 11px; color: var(--text3); white-space: nowrap; }
+.tt-filter-btn i { font-size: 15px; line-height: 1; display: inline-flex; }
+.tt-filter-btn:hover { background: var(--surface2); color: var(--text); }
+.tt-filter-btn.active { background: var(--surface2); color: var(--text); border-color: var(--border2); box-shadow: 0 0 0 2px var(--accent); }
+.tt-filter-btn.tt-filter-ok    { border-color: var(--teal); color: var(--teal); }
+.tt-filter-btn.tt-filter-ok.active    { background: var(--teal-dim); box-shadow: 0 0 0 2px var(--teal); }
+.tt-filter-btn.tt-filter-bad   { border-color: var(--red);  color: var(--red); }
+.tt-filter-btn.tt-filter-bad.active   { background: var(--red-dim); box-shadow: 0 0 0 2px var(--red); }
+.tt-count { font-size: 11px; color: var(--text3); white-space: nowrap; flex-shrink: 0; }
 
 /* ══ Sortable column headers ══ */
 .th-sort { cursor: pointer; user-select: none; display: inline-flex; align-items: center; gap: 4px; }
@@ -454,8 +473,11 @@ tr.skeleton-row td { padding: 13px 14px; }
 tr.skeleton-row:hover td { background: transparent !important; }
 
 /* ══ Table fade-in on update ══ */
-@keyframes rowFadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
-tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
+/* Row fade-in animation removed — like allEmp.html, tables here are
+   re-rendered on every silent cache refresh (poll / search / filter),
+   so animating rows on every render made them flash/blink repeatedly
+   instead of just on first paint. Rows now render instantly, same as
+   allEmp.html's virtual-scroll rows. */
 
 /* ══ Status pill for request workflow ══ */
 .badge.gold { background: rgba(227,179,65,.18); color: #e3b341; border: 1px solid rgba(227,179,65,.35); }
@@ -537,13 +559,8 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
 @media (max-width: 760px) {
   .page { padding: 8px; }
 
-  /* Tab bar: icon-only pills, horizontally scrollable instead of wrapping */
-  .tab-bar {
-    gap: 6px; margin-bottom: 10px; flex-wrap: nowrap;
-    overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; padding-bottom: 2px; border-bottom: 1.5px solid var(--border);
-  }
-  .tab-bar::-webkit-scrollbar { display: none; }
+  /* Tab bar: icon-only pills + compact toolbar, all on one scrollable line */
+  .tab-bar { gap: 8px; margin-bottom: 10px; padding-bottom: 2px; }
   .tab-btn {
     flex: 0 0 auto; padding: 9px 12px; font-size: 11.5px;
     border-radius: var(--radius); border-bottom: 1.5px solid transparent; bottom: 0;
@@ -554,7 +571,7 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
   .tab-btn .tab-badge { font-size: 9px; padding: 1px 5px; }
 
   /* Table row action buttons only: icon-only (label stays in the DOM for
-     screen readers + the title="" tooltip on tap-and-hold). Modal/drawer
+     screen readers + the title tooltip on tap-and-hold). Modal/drawer
      buttons keep their text — those have room and need to be unambiguous. */
   .data-table td.cell-action .tb-btn .tb-btn-label { display: none; }
   .data-table td.cell-action .tb-btn { padding: 8px; gap: 0; }
@@ -566,12 +583,10 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
 
   .sec-header { margin-bottom: 10px; }
 
-  .table-toolbar { gap: 8px; }
-  .tt-search { flex: 1 1 100%; max-width: none; }
-  .tt-filter { flex: 1 1 100%; }
-  .tt-filter select { width: 100%; }
-  .tt-spacer { display: none; }
-  .tt-count { flex-basis: 100%; text-align: right; }
+  .tab-bar-toolbar { flex-shrink: 0; }
+  .tt-panel { gap: 6px; }
+  .tt-search { flex: 0 0 auto; width: 108px; min-width: 108px; max-width: 108px; }
+  .tt-count { display: none; }
 
   .table-wrap { overflow-x: hidden; }
   .data-table, .data-table.wide-table { display: block; min-width: 0; width: 100%; }
@@ -634,19 +649,47 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
 <!-- ══ Main page ══ -->
 <div class="page" id="main-page">
 
-  <!-- Tab bar -->
+  <!-- Tab bar: tabs + the active tab's search/filter toolbar, one line -->
   <div class="tab-bar">
-    <button class="tab-btn active" data-tab="tab-loginreq" title="Requests Portal" onclick="switchTab('tab-loginreq')">
-      <i class="ti ti-mail-check"></i> <span class="tab-label">Requests Portal</span>
-      <span class="tab-badge" id="badge-loginreq">0</span>
-    </button>
-    <button class="tab-btn" data-tab="tab-users" title="Users" onclick="switchTab('tab-users')">
-      <i class="ti ti-users"></i> <span class="tab-label">Users</span>
-      <span class="tab-badge accent" id="badge-users">0</span>
-    </button>
-    <button class="tab-btn" data-tab="tab-permissions" title="Permissions Sheet" onclick="switchTab('tab-permissions')">
-      <i class="ti ti-lock-access"></i> <span class="tab-label">Permissions Sheet</span>
-    </button>
+    <div class="tab-bar-tabs">
+      <button class="tab-btn active" data-tab="tab-loginreq" title="Requests Portal" onclick="switchTab('tab-loginreq')">
+        <i class="ti ti-mail-check"></i> <span class="tab-label">Requests Portal</span>
+        <span class="tab-badge" id="badge-loginreq">0</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-users" title="Users" onclick="switchTab('tab-users')">
+        <i class="ti ti-users"></i> <span class="tab-label">Users</span>
+        <span class="tab-badge accent" id="badge-users">0</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-permissions" title="Permissions Sheet" onclick="switchTab('tab-permissions')">
+        <i class="ti ti-lock-access"></i> <span class="tab-label">Permissions Sheet</span>
+      </button>
+    </div>
+
+    <div class="tab-bar-toolbar">
+      <div class="tt-panel active" id="tt-tab-loginreq">
+        <div class="tt-search"><i class="ti ti-search"></i>
+          <input type="text" placeholder="Search email…" oninput="_setSearch('requests', this.value)" />
+        </div>
+        <span class="tt-count" id="requests-count"></span>
+      </div>
+      <div class="tt-panel" id="tt-tab-users">
+        <div class="tt-search"><i class="ti ti-search"></i>
+          <input type="text" placeholder="Search name or email…" oninput="_setSearch('users', this.value)" />
+        </div>
+        <div class="tt-filter-group" id="users-status-filter">
+          <button type="button" class="tt-filter-btn active" data-status="all" title="All statuses" onclick="_setStatusFilterBtn('users','all',this)"><i class="ti ti-users"></i></button>
+          <button type="button" class="tt-filter-btn tt-filter-ok" data-status="active" title="Active" onclick="_setStatusFilterBtn('users','active',this)"><i class="ti ti-circle-check"></i></button>
+          <button type="button" class="tt-filter-btn tt-filter-bad" data-status="inactive" title="Inactive" onclick="_setStatusFilterBtn('users','inactive',this)"><i class="ti ti-circle-x"></i></button>
+        </div>
+        <span class="tt-count" id="users-count"></span>
+      </div>
+      <div class="tt-panel" id="tt-tab-permissions">
+        <div class="tt-search"><i class="ti ti-search"></i>
+          <input type="text" placeholder="Search email or dataset…" oninput="_setSearch('perms', this.value)" />
+        </div>
+        <span class="tt-count" id="perms-count"></span>
+      </div>
+    </div>
   </div>
 
   <!-- ══════ TAB: REQUESTS PORTAL (pending only) ══════ -->
@@ -658,13 +701,6 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
       </div>
     </div>
     <div class="table-card">
-      <div class="table-toolbar">
-        <div class="tt-search"><i class="ti ti-search"></i>
-          <input type="text" placeholder="Search email…" oninput="_setSearch('requests', this.value)" />
-        </div>
-        <div class="tt-spacer"></div>
-        <span class="tt-count" id="requests-count"></span>
-      </div>
       <div class="table-wrap">
         <table class="data-table" style="grid-template-columns:20% 32% 16% 32%;">
           <thead>
@@ -675,7 +711,7 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
               <th style="text-align:right;">Action</th>
             </tr>
           </thead>
-          <tbody id="loginreq-tbody" class="tbody-anim">
+          <tbody id="loginreq-tbody">
           </tbody>
         </table>
       </div>
@@ -692,20 +728,6 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
       </div>
     </div>
     <div class="table-card">
-      <div class="table-toolbar">
-        <div class="tt-search"><i class="ti ti-search"></i>
-          <input type="text" placeholder="Search name or email…" oninput="_setSearch('users', this.value)" />
-        </div>
-        <div class="tt-filter">
-          <select onchange="_setFilter('users','status',this.value)">
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-        <div class="tt-spacer"></div>
-        <span class="tt-count" id="users-count"></span>
-      </div>
       <div class="table-wrap">
         <table class="data-table" style="grid-template-columns:36% 16% 14% 14% 20%;">
           <thead>
@@ -717,7 +739,7 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
               <th style="text-align:right;">Actions</th>
             </tr>
           </thead>
-          <tbody id="users-tbody" class="tbody-anim">
+          <tbody id="users-tbody">
           </tbody>
         </table>
       </div>
@@ -734,13 +756,6 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
       </div>
     </div>
     <div class="table-card">
-      <div class="table-toolbar">
-        <div class="tt-search"><i class="ti ti-search"></i>
-          <input type="text" placeholder="Search email or dataset…" oninput="_setSearch('perms', this.value)" />
-        </div>
-        <div class="tt-spacer"></div>
-        <span class="tt-count" id="perms-count"></span>
-      </div>
       <div class="table-wrap">
         <table class="data-table wide-table" style="grid-template-columns:20% 14% 19% 15% 15% 17%;">
           <thead>
@@ -753,7 +768,7 @@ tbody.tbody-anim tr { animation: rowFadeIn .22s ease; }
               <th>TTL</th>
             </tr>
           </thead>
-          <tbody id="perms-tbody" class="tbody-anim"></tbody>
+          <tbody id="perms-tbody"></tbody>
         </table>
       </div>
       <div class="pagination-bar" id="perms-pagination"></div>
@@ -1347,6 +1362,11 @@ function _setFilter(tableKey, field, value) {
   _ui[tableKey][field] = value;
   _ui[tableKey].page = 1;
   _renderers[tableKey] && _renderers[tableKey]();
+}
+function _setStatusFilterBtn(tableKey, value, btnEl) {
+  const group = btnEl.closest('.tt-filter-group');
+  if (group) group.querySelectorAll('.tt-filter-btn').forEach(b => b.classList.toggle('active', b === btnEl));
+  _setFilter(tableKey, 'status', value);
 }
 function _setSort(tableKey, key) {
   const ui = _ui[tableKey];
@@ -2052,6 +2072,7 @@ document.getElementById('profile-drawer-backdrop').addEventListener('click', e =
 function switchTab(id) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === id));
+  document.querySelectorAll('.tt-panel').forEach(p => p.classList.toggle('active', p.id === 'tt-' + id));
 }
 
 /* ═══════════════════════════════════════════════════════
