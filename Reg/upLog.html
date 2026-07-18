@@ -416,8 +416,6 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
    Search shrinks first so the row never wraps; filters/daterange/count
    hold their size for as long as possible. ══ */
 .tt-search { position: relative; flex: 1 1 130px; min-width: 80px; max-width: 200px; flex-shrink: 1; }
-.tt-filter { flex: 0 0 auto; }
-.tt-filter select { min-width: 0; max-width: 110px; }
 .tt-daterange { flex: 0 0 auto; }
 .tt-count { flex-shrink: 0; }
 
@@ -440,6 +438,10 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
   font-family: var(--mono);
 }
 .combo-trigger-label.placeholder { font-family: var(--font); color: var(--text3); }
+.email-dot {
+  display: none; width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+  position: absolute; top: 4px; right: 4px; border: 1.5px solid var(--bg2);
+}
 .combo-caret {
   position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
   color: var(--text3); font-size: 14px; pointer-events: none; transition: transform .14s;
@@ -472,39 +474,71 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .combo-option.selected { background: var(--accent-dim); color: var(--accent); font-weight: 600; }
 .combo-empty { padding: 10px; font-size: 12px; color: var(--text3); text-align: center; }
 
-.tt-filter select {
-  appearance: none; -webkit-appearance: none; -moz-appearance: none;
-  height: var(--field-h); box-sizing: border-box;
-  padding: 0 26px 0 12px; border-radius: var(--radius); border: 1px solid var(--border);
-  background: var(--bg2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 8px center;
-  background-size: 14px; color: var(--text); font-family: var(--font); font-size: 12.5px; cursor: pointer;
-  transition: border .16s, box-shadow .16s;
+/* ══ Icon-only filter button group (fixed option sets, e.g. status) ══ */
+.tt-filter-group { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; height: var(--field-h); }
+.tt-filter-btn {
+  width: var(--field-h); height: var(--field-h); flex-shrink: 0; padding: 0; border-radius: 50%;
+  border: 1.5px solid var(--border2); background: var(--bg2); color: var(--text3);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  font-size: 15px; line-height: 1; transition: all .16s;
 }
-.tt-filter select:hover { border-color: var(--border2); }
-.tt-filter select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
-[data-theme="light"] .tt-filter select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235a6370' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); }
+.tt-filter-btn i { font-size: 15px; line-height: 1; display: inline-flex; }
+.tt-filter-btn:hover { background: var(--surface2); color: var(--text); }
+.tt-filter-btn.active { background: var(--surface2); color: var(--text); border-color: var(--border2); box-shadow: 0 0 0 2px var(--accent); }
+.tt-filter-btn.tt-filter-ok    { border-color: var(--teal); color: var(--teal); }
+.tt-filter-btn.tt-filter-ok.active    { background: var(--teal-dim); box-shadow: 0 0 0 2px var(--teal); }
+.tt-filter-btn.tt-filter-bad   { border-color: var(--red);  color: var(--red); }
+.tt-filter-btn.tt-filter-bad.active   { background: var(--red-dim); box-shadow: 0 0 0 2px var(--red); }
 
-/* ══ Date range filter ══ */
-.tt-daterange {
-  display: flex; align-items: center; gap: 5px; height: var(--field-h); box-sizing: border-box;
-  padding: 0 6px; border-radius: var(--radius); border: 1px solid var(--border);
-  background: var(--bg2);
+/* ══ Icon-select — a real <select> hidden invisibly over a round icon button,
+   for filters with a dynamic/unbounded option list (e.g. Activity Log's
+   Action filter) where a fixed icon button group isn't possible. Native
+   picker still opens on tap; the icon is purely visual. ══ */
+.icon-select {
+  position: relative; width: var(--field-h); height: var(--field-h); flex-shrink: 0;
+  border-radius: 50%; border: 1.5px solid var(--border2); background: var(--bg2); color: var(--text3);
+  display: inline-flex; align-items: center; justify-content: center; transition: all .16s;
 }
-.tt-daterange i.ti-calendar { color: var(--text3); font-size: 14px; margin-left: 2px; }
-.tt-daterange input[type="date"] {
-  border: none; background: transparent; color: var(--text);
-  font-family: var(--font); font-size: 12px; padding: 3px 2px; cursor: pointer; color-scheme: dark;
-  max-width: 100px;
+.icon-select:hover { background: var(--surface2); color: var(--text); }
+.icon-select.active { background: var(--surface2); color: var(--text); border-color: var(--border2); box-shadow: 0 0 0 2px var(--accent); }
+.icon-select i { font-size: 15px; pointer-events: none; }
+.icon-select select {
+  position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
+  border: none; background: transparent; appearance: none;
 }
-[data-theme="light"] .tt-daterange input[type="date"] { color-scheme: light; }
-.tt-daterange input[type="date"]:focus { outline: none; }
-.tt-daterange .dr-sep { color: var(--text3); font-size: 11px; }
-.tt-daterange .dr-clear {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 20px; height: 20px; border-radius: 5px; color: var(--text3);
-  cursor: pointer; flex-shrink: 0; font-size: 12px; border: none; background: transparent;
+
+/* ══ Date range — icon trigger + popover panel (reuses .combo open/close
+   plumbing and its outside-click / Escape handlers, since those already
+   target any ".combo.open" generically). Collapses a two-field date range
+   into a single round button so it never forces the toolbar to wrap. ══ */
+.tt-daterange { position: relative; flex-shrink: 0; }
+.tt-daterange .combo-trigger.icon-trigger {
+  width: var(--field-h); padding: 0; justify-content: center;
 }
-.tt-daterange .dr-clear:hover { background: var(--surface2); color: var(--text); }
+.tt-daterange .combo-trigger.icon-trigger i { font-size: 15px; }
+.tt-daterange.combo.open .icon-trigger { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); color: var(--accent); }
+.tt-daterange .dr-dot {
+  position: absolute; top: 2px; right: 2px; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent); border: 1.5px solid var(--bg2); display: none;
+}
+.tt-daterange.dr-active .dr-dot { display: block; }
+.dr-panel { left: auto; right: 0; width: 220px; padding: 12px; }
+.dr-panel-body { display: flex; flex-direction: column; gap: 10px; }
+.dr-panel-body label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--text3); display: flex; flex-direction: column; gap: 5px; }
+.dr-panel-body input[type="date"] {
+  padding: 7px 8px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--bg2); color: var(--text); font-family: var(--font); font-size: 12.5px;
+  cursor: pointer; color-scheme: dark;
+}
+[data-theme="light"] .dr-panel-body input[type="date"] { color-scheme: light; }
+.dr-panel-body input[type="date"]:focus { outline: none; border-color: var(--accent); }
+.dr-clear-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 7px 8px; border-radius: 6px; border: 1px solid var(--border2);
+  background: var(--bg2); color: var(--text3); font-family: var(--font); font-size: 11.5px;
+  cursor: pointer; transition: all .16s;
+}
+.dr-clear-btn:hover { background: var(--surface2); color: var(--text); }
 .tt-count { font-size: 11px; color: var(--text3); white-space: nowrap; }
 
 /* ══ Sortable column headers ══ */
@@ -631,11 +665,13 @@ tr.skeleton-row:hover td { background: transparent !important; }
 @media (max-width: 760px) {
   .page { padding: 8px; }
 
-  /* Tab bar: icon-only pills on their own row, with the full toolbar
-     (search/combo, filter, date range, count) wrapping onto a second row
-     underneath — every filter stays visible and reachable, nothing is
-     hidden or clipped on small screens. */
-  .tab-bar { gap: 8px; margin-bottom: 10px; padding-bottom: 2px; flex-wrap: wrap; }
+  /* Tab bar + toolbar stay on ONE line at every width. The toolbar controls
+     are now all icon-sized (email combo collapses to icon-only, status is
+     an icon button group, action/date are icon triggers), so there's no
+     need to wrap or hide anything to make it fit — only the non-essential
+     record count drops, since it's not a button or a filter. */
+  .tab-bar { gap: 6px; margin-bottom: 10px; padding-bottom: 2px; flex-wrap: nowrap; }
+  .tab-bar-tabs { max-width: 40%; }
   .tab-btn {
     flex: 0 0 auto; padding: 9px 12px; font-size: 11.5px;
     border-radius: var(--radius); border-bottom: 1.5px solid transparent; bottom: 0;
@@ -658,12 +694,15 @@ tr.skeleton-row:hover td { background: transparent !important; }
 
   .sec-header { margin-bottom: 10px; }
 
-  .tab-bar-toolbar { flex: 1 1 100%; min-width: 0; justify-content: flex-start; order: 3; padding-top: 2px; }
-  .tt-panel { flex-wrap: wrap; row-gap: 8px; }
-  .tt-search { flex: 1 1 150px; min-width: 130px; max-width: none; }
-  .tt-filter select { max-width: none; width: auto; }
-  .tt-daterange { flex: 1 1 auto; }
-  .tt-count { flex: 0 0 100%; text-align: right; }
+  .tab-bar-toolbar { flex: 1 1 auto; min-width: 0; }
+  .tt-panel { gap: 5px; flex-wrap: nowrap; }
+  .tt-search.combo { flex: 0 0 auto; width: var(--field-h); min-width: var(--field-h); }
+  .tt-search.combo .combo-trigger { padding: 0; justify-content: center; }
+  .tt-search.combo .combo-trigger-label { display: none; }
+  .tt-search.combo .combo-caret { display: none; }
+  .tt-search.combo .combo-panel { width: min(260px, calc(100vw - 24px)); left: auto; right: 0; }
+  .tt-search.combo.email-active .email-dot { display: block; }
+  .tt-count { display: none; }
 
   .table-wrap { overflow-x: hidden; }
   .data-table, .data-table.wide-table { display: block; min-width: 0; width: 100%; }
@@ -744,6 +783,7 @@ tr.skeleton-row:hover td { background: transparent !important; }
           <button type="button" class="combo-trigger" id="history-email-trigger" onclick="_comboToggle('history')">
             <i class="ti ti-mail"></i>
             <span class="combo-trigger-label placeholder" id="history-email-label">All emails</span>
+            <span class="email-dot"></span>
           </button>
           <i class="ti ti-chevron-down combo-caret"></i>
           <div class="combo-panel" id="history-email-panel">
@@ -755,19 +795,23 @@ tr.skeleton-row:hover td { background: transparent !important; }
             <div class="combo-options" id="history-email-options"></div>
           </div>
         </div>
-        <div class="tt-filter">
-          <select onchange="_setFilter('history','status',this.value)">
-            <option value="all">All statuses</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
+        <div class="tt-filter-group" id="history-status-filter">
+          <button type="button" class="tt-filter-btn active" data-status="all" title="All statuses" onclick="_setStatusFilterBtn('history','all',this)"><i class="ti ti-list"></i></button>
+          <button type="button" class="tt-filter-btn tt-filter-ok" data-status="approved" title="Approved" onclick="_setStatusFilterBtn('history','approved',this)"><i class="ti ti-circle-check"></i></button>
+          <button type="button" class="tt-filter-btn tt-filter-bad" data-status="rejected" title="Rejected" onclick="_setStatusFilterBtn('history','rejected',this)"><i class="ti ti-circle-x"></i></button>
         </div>
-        <div class="tt-daterange">
-          <i class="ti ti-calendar"></i>
-          <input type="date" id="history-date-from" title="From date" onchange="_setFilter('history','dateFrom',this.value)" />
-          <span class="dr-sep">–</span>
-          <input type="date" id="history-date-to" title="To date" onchange="_setFilter('history','dateTo',this.value)" />
-          <button class="dr-clear" title="Clear date filter" onclick="_clearDateFilter('history')"><i class="ti ti-x"></i></button>
+        <div class="tt-daterange combo" id="history-dr-combo">
+          <button type="button" class="combo-trigger icon-trigger" id="history-dr-trigger" onclick="_drToggle('history')" title="Filter by date">
+            <i class="ti ti-calendar"></i>
+            <span class="dr-dot"></span>
+          </button>
+          <div class="combo-panel dr-panel" id="history-dr-panel">
+            <div class="dr-panel-body">
+              <label>From <input type="date" id="history-date-from" onchange="_setFilter('history','dateFrom',this.value)" /></label>
+              <label>To <input type="date" id="history-date-to" onchange="_setFilter('history','dateTo',this.value)" /></label>
+              <button type="button" class="dr-clear-btn" onclick="_clearDateFilter('history')"><i class="ti ti-x"></i> Clear dates</button>
+            </div>
+          </div>
         </div>
         <span class="tt-count" id="history-count"></span>
       </div>
@@ -776,6 +820,7 @@ tr.skeleton-row:hover td { background: transparent !important; }
           <button type="button" class="combo-trigger" id="logs-email-trigger" onclick="_comboToggle('logs')">
             <i class="ti ti-mail"></i>
             <span class="combo-trigger-label placeholder" id="logs-email-label">All emails</span>
+            <span class="email-dot"></span>
           </button>
           <i class="ti ti-chevron-down combo-caret"></i>
           <div class="combo-panel" id="logs-email-panel">
@@ -787,17 +832,24 @@ tr.skeleton-row:hover td { background: transparent !important; }
             <div class="combo-options" id="logs-email-options"></div>
           </div>
         </div>
-        <div class="tt-filter">
+        <div class="icon-select" id="logs-action-filter-wrap" title="All actions">
+          <i class="ti ti-filter"></i>
           <select id="logs-action-filter" onchange="_setFilter('logs','action',this.value)">
             <option value="all">All actions</option>
           </select>
         </div>
-        <div class="tt-daterange">
-          <i class="ti ti-calendar"></i>
-          <input type="date" id="logs-date-from" title="From date" onchange="_setFilter('logs','dateFrom',this.value)" />
-          <span class="dr-sep">–</span>
-          <input type="date" id="logs-date-to" title="To date" onchange="_setFilter('logs','dateTo',this.value)" />
-          <button class="dr-clear" title="Clear date filter" onclick="_clearDateFilter('logs')"><i class="ti ti-x"></i></button>
+        <div class="tt-daterange combo" id="logs-dr-combo">
+          <button type="button" class="combo-trigger icon-trigger" id="logs-dr-trigger" onclick="_drToggle('logs')" title="Filter by date">
+            <i class="ti ti-calendar"></i>
+            <span class="dr-dot"></span>
+          </button>
+          <div class="combo-panel dr-panel" id="logs-dr-panel">
+            <div class="dr-panel-body">
+              <label>From <input type="date" id="logs-date-from" onchange="_setFilter('logs','dateFrom',this.value)" /></label>
+              <label>To <input type="date" id="logs-date-to" onchange="_setFilter('logs','dateTo',this.value)" /></label>
+              <button type="button" class="dr-clear-btn" onclick="_clearDateFilter('logs')"><i class="ti ti-x"></i> Clear dates</button>
+            </div>
+          </div>
         </div>
         <span class="tt-count" id="logs-count"></span>
       </div>
@@ -1355,6 +1407,7 @@ function _setSearch(tableKey, value) {
 function _setFilter(tableKey, field, value) {
   _ui[tableKey][field] = value;
   _ui[tableKey].page = 1;
+  if (field === 'dateFrom' || field === 'dateTo') _updateDrDot(tableKey);
   _renderers[tableKey] && _renderers[tableKey]();
 }
 function _clearDateFilter(tableKey) {
@@ -1365,7 +1418,43 @@ function _clearDateFilter(tableKey) {
   if (fromEl) fromEl.value = '';
   if (toEl) toEl.value = '';
   _ui[tableKey].page = 1;
+  _updateDrDot(tableKey);
+  _drClose(tableKey);
   _renderers[tableKey] && _renderers[tableKey]();
+}
+
+/* Icon button group for fixed-option filters (status). Mirrors the visual
+   pattern used elsewhere in the portal — one tap, no dropdown needed, and
+   the whole group is compact enough that the toolbar never has to wrap. */
+function _setStatusFilterBtn(tableKey, value, btnEl) {
+  const group = btnEl.closest('.tt-filter-group');
+  if (group) group.querySelectorAll('.tt-filter-btn').forEach(b => b.classList.toggle('active', b === btnEl));
+  _setFilter(tableKey, 'status', value);
+}
+
+/* Date range popover — a round calendar icon that opens a small panel with
+   the two date inputs. Reuses the ".combo" open/close class so the existing
+   outside-click and Escape handlers (which target any ".combo.open")
+   close it automatically, same as the email combobox. */
+function _drToggle(tableKey) {
+  const wrap = document.getElementById(`${tableKey}-dr-combo`);
+  if (!wrap) return;
+  if (wrap.classList.contains('open')) { _drClose(tableKey); return; }
+  document.querySelectorAll('.combo.open').forEach(w => w.classList.remove('open'));
+  wrap.classList.add('open');
+}
+function _drClose(tableKey) {
+  const wrap = document.getElementById(`${tableKey}-dr-combo`);
+  if (wrap) wrap.classList.remove('open');
+}
+/* Small coloured dot on the calendar icon when a date filter is active,
+   since the two date fields themselves are now tucked inside the popover
+   and not visible at a glance. */
+function _updateDrDot(tableKey) {
+  const wrap = document.getElementById(`${tableKey}-dr-combo`);
+  if (!wrap) return;
+  const ui = _ui[tableKey];
+  wrap.classList.toggle('dr-active', !!(ui.dateFrom || ui.dateTo));
 }
 function _setSort(tableKey, key) {
   const ui = _ui[tableKey];
@@ -1536,7 +1625,9 @@ function _fillEmailDatalist(comboKey, emails) {
    actually appear in the log data — nothing hardcoded, so a brand-new
    action type (e.g. added later on the backend) shows up automatically.
    Keeps the person's current selection intact across re-renders instead of
-   silently resetting it back to "All actions". */
+   silently resetting it back to "All actions". The <select> itself is an
+   invisible layer over a round funnel icon (see .icon-select); this also
+   keeps that icon's active state + tooltip in sync with the selection. */
 function _fillActionFilter(key, actions) {
   const select = document.getElementById(`${key}-action-filter`);
   if (!select) return; // panel not present in this portal build
@@ -1546,6 +1637,12 @@ function _fillActionFilter(key, actions) {
   select.innerHTML = `<option value="all">All actions</option>`
     + unique.map(a => `<option value="${_esc(a)}">${_esc(a)}</option>`).join('');
   select.value = unique.includes(current) || current === 'all' ? current : 'all';
+  const wrap = document.getElementById(`${key}-action-filter-wrap`);
+  if (wrap) {
+    const active = select.value !== 'all';
+    wrap.classList.toggle('active', active);
+    wrap.title = active ? `Action: ${select.value}` : 'All actions';
+  }
 }
 
 function _comboRenderOptions(key) {
@@ -1569,10 +1666,14 @@ function _comboRenderOptions(key) {
 
 function _comboUpdateLabel(key) {
   const label = document.getElementById(`${key}-email-label`);
+  const trigger = document.getElementById(`${key}-email-trigger`);
+  const wrap = document.getElementById(`${key}-email-combo`);
   if (!label) return;
   const selected = _combo[key].selected;
   label.textContent = selected || 'All emails';
   label.classList.toggle('placeholder', !selected);
+  if (trigger) trigger.title = selected || 'All emails';
+  if (wrap) wrap.classList.toggle('email-active', !!selected);
 }
 
 function _comboToggle(key) {

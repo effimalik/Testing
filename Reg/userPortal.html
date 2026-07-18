@@ -560,12 +560,12 @@ tr.skeleton-row:hover td { background: transparent !important; }
 @media (max-width: 760px) {
   .page { padding: 8px; }
 
-  /* Tab bar: icon-only pills on their own (independently scrollable) row,
-     with the full toolbar (search, filter buttons, count) wrapping onto a
-     second row underneath — every filter stays visible, nothing is hidden
-     or requires scrolling to reach on small screens. */
-  .tab-bar { gap: 8px; margin-bottom: 10px; padding-bottom: 2px; flex-wrap: wrap; overflow-x: visible; }
-  .tab-bar-tabs { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; max-width: 100%; }
+  /* Tab bar + toolbar stay on ONE line at every width — the icon filter
+     buttons are already compact, so only the search box needs to shrink
+     (down to a usable minimum) and the non-essential record count drops,
+     since it's not a button or a filter. */
+  .tab-bar { gap: 6px; margin-bottom: 10px; padding-bottom: 2px; flex-wrap: nowrap; overflow-x: visible; }
+  .tab-bar-tabs { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; max-width: 38%; }
   .tab-bar-tabs::-webkit-scrollbar { display: none; }
   .tab-btn {
     flex: 0 0 auto; padding: 9px 12px; font-size: 11.5px;
@@ -589,10 +589,12 @@ tr.skeleton-row:hover td { background: transparent !important; }
 
   .sec-header { margin-bottom: 10px; }
 
-  .tab-bar-toolbar { flex: 1 1 100%; min-width: 0; justify-content: flex-start; order: 3; padding-top: 2px; }
-  .tt-panel { flex-wrap: wrap; row-gap: 8px; }
-  .tt-search { flex: 1 1 150px; min-width: 130px; max-width: none; }
-  .tt-count { flex: 0 0 100%; text-align: right; }
+  .tab-bar-toolbar { flex: 1 1 auto; min-width: 0; }
+  .tt-panel { gap: 5px; flex-wrap: nowrap; }
+  .tt-search { flex: 1 1 auto; min-width: 60px; max-width: none; }
+  .tt-search input { padding-left: 26px; }
+  .tt-search i { left: 8px; font-size: 12.5px; }
+  .tt-count { display: none; }
 
 
   .table-wrap { overflow-x: hidden; }
