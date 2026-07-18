@@ -412,6 +412,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 /* ══ Search + filters — now live inline inside the tab bar (.tt-panel).
    Search shrinks first so the row never wraps; filters/count stay put. ══ */
 .tt-search { position: relative; flex: 1 1 130px; min-width: 70px; max-width: 220px; }
+.tt-search.combo { flex-basis: 190px; max-width: 280px; }
 .tt-search i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 14px; }
 .tt-search input {
   width: 100%; height: var(--field-h); box-sizing: border-box; padding: 0 10px 0 30px; border-radius: var(--radius);
@@ -645,16 +646,19 @@ tr.skeleton-row:hover td { background: transparent !important; }
 
   .sec-header { margin-bottom: 10px; }
 
-  .tab-bar-toolbar { flex: 1 1 auto; min-width: 0; }
+  .tab-bar-toolbar { flex: 1 1 auto; min-width: 0; position: relative; }
   .tt-panel { gap: 5px; flex-wrap: nowrap; }
   .tt-search { flex: 1 1 auto; min-width: 60px; max-width: none; }
   .tt-search input { padding-left: 26px; }
   .tt-search i { left: 8px; font-size: 12.5px; }
-  .tt-search.combo { flex: 0 0 auto; width: var(--field-h); min-width: var(--field-h); }
+  .tt-search.combo { flex: 0 0 auto; width: var(--field-h); min-width: var(--field-h); position: static; }
   .tt-search.combo .combo-trigger { padding: 0; justify-content: center; }
   .tt-search.combo .combo-trigger-label { display: none; }
   .tt-search.combo .combo-caret { display: none; }
-  .tt-search.combo .combo-panel { width: min(260px, calc(100vw - 24px)); left: auto; right: 0; }
+  /* Positioned against .tab-bar-toolbar (set above), not the icon-only
+     trigger — so the panel's width is capped to the toolbar's own space
+     and can never stretch left over the tab buttons next to it. */
+  .tt-search.combo .combo-panel { width: min(260px, 100%); max-width: 100%; left: auto; right: 0; }
   .tt-search.combo.email-active .email-dot { display: block; }
   .tt-count { display: none; }
 
@@ -757,8 +761,21 @@ tr.skeleton-row:hover td { background: transparent !important; }
         <span class="tt-count" id="requests-count"></span>
       </div>
       <div class="tt-panel" id="tt-tab-users">
-        <div class="tt-search"><i class="ti ti-search"></i>
-          <input type="text" placeholder="Search name or email…" oninput="_setSearch('users', this.value)" />
+        <div class="tt-search combo" id="users-email-combo">
+          <button type="button" class="combo-trigger" id="users-email-trigger" onclick="_comboToggle('users')">
+            <i class="ti ti-mail"></i>
+            <span class="combo-trigger-label placeholder" id="users-email-label">All emails</span>
+            <span class="email-dot"></span>
+          </button>
+          <i class="ti ti-chevron-down combo-caret"></i>
+          <div class="combo-panel" id="users-email-panel">
+            <div class="combo-search">
+              <i class="ti ti-search"></i>
+              <input type="text" id="users-email-search" placeholder="Search email…" autocomplete="off"
+                     oninput="_comboFilter('users')" />
+            </div>
+            <div class="combo-options" id="users-email-options"></div>
+          </div>
         </div>
         <div class="tt-filter-group" id="users-status-filter">
           <button type="button" class="tt-filter-btn active" data-status="all" title="All statuses" onclick="_setStatusFilterBtn('users','all',this)"><i class="ti ti-users"></i></button>
@@ -768,8 +785,21 @@ tr.skeleton-row:hover td { background: transparent !important; }
         <span class="tt-count" id="users-count"></span>
       </div>
       <div class="tt-panel" id="tt-tab-permissions">
-        <div class="tt-search"><i class="ti ti-search"></i>
-          <input type="text" placeholder="Search email or dataset…" oninput="_setSearch('perms', this.value)" />
+        <div class="tt-search combo" id="perms-email-combo">
+          <button type="button" class="combo-trigger" id="perms-email-trigger" onclick="_comboToggle('perms')">
+            <i class="ti ti-mail"></i>
+            <span class="combo-trigger-label placeholder" id="perms-email-label">All emails</span>
+            <span class="email-dot"></span>
+          </button>
+          <i class="ti ti-chevron-down combo-caret"></i>
+          <div class="combo-panel" id="perms-email-panel">
+            <div class="combo-search">
+              <i class="ti ti-search"></i>
+              <input type="text" id="perms-email-search" placeholder="Search email…" autocomplete="off"
+                     oninput="_comboFilter('perms')" />
+            </div>
+            <div class="combo-options" id="perms-email-options"></div>
+          </div>
         </div>
         <span class="tt-count" id="perms-count"></span>
       </div>
@@ -1637,6 +1667,8 @@ _renderers.requests = renderLoginReqs;
 ═══════════════════════════════════════════════════════ */
 const _combo = {
   requests: { emails: [], selected: '' },
+  users:    { emails: [], selected: '' },
+  perms:    { emails: [], selected: '' },
 };
 
 /* Basic email shape check — used to keep the dropdown to real addresses only. */
@@ -1702,10 +1734,34 @@ function _comboToggle(key) {
   if (wrap.classList.contains('open')) { _comboClose(key); return; }
   document.querySelectorAll('.combo.open').forEach(w => w.classList.remove('open'));
   wrap.classList.add('open');
+  _comboPositionPanel(key);
   const searchEl = document.getElementById(`${key}-email-search`);
   if (searchEl) searchEl.value = '';
   _comboRenderOptions(key);
   if (searchEl) setTimeout(() => searchEl.focus(), 0);
+}
+
+/* Drops the panel below the WHOLE .tab-bar row (tabs + toolbar), not just
+   below the trigger button. Computed in real screen pixels via
+   getBoundingClientRect, so at any viewport width the panel opens
+   underneath every button in the row instead of ever covering one —
+   the tab buttons stay visible and clickable while it's open. */
+function _comboPositionPanel(key) {
+  const panel = document.getElementById(`${key}-email-panel`);
+  const trigger = document.getElementById(`${key}-email-trigger`);
+  const tabBar = document.querySelector('.tab-bar');
+  if (!panel || !trigger || !tabBar) return;
+  const barRect = tabBar.getBoundingClientRect();
+  const trigRect = trigger.getBoundingClientRect();
+  const margin = 12;
+  const width = Math.min(300, window.innerWidth - margin * 2);
+  let left = trigRect.right - width; // right-align under the trigger by default
+  left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
+  panel.style.position = 'fixed';
+  panel.style.top = Math.round(barRect.bottom + 6) + 'px';
+  panel.style.left = Math.round(left) + 'px';
+  panel.style.right = 'auto';
+  panel.style.width = Math.round(width) + 'px';
 }
 
 function _comboClose(key) {
@@ -1735,6 +1791,10 @@ document.addEventListener('click', (e) => {
 // Escape closes the currently open panel too.
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') document.querySelectorAll('.combo.open').forEach(w => w.classList.remove('open'));
+});
+// Resize (e.g. device rotation) invalidates the computed fixed position — close rather than leave it stale.
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.combo.open').forEach(w => w.classList.remove('open'));
 });
 
 /* ═══════════════════════════════════════════════════════
@@ -1798,11 +1858,12 @@ function renderUsers() {
 
   let rows = _state.users.map(u => ({ ...u, dsCnt: _dsCount(u.email) }));
   document.getElementById('badge-users').textContent = rows.length || '0';
+  _fillEmailDatalist('users', rows.map(u => u.email));
 
   if (ui.status !== 'all') rows = rows.filter(u => u.status === ui.status);
   if (ui.search) {
     const q = ui.search.toLowerCase();
-    rows = rows.filter(u => (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q));
+    rows = rows.filter(u => (u.email || '').toLowerCase().includes(q));
   }
   rows = _sortRows(rows, ui.sort, (r, k) => r[k]);
   const { pageRows, total } = _paginate(rows, ui);
@@ -1869,9 +1930,10 @@ function renderPermissionsSheet() {
   const ui = _ui.perms;
 
   let rows = _state.permissions;
+  _fillEmailDatalist('perms', rows.map(r => r.email));
   if (ui.search) {
     const q = ui.search.toLowerCase();
-    rows = rows.filter(r => (r.email || '').toLowerCase().includes(q) || (r.dataset || '').toLowerCase().includes(q) || (r.label || '').toLowerCase().includes(q));
+    rows = rows.filter(r => (r.email || '').toLowerCase().includes(q));
   }
   rows = _sortRows(rows, ui.sort, (r, k) => r[k]);
   const { pageRows, total } = _paginate(rows, ui);
