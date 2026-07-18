@@ -34,6 +34,7 @@
   --radius:8px; --radius-lg:12px; --radius-xl:16px;
   --font:'Sora',sans-serif; --mono:'JetBrains Mono',monospace;
   --shadow:0 1px 3px rgba(0,0,0,.4); --shadow-md:0 4px 16px rgba(0,0,0,.5); --shadow-lg:0 8px 32px rgba(0,0,0,.6);
+  --field-h:34px; /* shared height for every toolbar control — search box, filter control, pagination select — so they line up exactly, and match upLog.html */
 }
 [data-theme="light"] {
   --bg:#f0f2f5; --bg2:#ffffff; --bg3:#e8ecf0;
@@ -412,16 +413,16 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .tt-search { position: relative; flex: 1 1 130px; min-width: 70px; max-width: 220px; }
 .tt-search i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 14px; }
 .tt-search input {
-  width: 100%; padding: 7px 10px 7px 30px; border-radius: var(--radius);
+  width: 100%; height: var(--field-h); box-sizing: border-box; padding: 0 10px 0 30px; border-radius: var(--radius);
   border: 1px solid var(--border); background: var(--bg2); color: var(--text);
   font-family: var(--font); font-size: 12.5px; transition: border .16s, box-shadow .16s;
 }
 .tt-search input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
 
 /* ══ Icon-only filter button group — sits inline with search, same row/line ══ */
-.tt-filter-group { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.tt-filter-group { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; height: var(--field-h); }
 .tt-filter-btn {
-  width: 30px; height: 30px; flex-shrink: 0; padding: 0; border-radius: 50%;
+  width: var(--field-h); height: var(--field-h); flex-shrink: 0; padding: 0; border-radius: 50%;
   border: 1.5px solid var(--border2); background: var(--bg2); color: var(--text3);
   display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
   font-size: 15px; line-height: 1; transition: all .16s;
@@ -559,8 +560,13 @@ tr.skeleton-row:hover td { background: transparent !important; }
 @media (max-width: 760px) {
   .page { padding: 8px; }
 
-  /* Tab bar: icon-only pills + compact toolbar, all on one scrollable line */
-  .tab-bar { gap: 8px; margin-bottom: 10px; padding-bottom: 2px; }
+  /* Tab bar: icon-only pills on their own (independently scrollable) row,
+     with the full toolbar (search, filter buttons, count) wrapping onto a
+     second row underneath — every filter stays visible, nothing is hidden
+     or requires scrolling to reach on small screens. */
+  .tab-bar { gap: 8px; margin-bottom: 10px; padding-bottom: 2px; flex-wrap: wrap; overflow-x: visible; }
+  .tab-bar-tabs { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; max-width: 100%; }
+  .tab-bar-tabs::-webkit-scrollbar { display: none; }
   .tab-btn {
     flex: 0 0 auto; padding: 9px 12px; font-size: 11.5px;
     border-radius: var(--radius); border-bottom: 1.5px solid transparent; bottom: 0;
@@ -583,10 +589,11 @@ tr.skeleton-row:hover td { background: transparent !important; }
 
   .sec-header { margin-bottom: 10px; }
 
-  .tab-bar-toolbar { flex-shrink: 0; }
-  .tt-panel { gap: 6px; }
-  .tt-search { flex: 0 0 auto; width: 108px; min-width: 108px; max-width: 108px; }
-  .tt-count { display: none; }
+  .tab-bar-toolbar { flex: 1 1 100%; min-width: 0; justify-content: flex-start; order: 3; padding-top: 2px; }
+  .tt-panel { flex-wrap: wrap; row-gap: 8px; }
+  .tt-search { flex: 1 1 150px; min-width: 130px; max-width: none; }
+  .tt-count { flex: 0 0 100%; text-align: right; }
+
 
   .table-wrap { overflow-x: hidden; }
   .data-table, .data-table.wide-table { display: block; min-width: 0; width: 100%; }
@@ -1098,14 +1105,37 @@ function _esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* Normalise a timestamp coming from ANY source — ISO string from the sheet,
-   a raw Date object, an Excel/Sheets date serial number, an epoch-ms number,
-   or a locale string from new Date().toLocaleString() — into one consistent
-   "17 Jul 2026 14:23" (date, single space, time) display. Falls back to the
-   raw value (escaped) if it truly can't be parsed, so nothing ever silently
-   disappears. */
-function _fmtDateTime(raw) {
-  if (raw === undefined || raw === null || raw === '') return '—';
+/* This app's LoginReq/UserLog rows stamp timestamps as a bare 14-digit
+   DDMMYYYYHHMMSS number/string (no separators) — e.g. 18072026021216 means
+   18 Jul 2026, 02:12:16. It comes through as either a JS number or a numeric
+   string depending on how the sheet/IDB cache serialized it, so detect it
+   from the digit pattern before trying anything else. Returns null if the
+   14-digit shape doesn't decode to valid calendar/time components (so an
+   unrelated 14-digit number doesn't get silently misread as a date). */
+function _parseDdmmyyyyhhmmss(raw) {
+  const s = String(raw).trim();
+  const m = /^(\d{2})(\d{2})(\d{4})(\d{2})(\d{2})(\d{2})$/.exec(s);
+  if (!m) return null;
+  const [, dd, mm, yyyy, hh, mi, ss] = m.map(Number);
+  if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || hh > 23 || mi > 59 || ss > 59) return null;
+  const d = new Date(yyyy, mm - 1, dd, hh, mi, ss);
+  // Guard against e.g. 31 Feb rolling over into March — reject anything the
+  // Date constructor had to "correct".
+  if (d.getFullYear() !== yyyy || d.getMonth() !== mm - 1 || d.getDate() !== dd) return null;
+  return d;
+}
+
+/* Shared parser: turns ANY raw timestamp — this app's DDMMYYYYHHMMSS format,
+   an ISO string from the sheet, a raw Date object, an Excel/Sheets date
+   serial number, an epoch-ms number, or a locale string from
+   new Date().toLocaleString() — into a real Date object, or null if it
+   truly can't be parsed. */
+function _parseDate(raw) {
+  if (raw === undefined || raw === null || raw === '') return null;
+
+  const ddmmyyyy = _parseDdmmyyyyhhmmss(raw);
+  if (ddmmyyyy) return ddmmyyyy;
+
   let d = null;
   if (raw instanceof Date) {
     d = raw;
@@ -1117,10 +1147,41 @@ function _fmtDateTime(raw) {
     const parsed = new Date(s);
     d = isNaN(parsed.getTime()) ? null : parsed;
   }
-  if (!d || isNaN(d.getTime())) return _esc(raw);
-  const datePart = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  const timePart = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-  return `${datePart} ${timePart}`;
+  return (!d || isNaN(d.getTime())) ? null : d;
+}
+
+/* { date, time } display parts built on top of _parseDate — used by the
+   Timestamp column formatters below. */
+function _parseDateTimeParts(raw) {
+  const d = _parseDate(raw);
+  if (!d) return null;
+  return {
+    date: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+    time: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+  };
+}
+
+/* Single-line "17 Jul 2026 02:23 PM" — used wherever a plain string is
+   needed (modal fields, etc). Falls back to the raw value if unparseable. */
+function _fmtDateTime(raw) {
+  const p = _parseDateTimeParts(raw);
+  if (!p) return (raw === undefined || raw === null || raw === '') ? '—' : _esc(raw);
+  return `${p.date} ${p.time}`;
+}
+
+/* Two-line "date over time" markup for Timestamp table columns — date on
+   top, time underneath, clearly organized instead of one long string.
+   Matches upLog.html's Timestamp column exactly. */
+function _fmtDateTimeCell(raw) {
+  const p = _parseDateTimeParts(raw);
+  if (!p) {
+    const fallback = (raw === undefined || raw === null || raw === '') ? '—' : _esc(raw);
+    return `<span>${fallback}</span>`;
+  }
+  return `<div style="display:flex;flex-direction:column;gap:1px;line-height:1.35;">`
+       + `<span style="color:var(--text2);">${p.date}</span>`
+       + `<span style="color:var(--text3);font-size:10.5px;">${p.time}</span>`
+       + `</div>`;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1483,7 +1544,7 @@ function renderLoginReqs() {
            </button>
          </div>`;
     return `<tr>
-      <td data-label="Timestamp" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);">${_fmtDateTime(ts)}</td>
+      <td data-label="Timestamp" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);">${_fmtDateTimeCell(ts)}</td>
       <td data-label="Email" style="font-family:var(--mono);font-size:12px;">${_esc(email)}</td>
       <td data-label="Status"><span class="badge gold">Pending</span></td>
       <td data-label="Action" class="cell-action">${actionBtn}</td>
@@ -1531,7 +1592,7 @@ function renderHistory() {
       ? `<button class="tb-btn sm" title="View Profile" onclick="switchTab('tab-users'); openProfileDrawer('${_esc(email)}')"><i class="ti ti-user-circle"></i> <span class="tb-btn-label">View Profile</span></button>`
       : `<span style="color:var(--text3);font-size:11.5px;">—</span>`;
     return `<tr>
-      <td data-label="Timestamp" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);">${_fmtDateTime(ts)}</td>
+      <td data-label="Timestamp" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);">${_fmtDateTimeCell(ts)}</td>
       <td data-label="Email" style="font-family:var(--mono);font-size:12px;">${_esc(email)}</td>
       <td data-label="Status">${badge}</td>
       <td data-label="Reason">${reason}</td>
@@ -1682,7 +1743,7 @@ function renderLogs() {
   }
 
   tbody.innerHTML = pageRows.map(row => `<tr>
-      <td data-label="Timestamp" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);">${_fmtDateTime(row.timestamp)}</td>
+      <td data-label="Timestamp" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);">${_fmtDateTimeCell(row.timestamp)}</td>
       <td data-label="Admin" style="font-family:var(--mono);font-size:11.5px;">${_esc(row.adminEmail)}</td>
       <td data-label="Action">${_esc(row.action)}</td>
       <td data-label="Target" style="font-family:var(--mono);font-size:11.5px;">${_esc(row.targetEmail)}</td>

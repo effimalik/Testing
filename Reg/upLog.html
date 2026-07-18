@@ -34,6 +34,7 @@
   --radius:8px; --radius-lg:12px; --radius-xl:16px;
   --font:'Sora',sans-serif; --mono:'JetBrains Mono',monospace;
   --shadow:0 1px 3px rgba(0,0,0,.4); --shadow-md:0 4px 16px rgba(0,0,0,.5); --shadow-lg:0 8px 32px rgba(0,0,0,.6);
+  --field-h:34px; /* shared height for every toolbar control — email combo, select dropdown, date range — so they line up exactly */
 }
 [data-theme="light"] {
   --bg:#f0f2f5; --bg2:#ffffff; --bg3:#e8ecf0;
@@ -425,8 +426,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
    INSIDE the panel, pinned to its top, with the option list scrolling
    underneath it. ══ */
 .combo-trigger {
-  width: 100%; display: flex; align-items: center; gap: 8px;
-  padding: 7px 30px 7px 30px; border-radius: var(--radius);
+  width: 100%; height: var(--field-h); box-sizing: border-box; display: flex; align-items: center; gap: 8px;
+  padding: 0 30px 0 30px; border-radius: var(--radius);
   border: 1px solid var(--border); background: var(--bg2); color: var(--text);
   font-family: var(--font); font-size: 12.5px; cursor: pointer; text-align: left;
   transition: border .16s, box-shadow .16s;
@@ -472,14 +473,21 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .combo-empty { padding: 10px; font-size: 12px; color: var(--text3); text-align: center; }
 
 .tt-filter select {
-  padding: 7px 10px; border-radius: var(--radius); border: 1px solid var(--border);
-  background: var(--bg2); color: var(--text); font-family: var(--font); font-size: 12px; cursor: pointer;
+  appearance: none; -webkit-appearance: none; -moz-appearance: none;
+  height: var(--field-h); box-sizing: border-box;
+  padding: 0 26px 0 12px; border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--bg2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 8px center;
+  background-size: 14px; color: var(--text); font-family: var(--font); font-size: 12.5px; cursor: pointer;
+  transition: border .16s, box-shadow .16s;
 }
+.tt-filter select:hover { border-color: var(--border2); }
+.tt-filter select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+[data-theme="light"] .tt-filter select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235a6370' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); }
 
 /* ══ Date range filter ══ */
 .tt-daterange {
-  display: flex; align-items: center; gap: 5px;
-  padding: 4px 6px; border-radius: var(--radius); border: 1px solid var(--border);
+  display: flex; align-items: center; gap: 5px; height: var(--field-h); box-sizing: border-box;
+  padding: 0 6px; border-radius: var(--radius); border: 1px solid var(--border);
   background: var(--bg2);
 }
 .tt-daterange i.ti-calendar { color: var(--text3); font-size: 14px; margin-left: 2px; }
@@ -623,10 +631,11 @@ tr.skeleton-row:hover td { background: transparent !important; }
 @media (max-width: 760px) {
   .page { padding: 8px; }
 
-  /* Tab bar: icon-only pills + compact toolbar, all on one line.
-     Tabs scroll internally if needed; toolbar never scrolls (that would
-     clip the email-combobox dropdown), so it shrinks/hides instead. */
-  .tab-bar { gap: 8px; margin-bottom: 10px; padding-bottom: 2px; }
+  /* Tab bar: icon-only pills on their own row, with the full toolbar
+     (search/combo, filter, date range, count) wrapping onto a second row
+     underneath — every filter stays visible and reachable, nothing is
+     hidden or clipped on small screens. */
+  .tab-bar { gap: 8px; margin-bottom: 10px; padding-bottom: 2px; flex-wrap: wrap; }
   .tab-btn {
     flex: 0 0 auto; padding: 9px 12px; font-size: 11.5px;
     border-radius: var(--radius); border-bottom: 1.5px solid transparent; bottom: 0;
@@ -649,11 +658,12 @@ tr.skeleton-row:hover td { background: transparent !important; }
 
   .sec-header { margin-bottom: 10px; }
 
-  .tab-bar-toolbar { flex-shrink: 1; min-width: 0; }
-  .tt-panel { gap: 6px; }
-  .tt-search { flex: 0 1 96px; min-width: 76px; max-width: 96px; }
-  .tt-filter select { max-width: 78px; padding: 7px 6px; font-size: 11px; }
-  .tt-daterange, .tt-count { display: none; }
+  .tab-bar-toolbar { flex: 1 1 100%; min-width: 0; justify-content: flex-start; order: 3; padding-top: 2px; }
+  .tt-panel { flex-wrap: wrap; row-gap: 8px; }
+  .tt-search { flex: 1 1 150px; min-width: 130px; max-width: none; }
+  .tt-filter select { max-width: none; width: auto; }
+  .tt-daterange { flex: 1 1 auto; }
+  .tt-count { flex: 0 0 100%; text-align: right; }
 
   .table-wrap { overflow-x: hidden; }
   .data-table, .data-table.wide-table { display: block; min-width: 0; width: 100%; }
@@ -1472,7 +1482,7 @@ function renderLoginReqs() {
            </button>
          </div>`;
     return `<tr>
-      <td data-label="Timestamp" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);">${_fmtDateTime(ts)}</td>
+      <td data-label="Timestamp" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);">${_fmtDateTimeCell(ts)}</td>
       <td data-label="Email" style="font-family:var(--mono);font-size:12px;">${_esc(email)}</td>
       <td data-label="Status"><span class="badge gold">Pending</span></td>
       <td data-label="Action" class="cell-action">${actionBtn}</td>
@@ -1504,14 +1514,22 @@ const _EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
    "self"). Dedupes, drops anything that isn't a real email address, and
    sorts. The panel itself is only (re)built when it's open, so this never
    fights with what the person is currently doing in the field. */
-function _fillEmailDatalist(key, emails) {
-  const trigger = document.getElementById(`${key}-email-trigger`);
+function _fillEmailDatalist(comboKey, emails) {
+  const trigger = document.getElementById(`${comboKey}-email-trigger`);
   if (!trigger) return; // panel not present in this portal build
-  const unique = [...new Set(emails.filter(Boolean).map(e => String(e).trim()))]
-    .filter(e => _EMAIL_RE.test(e));
-  _combo[key].emails = unique.sort((a, b) => a.localeCompare(b));
-  const wrap = document.getElementById(`${key}-email-combo`);
-  if (wrap && wrap.classList.contains('open')) _comboRenderOptions(key);
+  const seen = new Set();
+  const unique = [];
+  emails.filter(Boolean).forEach(raw => {
+    const trimmed = String(raw).trim();
+    if (!_EMAIL_RE.test(trimmed)) return;
+    const norm = trimmed.toLowerCase(); // fold case so "User@x.com" / "user@x.com" collapse to one entry
+    if (seen.has(norm)) return;
+    seen.add(norm);
+    unique.push(norm);
+  });
+  _combo[comboKey].emails = unique.sort((a, b) => a.localeCompare(b));
+  const wrap = document.getElementById(`${comboKey}-email-combo`);
+  if (wrap && wrap.classList.contains('open')) _comboRenderOptions(comboKey);
 }
 
 /* Rebuilds the Action filter <select> from whatever unique action strings
