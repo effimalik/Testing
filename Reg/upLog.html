@@ -1494,10 +1494,6 @@ function _paginate(rows, ui) {
   return { pageRows: rows.slice(start, start + ui.pageSize), total, start, pages };
 }
 
-function _updateSortHeaders(tableKey, ui) {
-  document.querySelectorAll(`#tab-${_tabForTable(tableKey)} .th-sort, #tab-loginreq .th-sort, #tab-history .th-sort, #tab-users .th-sort, #tab-permissions .th-sort`)
-    .forEach(() => {}); // no-op placeholder (headers scoped below per-table instead)
-}
 function _tabForTable(tableKey) {
   return { requests: 'loginreq', history: 'history', users: 'users', perms: 'permissions', logs: 'logs' }[tableKey];
 }

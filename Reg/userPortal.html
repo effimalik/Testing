@@ -131,9 +131,10 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .tab-badge.accent { background: var(--accent-dim); color: var(--accent); border-color: rgba(88,166,255,.25); }
 
 /* ── Toolbar area inside the tab bar — one .tt-panel per tab, only the
-   active one shown. Stays flexible so it shrinks before ever wrapping. ── */
-.tab-bar-toolbar { flex: 1 1 auto; min-width: 0; display: flex; justify-content: flex-end; padding: 5px 0; }
-.tt-panel { display: none; align-items: center; gap: 8px; min-width: 0; flex-wrap: nowrap; }
+   active one shown. Overflow stays visible (not scroll) so the email
+   combobox dropdown can open below it without being clipped. ── */
+.tab-bar-toolbar { flex: 1 1 auto; min-width: 0; display: flex; justify-content: flex-end; padding: 5px 0; overflow: visible; }
+.tt-panel { display: none; align-items: center; gap: 8px; min-width: 0; flex-wrap: nowrap; overflow: visible; }
 .tt-panel.active { display: flex; }
 
 /* ══ Tab panels ══ */
@@ -419,6 +420,61 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 }
 .tt-search input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
 
+/* ══ Searchable email combobox (custom dropdown, not a native datalist)
+   Click the trigger to open a real dropdown panel; the search box lives
+   INSIDE the panel, pinned to its top, with the option list scrolling
+   underneath it. Ditto upLog.html. ══ */
+.combo-trigger {
+  width: 100%; height: var(--field-h); box-sizing: border-box; display: flex; align-items: center; gap: 8px;
+  padding: 0 30px 0 30px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--bg2); color: var(--text);
+  font-family: var(--font); font-size: 12.5px; cursor: pointer; text-align: left;
+  transition: border .16s, box-shadow .16s;
+}
+.combo-trigger:hover { border-color: var(--border2); }
+.combo.open .combo-trigger { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.combo-trigger i.ti-mail { color: var(--text3); font-size: 14px; flex-shrink: 0; }
+.combo-trigger-label {
+  flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--mono);
+}
+.combo-trigger-label.placeholder { font-family: var(--font); color: var(--text3); }
+.email-dot {
+  display: none; width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+  position: absolute; top: 4px; right: 4px; border: 1.5px solid var(--bg2);
+}
+.combo-caret {
+  position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
+  color: var(--text3); font-size: 14px; pointer-events: none; transition: transform .14s;
+}
+.combo.open .combo-caret { transform: translateY(-50%) rotate(180deg); color: var(--accent); }
+.combo-panel {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20;
+  background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius);
+  box-shadow: var(--shadow-lg); max-height: 280px;
+  display: none; flex-direction: column; overflow: hidden;
+}
+.combo.open .combo-panel { display: flex; }
+.combo-search {
+  position: relative; flex-shrink: 0; padding: 6px; border-bottom: 1px solid var(--border);
+}
+.combo-search i.ti-search { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 13px; }
+.combo-search input {
+  width: 100%; padding: 6px 10px 6px 28px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--bg2); color: var(--text);
+  font-family: var(--font); font-size: 12.5px;
+}
+.combo-search input:focus { outline: none; border-color: var(--accent); }
+.combo-options { overflow-y: auto; padding: 4px; }
+.combo-option {
+  padding: 7px 10px; border-radius: 6px; font-size: 12.5px; font-family: var(--mono);
+  color: var(--text); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.combo-option:hover, .combo-option.hl { background: var(--accent-dim); color: var(--accent); }
+.combo-option.combo-clear { font-family: var(--font); color: var(--text3); font-style: italic; }
+.combo-option.selected { background: var(--accent-dim); color: var(--accent); font-weight: 600; }
+.combo-empty { padding: 10px; font-size: 12px; color: var(--text3); text-align: center; }
+
 /* ══ Icon-only filter button group — sits inline with search, same row/line ══ */
 .tt-filter-group { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; height: var(--field-h); }
 .tt-filter-btn {
@@ -594,6 +650,12 @@ tr.skeleton-row:hover td { background: transparent !important; }
   .tt-search { flex: 1 1 auto; min-width: 60px; max-width: none; }
   .tt-search input { padding-left: 26px; }
   .tt-search i { left: 8px; font-size: 12.5px; }
+  .tt-search.combo { flex: 0 0 auto; width: var(--field-h); min-width: var(--field-h); }
+  .tt-search.combo .combo-trigger { padding: 0; justify-content: center; }
+  .tt-search.combo .combo-trigger-label { display: none; }
+  .tt-search.combo .combo-caret { display: none; }
+  .tt-search.combo .combo-panel { width: min(260px, calc(100vw - 24px)); left: auto; right: 0; }
+  .tt-search.combo.email-active .email-dot { display: block; }
   .tt-count { display: none; }
 
 
@@ -676,8 +738,21 @@ tr.skeleton-row:hover td { background: transparent !important; }
 
     <div class="tab-bar-toolbar">
       <div class="tt-panel active" id="tt-tab-loginreq">
-        <div class="tt-search"><i class="ti ti-search"></i>
-          <input type="text" placeholder="Search email…" oninput="_setSearch('requests', this.value)" />
+        <div class="tt-search combo" id="requests-email-combo">
+          <button type="button" class="combo-trigger" id="requests-email-trigger" onclick="_comboToggle('requests')">
+            <i class="ti ti-mail"></i>
+            <span class="combo-trigger-label placeholder" id="requests-email-label">All emails</span>
+            <span class="email-dot"></span>
+          </button>
+          <i class="ti ti-chevron-down combo-caret"></i>
+          <div class="combo-panel" id="requests-email-panel">
+            <div class="combo-search">
+              <i class="ti ti-search"></i>
+              <input type="text" id="requests-email-search" placeholder="Search email…" autocomplete="off"
+                     oninput="_comboFilter('requests')" />
+            </div>
+            <div class="combo-options" id="requests-email-options"></div>
+          </div>
         </div>
         <span class="tt-count" id="requests-count"></span>
       </div>
@@ -1469,10 +1544,6 @@ function _paginate(rows, ui) {
   return { pageRows: rows.slice(start, start + ui.pageSize), total, start, pages };
 }
 
-function _updateSortHeaders(tableKey, ui) {
-  document.querySelectorAll(`#tab-${_tabForTable(tableKey)} .th-sort, #tab-loginreq .th-sort, #tab-history .th-sort, #tab-users .th-sort, #tab-permissions .th-sort`)
-    .forEach(() => {}); // no-op placeholder (headers scoped below per-table instead)
-}
 function _tabForTable(tableKey) {
   return { requests: 'loginreq', history: 'history', users: 'users', perms: 'permissions', logs: 'logs' }[tableKey];
 }
@@ -1515,6 +1586,7 @@ function renderLoginReqs() {
 
   let rows = _state.loginReqs.filter(r => r.status === 'pending');
   document.getElementById('badge-loginreq').textContent = rows.length || '0';
+  _fillEmailDatalist('requests', rows.map(r => r.email));
 
   if (ui.search) {
     const q = ui.search.toLowerCase();
@@ -1555,6 +1627,115 @@ function renderLoginReqs() {
   _renderPaginationBar('requests', total, ui);
 }
 _renderers.requests = renderLoginReqs;
+
+/* ═══════════════════════════════════════════════════════
+   EMAIL DROPDOWN (real dropdown, not a live-typing search box)
+   — powers the email filter on the Requests Portal. Ditto upLog.html.
+   Click the trigger to open a panel; a search box pinned to the top
+   of that panel narrows the option list; clicking an option applies
+   the filter and closes the panel.
+═══════════════════════════════════════════════════════ */
+const _combo = {
+  requests: { emails: [], selected: '' },
+};
+
+/* Basic email shape check — used to keep the dropdown to real addresses only. */
+const _EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/* Called from each renderer with the raw set of email-ish values found in
+   that table's data (may include duplicates). Dedupes, drops anything that
+   isn't a real email address, and sorts. The panel itself is only
+   (re)built when it's open, so this never fights with what the person is
+   currently doing in the field. */
+function _fillEmailDatalist(comboKey, emails) {
+  const trigger = document.getElementById(`${comboKey}-email-trigger`);
+  if (!trigger) return; // panel not present in this portal build
+  const seen = new Set();
+  const unique = [];
+  emails.filter(Boolean).forEach(raw => {
+    const trimmed = String(raw).trim();
+    if (!_EMAIL_RE.test(trimmed)) return;
+    const norm = trimmed.toLowerCase(); // fold case so "User@x.com" / "user@x.com" collapse to one entry
+    if (seen.has(norm)) return;
+    seen.add(norm);
+    unique.push(norm);
+  });
+  _combo[comboKey].emails = unique.sort((a, b) => a.localeCompare(b));
+  const wrap = document.getElementById(`${comboKey}-email-combo`);
+  if (wrap && wrap.classList.contains('open')) _comboRenderOptions(comboKey);
+}
+
+function _comboRenderOptions(key) {
+  const optionsEl = document.getElementById(`${key}-email-options`);
+  const searchEl = document.getElementById(`${key}-email-search`);
+  if (!optionsEl) return;
+  const q = (searchEl ? searchEl.value : '').trim().toLowerCase();
+  const matches = q ? _combo[key].emails.filter(e => e.toLowerCase().includes(q)) : _combo[key].emails;
+  const selected = _combo[key].selected;
+
+  let html = `<div class="combo-option combo-clear ${selected ? '' : 'selected'}" onclick="_comboSelect('${key}','')"><i class="ti ti-list"></i> All emails</div>`;
+  if (!matches.length) {
+    html += `<div class="combo-empty">No matching emails</div>`;
+  } else {
+    html += matches.map(e =>
+      `<div class="combo-option ${e === selected ? 'selected' : ''}" onclick="_comboSelect('${key}','${_esc(e).replace(/'/g, "\\'")}')">${_esc(e)}</div>`
+    ).join('');
+  }
+  optionsEl.innerHTML = html;
+}
+
+function _comboUpdateLabel(key) {
+  const label = document.getElementById(`${key}-email-label`);
+  const trigger = document.getElementById(`${key}-email-trigger`);
+  const wrap = document.getElementById(`${key}-email-combo`);
+  if (!label) return;
+  const selected = _combo[key].selected;
+  label.textContent = selected || 'All emails';
+  label.classList.toggle('placeholder', !selected);
+  if (trigger) trigger.title = selected || 'All emails';
+  if (wrap) wrap.classList.toggle('email-active', !!selected);
+}
+
+function _comboToggle(key) {
+  const wrap = document.getElementById(`${key}-email-combo`);
+  if (!wrap) return;
+  if (wrap.classList.contains('open')) { _comboClose(key); return; }
+  document.querySelectorAll('.combo.open').forEach(w => w.classList.remove('open'));
+  wrap.classList.add('open');
+  const searchEl = document.getElementById(`${key}-email-search`);
+  if (searchEl) searchEl.value = '';
+  _comboRenderOptions(key);
+  if (searchEl) setTimeout(() => searchEl.focus(), 0);
+}
+
+function _comboClose(key) {
+  const wrap = document.getElementById(`${key}-email-combo`);
+  if (wrap) wrap.classList.remove('open');
+}
+
+/* Typing in the panel's own search box only narrows the visible option
+   list — it does NOT touch the table filter until an option is clicked. */
+function _comboFilter(key) {
+  _comboRenderOptions(key);
+}
+
+function _comboSelect(key, email) {
+  _combo[key].selected = email;
+  _comboUpdateLabel(key);
+  _comboClose(key);
+  _setSearch(key, email);
+}
+
+// Close any open dropdown panel when clicking outside it.
+document.addEventListener('click', (e) => {
+  document.querySelectorAll('.combo.open').forEach(wrap => {
+    if (!wrap.contains(e.target)) wrap.classList.remove('open');
+  });
+});
+// Escape closes the currently open panel too.
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') document.querySelectorAll('.combo.open').forEach(w => w.classList.remove('open'));
+});
 
 /* ═══════════════════════════════════════════════════════
    RENDER: REQUEST HISTORY (approved + rejected, permanent)
