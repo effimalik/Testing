@@ -1116,7 +1116,7 @@ if (typeof window.AP2CacheWatcher === 'undefined') {
             r.onsuccess = () => res(r.result || null);
             r.onerror   = () => rej(r.error);
           });
-          return (rec && rec.data) ? rec.data : null;
+          return (rec && rec.data && typeof rec.data === 'object') ? rec.data : null;
         } catch (e) {
           if (e && e.name === 'NotFoundError') return null; // store not created yet — normal
           console.warn('[userAdmin] fallback read failed:', e.message);
