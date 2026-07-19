@@ -111,7 +111,7 @@
           req.onsuccess = () => res(req.result || null);
           req.onerror   = () => rej(req.error);
         });
-        const data = (rec && Array.isArray(rec.data) && rec.data.length) ? rec.data : null;
+        const data = (rec && _isValidData(rec.data)) ? rec.data : null;
         if (data) _memoryFallback[key] = data;
         return data;
       } catch (e) {
@@ -132,10 +132,35 @@
     });
   }
 
+  // Accepts BOTH shapes of cached value:
+  //   - a non-empty array              (e.g. ap2_employee — flat row list)
+  //   - a non-empty plain object       (e.g. ap2_loginData — bundle of
+  //                                      several named sub-datasets)
+  // Previously this only recognised arrays, so any object-shaped cache
+  // value (like ap2_loginData) silently read back as "no data" on every
+  // poll/notifyNow-triggered read, even though it was populated — this
+  // is what caused good data to blink away a few seconds after paint.
+  function _isValidData(data) {
+    if (Array.isArray(data)) return data.length > 0;
+    if (data && typeof data === 'object') return Object.keys(data).length > 0;
+    return false;
+  }
+
   function _fingerprint(rec) {
-    if (!rec || !Array.isArray(rec.data)) return '';
-    const len = rec.data.length;
-    return len + '|' + JSON.stringify(rec.data[0] || '') + '|' + JSON.stringify(rec.data[len - 1] || '');
+    if (!rec || !_isValidData(rec.data)) return '';
+    if (Array.isArray(rec.data)) {
+      const len = rec.data.length;
+      return 'arr|' + len + '|' + JSON.stringify(rec.data[0] || '') + '|' + JSON.stringify(rec.data[len - 1] || '');
+    }
+    // Object shape: cheap structural fingerprint — key count + per-key
+    // array lengths (or JSON length for non-array values) — enough to
+    // detect additions/removals/edits without hashing the whole payload.
+    const keys = Object.keys(rec.data).sort();
+    const shape = keys.map(k => {
+      const v = rec.data[k];
+      return k + ':' + (Array.isArray(v) ? v.length : JSON.stringify(v || '').length);
+    }).join(',');
+    return 'obj|' + keys.length + '|' + shape;
   }
 
   // Each page watches for changes to ITS OWN data on its own short poll —
