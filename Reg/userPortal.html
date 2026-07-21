@@ -558,7 +558,14 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
   color: var(--text); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .combo-option:hover, .combo-option.hl { background: var(--accent-dim); color: var(--accent); }
-.combo-option.combo-clear { font-family: var(--font); color: var(--text3); font-style: italic; }
+.combo-option.combo-clear {
+  font-family: var(--font); color: var(--text3); font-style: italic;
+  display: flex; align-items: center; gap: 7px;
+}
+.combo-option.combo-clear i.ti-list {
+  font-size: 13px; line-height: 1; flex-shrink: 0;
+  position: static; top: auto; left: auto; transform: none;
+}
 .combo-option.selected { background: var(--accent-dim); color: var(--accent); font-weight: 600; }
 .combo-option.combo-clear.selected { font-style: normal; }
 .combo-empty { padding: 10px; font-size: 12px; color: var(--text3); text-align: center; }
@@ -1782,6 +1789,10 @@ _renderers.requests = renderLoginReqs;
    of that panel narrows the option list; clicking an option applies
    the filter and closes the panel.
 ═══════════════════════════════════════════════════════ */
+// On touch devices, autofocusing the search box pops the on-screen
+// keyboard the instant the dropdown opens, shrinking the viewport —
+// same guard as upLog.html, so behavior matches across the app.
+const _isCoarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
 const _combo = {
   requests: { emails: [], selected: '' },
   users:    { emails: [], selected: '' },
@@ -1845,6 +1856,12 @@ function _comboUpdateLabel(key) {
   if (wrap) wrap.classList.toggle('email-active', !!selected);
 }
 
+/* preventScroll on the search input's focus() below: the panel is
+   position:fixed, already fully on-screen the instant it opens, but
+   focusing an input still makes some browsers "scroll it into view" as
+   if it might not be — since nothing actually needs to move, that
+   scroll snaps back immediately and reads as a quick vertical-scrollbar
+   blink right where the toolbar sits. preventScroll skips that step. */
 function _comboToggle(key) {
   const wrap = document.getElementById(`${key}-email-combo`);
   if (!wrap) return;
@@ -1855,7 +1872,7 @@ function _comboToggle(key) {
   const searchEl = document.getElementById(`${key}-email-search`);
   if (searchEl) searchEl.value = '';
   _comboRenderOptions(key);
-  if (searchEl) setTimeout(() => searchEl.focus(), 0);
+  if (searchEl && !_isCoarsePointer) setTimeout(() => searchEl.focus({ preventScroll: true }), 0);
 }
 
 /* Drops the panel below the WHOLE .tab-bar row (tabs + toolbar), not just
