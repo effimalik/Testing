@@ -560,6 +560,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .combo-option:hover, .combo-option.hl { background: var(--accent-dim); color: var(--accent); }
 .combo-option.combo-clear { font-family: var(--font); color: var(--text3); font-style: italic; }
 .combo-option.selected { background: var(--accent-dim); color: var(--accent); font-weight: 600; }
+.combo-option.combo-clear.selected { font-style: normal; }
 .combo-empty { padding: 10px; font-size: 12px; color: var(--text3); text-align: center; }
 
 /* ══ Icon-only filter button group — sits inline with search, same row/line ══ */
@@ -748,7 +749,7 @@ tr.skeleton-row:hover td { background: transparent !important; }
   .tt-search { flex: 1 1 auto; min-width: 60px; max-width: none; }
   .tt-search input { padding-left: 26px; }
   .tt-search i { left: 8px; font-size: 12.5px; }
-  .tt-search.combo { flex: 0 0 auto; width: var(--field-h); min-width: var(--field-h); position: static; }
+  .tt-search.combo { flex: 0 0 auto; width: var(--field-h); min-width: var(--field-h); position: relative; }
   .tt-search.combo .combo-trigger { padding: 0; justify-content: center; }
   .tt-search.combo .combo-trigger-label { display: none; }
   .tt-search.combo .combo-caret { display: none; }
