@@ -6,7 +6,62 @@
 <title>Requests & Users · AP2 Fleet</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
+<style>
+/* ══ Self-hosted Tabler Icons subset (only the ~26 icons this page uses) ══
+   Previously loaded from cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest —
+   that "@latest" tag is unpinned, and when the CDN request fails/blocked or
+   an icon gets renamed upstream, every <i class="ti ti-*"> silently renders
+   as an empty glyph box with nothing visibly broken in the markup. Embedding
+   a small subsetted font (~4KB) removes the external dependency entirely so
+   icons always render, regardless of network access to jsdelivr. ══ */
+@font-face {
+  font-family: "tabler-icons";
+  src: url(data:font/woff2;base64,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) format("woff2");
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+.ti {
+  font-family: "tabler-icons" !important;
+  font-style: normal;
+  font-weight: normal;
+  speak: never;
+  display: inline-block;
+  text-decoration: inherit;
+  text-transform: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-variant: normal;
+  line-height: 1;
+}
+.ti-activity::before { content: "\ed23"; }
+.ti-check::before { content: "\ea5e"; }
+.ti-chevron-down::before { content: "\ea5f"; }
+.ti-chevron-left::before { content: "\ea60"; }
+.ti-chevron-right::before { content: "\ea61"; }
+.ti-chevron-up::before { content: "\ea62"; }
+.ti-circle-check::before { content: "\ea67"; }
+.ti-circle-x::before { content: "\ea6a"; }
+.ti-database::before { content: "\ea88"; }
+.ti-database-off::before { content: "\ee70"; }
+.ti-device-floppy::before { content: "\eb62"; }
+.ti-history::before { content: "\ebea"; }
+.ti-inbox::before { content: "\eac4"; }
+.ti-list::before { content: "\eb6b"; }
+.ti-list-details::before { content: "\ef40"; }
+.ti-loader::before { content: "\eca3"; }
+.ti-lock-access::before { content: "\eeaa"; }
+.ti-mail::before { content: "\eae5"; }
+.ti-mail-check::before { content: "\f939"; }
+.ti-shield::before { content: "\eb24"; }
+.ti-table::before { content: "\eba1"; }
+.ti-user-check::before { content: "\eb49"; }
+.ti-user-circle::before { content: "\ef68"; }
+.ti-users::before { content: "\ebf2"; }
+.ti-x::before { content: "\eb55"; }
+.ti-search::before { content: "\eb1c"; }
+</style>
 <script src="https://effimalik.github.io/Testing/shared/auth.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/code.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
@@ -115,6 +170,12 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
   font-family: var(--font); font-size: clamp(11px,1.2vw,13px); font-weight: 600;
   cursor: pointer; transition: all .16s; white-space: nowrap;
   position: relative; bottom: -1.5px;
+  /* min-height keeps every tab the same size whether or not it carries a
+     .tab-badge — an icon-only tab with no badge sibling has less inline
+     content than one with a badge, and without a floor here the two can
+     render at visibly different heights (badge-less tab collapsing small
+     enough to look broken/missing). */
+  min-height: var(--field-h); box-sizing: border-box;
 }
 .tab-btn i { font-size: 16px; flex-shrink: 0; line-height: 1; }
 .tab-btn:hover { color: var(--text); background: var(--surface); }
@@ -147,6 +208,13 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .tt-panel::-webkit-scrollbar { height: 5px; }
 .tt-panel::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
 .tt-panel::-webkit-scrollbar-track { background: transparent; }
+/* Mobile touch-scroll hides the thin scrollbar above, so overflowing
+   content (e.g. status filter circles on narrow phones) needs its own
+   cue — same fade-mask trick already used on .tab-bar-tabs. */
+.tt-panel.has-overflow {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent 100%);
+          mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent 100%);
+}
 
 /* ══ Tab panels ══ */
 .tab-panel { display: none; flex: 1 1 auto; min-height: 0; flex-direction: column; overflow: hidden; }
@@ -463,9 +531,12 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 /* position:fixed (not absolute) + JS-computed coordinates
    (_positionComboPanel) — see the note on .tt-panel above. Guarantees the
    panel always renders fully in front, never clipped or stuck underneath
-   other toolbar controls in a congested/narrow layout. */
+   other toolbar controls in a congested/narrow layout. z-index is set
+   above every other overlay in the app (modal, drawer, toast) so an open
+   dropdown is unconditionally on top of any table, div, or panel it
+   might appear over. */
 .combo-panel {
-  position: fixed; z-index: 250;
+  position: fixed; z-index: 4000;
   background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius);
   box-shadow: var(--shadow-lg); max-height: 280px;
   display: none; flex-direction: column; overflow: hidden;
@@ -637,11 +708,26 @@ tr.skeleton-row:hover td { background: transparent !important; }
      (down to a usable minimum) and the non-essential record count drops,
      since it's not a button or a filter. */
   .tab-bar { gap: 6px; margin-bottom: 10px; padding-bottom: 2px; flex-wrap: nowrap; overflow-x: visible; }
-  .tab-bar-tabs { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; max-width: 38%; }
+  /* Tabs strip: allowed to shrink (flex:0 1 auto) so the toolbar keeps its
+     space, but never below its own content — if it still doesn't fit, it
+     scrolls horizontally (overflow-x:auto below) rather than clipping a
+     tab out of existence. max-width raised from a fixed 38% so 2–3
+     icon-only tabs always have genuine room instead of relying on scroll
+     for a case that should just fit. */
+  .tab-bar-tabs {
+    flex: 0 1 auto; max-width: 62%; min-width: 0;
+    overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
   .tab-bar-tabs::-webkit-scrollbar { display: none; }
+  .tab-bar-tabs.has-overflow {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 14px), transparent 100%);
+            mask-image: linear-gradient(to right, #000 calc(100% - 14px), transparent 100%);
+  }
   .tab-btn {
     flex: 0 0 auto; padding: 9px 12px; font-size: 11.5px;
     border-radius: var(--radius); border-bottom: 1.5px solid transparent; bottom: 0;
+    min-height: var(--field-h); box-sizing: border-box; scroll-snap-align: start;
   }
   .tab-btn.active { border-bottom-color: var(--accent); }
   .tab-btn i { font-size: 17px; }
@@ -652,12 +738,8 @@ tr.skeleton-row:hover td { background: transparent !important; }
      screen readers + the title tooltip on tap-and-hold). Modal/drawer
      buttons keep their text — those have room and need to be unambiguous. */
   .data-table td.cell-action .tb-btn .tb-btn-label { display: none; }
-  .data-table td.cell-action .tb-btn { padding: 8px; gap: 0; }
+  .data-table td.cell-action .tb-btn { padding: 8px; gap: 0; justify-content: center; }
   .data-table td.cell-action .tb-btn.sm { padding: 7px; }
-  .data-table td.cell-action > div { gap: 8px; }
-  .data-table td.cell-action > div,
-  .data-table td.cell-action button { width: auto; }
-  .data-table td.cell-action { justify-content: flex-end; }
 
   .sec-header { margin-bottom: 10px; }
 
@@ -705,8 +787,13 @@ tr.skeleton-row:hover td { background: transparent !important; }
   .data-table td.cell-user::before { display: none; }
   .data-table td.cell-action { display: block; padding: 10px 0 12px; }
   .data-table td.cell-action::before { display: none; }
-  .data-table td.cell-action > div,
-  .data-table td.cell-action button { width: 100%; }
+  /* Multi-button rows (e.g. Approve/Reject) are wrapped in a <div> by the
+     renderers — split those evenly so two icon buttons never fight for
+     the same 100% width and overlap. A bare button with no wrapping div
+     (e.g. the Users "Profile" action) gets the full-width tap target. */
+  .data-table td.cell-action > div { width: 100%; display: flex; gap: 8px; }
+  .data-table td.cell-action > div > * { flex: 1 1 0; min-width: 0; width: auto; }
+  .data-table td.cell-action > button { width: 100%; }
   .data-table td[colspan] {
     display: block; text-align: left; padding: 0; border-bottom: none;
   }
@@ -1644,6 +1731,7 @@ function renderLoginReqs() {
 
   let rows = _state.loginReqs.filter(r => r.status === 'pending');
   document.getElementById('badge-loginreq').textContent = rows.length || '0';
+  _updateTabBarOverflow();
   _fillEmailDatalist('requests', rows.map(r => r.email));
 
   if (ui.search) {
@@ -1821,9 +1909,42 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') document.querySelectorAll('.combo.open').forEach(w => w.classList.remove('open'));
 });
 // Resize (e.g. device rotation) invalidates the computed fixed position — close rather than leave it stale.
+// IMPORTANT: on mobile, focusing the panel's search input opens the on-screen
+// keyboard, which shrinks the viewport and fires this same 'resize' event.
+// A width-agnostic listener was closing the panel the instant it opened —
+// looked like a blink and made the dropdown seem broken/unclickable on
+// phones. A real rotation/resize always changes the WIDTH; the keyboard
+// only changes height, so we ignore height-only resizes here.
+let _comboViewportWidth = window.innerWidth;
 window.addEventListener('resize', () => {
+  if (window.innerWidth === _comboViewportWidth) return; // keyboard open/close, not a real resize
+  _comboViewportWidth = window.innerWidth;
   document.querySelectorAll('.combo.open').forEach(w => w.classList.remove('open'));
 });
+
+/* Toggles a fade hint on the tab strip only when it actually has more
+   tabs than fit — an always-on fade would visually clip the last tab
+   even when there's nothing to scroll to. */
+function _updateTabBarOverflow() {
+  document.querySelectorAll('.tab-bar-tabs, .tt-panel').forEach(el => {
+    el.classList.toggle('has-overflow', el.scrollWidth > el.clientWidth + 1);
+  });
+}
+window.addEventListener('resize', _updateTabBarOverflow);
+document.querySelectorAll('.tab-bar-tabs, .tt-panel').forEach(el => el.addEventListener('scroll', () => {
+  el.classList.toggle('has-overflow', Math.ceil(el.scrollLeft) + el.clientWidth < el.scrollWidth - 1);
+}));
+// Toolbar content (search width, filter buttons) can change size after a
+// tab switch or a re-render — re-check overflow whenever either happens,
+// not just on load/resize/scroll.
+const _origSwitchTab = window.switchTab;
+if (typeof _origSwitchTab === 'function') {
+  window.switchTab = function (...args) {
+    const result = _origSwitchTab.apply(this, args);
+    setTimeout(_updateTabBarOverflow, 0);
+    return result;
+  };
+}
 
 /* ═══════════════════════════════════════════════════════
    RENDER: REQUEST HISTORY (approved + rejected, permanent)
@@ -1886,6 +2007,7 @@ function renderUsers() {
 
   let rows = _state.users.map(u => ({ ...u, dsCnt: _dsCount(u.email) }));
   document.getElementById('badge-users').textContent = rows.length || '0';
+  _updateTabBarOverflow();
   _fillEmailDatalist('users', rows.map(u => u.email));
 
   if (ui.status !== 'all') rows = rows.filter(u => u.status === ui.status);
@@ -1934,7 +2056,7 @@ function renderUsers() {
       </td>
       <td data-label="Actions" class="cell-action">
         <button class="tb-btn sm primary" onclick="openProfileDrawer('${_esc(email)}')">
-          <i class="ti ti-user-circle"></i> Profile
+          <i class="ti ti-user-circle"></i> <span class="tb-btn-label">Profile</span>
         </button>
       </td>
     </tr>`;
@@ -2407,6 +2529,7 @@ function switchTab(id) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === id));
   document.querySelectorAll('.tt-panel').forEach(p => p.classList.toggle('active', p.id === 'tt-' + id));
+  _updateTabBarOverflow();
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -2430,7 +2553,7 @@ function toast(msg, type = 'success') {
   clearTimeout(_toastTimer);
   el.className = 'toast';
   msgEl.textContent = msg;
-  icon.className = type === 'error' ? 'ti ti-x-circle' : 'ti ti-circle-check';
+  icon.className = type === 'error' ? 'ti ti-circle-x' : 'ti ti-circle-check';
   requestAnimationFrame(() => el.classList.add('show', type));
   _toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
 }
@@ -2541,6 +2664,7 @@ try { window.parent.postMessage({ type: 'ap-cache-request', key: _AP2_CACHE_KEY 
    INIT
 ═══════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async () => {
+  _updateTabBarOverflow();
   await loadAll();
 });
 </script>
