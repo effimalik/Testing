@@ -452,6 +452,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
   border: 1px solid var(--border); background: var(--bg2); color: var(--text);
   font-family: var(--font); font-size: 12.5px; cursor: pointer; text-align: left;
   transition: border .16s, box-shadow .16s;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
 }
 .combo-trigger:hover { border-color: var(--border2); }
 .combo.open .combo-trigger { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
@@ -530,13 +531,19 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
   position: relative; width: var(--field-h); height: var(--field-h); flex-shrink: 0;
   border-radius: 50%; border: 1.5px solid var(--border2); background: var(--bg2); color: var(--text3);
   display: inline-flex; align-items: center; justify-content: center; transition: all .16s;
+  overflow: hidden; /* clips the invisible native <select> to a true circle — some mobile
+                        browsers paint a focus/tap box around a <select> even at opacity:0,
+                        which otherwise squares off this button's corners on tap */
+  -webkit-tap-highlight-color: transparent;
 }
 .icon-select:hover { background: var(--surface2); color: var(--text); }
 .icon-select.active { background: var(--surface2); color: var(--text); border-color: var(--border2); box-shadow: 0 0 0 2px var(--accent); }
 .icon-select i { font-size: 15px; pointer-events: none; }
 .icon-select select {
-  position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
-  border: none; background: transparent; appearance: none;
+  position: absolute; inset: -4px; width: calc(100% + 8px); height: calc(100% + 8px); opacity: 0; cursor: pointer;
+  border: none; background: transparent;
+  -webkit-appearance: none; -moz-appearance: none; appearance: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ══ Date range — icon trigger + popover panel (reuses .combo open/close
@@ -702,25 +709,27 @@ tr.skeleton-row:hover td { background: transparent !important; }
      an icon button group, action/date are icon triggers), so there's no
      need to wrap or hide anything to make it fit — only the non-essential
      record count drops, since it's not a button or a filter. */
-  .tab-bar { gap: 6px; margin-bottom: 10px; padding-bottom: 2px; flex-wrap: nowrap; }
-  /* Tabs strip: allowed to shrink (flex:0 1 auto) so the toolbar keeps its
-     space, but never below its own content — if it still doesn't fit, it
-     scrolls horizontally (overflow-x:auto below) rather than clipping a
-     tab out of existence. max-width raised from a fixed 40% so 2–3
-     icon-only tabs always have genuine room instead of relying on scroll
-     for a case that should just fit. */
-  .tab-bar-tabs {
-    flex: 0 1 auto; max-width: 62%; min-width: 0;
-    scroll-snap-type: x proximity;
+  /* Tabs + toolbar no longer scroll independently of each other (that read
+     as two zones fighting for space, tabs sliding one way while the
+     toolbar icons stayed put). The whole bar is now ONE scroll container;
+     both groups sit at their natural width and the row scrolls as a unit
+     if it doesn't fit, so left (tabs) and right (toolbar/filters) always
+     move and align together. */
+  .tab-bar {
+    gap: 6px; margin-bottom: 10px; padding-bottom: 2px; flex-wrap: nowrap;
+    overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; scroll-snap-type: x proximity;
   }
-  .tab-bar-tabs.has-overflow {
-    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 14px), transparent 100%);
-            mask-image: linear-gradient(to right, #000 calc(100% - 14px), transparent 100%);
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-bar-tabs {
+    flex: 0 0 auto; max-width: none; min-width: 0;
+    overflow: visible; /* scrolling now happens on .tab-bar itself */
   }
   .tab-btn {
     flex: 0 0 auto; padding: 9px 12px; font-size: 11.5px;
     border-radius: var(--radius); border-bottom: 1.5px solid transparent; bottom: 0;
     min-height: var(--field-h); box-sizing: border-box; scroll-snap-align: start;
+    -webkit-tap-highlight-color: transparent;
   }
   .tab-btn.active { border-bottom-color: var(--accent); }
   .tab-btn i { font-size: 17px; }
@@ -740,8 +749,8 @@ tr.skeleton-row:hover td { background: transparent !important; }
 
   .sec-header { margin-bottom: 10px; }
 
-  .tab-bar-toolbar { flex: 1 1 auto; min-width: 0; }
-  .tt-panel { gap: 5px; flex-wrap: nowrap; }
+  .tab-bar-toolbar { flex: 0 0 auto; min-width: 0; margin-left: auto; }
+  .tt-panel { gap: 5px; flex-wrap: nowrap; overflow: visible; }
   .tt-search.combo { flex: 0 0 auto; width: var(--field-h); min-width: var(--field-h); }
   .tt-search.combo .combo-trigger { padding: 0; justify-content: center; }
   .tt-search.combo .combo-trigger-label { display: none; }
@@ -1525,17 +1534,25 @@ function _repositionOpenPanels() {
 }
 window.addEventListener('resize', _repositionOpenPanels);
 window.addEventListener('scroll', _repositionOpenPanels, true); // capture: catches the toolbar's own horizontal scroll too
+// visualViewport (not just window) resizes when the mobile keyboard opens —
+// window.resize doesn't reliably fire for that on every mobile browser, which
+// let the keyboard cover/shove an already-open panel out of view.
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', _repositionOpenPanels);
+  window.visualViewport.addEventListener('scroll', _repositionOpenPanels);
+}
+const _isCoarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
 
 /* Toggles a fade hint on the tab strip only when it actually has more
    tabs than fit — an always-on fade would visually clip the last tab
    even when there's nothing to scroll to. */
 function _updateTabBarOverflow() {
-  document.querySelectorAll('.tab-bar-tabs').forEach(el => {
+  document.querySelectorAll('.tab-bar').forEach(el => {
     el.classList.toggle('has-overflow', el.scrollWidth > el.clientWidth + 1);
   });
 }
 window.addEventListener('resize', _updateTabBarOverflow);
-document.querySelectorAll('.tab-bar-tabs').forEach(el => el.addEventListener('scroll', () => {
+document.querySelectorAll('.tab-bar').forEach(el => el.addEventListener('scroll', () => {
   el.classList.toggle('has-overflow', Math.ceil(el.scrollLeft) + el.clientWidth < el.scrollWidth - 1);
 }));
 
@@ -1790,7 +1807,7 @@ function _comboToggle(key) {
   const searchEl = document.getElementById(`${key}-email-search`);
   if (searchEl) searchEl.value = '';
   _comboRenderOptions(key);
-  if (searchEl) setTimeout(() => searchEl.focus(), 0);
+  if (searchEl && !_isCoarsePointer) setTimeout(() => searchEl.focus(), 0);
 }
 
 function _comboClose(key) {
