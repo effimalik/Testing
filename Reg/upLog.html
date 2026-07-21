@@ -523,28 +523,22 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .tt-filter-btn.tt-filter-bad   { border-color: var(--red);  color: var(--red); }
 .tt-filter-btn.tt-filter-bad.active   { background: var(--red-dim); box-shadow: 0 0 0 2px var(--red); }
 
-/* ══ Icon-select — a real <select> hidden invisibly over a round icon button,
-   for filters with a dynamic/unbounded option list (e.g. Activity Log's
-   Action filter) where a fixed icon button group isn't possible. Native
-   picker still opens on tap; the icon is purely visual. ══ */
-.icon-select {
-  position: relative; width: var(--field-h); height: var(--field-h); flex-shrink: 0;
-  border-radius: 50%; border: 1.5px solid var(--border2); background: var(--bg2); color: var(--text3);
-  display: inline-flex; align-items: center; justify-content: center; transition: all .16s;
-  overflow: hidden; /* clips the invisible native <select> to a true circle — some mobile
-                        browsers paint a focus/tap box around a <select> even at opacity:0,
-                        which otherwise squares off this button's corners on tap */
-  -webkit-tap-highlight-color: transparent;
+/* ══ Action filter — icon trigger + themed dropdown panel (reuses .combo
+   open/close plumbing, same as the date-range popover below). Replaces a
+   native <select> — its option list is unstyleable and renders as the
+   browser's native white/light list regardless of app theme. ══ */
+.tt-action { position: relative; flex-shrink: 0; }
+.tt-action .combo-trigger.icon-trigger {
+  width: var(--field-h); padding: 0; justify-content: center;
 }
-.icon-select:hover { background: var(--surface2); color: var(--text); }
-.icon-select.active { background: var(--surface2); color: var(--text); border-color: var(--border2); box-shadow: 0 0 0 2px var(--accent); }
-.icon-select i { font-size: 15px; pointer-events: none; }
-.icon-select select {
-  position: absolute; inset: -4px; width: calc(100% + 8px); height: calc(100% + 8px); opacity: 0; cursor: pointer;
-  border: none; background: transparent;
-  -webkit-appearance: none; -moz-appearance: none; appearance: none;
-  -webkit-tap-highlight-color: transparent;
+.tt-action .combo-trigger.icon-trigger i { font-size: 15px; }
+.tt-action.combo.open .icon-trigger { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); color: var(--accent); }
+.tt-action .action-dot {
+  position: absolute; top: 2px; right: 2px; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent); border: 1.5px solid var(--bg2); display: none;
 }
+.tt-action.action-active .action-dot { display: block; }
+.action-panel { width: 220px; }
 
 /* ══ Date range — icon trigger + popover panel (reuses .combo open/close
    plumbing and its outside-click / Escape handlers, since those already
@@ -887,11 +881,14 @@ tr.skeleton-row:hover td { background: transparent !important; }
             <div class="combo-options" id="logs-email-options"></div>
           </div>
         </div>
-        <div class="icon-select" id="logs-action-filter-wrap" title="All actions">
-          <i class="ti ti-filter"></i>
-          <select id="logs-action-filter" onchange="_setFilter('logs','action',this.value)">
-            <option value="all">All actions</option>
-          </select>
+        <div class="tt-action combo" id="logs-action-filter-wrap" title="All actions">
+          <button type="button" class="combo-trigger icon-trigger" id="logs-action-trigger" onclick="_actionToggle('logs')">
+            <i class="ti ti-filter"></i>
+            <span class="action-dot"></span>
+          </button>
+          <div class="combo-panel action-panel" id="logs-action-panel">
+            <div class="combo-options" id="logs-action-options"></div>
+          </div>
         </div>
         <div class="tt-daterange combo" id="logs-dr-combo">
           <button type="button" class="combo-trigger icon-trigger" id="logs-dr-trigger" onclick="_drToggle('logs')" title="Filter by date">
@@ -1742,29 +1739,73 @@ function _fillEmailDatalist(comboKey, emails) {
   if (wrap && wrap.classList.contains('open')) _comboRenderOptions(comboKey);
 }
 
-/* Rebuilds the Action filter <select> from whatever unique action strings
-   actually appear in the log data — nothing hardcoded, so a brand-new
-   action type (e.g. added later on the backend) shows up automatically.
-   Keeps the person's current selection intact across re-renders instead of
-   silently resetting it back to "All actions". The <select> itself is an
-   invisible layer over a round funnel icon (see .icon-select); this also
-   keeps that icon's active state + tooltip in sync with the selection. */
+/* Rebuilds the Action filter's option list from whatever unique action
+   strings actually appear in the log data — nothing hardcoded, so a
+   brand-new action type (e.g. added later on the backend) shows up
+   automatically. Keeps the person's current selection intact across
+   re-renders instead of silently resetting it back to "All actions".
+   Renders into a themed .combo-panel (same visual language as the email
+   dropdown) rather than a native <select>, whose option list can't be
+   restyled and shows up as the browser's native white list regardless of
+   app theme. */
+const _actionFilter = { logs: { options: [], selected: 'all' } };
+
 function _fillActionFilter(key, actions) {
-  const select = document.getElementById(`${key}-action-filter`);
-  if (!select) return; // panel not present in this portal build
+  const state = _actionFilter[key];
+  if (!state) return; // panel not present in this portal build
   const unique = [...new Set(actions.filter(Boolean).map(a => String(a).trim()))]
     .sort((a, b) => a.localeCompare(b));
-  const current = select.value || 'all';
-  select.innerHTML = `<option value="all">All actions</option>`
-    + unique.map(a => `<option value="${_esc(a)}">${_esc(a)}</option>`).join('');
-  select.value = unique.includes(current) || current === 'all' ? current : 'all';
+  const current = state.selected || 'all';
+  state.options = unique;
+  state.selected = unique.includes(current) || current === 'all' ? current : 'all';
+  _actionUpdateTrigger(key);
   const wrap = document.getElementById(`${key}-action-filter-wrap`);
-  if (wrap) {
-    const active = select.value !== 'all';
-    wrap.classList.toggle('active', active);
-    wrap.title = active ? `Action: ${select.value}` : 'All actions';
-  }
+  if (wrap && wrap.classList.contains('open')) _actionRenderOptions(key);
 }
+
+function _actionUpdateTrigger(key) {
+  const wrap = document.getElementById(`${key}-action-filter-wrap`);
+  if (!wrap) return;
+  const value = _actionFilter[key].selected;
+  const active = value !== 'all';
+  wrap.classList.toggle('action-active', active);
+  wrap.title = active ? `Action: ${value}` : 'All actions';
+}
+
+function _actionRenderOptions(key) {
+  const optionsEl = document.getElementById(`${key}-action-options`);
+  if (!optionsEl) return;
+  const state = _actionFilter[key];
+  const selected = state.selected;
+  let html = `<div class="combo-option combo-clear ${selected === 'all' ? 'selected' : ''}" onclick="_actionSelect('${key}','all')"><i class="ti ti-list"></i> All actions</div>`;
+  html += state.options.map(a =>
+    `<div class="combo-option ${a === selected ? 'selected' : ''}" onclick="_actionSelect('${key}','${_esc(a).replace(/'/g, "\\'")}')">${_esc(a)}</div>`
+  ).join('');
+  optionsEl.innerHTML = html;
+}
+
+function _actionToggle(key) {
+  const wrap = document.getElementById(`${key}-action-filter-wrap`);
+  if (!wrap) return;
+  if (wrap.classList.contains('open')) { _actionClose(key); return; }
+  document.querySelectorAll('.combo.open').forEach(w => w.classList.remove('open'));
+  wrap.classList.add('open');
+  _positionComboPanel(wrap);
+  _actionRenderOptions(key);
+}
+
+function _actionClose(key) {
+  const wrap = document.getElementById(`${key}-action-filter-wrap`);
+  if (wrap) wrap.classList.remove('open');
+}
+
+function _actionSelect(key, value) {
+  _actionFilter[key].selected = value;
+  _actionClose(key);
+  _actionUpdateTrigger(key);
+  _setFilter(key, 'action', value);
+}
+
 
 function _comboRenderOptions(key) {
   const optionsEl = document.getElementById(`${key}-email-options`);
