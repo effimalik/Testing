@@ -73,6 +73,7 @@
 
   .badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;}
   .badge-active{background:var(--teal-soft);color:var(--teal);border:1px solid var(--teal);}
+  .badge-inactive{background:#EEF0F3;color:var(--ink-soft);border:1px solid var(--border);}
   .badge-expired{background:var(--red-soft);color:var(--red);border:1px solid var(--red);}
   .badge-missing{background:#EEF0F3;color:var(--ink-soft);border:1px solid var(--border);}
   .badge-fallback{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber);transform:rotate(-1deg);display:inline-block;}
@@ -80,6 +81,14 @@
   .badge-type{background:#EEF0F3;color:var(--ink-soft);}
   .badge-auto{background:var(--teal-soft);color:var(--teal);}
   .badge-manual{background:#EEF0F3;color:var(--ink-soft);}
+
+  .preview-panel{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:16px;}
+  .preview-row{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:10px 12px;margin-bottom:8px;flex-wrap:wrap;}
+  .preview-row:last-child{margin-bottom:0;}
+  .preview-row .info{flex:1;min-width:220px;}
+  .preview-row .acc{font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:600;color:var(--ink);}
+  .preview-row .meta{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
+  .timed-note{background:var(--violet-soft);color:var(--violet);border:1px solid var(--violet);border-radius:6px;padding:8px 12px;font-size:12px;margin-bottom:12px;}
 
   .mode-row{display:flex;gap:8px;margin-bottom:18px;}
   .mode-btn{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;padding:10px 20px;border-radius:7px;border:1.5px solid var(--border);background:#fff;color:var(--ink-soft);cursor:pointer;letter-spacing:.03em;}
@@ -113,14 +122,43 @@
   </div>
 
   <nav class="tabs">
-    <button data-tab="import" class="active">Import &amp; Add</button>
+    <button data-tab="portal" class="active">Activation Portal</button>
+    <button data-tab="import">Import &amp; Add</button>
     <button data-tab="resolver">Resolver</button>
     <button data-tab="batch">WPS Batch</button>
     <button data-tab="log">Full Log</button>
   </nav>
 
+  <!-- ACTIVATION PORTAL -->
+  <section class="tab active" id="tab-portal">
+    <div class="card">
+      <h2>Activate an account for a rider</h2>
+      <p class="hint" style="margin-top:0;">
+        Pick a rider, then a purpose. If they already have account(s) on file for that purpose, you'll see them all and can activate whichever one applies. A <strong>timed</strong> account (has both a StartDate and ExpDate) automatically stays Active for as long as today falls in that window — it wins over any manual pick for that purpose. Otherwise, whichever account you activated most recently is the Active one. Nothing is ever deleted; every activation just adds a new dated entry, so the full history stays in the log below.
+      </p>
+      <label>Rider (EID)</label>
+      <select id="p-eid"></select>
+      <div class="mode-row" id="p-purpose-row" style="margin-top:14px;">
+        <button class="mode-btn" data-purpose="WPS">WPS</button>
+        <button class="mode-btn" data-purpose="Salary">Salary</button>
+        <button class="mode-btn" data-purpose="Advance">Advance</button>
+      </div>
+      <div id="p-panel"></div>
+    </div>
+
+    <div class="card">
+      <h2>This rider's accounts</h2>
+      <div class="stat-row" id="p-stats">
+        <div class="stat"><div class="n" id="p-n-active">0</div><div class="l">Active</div></div>
+        <div class="stat"><div class="n" id="p-n-inactive">0</div><div class="l">Inactive</div></div>
+        <div class="stat"><div class="n" id="p-n-total">0</div><div class="l">Total on file</div></div>
+      </div>
+      <div id="p-rider-table"></div>
+    </div>
+  </section>
+
   <!-- IMPORT & ADD -->
-  <section class="tab active" id="tab-import">
+  <section class="tab" id="tab-import">
     <div class="grid2">
       <div class="card">
         <h2>Add a record (manual)</h2>
@@ -220,7 +258,7 @@
     <div class="card">
       <h2>Which account is active right now?</h2>
       <p class="hint" style="margin-top:0;">
-        Pick a mode. For each EID, the resolver first looks for a <strong>special / timed account</strong> (any AccType with both a StartDate and an ExpDate) that is valid <em>today</em> — if one exists, it wins regardless of type. Otherwise it falls back to that EID's plain <strong>${MODE}</strong> account (no expiry, or an expiry that just hasn't been reached). <strong>Advance</strong> additionally falls back to Salary if no Advance account exists at all. Anything with no valid account for the mode is skipped here (it's still in the Full Log).
+        Pick a purpose. For each EID this shows whichever account is currently <strong>Active</strong> for that purpose — same engine as the Activation Portal: a timed account (StartDate + ExpDate) inside its window always wins; otherwise the most recently activated account for that EID + purpose wins. EIDs with no active account for the purpose are skipped here (they're still in the Full Log).
       </p>
       <div class="mode-row">
         <button class="mode-btn active" data-mode="WPS">WPS</button>
@@ -231,8 +269,8 @@
     </div>
 
     <div class="card">
-      <h2>Status overview — all types, all EIDs</h2>
-      <p class="hint" style="margin-top:0;">Reference view: current status per EID across all three types, regardless of which mode is selected above.</p>
+      <h2>Status overview — all purposes, all EIDs</h2>
+      <p class="hint" style="margin-top:0;">Reference view: current Active/Inactive/Missing status per EID across all three purposes.</p>
       <div id="status-table"></div>
     </div>
   </section>
@@ -242,7 +280,7 @@
     <div class="card">
       <h2>Process a WPS run from a sheet</h2>
       <p class="hint" style="margin-top:0;">
-        Upload a sheet of the employees you're processing this run (just <span class="mono">EmpID, Name</span>). For each one, this looks up their account exactly like the Resolver above: a special/timed account valid today wins; otherwise it uses their base account for the mode you pick. Nothing here is saved — it's a one-off lookup for this run, ready to export.
+        Upload a sheet of the employees you're processing this run (just <span class="mono">EmpID, Name</span>). For each one, this looks up their currently Active account for the purpose you pick — same engine as the Activation Portal: timed accounts inside their window win automatically, otherwise the most recently activated one wins. Nothing here is saved — it's a one-off lookup for this run, ready to export.
       </p>
       <div class="import-drop">
         <input type="file" id="batch-csv-file" accept=".csv" style="margin-bottom:8px;">
@@ -282,6 +320,11 @@
         <h2 style="margin:0;">Full log</h2>
         <button class="btn btn-ghost" id="export-csv">Export CSV</button>
       </div>
+      <div class="stat-row">
+        <div class="stat"><div class="n" id="log-n-active">0</div><div class="l">Active (all riders)</div></div>
+        <div class="stat"><div class="n" id="log-n-inactive">0</div><div class="l">Inactive (all riders)</div></div>
+        <div class="stat"><div class="n" id="log-n-total">0</div><div class="l">Total records</div></div>
+      </div>
       <div class="filters">
         <div>
           <label>EID</label>
@@ -296,7 +339,7 @@
           <select id="f-status">
             <option value="">All</option>
             <option value="active">Active only</option>
-            <option value="expired">Expired only</option>
+            <option value="inactive">Inactive only</option>
           </select>
         </div>
         <div>
@@ -366,7 +409,40 @@ if (typeof window.AP2CacheWatcher === 'undefined') {
     };
   })();
 }
-async function _readCache(key) { return AP2CacheWatcher.readKey(key || _AP2_CACHE_KEY); }
+async function _readCache_bareArray(key) { return AP2CacheWatcher.readKey(key || _AP2_CACHE_KEY); }
+
+/* cacheWatcher.js's readKey() only gives back the data array — but we also
+   want the write timestamp (rec.ts) so "last coming" ordering and the
+   Timestamp column for cache-sourced rows reflect the real sync time, same
+   trick docPortal.html uses alongside the shared watcher. */
+const _IDB_NAME_TS = 'ap2_fleet_cache', _IDB_STORE_TS = 'datasets';
+let _idbConnTs = null;
+function _getDBTs() {
+  if (_idbConnTs) return Promise.resolve(_idbConnTs);
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(_IDB_NAME_TS);
+    req.onsuccess = e => { _idbConnTs = e.target.result; res(_idbConnTs); };
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+async function _readRawTs(key) {
+  try {
+    const db = await _getDBTs();
+    if (!db.objectStoreNames.contains(_IDB_STORE_TS)) return 0;
+    const rec = await new Promise((res, rej) => {
+      const req = db.transaction(_IDB_STORE_TS, 'readonly').objectStore(_IDB_STORE_TS).get(key);
+      req.onsuccess = () => res(req.result || null);
+      req.onerror   = () => rej(req.error);
+    });
+    return (rec && rec.ts) ? rec.ts : 0;
+  } catch (e) { return 0; }
+}
+async function _readCache(key) {
+  const data = await _readCache_bareArray(key);
+  if (!data || !Array.isArray(data) || !data.length) return null;
+  const ts = await _readRawTs(key || _AP2_CACHE_KEY);
+  return { ts: ts || Date.now(), data };
+}
 
 /* ═══════════════════════════════════════════════════════
    DATE PARSING — same convention as upLog.html: timestamps
@@ -446,16 +522,52 @@ function isActive(r){
 // deliberately time-boxed account, as opposed to an ordinary ongoing one.
 function isSpecial(r){ return !!(r.startDate && r.expDate); }
 
+/* ═══════════════════════════════════════════════════════
+   ACTIVATION ENGINE — single source of truth for Active/Inactive.
+   Nothing is stored as "the active flag" on a record; status is always
+   computed live from the group of records sharing the same EID+AccType:
+     1) Any timed record (StartDate+ExpDate) currently inside its window
+        wins, always — regardless of when anything else was activated.
+     2) Otherwise, whichever currently-valid record has the newest
+        activatedAt ("last coming") wins.
+   Everything else in that group is Inactive. Expired/future-dated and
+   superseded records are never deleted — they just aren't the winner.
+═══════════════════════════════════════════════════════ */
+function groupFor(eid, type){
+  const T = normType(type);
+  return allRecords().filter(r => r.eid === eid && normType(r.accType) === T);
+}
+function computeActiveRecord(eid, type){
+  const eligible = groupFor(eid, type).filter(isActive);
+  if(!eligible.length) return null;
+  const timed = eligible.filter(isSpecial);
+  const pool = timed.length ? timed : eligible;
+  pool.sort((a,b) => (b.activatedAt||0) - (a.activatedAt||0));
+  return pool[0];
+}
+function recordStatus(r){
+  const winner = computeActiveRecord(r.eid, r.accType);
+  return (winner && winner.id === r.id) ? 'active' : 'inactive';
+}
+function activeCount(){ return allRecords().filter(r=>recordStatus(r)==='active').length; }
+function inactiveCount(){ return allRecords().filter(r=>recordStatus(r)==='inactive').length; }
+
 /* Column mapping for each row cached under ap2_accLog. Adjust here if the
    real sheet's column order differs — everything else consumes the
-   normalised record shape below, so nothing else needs to change. */
-function mapRawRow(row, idx){
+   normalised record shape below, so nothing else needs to change.
+   activatedAt drives "last coming" ordering + the Timestamp column; since
+   ap2_accLog's cached rows don't carry a per-row timestamp, every row in
+   one sync shares the cache's write time (cacheTs), nudged by its position
+   in the array (idx ms) so original sheet order is preserved as the
+   tie-break — i.e. a later row in the sheet counts as more recent. */
+function mapRawRow(row, idx, cacheTs){
   if(!Array.isArray(row) || row.length < 2) return null;
   const [accountNo, accType, eid, addDetail, comment, startRaw, expRaw] = row;
   if(!accountNo && accountNo !== 0) return null;
   if(!accType) return null;
   const sd = _parseDate(startRaw);
   const ed = _parseDate(expRaw);
+  const base = cacheTs || Date.now();
   return {
     id: 'auto_' + idx,
     eid: (eid === undefined || eid === null) ? '' : String(eid),
@@ -465,14 +577,19 @@ function mapRawRow(row, idx){
     comment: (comment ?? '').toString().trim(),
     startDate: sd ? toISO(sd) : '',
     expDate: ed ? toISO(ed) : '',
+    activatedAt: base + idx,
     source: 'auto'
   };
 }
-function applyCacheData(data){
+function applyCacheData(payload){
+  // Accepts either the {ts,data} shape from _readCache(), a bare array
+  // (postMessage push / pasted snapshot), or a {ts,data,fingerprint} snapshot.
+  const data = Array.isArray(payload) ? payload : (payload && payload.data);
+  const ts = Array.isArray(payload) ? Date.now() : (payload && payload.ts) || Date.now();
   if(!Array.isArray(data)) return false;
-  AUTO_RECORDS = data.map(mapRawRow).filter(Boolean);
+  AUTO_RECORDS = data.map((row,i)=>mapRawRow(row,i,ts)).filter(Boolean);
   cacheReady = true;
-  lastSync = new Date();
+  lastSync = new Date(ts);
   return true;
 }
 
@@ -593,8 +710,8 @@ async function tryApplyCache(){
 }
 async function tryApplyEmpCache(){
   try{
-    const data = await _readCache(_AP2_CACHE_KEY_EMP);
-    if(data){ return applyEmpCacheData(data); }
+    const rec = await _readCache(_AP2_CACHE_KEY_EMP);
+    if(rec && rec.data){ return applyEmpCacheData(rec.data); }
   }catch(e){ console.error('[accLog] ap2_employee cache read error:', e); }
   return false;
 }
@@ -652,9 +769,9 @@ document.getElementById('snap-load').addEventListener('click', ()=>{
   if(!raw){ errEl.textContent = 'Paste a snapshot first.'; return; }
   let parsed;
   try{ parsed = JSON.parse(raw); }catch(e){ errEl.textContent = 'Could not parse that as JSON.'; return; }
-  const arr = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.data) ? parsed.data : null);
-  if(!arr){ errEl.textContent = 'Expected either a bare array, or an object with a "data" array.'; return; }
-  applyCacheData(arr);
+  const valid = Array.isArray(parsed) || (parsed && Array.isArray(parsed.data));
+  if(!valid){ errEl.textContent = 'Expected either a bare array, or an object with a "data" array.'; return; }
+  applyCacheData(parsed);
   renderSyncBar(); renderAll();
   alert(`Loaded ${AUTO_RECORDS.length} record(s) from the pasted snapshot.`);
 });
@@ -734,6 +851,9 @@ document.getElementById('emp-clear').addEventListener('click', async ()=>{
 });
 
 // ---------- ADD RECORD (manual) ----------
+function newRecord(fields){
+  return Object.assign({ id: uid(), activatedAt: Date.now(), source: 'manual' }, fields);
+}
 document.getElementById('r-save').addEventListener('click', async ()=>{
   const eid = document.getElementById('r-eid').value.trim();
   const accType = document.getElementById('r-acctype').value;
@@ -746,7 +866,7 @@ document.getElementById('r-save').addEventListener('click', async ()=>{
   if(!eid){ errEl.textContent = 'EID is required.'; return; }
   if(!accountNo){ errEl.textContent = 'Account No is required.'; return; }
   errEl.textContent = '';
-  RECORDS.push({ id: uid(), eid, accType, accountNo, addDetail, comment, startDate, expDate, source:'manual' });
+  RECORDS.push(newRecord({ eid, accType, accountNo, addDetail, comment, startDate, expDate }));
   ['r-eid','r-accno','r-adddetail','r-comment','r-start','r-exp'].forEach(id=>document.getElementById(id).value='');
   await saveData();
   renderAll();
@@ -796,20 +916,21 @@ document.getElementById('csv-import').addEventListener('click', async ()=>{
   try{ rows = parseCSV(text); } catch(e){ errEl.textContent = 'Could not read that file as CSV.'; return; }
   if(!rows.length){ errEl.textContent = 'No rows found in the file.'; return; }
   let added = 0;
-  rows.forEach(row=>{
+  const base = Date.now();
+  rows.forEach((row,i)=>{
     const eid = (row.eid||'').trim();
     const accountNo = (row.accountno||'').trim();
     if(!eid || !accountNo) return;
-    RECORDS.push({
-      id: uid(), eid,
+    RECORDS.push(newRecord({
+      eid,
       accType: (row.acctype||'').trim() || 'Other',
       accountNo,
       addDetail: (row.adddetail||'').trim(),
       comment: (row.comment||'').trim(),
       startDate: (row.startdate||'').trim(),
       expDate: (row.expdate||'').trim(),
-      source:'manual'
-    });
+      activatedAt: base + i
+    }));
     added++;
   });
   await saveData();
@@ -823,53 +944,18 @@ function removeRecord(id){
   saveData().then(renderAll);
 }
 
-// ---------- RESOLVER LOGIC ----------
+// ---------- RESOLVER LOGIC (thin wrapper over the activation engine) ----------
 function distinctEIDs(){
   return [...new Set(allRecords().map(r=>r.eid))].filter(Boolean).sort();
 }
-function recordsFor(eid, type){
-  return allRecords().filter(r=> r.eid===eid && normType(r.accType)===type);
-}
-function latestActive(eid, type){
-  const matches = recordsFor(eid, type).filter(isActive);
-  if(!matches.length) return null;
-  matches.sort((a,b)=> (b.startDate||'').localeCompare(a.startDate||''));
-  return matches[0];
-}
 function statusFor(eid, type){
-  const all = recordsFor(eid, type);
+  const all = groupFor(eid, type);
   if(!all.length) return 'missing';
-  return latestActive(eid, type) ? 'active' : 'expired';
+  return computeActiveRecord(eid, type) ? 'active' : 'missing';
 }
-
-/* Core resolution flow:
-   1) Any record for this EID — of ANY AccType — that has both a StartDate
-      and an ExpDate ("special / timed") and is valid today wins, preferring
-      one whose AccType matches the requested mode if there's more than one.
-   2) Otherwise fall back to the EID's plain account for the requested mode
-      (no expiry, or an expiry not yet reached).
-   3) Advance additionally falls back to Salary if there's no Advance
-      account at all.
-   Expired/future-dated records are never deleted — they just don't win. */
 function resolve(eid, mode){
-  const MODE = normType(mode);
-  const special = allRecords().filter(r=> r.eid===eid && isSpecial(r) && isActive(r));
-  if(special.length){
-    special.sort((a,b)=>{
-      const am = normType(a.accType)===MODE ? 0 : 1;
-      const bm = normType(b.accType)===MODE ? 0 : 1;
-      if(am!==bm) return am-bm;
-      return (b.startDate||'').localeCompare(a.startDate||'');
-    });
-    return { rec: special[0], usedType: special[0].accType, special: true, fallback: false };
-  }
-  const base = latestActive(eid, MODE);
-  if(base) return { rec: base, usedType: base.accType, special: false, fallback: false };
-  if(MODE === 'ADVANCE'){
-    const sal = latestActive(eid, 'SALARY');
-    if(sal) return { rec: sal, usedType: 'Salary', special: false, fallback: true };
-  }
-  return null;
+  const rec = computeActiveRecord(eid, mode);
+  return rec ? { rec, usedType: rec.accType, special: isSpecial(rec) } : null;
 }
 
 document.querySelectorAll('.mode-btn[data-mode]').forEach(btn=>{
@@ -882,8 +968,7 @@ document.querySelectorAll('.mode-btn[data-mode]').forEach(btn=>{
 });
 
 function usedBadge(result){
-  if(result.special) return `<span class="badge badge-special">${esc(result.usedType)} · special</span>`;
-  if(result.fallback) return `<span class="badge badge-fallback">${esc(result.usedType)} · fallback</span>`;
+  if(result.special) return `<span class="badge badge-special">${esc(result.usedType)} · timed</span>`;
   return `<span class="badge badge-type">${esc(result.usedType)}</span>`;
 }
 
@@ -1002,7 +1087,7 @@ function renderBatch(){
       return `<tr>
         <td class="mono">${esc(eid)}</td><td>${esc(name||nameForEid(eid)||'—')}</td>
         <td><span class="badge badge-missing">NO ACCOUNT</span></td>
-        <td colspan="5" class="hint">No valid ${esc(currentBatchMode)} account (and no fallback) found for this EID.</td>
+        <td colspan="5" class="hint">No currently Active ${esc(currentBatchMode)} account found for this EID.</td>
       </tr>`;
     }
     const r = result.rec;
@@ -1022,15 +1107,15 @@ function renderBatch(){
   </tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 document.getElementById('batch-export').addEventListener('click', ()=>{
-  const header = ['EID','Name','Mode','UsedAs','Special','Fallback','AccountNo','AddDetail','Comment','StartDate','ExpDate','Source'];
+  const header = ['EID','Name','Purpose','UsedAs','Timed','AccountNo','AddDetail','Comment','StartDate','ExpDate','Source'];
   const lines = [header.join(',')];
   LAST_BATCH_RESULTS.forEach(({eid,name,result})=>{
     if(!result){
-      lines.push([eid,name,currentBatchMode,'NO ACCOUNT','','','','','','','',''].map(v=>`"${(v??'').toString().replace(/"/g,'""')}"`).join(','));
+      lines.push([eid,name,currentBatchMode,'NO ACCOUNT','','','','','','',''].map(v=>`"${(v??'').toString().replace(/"/g,'""')}"`).join(','));
       return;
     }
     const r = result.rec;
-    const row = [eid, name||nameForEid(eid), currentBatchMode, result.usedType, result.special?'YES':'', result.fallback?'YES':'',
+    const row = [eid, name||nameForEid(eid), currentBatchMode, result.usedType, result.special?'YES':'',
       r.accountNo, r.addDetail, r.comment, r.startDate, r.expDate, r.source==='auto'?'ap2_accLog':'manual']
       .map(v => `"${(v??'').toString().replace(/"/g,'""')}"`);
     lines.push(row.join(','));
@@ -1061,46 +1146,60 @@ function refreshLogFilters(){
   document.getElementById(id).addEventListener('change', renderLog);
 });
 
+function fmtTs(ms){
+  if(!ms) return '—';
+  const d = new Date(ms);
+  return d.toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
 function renderLog(){
   const eidF = document.getElementById('f-eid').value;
   const typeF = document.getElementById('f-acctype').value;
   const statusF = document.getElementById('f-status').value;
   const sourceF = document.getElementById('f-source').value;
 
-  let rows = allRecords().filter(r=>{
+  const all = allRecords();
+  document.getElementById('log-n-active').textContent = all.filter(r=>recordStatus(r)==='active').length;
+  document.getElementById('log-n-inactive').textContent = all.filter(r=>recordStatus(r)==='inactive').length;
+  document.getElementById('log-n-total').textContent = all.length;
+
+  let rows = all.filter(r=>{
     if(eidF && r.eid !== eidF) return false;
     if(typeF && r.accType !== typeF) return false;
-    if(statusF === 'active' && !isActive(r)) return false;
-    if(statusF === 'expired' && isActive(r)) return false;
+    const st = recordStatus(r);
+    if(statusF === 'active' && st !== 'active') return false;
+    if(statusF === 'inactive' && st !== 'inactive') return false;
     if(sourceF && r.source !== sourceF) return false;
     return true;
   });
+  rows.sort((a,b)=> (b.activatedAt||0) - (a.activatedAt||0));
 
   const el = document.getElementById('log-table');
   if(!rows.length){ el.innerHTML = '<div class="empty">No records match these filters.</div>'; return; }
-  const html = rows.map(r=>`<tr>
+  const html = rows.map(r=>{
+    const st = recordStatus(r);
+    return `<tr>
+    <td class="mono">${esc(fmtTs(r.activatedAt))}</td>
     <td class="mono">${esc(r.eid||'—')}</td>
-    <td>${esc(nameForEid(r.eid)||'—')}</td>
-    <td><span class="badge badge-type">${esc(r.accType)}</span></td>
+    <td><span class="badge badge-type">${esc(r.accType)}</span>${isSpecial(r) ? ' <span class="badge badge-special">TIMED</span>' : ''}</td>
     <td class="mono">${esc(r.accountNo)}</td>
     <td>${esc(r.addDetail||'—')}</td>
-    <td>${esc(r.comment||'—')}</td>
+    <td>${st==='active' ? '<span class="badge badge-active">ACTIVE</span>' : '<span class="badge badge-inactive">INACTIVE</span>'}</td>
     <td class="mono">${esc(r.startDate||'—')}</td>
     <td class="mono">${esc(r.expDate||'no expiry')}</td>
-    <td>${isSpecial(r) ? '<span class="badge badge-special">TIMED</span>' : ''}</td>
-    <td>${isActive(r) ? '<span class="badge badge-active">ACTIVE</span>' : '<span class="badge badge-expired">EXPIRED</span>'}</td>
     <td><span class="badge ${r.source==='auto'?'badge-auto':'badge-manual'}">${r.source==='auto'?'ap2_accLog':'manual'}</span></td>
     <td>${r.source==='auto' ? '' : `<button class="small-btn" onclick="removeRecord('${r.id}')">Remove</button>`}</td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
   el.innerHTML = `<div class="tablewrap"><table><thead><tr>
-    <th>EID</th><th>Name</th><th>AccType</th><th>Account No</th><th>AddDetail</th><th>Comment</th><th>StartDate</th><th>ExpDate</th><th>Timed</th><th>Status</th><th>Source</th><th></th>
+    <th>Timestamp</th><th>EID</th><th>AccType</th><th>Account No</th><th>AddDetail</th><th>Status</th><th>StartDate</th><th>ExpDate</th><th>Source</th><th></th>
   </tr></thead><tbody>${html}</tbody></table></div>`;
 }
 document.getElementById('export-csv').addEventListener('click', ()=>{
-  const header = ['EID','AccType','Account No','AddDetail','Comment','StartDate','ExpDate','Status','Source'];
+  const header = ['Timestamp','EID','AccType','Account No','AddDetail','Status','StartDate','ExpDate','Source'];
   const lines = [header.join(',')];
-  allRecords().forEach(r=>{
-    const row = [r.eid, r.accType, r.accountNo, r.addDetail, r.comment, r.startDate, r.expDate, isActive(r)?'ACTIVE':'EXPIRED', r.source==='auto'?'ap2_accLog':'manual']
+  allRecords().slice().sort((a,b)=>(b.activatedAt||0)-(a.activatedAt||0)).forEach(r=>{
+    const row = [fmtTs(r.activatedAt), r.eid, r.accType, r.accountNo, r.addDetail, recordStatus(r)==='active'?'ACTIVE':'INACTIVE', r.startDate, r.expDate, r.source==='auto'?'ap2_accLog':'manual']
       .map(v => `"${(v??'').toString().replace(/"/g,'""')}"`);
     lines.push(row.join(','));
   });
@@ -1110,12 +1209,156 @@ document.getElementById('export-csv').addEventListener('click', ()=>{
   URL.revokeObjectURL(url);
 });
 
+// ---------- ACTIVATION PORTAL ----------
+let portalEid = '';
+let portalPurpose = '';
+
+function refreshPortalEidSelect(){
+  const sel = document.getElementById('p-eid');
+  const cur = sel.value;
+  const list = allEmployees();
+  const eidsWithRecords = new Set(distinctEIDs());
+  // Show every known employee (even with no accounts yet) plus any EID that
+  // only appears in ap2_accLog but isn't in the employee master yet.
+  const merged = {};
+  list.forEach(e=> merged[e.empid] = e.name);
+  eidsWithRecords.forEach(e=>{ if(!(e in merged)) merged[e] = ''; });
+  const ids = Object.keys(merged).sort();
+  if(ids.length){
+    sel.innerHTML = '<option value="">Select rider…</option>' +
+      ids.map(id=>`<option value="${esc(id)}">${esc(id)}${merged[id] ? ' – ' + esc(merged[id]) : ''}</option>`).join('');
+  } else {
+    sel.innerHTML = '<option value="">No riders yet</option>';
+  }
+  if([...sel.options].some(o=>o.value===cur)) sel.value = cur;
+}
+document.getElementById('p-eid').addEventListener('change', (e)=>{
+  portalEid = e.target.value;
+  portalPurpose = '';
+  document.querySelectorAll('.mode-btn[data-purpose]').forEach(b=>b.classList.remove('active'));
+  renderPortal();
+});
+document.querySelectorAll('.mode-btn[data-purpose]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    if(!portalEid){ alert('Pick a rider first.'); return; }
+    document.querySelectorAll('.mode-btn[data-purpose]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    portalPurpose = btn.dataset.purpose;
+    renderPortal();
+  });
+});
+
+function activateExisting(recordId){
+  const src = allRecords().find(r=>r.id===recordId);
+  if(!src) return;
+  // Every activation is a fresh, timestamped event — nothing is overwritten,
+  // so the full history (including who/what was active before) stays intact.
+  RECORDS.push(newRecord({
+    eid: src.eid, accType: src.accType, accountNo: src.accountNo,
+    addDetail: src.addDetail, comment: src.comment,
+    startDate: src.startDate, expDate: src.expDate
+  }));
+  saveData().then(renderAll);
+}
+document.getElementById('p-panel').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-activate]');
+  if(btn) activateExisting(btn.dataset.activate);
+});
+document.getElementById('p-panel').addEventListener('click', (e)=>{
+  if(e.target.id === 'p-add-save') savePortalNewAccount();
+});
+function savePortalNewAccount(){
+  const accountNo = document.getElementById('p-add-accno').value.trim();
+  const addDetail = document.getElementById('p-add-adddetail').value.trim();
+  const startDate = document.getElementById('p-add-start').value;
+  const expDate = document.getElementById('p-add-exp').value;
+  const errEl = document.getElementById('p-add-error');
+  if(!accountNo){ errEl.textContent = 'Account No is required.'; return; }
+  errEl.textContent = '';
+  RECORDS.push(newRecord({ eid: portalEid, accType: portalPurpose, accountNo, addDetail, comment:'', startDate, expDate }));
+  saveData().then(renderAll);
+}
+
+function renderPortal(){
+  refreshPortalEidSelect();
+  const panel = document.getElementById('p-panel');
+  document.querySelectorAll('.mode-btn[data-purpose]').forEach(b=>{
+    b.classList.toggle('active', b.dataset.purpose === portalPurpose);
+  });
+
+  if(!portalEid){
+    panel.innerHTML = '';
+  } else if(!portalPurpose){
+    panel.innerHTML = `<p class="hint" style="margin-top:14px;">Pick WPS, Salary, or Advance above to see or activate an account for this rider.</p>`;
+  } else {
+    const group = groupFor(portalEid, portalPurpose).slice().sort((a,b)=>(b.activatedAt||0)-(a.activatedAt||0));
+    const activeRec = computeActiveRecord(portalEid, portalPurpose);
+    const timedActive = activeRec && isSpecial(activeRec);
+    let html = `<div class="preview-panel">`;
+    html += `<div style="font-size:12.5px;font-weight:600;color:var(--navy);margin-bottom:10px;">${esc(portalPurpose)} accounts for ${esc(portalEid)}${nameForEid(portalEid) ? ' – ' + esc(nameForEid(portalEid)) : ''}</div>`;
+    if(timedActive){
+      html += `<div class="timed-note">A timed account (valid ${esc(activeRec.startDate)} → ${esc(activeRec.expDate)}) is automatically Active for this purpose right now. Activating another one below is still recorded, but it'll only take effect once this timed window ends.</div>`;
+    }
+    if(group.length){
+      group.forEach(r=>{
+        const st = recordStatus(r);
+        html += `<div class="preview-row">
+          <div class="info">
+            <div class="acc">${esc(r.accountNo)} ${isSpecial(r) ? '<span class="badge badge-special">TIMED</span>' : ''}</div>
+            <div class="meta">${esc(r.addDetail||'No add. detail')} · ${esc(r.startDate||'no start')} → ${esc(r.expDate||'no expiry')} · activated ${esc(fmtTs(r.activatedAt))}</div>
+          </div>
+          <span class="badge ${st==='active'?'badge-active':'badge-inactive'}">${st.toUpperCase()}</span>
+          <button class="btn btn-ghost" data-activate="${r.id}">${st==='active' ? 'Re-activate' : 'Activate'}</button>
+        </div>`;
+      });
+    } else {
+      html += `<p class="hint" style="margin-top:0;">No ${esc(portalPurpose)} account on file yet for this rider.</p>`;
+    }
+    html += `<h2 style="margin-top:18px;font-size:13px;">Add a new ${esc(portalPurpose)} account &amp; activate it</h2>
+      <label>Account No</label><input id="p-add-accno" class="mono" placeholder="account / IBAN / card number">
+      <label>AddDetail</label><input id="p-add-adddetail" placeholder="bank name, branch, etc.">
+      <label>StartDate <span class="hint">(leave both dates blank for an ordinary account)</span></label><input id="p-add-start" type="date">
+      <label>ExpDate</label><input id="p-add-exp" type="date">
+      <div id="p-add-error" class="error"></div>
+      <div class="btn-row"><button class="btn btn-primary" id="p-add-save">Add &amp; activate</button></div>`;
+    html += `</div>`;
+    panel.innerHTML = html;
+  }
+
+  const riderRecs = portalEid ? allRecords().filter(r=>r.eid===portalEid) : [];
+  document.getElementById('p-n-active').textContent = riderRecs.filter(r=>recordStatus(r)==='active').length;
+  document.getElementById('p-n-inactive').textContent = riderRecs.filter(r=>recordStatus(r)==='inactive').length;
+  document.getElementById('p-n-total').textContent = riderRecs.length;
+
+  const tblEl = document.getElementById('p-rider-table');
+  if(!portalEid){ tblEl.innerHTML = '<div class="empty">Pick a rider above to see their accounts.</div>'; return; }
+  if(!riderRecs.length){ tblEl.innerHTML = '<div class="empty">No accounts on file for this rider yet.</div>'; return; }
+  const sorted = riderRecs.slice().sort((a,b)=>(b.activatedAt||0)-(a.activatedAt||0));
+  const rows = sorted.map(r=>{
+    const st = recordStatus(r);
+    return `<tr>
+      <td class="mono">${esc(fmtTs(r.activatedAt))}</td>
+      <td class="mono">${esc(r.eid)}</td>
+      <td><span class="badge badge-type">${esc(r.accType)}</span>${isSpecial(r) ? ' <span class="badge badge-special">TIMED</span>' : ''}</td>
+      <td class="mono">${esc(r.accountNo)}</td>
+      <td>${esc(r.addDetail||'—')}</td>
+      <td>${st==='active' ? '<span class="badge badge-active">ACTIVE</span>' : '<span class="badge badge-inactive">INACTIVE</span>'}</td>
+      <td class="mono">${esc(r.startDate||'—')}</td>
+      <td class="mono">${esc(r.expDate||'no expiry')}</td>
+    </tr>`;
+  }).join('');
+  tblEl.innerHTML = `<div class="tablewrap"><table><thead><tr>
+    <th>Timestamp</th><th>EID</th><th>AccType</th><th>Account No</th><th>AddDetail</th><th>Status</th><th>StartDate</th><th>ExpDate</th>
+  </tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
 // ---------- RENDER ALL ----------
 function renderAll(){
   if(!loaded) return;
   document.getElementById('import-summary').textContent = `${allRecords().length} record(s) on file (${AUTO_RECORDS.length} live from ap2_accLog, ${RECORDS.length} manual/CSV) across ${distinctEIDs().length} EID(s).`;
   refreshEidSelect();
   refreshEmpSummary();
+  renderPortal();
   renderResolver();
   renderStatusTable();
   renderBatch();
