@@ -8,101 +8,124 @@
 <script src="https://effimalik.github.io/Testing/shared/cioView.js"></script>
 <style>
   :root{
-    --bg:#F5F6F8; --surface:#FFFFFF; --ink:#151A23; --ink-soft:#5B6472; --border:#E2E5EA;
-    --navy:#10243E; --navy-soft:#1B3A5C; --teal:#1E7F73; --teal-soft:#E6F2EF;
-    --amber:#B8722C; --amber-soft:#FBF0E4; --red:#B4432F; --red-soft:#FBE7E4; --violet:#5B4B9E; --violet-soft:#EFEBFB; --radius:8px;
+    --bg:#F3F5F8; --surface:#FFFFFF; --ink:#151A23; --ink-soft:#5B6472; --border:#E4E7EC;
+    --navy:#0F2340; --navy-soft:#1B3A5C; --navy2:#173A63; --teal:#12897B; --teal-soft:#E4F4F1;
+    --amber:#B8722C; --amber-soft:#FBF0E4; --red:#C2402B; --red-soft:#FCEAE7; --violet:#5B4B9E; --violet-soft:#EFEBFB;
+    --gold:#8A6D1F; --gold-soft:#FBF3DE; --radius:10px;
+    --shadow:0 1px 2px rgba(16,26,45,.04), 0 4px 16px rgba(16,26,45,.06);
   }
   *{box-sizing:border-box;}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;}
-  .app{max-width:1280px;margin:0 auto;padding:28px 24px 80px;}
-  header.top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;padding-bottom:18px;border-bottom:2px solid var(--navy);}
-  header.top .brand{display:flex;align-items:baseline;gap:12px;}
-  header.top h1{font-family:'Space Grotesk',sans-serif;font-size:22px;letter-spacing:-0.01em;margin:0;color:var(--navy);}
-  header.top .tag{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);background:var(--surface);border:1px solid var(--border);padding:3px 8px;border-radius:4px;}
-  header.top .stamp{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--teal);border:1.5px solid var(--teal);padding:4px 10px;border-radius:4px;transform:rotate(-2deg);font-weight:600;letter-spacing:.04em;}
+  html,body{height:100%;}
+  body{margin:0;background:
+    radial-gradient(1200px 400px at 100% -10%, #E7EEF7 0%, transparent 55%),
+    var(--bg);
+    color:var(--ink);font-family:'Inter',sans-serif;overflow:hidden;}
 
-  .syncbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:12.5px;color:var(--ink-soft);}
+  .app{height:100vh;max-width:1360px;margin:0 auto;padding:18px 22px 14px;display:flex;flex-direction:column;}
+
+  header.top{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:14px 20px;border-radius:12px;
+    background:linear-gradient(120deg, var(--navy) 0%, var(--navy2) 60%, #204a7c 100%);box-shadow:var(--shadow);}
+  header.top .brand{display:flex;align-items:center;gap:12px;}
+  header.top .brand .dotmark{width:9px;height:9px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 4px rgba(18,137,123,.28);flex:none;}
+  header.top h1{font-family:'Space Grotesk',sans-serif;font-size:19px;letter-spacing:-0.01em;margin:0;color:#fff;}
+  header.top .tag{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#C9D6E8;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);padding:3px 8px;border-radius:4px;}
+  header.top .stamp{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#DFF3EF;background:rgba(18,137,123,.28);border:1px solid rgba(18,137,123,.55);padding:5px 11px;border-radius:5px;font-weight:600;letter-spacing:.05em;}
+
+  .syncbar{flex:0 0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 14px;margin-bottom:10px;font-size:12px;color:var(--ink-soft);box-shadow:var(--shadow);}
   .syncbar .dot{width:8px;height:8px;border-radius:50%;background:#B7BDC7;flex:none;}
   .syncbar.live .dot{background:var(--teal);box-shadow:0 0 0 3px var(--teal-soft);}
   .syncbar.none .dot{background:var(--amber);box-shadow:0 0 0 3px var(--amber-soft);}
   .syncbar strong{color:var(--ink);}
   .syncbar .spacer{flex:1;}
-  .syncbar button{font-size:11.5px;padding:5px 10px;border-radius:5px;border:1px solid var(--border);background:#fff;color:var(--ink-soft);cursor:pointer;}
+  .syncbar button{font-size:11.5px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:#fff;color:var(--ink-soft);cursor:pointer;transition:.15s;}
   .syncbar button:hover{border-color:var(--navy);color:var(--navy);}
 
-  nav.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
-  nav.tabs button{font-size:14px;font-weight:500;color:var(--ink-soft);background:none;border:none;padding:10px 16px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;}
-  nav.tabs button.active{color:var(--navy);border-bottom-color:var(--navy);font-weight:600;}
-  nav.tabs button:hover{color:var(--navy);}
+  nav.tabs{flex:0 0 auto;display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:5px;box-shadow:var(--shadow);}
+  nav.tabs button{font-size:13px;font-weight:600;color:var(--ink-soft);background:none;border:none;padding:9px 16px;cursor:pointer;border-radius:8px;transition:.15s;letter-spacing:.01em;}
+  nav.tabs button.active{color:#fff;background:linear-gradient(120deg,var(--navy) 0%, var(--navy2) 100%);box-shadow:0 2px 8px rgba(15,35,64,.25);}
+  nav.tabs button:hover:not(.active){color:var(--navy);background:var(--bg);}
+
+  .tab-viewport{flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:2px;}
   section.tab{display:none;} section.tab.active{display:block;}
 
-  .grid2{display:grid;grid-template-columns:360px 1fr;gap:20px;align-items:start;}
-  @media (max-width:860px){.grid2{grid-template-columns:1fr;}}
+  .grid2{display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start;}
+  @media (max-width:900px){.grid2{grid-template-columns:1fr;}}
 
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
-  .card h2{font-family:'Space Grotesk',sans-serif;font-size:15px;margin:0 0 14px;color:var(--navy);}
-  .card + .card{margin-top:20px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);}
+  .card h2{font-family:'Space Grotesk',sans-serif;font-size:14.5px;margin:0 0 12px;color:var(--navy);}
+  .card + .card{margin-top:14px;}
 
-  label{display:block;font-size:12px;color:var(--ink-soft);margin:10px 0 4px;font-weight:500;}
+  label{display:block;font-size:11.5px;color:var(--ink-soft);margin:9px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
   label:first-of-type{margin-top:0;}
-  input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:'Inter',sans-serif;font-size:13.5px;background:#fff;color:var(--ink);}
-  input:focus,select:focus,textarea:focus{outline:2px solid var(--teal);outline-offset:1px;border-color:var(--teal);}
-  textarea{font-family:'IBM Plex Mono',monospace;font-size:11.5px;min-height:110px;resize:vertical;}
+  input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-family:'Inter',sans-serif;font-size:13.5px;background:#fcfdfe;color:var(--ink);transition:.15s;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-soft);}
+  textarea{font-family:'IBM Plex Mono',monospace;font-size:11.5px;min-height:90px;resize:vertical;}
   .mono{font-family:'IBM Plex Mono',monospace;}
-  .hint{font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
+  .hint{font-size:11.5px;color:var(--ink-soft);margin-top:4px;line-height:1.5;}
   .error{color:var(--red);font-size:12px;margin-top:6px;}
   .ok{color:var(--teal);font-size:12px;margin-top:6px;}
 
-  button.btn{font-weight:600;font-size:13px;padding:9px 16px;border-radius:6px;border:none;cursor:pointer;}
-  button.btn-primary{background:var(--navy);color:#fff;}
-  button.btn-primary:hover{background:var(--navy-soft);}
-  button.btn-ghost{background:none;border:1px solid var(--border);color:var(--ink-soft);}
+  button.btn{font-weight:600;font-size:12.5px;padding:9px 16px;border-radius:7px;border:none;cursor:pointer;transition:.15s;}
+  button.btn-primary{background:linear-gradient(120deg,var(--navy) 0%, var(--navy2) 100%);color:#fff;}
+  button.btn-primary:hover{filter:brightness(1.12);box-shadow:0 3px 10px rgba(15,35,64,.3);}
+  button.btn-ghost{background:#fff;border:1px solid var(--border);color:var(--ink-soft);}
   button.btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
-  .btn-row{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;}
-  .small-btn{font-size:11px;padding:4px 8px;border-radius:5px;border:1px solid var(--border);background:#fff;color:var(--ink-soft);cursor:pointer;}
+  .btn-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+  .small-btn{font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:#fff;color:var(--ink-soft);cursor:pointer;}
   .small-btn:hover{color:var(--red);border-color:var(--red);}
-  .import-drop{border:1.5px dashed var(--border);border-radius:8px;padding:16px;text-align:center;font-size:12.5px;color:var(--ink-soft);}
+  .import-drop{border:1.5px dashed var(--border);border-radius:9px;padding:14px;text-align:center;font-size:12.5px;color:var(--ink-soft);background:var(--bg);}
 
-  table{width:100%;border-collapse:collapse;font-size:13px;}
-  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);border-bottom:1px solid var(--border);padding:8px 10px;font-weight:600;white-space:nowrap;}
-  td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);border-bottom:1px solid var(--border);padding:7px 9px;font-weight:700;white-space:nowrap;position:sticky;top:0;background:var(--surface);}
+  td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;}
   tr:last-child td{border-bottom:none;}
-  tr:hover td{background:#FAFBFC;}
-  .empty{color:var(--ink-soft);font-size:13px;padding:24px 4px;text-align:center;}
-  .tablewrap{overflow-x:auto;}
+  tr:hover td{background:#FAFBFD;}
+  .empty{color:var(--ink-soft);font-size:13px;padding:20px 4px;text-align:center;}
+  .tablewrap{overflow:auto;max-height:38vh;border-radius:8px;border:1px solid var(--border);}
 
-  .badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;letter-spacing:.03em;white-space:nowrap;}
+  .badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:.03em;white-space:nowrap;}
   .badge-active{background:var(--teal-soft);color:var(--teal);border:1px solid var(--teal);}
   .badge-inactive{background:#EEF0F3;color:var(--ink-soft);border:1px solid var(--border);}
   .badge-expired{background:var(--red-soft);color:var(--red);border:1px solid var(--red);}
+  .badge-upcoming{background:var(--gold-soft);color:var(--gold);border:1px solid var(--gold);}
   .badge-missing{background:#EEF0F3;color:var(--ink-soft);border:1px solid var(--border);}
-  .badge-fallback{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber);transform:rotate(-1deg);display:inline-block;}
   .badge-special{background:var(--violet-soft);color:var(--violet);border:1px solid var(--violet);}
   .badge-type{background:#EEF0F3;color:var(--ink-soft);}
   .badge-auto{background:var(--teal-soft);color:var(--teal);}
   .badge-manual{background:#EEF0F3;color:var(--ink-soft);}
 
-  .preview-panel{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:16px;}
-  .preview-row{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:10px 12px;margin-bottom:8px;flex-wrap:wrap;}
+  .active-account-card{display:flex;align-items:center;gap:14px;background:linear-gradient(120deg, var(--teal-soft), #fff);border:1px solid var(--teal);border-radius:10px;padding:12px 16px;margin-bottom:12px;flex-wrap:wrap;}
+  .active-account-card.is-expired{background:linear-gradient(120deg, var(--red-soft), #fff);border-color:var(--red);}
+  .active-account-card.is-missing{background:var(--bg);border-color:var(--border);}
+  .active-account-card .acc-no{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;color:var(--navy);letter-spacing:.01em;}
+  .active-account-card .acc-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:700;}
+  .override-note{background:var(--gold-soft);color:var(--gold);border:1px solid var(--gold);border-radius:7px;padding:7px 11px;font-size:11.5px;margin-top:8px;flex-basis:100%;}
+
+  .preview-panel{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:14px;margin-top:14px;}
+  .preview-row{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;flex-wrap:wrap;transition:.15s;}
+  .preview-row:hover{border-color:var(--navy);}
   .preview-row:last-child{margin-bottom:0;}
   .preview-row .info{flex:1;min-width:220px;}
-  .preview-row .acc{font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:600;color:var(--ink);}
+  .preview-row .acc{font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:700;color:var(--ink);}
   .preview-row .meta{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
-  .timed-note{background:var(--violet-soft);color:var(--violet);border:1px solid var(--violet);border-radius:6px;padding:8px 12px;font-size:12px;margin-bottom:12px;}
+  .timed-note{background:var(--violet-soft);color:var(--violet);border:1px solid var(--violet);border-radius:7px;padding:8px 12px;font-size:12px;margin-bottom:12px;}
 
-  .mode-row{display:flex;gap:8px;margin-bottom:18px;}
-  .mode-btn{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;padding:10px 20px;border-radius:7px;border:1.5px solid var(--border);background:#fff;color:var(--ink-soft);cursor:pointer;letter-spacing:.03em;}
-  .mode-btn.active{border-color:var(--navy);background:var(--navy);color:#fff;}
+  .mode-row{display:flex;gap:8px;margin-bottom:16px;}
+  .mode-btn{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;padding:9px 18px;border-radius:8px;border:1.5px solid var(--border);background:#fff;color:var(--ink-soft);cursor:pointer;letter-spacing:.03em;transition:.15s;}
+  .mode-btn.active{border-color:var(--navy);background:linear-gradient(120deg,var(--navy) 0%, var(--navy2) 100%);color:#fff;box-shadow:0 2px 8px rgba(15,35,64,.25);}
   .mode-btn:hover:not(.active){border-color:var(--navy);color:var(--navy);}
 
-  .filters{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:end;}
+  .filters{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:end;}
   .filters > div{min-width:150px;}
   .filters label{margin-top:0;}
-  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
-  .stat-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
-  .stat{flex:1;min-width:120px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:10px 12px;}
-  .stat .n{font-family:'Space Grotesk',sans-serif;font-size:20px;color:var(--navy);}
-  .stat .l{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;}
+  .stat-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  .stat{flex:1;min-width:120px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--navy);border-radius:8px;padding:9px 12px;box-shadow:var(--shadow);}
+  .stat.acc-active{border-left-color:var(--teal);}
+  .stat.acc-inactive{border-left-color:var(--ink-soft);}
+  .stat.acc-expired{border-left-color:var(--red);}
+  .stat .n{font-family:'Space Grotesk',sans-serif;font-size:19px;color:var(--navy);}
+  .stat .l{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;}
 </style>
 
 <div class="app">
@@ -129,7 +152,7 @@
     <button data-tab="log">Full Log</button>
   </nav>
 
-  <!-- ACTIVATION PORTAL -->
+  <div class="tab-viewport">
   <section class="tab active" id="tab-portal">
     <div class="card">
       <h2>Activate an account for a rider</h2>
@@ -321,8 +344,9 @@
         <button class="btn btn-ghost" id="export-csv">Export CSV</button>
       </div>
       <div class="stat-row">
-        <div class="stat"><div class="n" id="log-n-active">0</div><div class="l">Active (all riders)</div></div>
-        <div class="stat"><div class="n" id="log-n-inactive">0</div><div class="l">Inactive (all riders)</div></div>
+        <div class="stat acc-active"><div class="n" id="log-n-active">0</div><div class="l">Active (all riders)</div></div>
+        <div class="stat acc-inactive"><div class="n" id="log-n-inactive">0</div><div class="l">Inactive</div></div>
+        <div class="stat acc-expired"><div class="n" id="log-n-expired">0</div><div class="l">Expired</div></div>
         <div class="stat"><div class="n" id="log-n-total">0</div><div class="l">Total records</div></div>
       </div>
       <div class="filters">
@@ -340,6 +364,8 @@
             <option value="">All</option>
             <option value="active">Active only</option>
             <option value="inactive">Inactive only</option>
+            <option value="expired">Expired only</option>
+            <option value="upcoming">Upcoming only</option>
           </select>
         </div>
         <div>
@@ -354,6 +380,7 @@
       <div id="log-table"></div>
     </div>
   </section>
+  </div>
 </div>
 
 <script>
@@ -545,12 +572,33 @@ function computeActiveRecord(eid, type){
   pool.sort((a,b) => (b.activatedAt||0) - (a.activatedAt||0));
   return pool[0];
 }
+/* What would be Active for this EID+type if timed accounts weren't given
+   automatic priority — i.e. the plain "last coming" pick among ordinary
+   (non-timed) currently-valid accounts. Used to detect + explain an
+   override: when a timed account is the actual winner but a *different*
+   account would otherwise be active, that's an override worth flagging. */
+function wouldBeWithoutTimed(eid, type){
+  const eligible = groupFor(eid, type).filter(isActive).filter(r=>!isSpecial(r));
+  if(!eligible.length) return null;
+  eligible.sort((a,b) => (b.activatedAt||0) - (a.activatedAt||0));
+  return eligible[0];
+}
+/* Per-record status shown everywhere: Active / Inactive / Expired / Upcoming.
+   A timed record past its ExpDate is EXPIRED (not just "inactive") so it's
+   visually distinct that the account itself lapsed, vs. simply being
+   superseded by something newer. A timed record whose StartDate hasn't
+   arrived yet is UPCOMING. */
 function recordStatus(r){
+  if(isSpecial(r)){
+    const t = todayISO();
+    if(r.expDate && r.expDate < t) return 'expired';
+    if(r.startDate && r.startDate > t) return 'upcoming';
+  }
   const winner = computeActiveRecord(r.eid, r.accType);
   return (winner && winner.id === r.id) ? 'active' : 'inactive';
 }
 function activeCount(){ return allRecords().filter(r=>recordStatus(r)==='active').length; }
-function inactiveCount(){ return allRecords().filter(r=>recordStatus(r)==='inactive').length; }
+function inactiveCount(){ return allRecords().filter(r=>recordStatus(r)!=='active').length; }
 
 /* Column mapping for each row cached under ap2_accLog. Adjust here if the
    real sheet's column order differs — everything else consumes the
@@ -951,11 +999,21 @@ function distinctEIDs(){
 function statusFor(eid, type){
   const all = groupFor(eid, type);
   if(!all.length) return 'missing';
-  return computeActiveRecord(eid, type) ? 'active' : 'missing';
+  if(computeActiveRecord(eid, type)) return 'active';
+  // No current winner — report the most recent record's own status
+  // (expired / upcoming / inactive) so the overview explains why.
+  const mostRecent = all.slice().sort((a,b)=>(b.activatedAt||0)-(a.activatedAt||0))[0];
+  return recordStatus(mostRecent);
 }
 function resolve(eid, mode){
   const rec = computeActiveRecord(eid, mode);
-  return rec ? { rec, usedType: rec.accType, special: isSpecial(rec) } : null;
+  if(!rec) return null;
+  let overriding = null;
+  if(isSpecial(rec)){
+    const alt = wouldBeWithoutTimed(eid, mode);
+    if(alt && alt.accountNo !== rec.accountNo) overriding = alt;
+  }
+  return { rec, usedType: rec.accType, special: isSpecial(rec), overriding };
 }
 
 document.querySelectorAll('.mode-btn[data-mode]').forEach(btn=>{
@@ -980,26 +1038,30 @@ function renderResolver(){
     const result = resolve(eid, currentMode);
     if(!result) return;
     const r = result.rec;
+    const overrideCell = result.overriding
+      ? `<span class="badge badge-special">TIMED</span> overrides <span class="mono">${esc(result.overriding.accountNo)}</span>`
+      : '—';
     rows.push(`<tr>
       <td class="mono">${esc(eid)}</td>
       <td>${esc(nameForEid(eid)||'—')}</td>
+      <td class="mono" style="font-weight:700;font-size:13.5px;">${esc(r.accountNo)}</td>
       <td>${usedBadge(result)}</td>
-      <td class="mono">${esc(r.accountNo)}</td>
       <td>${esc(r.addDetail||'—')}</td>
-      <td>${esc(r.comment||'—')}</td>
       <td class="mono">${esc(r.startDate||'—')} → ${esc(r.expDate||'no expiry')}</td>
-      <td><span class="badge badge-active">ACTIVE</span></td>
+      <td>${overrideCell}</td>
     </tr>`);
   });
   if(!rows.length){ el.innerHTML = `<div class="empty">No EID currently has a valid ${esc(currentMode)} account.</div>`; return; }
   el.innerHTML = `<div class="tablewrap"><table><thead><tr>
-    <th>EID</th><th>Name</th><th>Used as</th><th>Account No</th><th>AddDetail</th><th>Comment</th><th>Validity</th><th>Status</th>
+    <th>EID</th><th>Name</th><th>Active Account No</th><th>Used as</th><th>AddDetail</th><th>Validity</th><th>Override</th>
   </tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
 }
 
 function statusBadge(s){
   if(s==='active') return '<span class="badge badge-active">ACTIVE</span>';
   if(s==='expired') return '<span class="badge badge-expired">EXPIRED</span>';
+  if(s==='upcoming') return '<span class="badge badge-upcoming">UPCOMING</span>';
+  if(s==='inactive') return '<span class="badge badge-inactive">INACTIVE</span>';
   return '<span class="badge badge-missing">—</span>';
 }
 function renderStatusTable(){
@@ -1159,16 +1221,16 @@ function renderLog(){
   const sourceF = document.getElementById('f-source').value;
 
   const all = allRecords();
-  document.getElementById('log-n-active').textContent = all.filter(r=>recordStatus(r)==='active').length;
-  document.getElementById('log-n-inactive').textContent = all.filter(r=>recordStatus(r)==='inactive').length;
+  const statuses = all.map(recordStatus);
+  document.getElementById('log-n-active').textContent = statuses.filter(s=>s==='active').length;
+  document.getElementById('log-n-inactive').textContent = statuses.filter(s=>s==='inactive').length;
+  document.getElementById('log-n-expired').textContent = statuses.filter(s=>s==='expired').length;
   document.getElementById('log-n-total').textContent = all.length;
 
   let rows = all.filter(r=>{
     if(eidF && r.eid !== eidF) return false;
     if(typeF && r.accType !== typeF) return false;
-    const st = recordStatus(r);
-    if(statusF === 'active' && st !== 'active') return false;
-    if(statusF === 'inactive' && st !== 'inactive') return false;
+    if(statusF && recordStatus(r) !== statusF) return false;
     if(sourceF && r.source !== sourceF) return false;
     return true;
   });
@@ -1177,14 +1239,13 @@ function renderLog(){
   const el = document.getElementById('log-table');
   if(!rows.length){ el.innerHTML = '<div class="empty">No records match these filters.</div>'; return; }
   const html = rows.map(r=>{
-    const st = recordStatus(r);
     return `<tr>
     <td class="mono">${esc(fmtTs(r.activatedAt))}</td>
     <td class="mono">${esc(r.eid||'—')}</td>
     <td><span class="badge badge-type">${esc(r.accType)}</span>${isSpecial(r) ? ' <span class="badge badge-special">TIMED</span>' : ''}</td>
     <td class="mono">${esc(r.accountNo)}</td>
     <td>${esc(r.addDetail||'—')}</td>
-    <td>${st==='active' ? '<span class="badge badge-active">ACTIVE</span>' : '<span class="badge badge-inactive">INACTIVE</span>'}</td>
+    <td>${statusBadge(recordStatus(r))}</td>
     <td class="mono">${esc(r.startDate||'—')}</td>
     <td class="mono">${esc(r.expDate||'no expiry')}</td>
     <td><span class="badge ${r.source==='auto'?'badge-auto':'badge-manual'}">${r.source==='auto'?'ap2_accLog':'manual'}</span></td>
@@ -1199,7 +1260,7 @@ document.getElementById('export-csv').addEventListener('click', ()=>{
   const header = ['Timestamp','EID','AccType','Account No','AddDetail','Status','StartDate','ExpDate','Source'];
   const lines = [header.join(',')];
   allRecords().slice().sort((a,b)=>(b.activatedAt||0)-(a.activatedAt||0)).forEach(r=>{
-    const row = [fmtTs(r.activatedAt), r.eid, r.accType, r.accountNo, r.addDetail, recordStatus(r)==='active'?'ACTIVE':'INACTIVE', r.startDate, r.expDate, r.source==='auto'?'ap2_accLog':'manual']
+    const row = [fmtTs(r.activatedAt), r.eid, r.accType, r.accountNo, r.addDetail, recordStatus(r).toUpperCase(), r.startDate, r.expDate, r.source==='auto'?'ap2_accLog':'manual']
       .map(v => `"${(v??'').toString().replace(/"/g,'""')}"`);
     lines.push(row.join(','));
   });
