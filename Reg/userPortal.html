@@ -1723,12 +1723,40 @@ function _renderPaginationBar(tableKey, total, ui) {
 /* ═══════════════════════════════════════════════════════
    RENDER: REQUESTS PORTAL (pending only)
 ═══════════════════════════════════════════════════════ */
+/* Pull additional "should be pending" candidates out of UserLog: anyone
+   denied login (Action: 'Login Denied - Access Requested') whose email
+   either has no Users row at all, or has a Users row that's inactive.
+   These aren't real LoginReq sheet rows, so they're synthesized here
+   purely for display — approve/reject on them still just calls the
+   normal by-email flow. Only the most recent denial per email is kept. */
+function _deriveDeniedAccessRequests() {
+  const latestByEmail = new Map();
+  for (const log of _state.logs) {
+    if (log.action !== 'Login Denied - Access Requested') continue;
+    const email = (log.targetEmail || '').trim().toLowerCase();
+    if (!email) continue;
+    latestByEmail.set(email, log); // later entries overwrite earlier ones
+  }
+
+  const out = [];
+  latestByEmail.forEach((log, email) => {
+    const user = _state.users.find(u => (u.email || '').toLowerCase() === email);
+    const eligible = !user || user.status === 'inactive';
+    if (!eligible) return;
+    out.push({ timestamp: log.timestamp, email, status: 'pending', reason: '', _synthetic: true });
+  });
+  return out;
+}
+
 function renderLoginReqs() {
   const tbody = document.getElementById('loginreq-tbody');
   if (!tbody) return; // panel not present in this portal build
   const ui = _ui.requests;
 
-  let rows = _state.loginReqs.filter(r => r.status === 'pending');
+  const pendingReqs = _state.loginReqs.filter(r => r.status === 'pending');
+  const deniedReqs = _deriveDeniedAccessRequests()
+    .filter(d => !pendingReqs.some(r => (r.email || '').toLowerCase() === d.email));
+  let rows = pendingReqs.concat(deniedReqs);
   document.getElementById('badge-loginreq').textContent = rows.length || '0';
   _updateTabBarOverflow();
   _fillEmailDatalist('requests', rows.map(r => r.email));
@@ -1751,7 +1779,7 @@ function renderLoginReqs() {
   tbody.innerHTML = pageRows.map(row => {
     const ts = row.timestamp || '—';
     const email = row.email || '—';
-    const alreadyUser = _state.users.some(u => u.email === email);
+    const alreadyUser = _state.users.some(u => u.email === email && u.status !== 'inactive');
     const actionBtn = alreadyUser
       ? `<span style="font-size:11.5px;color:var(--text3);font-family:var(--mono);">Already registered</span>`
       : `<div style="display:flex;gap:6px;justify-content:flex-end;">
