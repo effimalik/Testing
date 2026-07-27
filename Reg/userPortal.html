@@ -1813,9 +1813,6 @@ function renderLoginReqs() {
            <button class="tb-btn sm success" title="Activate" onclick="activateInactiveUser('${_esc(email)}')">
              <i class="ti ti-check"></i> <span class="tb-btn-label">Active</span>
            </button>
-           <button class="tb-btn sm danger" title="Reject" onclick="openRejectModal('${_esc(email)}')">
-             <i class="ti ti-x"></i> <span class="tb-btn-label">Reject</span>
-           </button>
          </div>`;
     } else {
       statusBadge = `<span class="badge gold">Pending</span>`;
