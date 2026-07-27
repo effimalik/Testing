@@ -1724,8 +1724,9 @@ function _renderPaginationBar(tableKey, total, ui) {
    RENDER: REQUESTS PORTAL (pending only)
 ═══════════════════════════════════════════════════════ */
 /* Pull additional "should be pending" candidates out of UserLog: anyone
-   denied login (Action: 'Login Denied - Access Requested') whose email
-   either has no Users row at all, or has a Users row that's inactive.
+   denied login (Action: 'Login Denied - Access Requested') with no
+   matching Users row at all. (Existing users who are inactive are a
+   separate case — see _deriveInactiveLoginAttempts below.)
    These aren't real LoginReq sheet rows, so they're synthesized here
    purely for display — approve/reject on them still just calls the
    normal by-email flow. Only the most recent denial per email is kept. */
@@ -1741,9 +1742,30 @@ function _deriveDeniedAccessRequests() {
   const out = [];
   latestByEmail.forEach((log, email) => {
     const user = _state.users.find(u => (u.email || '').toLowerCase() === email);
-    const eligible = !user || user.status === 'inactive';
-    if (!eligible) return;
+    if (user) return; // has a Users row → not this category
     out.push({ timestamp: log.timestamp, email, status: 'pending', reason: '', _synthetic: true });
+  });
+  return out;
+}
+
+/* Anyone who tried to log in and was denied because their Users row is
+   inactive (Action: 'Login Denied - Inactive'), confirmed still inactive
+   in the current Users cache. Shown in the Requests Portal as its own
+   "Inactive" status with Active/Reject actions rather than Approve. */
+function _deriveInactiveLoginAttempts() {
+  const latestByEmail = new Map();
+  for (const log of _state.logs) {
+    if (log.action !== 'Login Denied - Inactive') continue;
+    const email = (log.targetEmail || '').trim().toLowerCase();
+    if (!email) continue;
+    latestByEmail.set(email, log);
+  }
+
+  const out = [];
+  latestByEmail.forEach((log, email) => {
+    const user = _state.users.find(u => (u.email || '').toLowerCase() === email);
+    if (!user || user.status !== 'inactive') return; // must exist AND still be inactive
+    out.push({ timestamp: log.timestamp, email, status: 'inactive', reason: '', _synthetic: true });
   });
   return out;
 }
@@ -1756,7 +1778,10 @@ function renderLoginReqs() {
   const pendingReqs = _state.loginReqs.filter(r => r.status === 'pending');
   const deniedReqs = _deriveDeniedAccessRequests()
     .filter(d => !pendingReqs.some(r => (r.email || '').toLowerCase() === d.email));
-  let rows = pendingReqs.concat(deniedReqs);
+  const inactiveReqs = _deriveInactiveLoginAttempts()
+    .filter(d => !pendingReqs.some(r => (r.email || '').toLowerCase() === d.email)
+              && !deniedReqs.some(r => r.email === d.email));
+  let rows = pendingReqs.concat(deniedReqs, inactiveReqs);
   document.getElementById('badge-loginreq').textContent = rows.length || '0';
   _updateTabBarOverflow();
   _fillEmailDatalist('requests', rows.map(r => r.email));
@@ -1767,7 +1792,7 @@ function renderLoginReqs() {
   }
   rows = _sortRows(rows, ui.sort, (r, k) => r[k]);
   const { pageRows, total } = _paginate(rows, ui);
-  document.getElementById('requests-count').textContent = `${total} pending`;
+  document.getElementById('requests-count').textContent = `${total} request${total !== 1 ? 's' : ''}`;
   _markSortHeaders('requests');
 
   if (!total) {
@@ -1779,21 +1804,37 @@ function renderLoginReqs() {
   tbody.innerHTML = pageRows.map(row => {
     const ts = row.timestamp || '—';
     const email = row.email || '—';
-    const alreadyUser = _state.users.some(u => u.email === email && u.status !== 'inactive');
-    const actionBtn = alreadyUser
-      ? `<span style="font-size:11.5px;color:var(--text3);font-family:var(--mono);">Already registered</span>`
-      : `<div style="display:flex;gap:6px;justify-content:flex-end;">
-           <button class="tb-btn sm success" title="Approve" onclick="openActivateModal('${_esc(email)}','${_esc(ts)}')">
-             <i class="ti ti-check"></i> <span class="tb-btn-label">Approve</span>
+    const isInactiveRow = row.status === 'inactive';
+
+    let statusBadge, actionBtn;
+    if (isInactiveRow) {
+      statusBadge = `<span class="badge red">Inactive</span>`;
+      actionBtn = `<div style="display:flex;gap:6px;justify-content:flex-end;">
+           <button class="tb-btn sm success" title="Activate" onclick="activateInactiveUser('${_esc(email)}')">
+             <i class="ti ti-check"></i> <span class="tb-btn-label">Active</span>
            </button>
            <button class="tb-btn sm danger" title="Reject" onclick="openRejectModal('${_esc(email)}')">
              <i class="ti ti-x"></i> <span class="tb-btn-label">Reject</span>
            </button>
          </div>`;
+    } else {
+      statusBadge = `<span class="badge gold">Pending</span>`;
+      const alreadyUser = _state.users.some(u => u.email === email && u.status !== 'inactive');
+      actionBtn = alreadyUser
+        ? `<span style="font-size:11.5px;color:var(--text3);font-family:var(--mono);">Already registered</span>`
+        : `<div style="display:flex;gap:6px;justify-content:flex-end;">
+             <button class="tb-btn sm success" title="Approve" onclick="openActivateModal('${_esc(email)}','${_esc(ts)}')">
+               <i class="ti ti-check"></i> <span class="tb-btn-label">Approve</span>
+             </button>
+             <button class="tb-btn sm danger" title="Reject" onclick="openRejectModal('${_esc(email)}')">
+               <i class="ti ti-x"></i> <span class="tb-btn-label">Reject</span>
+             </button>
+           </div>`;
+    }
     return `<tr>
       <td data-label="Timestamp" style="font-family:var(--mono);font-size:11.5px;color:var(--text3);">${_fmtDateTimeCell(ts)}</td>
       <td data-label="Email" style="font-family:var(--mono);font-size:12px;">${_esc(email)}</td>
-      <td data-label="Status"><span class="badge gold">Pending</span></td>
+      <td data-label="Status">${statusBadge}</td>
       <td data-label="Action" class="cell-action">${actionBtn}</td>
     </tr>`;
   }).join('');
@@ -2427,6 +2468,25 @@ async function confirmReject() {
     toast('Request rejected', 'success');
   } catch (err) {
     toast('Reject failed: ' + err.message, 'error');
+  }
+}
+
+/* "Active" button on an Inactive-status Requests Portal row — reactivates
+   the existing Users row in place (name/role unchanged) rather than going
+   through the new-registration Approve flow. */
+async function activateInactiveUser(email) {
+  const user = _state.users.find(u => u.email === email);
+  if (!user) { toast('User not found.', 'error'); return; }
+
+  try {
+    await _gasPost('updateUser', { name: user.name, email, role: user.role, status: 'active' });
+    const idx = _state.users.findIndex(u => u.email === email);
+    if (idx >= 0) _state.users[idx].status = 'active';
+    renderUsers(); renderLoginReqs(); renderHistory();
+    _logLocal('User reactivated', email, `Role: ${user.role || '—'}`);
+    toast(`${user.name || email} reactivated`, 'success');
+  } catch (err) {
+    toast('Reactivation failed: ' + err.message, 'error');
   }
 }
 
