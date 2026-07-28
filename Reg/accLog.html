@@ -9,17 +9,15 @@
 <style>
   :root{
     --bg:#F3F5F8; --surface:#FFFFFF; --ink:#151A23; --ink-soft:#5B6472; --border:#E4E7EC;
-    --navy:#0F2340; --navy-soft:#1B3A5C; --navy2:#173A63; --teal:#12897B; --teal-soft:#E4F4F1;
+    --navy:#0F2340; --navy2:#173A63; --teal:#12897B; --teal-soft:#E4F4F1;
     --amber:#B8722C; --amber-soft:#FBF0E4; --red:#C2402B; --red-soft:#FCEAE7; --violet:#5B4B9E; --violet-soft:#EFEBFB;
     --gold:#8A6D1F; --gold-soft:#FBF3DE; --radius:10px;
     --shadow:0 1px 2px rgba(16,26,45,.04), 0 4px 16px rgba(16,26,45,.06);
   }
   *{box-sizing:border-box;}
   html,body{height:100%;overscroll-behavior:none;}
-  body{margin:0;background:
-    radial-gradient(1200px 400px at 100% -10%, #E7EEF7 0%, transparent 55%),
-    var(--bg);
-    color:var(--ink);font-family:'Inter',sans-serif;overflow:hidden;width:100%;}
+  body{margin:0;width:100%;overflow:hidden;color:var(--ink);font-family:'Inter',sans-serif;
+    background:radial-gradient(1200px 400px at 100% -10%, #E7EEF7 0%, transparent 55%), var(--bg);}
 
   .app{height:100vh;height:100dvh;width:100%;max-width:1360px;margin:0 auto;padding:14px 16px 10px;display:flex;flex-direction:column;overflow:hidden;}
 
@@ -27,115 +25,103 @@
     background:linear-gradient(120deg, var(--navy) 0%, var(--navy2) 60%, #204a7c 100%);box-shadow:var(--shadow);}
   header.top .brand{display:flex;align-items:center;gap:10px;min-width:0;}
   header.top .brand .dotmark{width:9px;height:9px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 4px rgba(18,137,123,.28);flex:none;}
-  header.top h1{font-family:'Space Grotesk',sans-serif;font-size:17px;letter-spacing:-0.01em;margin:0;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  header.top h1{font-family:'Space Grotesk',sans-serif;font-size:17px;letter-spacing:-0.01em;margin:0;color:#fff;white-space:nowrap;}
   header.top .tag{font-family:'IBM Plex Mono',monospace;font-size:10px;color:#C9D6E8;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);padding:3px 8px;border-radius:4px;white-space:nowrap;}
-  header.top .stamp{font-family:'IBM Plex Mono',monospace;font-size:10px;color:#DFF3EF;background:rgba(18,137,123,.28);border:1px solid rgba(18,137,123,.55);padding:5px 10px;border-radius:5px;font-weight:600;letter-spacing:.05em;white-space:nowrap;}
   @media (max-width:640px){ header.top .tag{display:none;} }
 
-  .syncbar{flex:0 0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 14px;margin-bottom:10px;font-size:12px;color:var(--ink-soft);box-shadow:var(--shadow);}
+  .syncbar{flex:0 0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 14px;margin-bottom:10px;font-size:11.5px;color:var(--ink-soft);box-shadow:var(--shadow);}
   .syncbar .dot{width:8px;height:8px;border-radius:50%;background:#B7BDC7;flex:none;}
   .syncbar.live .dot{background:var(--teal);box-shadow:0 0 0 3px var(--teal-soft);}
   .syncbar.none .dot{background:var(--amber);box-shadow:0 0 0 3px var(--amber-soft);}
   .syncbar strong{color:var(--ink);}
   .syncbar .spacer{flex:1;}
-  .syncbar button{font-size:11.5px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:#fff;color:var(--ink-soft);cursor:pointer;transition:.15s;}
+  .syncbar button{font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:#fff;color:var(--ink-soft);cursor:pointer;}
   .syncbar button:hover{border-color:var(--navy);color:var(--navy);}
 
-  nav.tabs{flex:0 0 auto;display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:5px;box-shadow:var(--shadow);}
-  nav.tabs button{font-size:13px;font-weight:600;color:var(--ink-soft);background:none;border:none;padding:9px 16px;cursor:pointer;border-radius:8px;transition:.15s;letter-spacing:.01em;}
+  nav.tabs{flex:0 0 auto;display:flex;gap:6px;margin-bottom:10px;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:5px;box-shadow:var(--shadow);}
+  nav.tabs button{flex:1;font-size:13px;font-weight:700;color:var(--ink-soft);background:none;border:none;padding:10px 14px;cursor:pointer;border-radius:8px;transition:.15s;}
   nav.tabs button.active{color:#fff;background:linear-gradient(120deg,var(--navy) 0%, var(--navy2) 100%);box-shadow:0 2px 8px rgba(15,35,64,.25);}
   nav.tabs button:hover:not(.active){color:var(--navy);background:var(--bg);}
+  nav.tabs .sub{display:block;font-size:9.5px;font-weight:500;opacity:.75;text-transform:uppercase;letter-spacing:.04em;margin-top:1px;}
 
-  .tab-viewport{flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:2px;}
-  section.tab{display:none;} section.tab.active{display:block;}
+  .tab-viewport{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;}
+  section.tab{display:none;height:100%;} section.tab.active{display:flex;flex-direction:column;gap:12px;}
 
-  .grid2{display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start;}
-  @media (max-width:900px){.grid2{grid-template-columns:1fr;}}
+  .purpose-strip{flex:0 0 auto;font-size:12px;color:var(--ink-soft);background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--navy);border-radius:8px;padding:8px 12px;box-shadow:var(--shadow);}
+  .purpose-strip strong{color:var(--navy);}
 
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);}
-  .card h2{font-family:'Space Grotesk',sans-serif;font-size:14.5px;margin:0 0 12px;color:var(--navy);}
-  .card + .card{margin-top:14px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;flex:0 0 auto;}
+  @media (max-width:820px){.grid2{grid-template-columns:1fr;}}
 
-  label{display:block;font-size:11.5px;color:var(--ink-soft);margin:9px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);}
+  .card h2{font-family:'Space Grotesk',sans-serif;font-size:13.5px;margin:0 0 8px;color:var(--navy);}
+  .scroll-card{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
+  .scroll-card > .tablewrap{flex:1 1 auto;}
+
+  label{display:block;font-size:11px;color:var(--ink-soft);margin:8px 0 4px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
   label:first-of-type{margin-top:0;}
-  input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-family:'Inter',sans-serif;font-size:13.5px;background:#fcfdfe;color:var(--ink);transition:.15s;}
+  input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-family:'Inter',sans-serif;font-size:13.5px;background:#fcfdfe;color:var(--ink);}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-soft);}
-  textarea{font-family:'IBM Plex Mono',monospace;font-size:11.5px;min-height:90px;resize:vertical;}
   .mono{font-family:'IBM Plex Mono',monospace;}
   .hint{font-size:11.5px;color:var(--ink-soft);margin-top:4px;line-height:1.5;}
   .error{color:var(--red);font-size:12px;margin-top:6px;}
-  .ok{color:var(--teal);font-size:12px;margin-top:6px;}
 
-  button.btn{font-weight:600;font-size:12.5px;padding:9px 16px;border-radius:7px;border:none;cursor:pointer;transition:.15s;}
+  button.btn{font-weight:700;font-size:12.5px;padding:9px 16px;border-radius:7px;border:none;cursor:pointer;}
   button.btn-primary{background:linear-gradient(120deg,var(--navy) 0%, var(--navy2) 100%);color:#fff;}
-  button.btn-primary:hover{filter:brightness(1.12);box-shadow:0 3px 10px rgba(15,35,64,.3);}
+  button.btn-primary:hover{filter:brightness(1.12);}
   button.btn-ghost{background:#fff;border:1px solid var(--border);color:var(--ink-soft);}
   button.btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink);}
-  .btn-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+  .btn-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
   .small-btn{font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:#fff;color:var(--ink-soft);cursor:pointer;}
   .small-btn:hover{color:var(--red);border-color:var(--red);}
-  .import-drop{border:1.5px dashed var(--border);border-radius:9px;padding:14px;text-align:center;font-size:12.5px;color:var(--ink-soft);background:var(--bg);}
+  .import-drop{border:1.5px dashed var(--border);border-radius:9px;padding:12px;text-align:center;font-size:12px;color:var(--ink-soft);background:var(--bg);}
 
   table{width:100%;border-collapse:collapse;font-size:12.5px;}
-  th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);border-bottom:1px solid var(--border);padding:7px 9px;font-weight:700;white-space:nowrap;position:sticky;top:0;background:var(--surface);}
-  td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;}
+  th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);border-bottom:1px solid var(--border);padding:7px 9px;font-weight:700;white-space:nowrap;position:sticky;top:0;background:var(--surface);z-index:1;}
+  td{padding:7px 9px;border-bottom:1px solid var(--border);vertical-align:middle;}
   tr:last-child td{border-bottom:none;}
   tr:hover td{background:#FAFBFD;}
   .empty{color:var(--ink-soft);font-size:13px;padding:20px 4px;text-align:center;}
-  .tablewrap{overflow:auto;max-height:38vh;border-radius:8px;border:1px solid var(--border);}
+  .tablewrap{overflow:auto;border-radius:8px;border:1px solid var(--border);height:100%;}
 
   .badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:.03em;white-space:nowrap;}
   .badge-active{background:var(--teal-soft);color:var(--teal);border:1px solid var(--teal);}
   .badge-inactive{background:#EEF0F3;color:var(--ink-soft);border:1px solid var(--border);}
+  .badge-partial{background:var(--gold-soft);color:var(--gold);border:1px solid var(--gold);}
   .badge-expired{background:var(--red-soft);color:var(--red);border:1px solid var(--red);}
-  .badge-upcoming{background:var(--gold-soft);color:var(--gold);border:1px solid var(--gold);}
+  .badge-upcoming{background:var(--violet-soft);color:var(--violet);border:1px solid var(--violet);}
   .badge-missing{background:#EEF0F3;color:var(--ink-soft);border:1px solid var(--border);}
-  .badge-special{background:var(--violet-soft);color:var(--violet);border:1px solid var(--violet);}
   .badge-type{background:#EEF0F3;color:var(--ink-soft);}
   .badge-auto{background:var(--teal-soft);color:var(--teal);}
   .badge-manual{background:#EEF0F3;color:var(--ink-soft);}
+  .badge-override{background:var(--violet-soft);color:var(--violet);border:1px solid var(--violet);}
 
-  .active-account-card{display:flex;align-items:center;gap:14px;background:linear-gradient(120deg, var(--teal-soft), #fff);border:1px solid var(--teal);border-radius:10px;padding:12px 16px;margin-bottom:12px;flex-wrap:wrap;}
-  .active-account-card.is-expired{background:linear-gradient(120deg, var(--red-soft), #fff);border-color:var(--red);}
-  .active-account-card.is-missing{background:var(--bg);border-color:var(--border);}
-  .active-account-card .acc-no{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;color:var(--navy);letter-spacing:.01em;}
-  .active-account-card .acc-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:700;}
-  .override-note{background:var(--gold-soft);color:var(--gold);border:1px solid var(--gold);border-radius:7px;padding:7px 11px;font-size:11.5px;margin-top:8px;flex-basis:100%;}
+  .stat-row{display:flex;gap:8px;flex-wrap:wrap;flex:0 0 auto;}
+  .stat{flex:1;min-width:88px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--navy);border-radius:8px;padding:7px 10px;box-shadow:var(--shadow);}
+  .stat.s-active{border-left-color:var(--teal);}
+  .stat.s-inactive{border-left-color:var(--ink-soft);}
+  .stat.s-partial{border-left-color:var(--gold);}
+  .stat.s-expired{border-left-color:var(--red);}
+  .stat.s-upcoming{border-left-color:var(--violet);}
+  .stat .n{font-family:'Space Grotesk',sans-serif;font-size:17px;color:var(--navy);}
+  .stat .l{font-size:9.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;}
 
-  .preview-panel{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:14px;margin-top:14px;}
-  .preview-row{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;flex-wrap:wrap;transition:.15s;}
-  .preview-row:hover{border-color:var(--navy);}
-  .preview-row:last-child{margin-bottom:0;}
-  .preview-row .info{flex:1;min-width:220px;}
-  .preview-row .acc{font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:700;color:var(--ink);}
-  .preview-row .meta{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
-  .timed-note{background:var(--violet-soft);color:var(--violet);border:1px solid var(--violet);border-radius:7px;padding:8px 12px;font-size:12px;margin-bottom:12px;}
-
-  .mode-row{display:flex;gap:8px;margin-bottom:16px;}
-  .mode-btn{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;padding:9px 18px;border-radius:8px;border:1.5px solid var(--border);background:#fff;color:var(--ink-soft);cursor:pointer;letter-spacing:.03em;transition:.15s;}
-  .mode-btn.active{border-color:var(--navy);background:linear-gradient(120deg,var(--navy) 0%, var(--navy2) 100%);color:#fff;box-shadow:0 2px 8px rgba(15,35,64,.25);}
-  .mode-btn:hover:not(.active){border-color:var(--navy);color:var(--navy);}
-
-  .filters{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:end;}
-  .filters > div{min-width:150px;}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:end;flex:0 0 auto;}
+  .filters > div{min-width:130px;flex:1;}
   .filters label{margin-top:0;}
-  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;}
-  .stat-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
-  .stat{flex:1;min-width:120px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--navy);border-radius:8px;padding:9px 12px;box-shadow:var(--shadow);}
-  .stat.acc-active{border-left-color:var(--teal);}
-  .stat.acc-inactive{border-left-color:var(--ink-soft);}
-  .stat.acc-expired{border-left-color:var(--red);}
-  .stat .n{font-family:'Space Grotesk',sans-serif;font-size:19px;color:var(--navy);}
-  .stat .l{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;flex:0 0 auto;}
+
+  .acc-cell{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:13px;color:var(--ink);}
+  select.purpose-select{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:11.5px;padding:5px 6px;min-width:88px;}
 </style>
 
 <div class="app">
   <header class="top">
     <div class="brand">
-      <h1>WPS Account Resolver</h1>
-      <span class="tag">EID · AccType · validity engine</span>
+      <span class="dotmark"></span>
+      <h1>Account Activation</h1>
     </div>
-    <span class="stamp">AUDIT-READY</span>
+    <span class="tag">EID · AccType · validity engine</span>
   </header>
 
   <div class="syncbar none" id="syncbar">
@@ -146,109 +132,37 @@
   </div>
 
   <nav class="tabs">
-    <button data-tab="portal" class="active">Activation Portal</button>
-    <button data-tab="import">Import &amp; Add</button>
-    <button data-tab="resolver">Resolver</button>
-    <button data-tab="batch">WPS Batch</button>
-    <button data-tab="log">Full Log</button>
+    <button data-tab="upload" class="active">Upload<span class="sub">save records</span></button>
+    <button data-tab="download">Download<span class="sub">activated accounts only</span></button>
+    <button data-tab="log">Log<span class="sub">full history</span></button>
   </nav>
 
   <div class="tab-viewport">
-  <section class="tab active" id="tab-portal">
-    <div class="card">
-      <h2>Activate an account for a rider</h2>
-      <p class="hint" style="margin-top:0;">
-        Pick a rider, then a purpose. If they already have account(s) on file for that purpose, you'll see them all and can activate whichever one applies. A <strong>timed</strong> account (has both a StartDate and ExpDate) automatically stays Active for as long as today falls in that window — it wins over any manual pick for that purpose. Otherwise, whichever account you activated most recently is the Active one. Nothing is ever deleted; every activation just adds a new dated entry, so the full history stays in the log below.
-      </p>
-      <label>Rider (EID)</label>
-      <select id="p-eid"></select>
-      <div class="mode-row" id="p-purpose-row" style="margin-top:14px;">
-        <button class="mode-btn" data-purpose="WPS">WPS</button>
-        <button class="mode-btn" data-purpose="Salary">Salary</button>
-        <button class="mode-btn" data-purpose="Advance">Advance</button>
-      </div>
-      <div id="p-panel"></div>
-    </div>
-
-    <div class="card">
-      <h2>This rider's accounts</h2>
-      <div class="stat-row" id="p-stats">
-        <div class="stat"><div class="n" id="p-n-active">0</div><div class="l">Active</div></div>
-        <div class="stat"><div class="n" id="p-n-inactive">0</div><div class="l">Inactive</div></div>
-        <div class="stat"><div class="n" id="p-n-total">0</div><div class="l">Total on file</div></div>
-      </div>
-      <div id="p-rider-table"></div>
-    </div>
-  </section>
-
-  <!-- IMPORT & ADD -->
-  <section class="tab" id="tab-import">
+  <!-- ══════════════ UPLOAD ══════════════ -->
+  <section class="tab active" id="tab-upload">
+    <div class="purpose-strip"><strong>Purpose:</strong> save account records and the employee list. Nothing here is ever overwritten — every upload just adds new dated entries.</div>
     <div class="grid2">
       <div class="card">
-        <h2>Add a record (manual)</h2>
-        <p class="hint" style="margin-top:0;">Manual/CSV records supplement whatever is live in <span class="mono">ap2_accLog</span> — they never overwrite it. Useful before the real cache is wired up, or for one-off exceptions.</p>
-        <label>EID</label>
-        <select id="r-eid"></select>
-        <div class="hint">List is cached from your ap2_employee upload (right panel). Shows EmpID – Name, stores only the EmpID.</div>
-        <label>AccType</label>
-        <select id="r-acctype">
-          <option value="WPS">WPS</option>
-          <option value="Salary">Salary</option>
-          <option value="Advance">Advance</option>
-          <option value="Others">Others</option>
-          <option value="Personal">Personal</option>
-          <option value="Other">Other</option>
-        </select>
-        <label>Account No</label>
-        <input id="r-accno" class="mono" placeholder="IBAN / card / account number">
-        <label>AddDetail</label>
-        <input id="r-adddetail" placeholder="bank name, branch, etc.">
-        <label>Comment</label>
-        <input id="r-comment" placeholder="free text note">
-        <label>StartDate</label>
-        <input id="r-start" type="date">
-        <label>ExpDate <span class="hint">(blank = no expiry — this is the "default/base" account)</span></label>
-        <input id="r-exp" type="date">
-        <div class="hint">Give a record <strong>both</strong> a StartDate and ExpDate to make it a "special / timed" account — one that only wins the resolver over the base account while today falls inside that window.</div>
-        <div id="r-error" class="error"></div>
-        <div class="btn-row">
-          <button class="btn btn-primary" id="r-save">Add record</button>
+        <h2>Account records</h2>
+        <p class="hint" style="margin-top:0;">Columns exactly: <span class="mono">EID, AccType, Account No, AddDetail, StartDate, ExpDate</span>. Dates as YYYY-MM-DD, or leave both blank for an ordinary (no-expiry) account. Give a record <strong>both</strong> dates to make it a timed/override account.</p>
+        <div class="import-drop">
+          <input type="file" id="csv-file" accept=".csv" style="margin-bottom:8px;">
+          <div class="btn-row" style="justify-content:center;">
+            <button class="btn btn-primary" id="csv-import">Save records</button>
+            <button class="btn btn-ghost" id="csv-template">Download template</button>
+          </div>
         </div>
+        <div id="csv-error" class="error"></div>
+        <div id="import-summary" class="hint" style="margin-top:8px;"></div>
       </div>
 
       <div class="card">
-        <h2>ap2_accLog — live cache</h2>
-        <p class="hint" style="margin-top:0;">
-          This reads the <span class="mono">ap2_accLog</span> IndexedDB cache the same way <span class="mono">upLog.html</span> reads <span class="mono">ap2_loginData</span> — via the shared cacheWatcher, or a direct IDB read / parent postMessage if that script isn't available. Rows never get deleted here: an expired record just stops being picked by the resolver and stays visible in the Full Log for future reference.
-        </p>
-        <div id="cache-summary" class="hint"></div>
-        <p class="hint" style="margin-top:12px;">Expected row shape per entry in <span class="mono">ap2_accLog</span>'s cached array (7 columns):</p>
-        <div class="mono hint" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;">
-          [ EID, AccType, AccountNo, AddDetail, Comment, StartDate(DDMMYYYYHHMMSS), ExpDate(DDMMYYYYHHMMSS) ]
-        </div>
-        <p class="hint">If your sheet's real column order differs, adjust <span class="mono">mapRawRow()</span> near the top of the script — everything downstream (resolver, batch, log) just consumes the normalised record.</p>
-
-        <h2 style="margin-top:18px;">Paste a snapshot (testing)</h2>
-        <p class="hint" style="margin-top:0;">No live parent/cache handy? Paste the console object (either the full <span class="mono">{ts, data, fingerprint}</span> record, or just the bare <span class="mono">data</span> array) and load it manually.</p>
-        <textarea id="snap-json" placeholder='{"ts":..., "data":[[12345671,"Salary",123,"","","",""], ...], "fingerprint":"..."}'></textarea>
-        <div id="snap-error" class="error"></div>
-        <div class="btn-row">
-          <button class="btn btn-primary" id="snap-load">Load snapshot</button>
-          <button class="btn btn-ghost" id="snap-clear">Clear snapshot</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>Employee master (ap2_employee)</h2>
-        <p class="hint" style="margin-top:0;">
-          The EID dropdown reads live from the <span class="mono">ap2_employee</span> cache — the same cache <span class="mono">docPortal.html</span> / <span class="mono">allEmp.html</span> use, same column layout (<span class="mono">EmpID, Name, EID, DOB, Mobile, …</span>), read via the shared cacheWatcher with the same IndexedDB/postMessage fallback as <span class="mono">ap2_accLog</span> above. It shows "EmpID – Name" but only ever stores the EmpID.
-        </p>
-        <div id="emp-cache-summary" class="hint"></div>
-        <p class="hint" style="margin-top:12px;">No live cache yet? Upload a manual list below — it only fills in EIDs the live cache doesn't have, and never overwrites a live match.</p>
+        <h2>Employee list</h2>
+        <p class="hint" style="margin-top:0;">Columns exactly: <span class="mono">EmpID, Name</span>. Used to show names next to EIDs everywhere in this app.</p>
         <div class="import-drop">
           <input type="file" id="emp-csv-file" accept=".csv" style="margin-bottom:8px;">
           <div class="btn-row" style="justify-content:center;">
-            <button class="btn btn-primary" id="emp-csv-import">Cache list</button>
+            <button class="btn btn-primary" id="emp-csv-import">Save employees</button>
             <button class="btn btn-ghost" id="emp-csv-template">Download template</button>
             <button class="btn btn-ghost" id="emp-clear">Clear manual list</button>
           </div>
@@ -256,56 +170,18 @@
         <div id="emp-csv-error" class="error"></div>
         <div id="emp-summary" class="hint" style="margin-top:8px;"></div>
       </div>
-
-      <div class="card">
-        <h2>Bulk import (CSV)</h2>
-        <p class="hint" style="margin-top:0;">
-          Upload a file with columns exactly: <span class="mono">EID, AccType, Account No, AddDetail, Comment, StartDate, ExpDate</span>. Dates as YYYY-MM-DD. Existing rows are never overwritten — every import just adds new records, so history stays intact.
-        </p>
-        <div class="import-drop">
-          <input type="file" id="csv-file" accept=".csv" style="margin-bottom:8px;">
-          <div class="btn-row" style="justify-content:center;">
-            <button class="btn btn-primary" id="csv-import">Import CSV</button>
-            <button class="btn btn-ghost" id="csv-template">Download template</button>
-          </div>
-        </div>
-        <div id="csv-error" class="error"></div>
-
-        <h2 style="margin-top:22px;">Records loaded</h2>
-        <div id="import-summary" class="hint"></div>
-      </div>
+    </div>
+    <div class="card scroll-card">
+      <h2>On file right now</h2>
+      <div id="upload-stats" class="stat-row" style="margin-bottom:10px;"></div>
+      <div id="upload-preview"></div>
     </div>
   </section>
 
-  <!-- RESOLVER -->
-  <section class="tab" id="tab-resolver">
-    <div class="card">
-      <h2>Which account is active right now?</h2>
-      <p class="hint" style="margin-top:0;">
-        Pick a purpose. For each EID this shows whichever account is currently <strong>Active</strong> for that purpose — same engine as the Activation Portal: a timed account (StartDate + ExpDate) inside its window always wins; otherwise the most recently activated account for that EID + purpose wins. EIDs with no active account for the purpose are skipped here (they're still in the Full Log).
-      </p>
-      <div class="mode-row">
-        <button class="mode-btn active" data-mode="WPS">WPS</button>
-        <button class="mode-btn" data-mode="Salary">Salary</button>
-        <button class="mode-btn" data-mode="Advance">Advance</button>
-      </div>
-      <div id="resolver-table"></div>
-    </div>
-
-    <div class="card">
-      <h2>Status overview — all purposes, all EIDs</h2>
-      <p class="hint" style="margin-top:0;">Reference view: current Active/Inactive/Missing status per EID across all three purposes.</p>
-      <div id="status-table"></div>
-    </div>
-  </section>
-
-  <!-- WPS BATCH -->
-  <section class="tab" id="tab-batch">
-    <div class="card">
-      <h2>Process a WPS run from a sheet</h2>
-      <p class="hint" style="margin-top:0;">
-        Upload a sheet of the employees you're processing this run (just <span class="mono">EmpID, Name</span>). For each one, this looks up their currently Active account for the purpose you pick — same engine as the Activation Portal: timed accounts inside their window win automatically, otherwise the most recently activated one wins. Nothing here is saved — it's a one-off lookup for this run, ready to export.
-      </p>
+  <!-- ══════════════ DOWNLOAD ══════════════ -->
+  <section class="tab" id="tab-download">
+    <div class="purpose-strip"><strong>Purpose:</strong> upload the riders you're processing this run, then download only their currently activated account per purpose. A timed/override account valid today is used by default; switch a row's purpose to pick a different account type instead.</div>
+    <div class="card" style="flex:0 0 auto;">
       <div class="import-drop">
         <input type="file" id="batch-csv-file" accept=".csv" style="margin-bottom:8px;">
         <div class="btn-row" style="justify-content:center;">
@@ -315,58 +191,37 @@
         </div>
       </div>
       <div id="batch-csv-error" class="error"></div>
+    </div>
 
-      <div class="mode-row" style="margin-top:18px;">
-        <button class="mode-btn active" data-batch-mode="WPS">WPS</button>
-        <button class="mode-btn" data-batch-mode="Salary">Salary</button>
-        <button class="mode-btn" data-batch-mode="Advance">Advance</button>
+    <div class="card scroll-card">
+      <div class="toolbar" style="margin-bottom:10px;">
+        <div class="stat-row" id="batch-stats"></div>
+        <button class="btn btn-ghost" id="batch-export">Download CSV (activated accounts)</button>
       </div>
-
-      <div class="stat-row" id="batch-stats" style="display:none;">
-        <div class="stat"><div class="n" id="batch-n-total">0</div><div class="l">In sheet</div></div>
-        <div class="stat"><div class="n" id="batch-n-special">0</div><div class="l">Special/timed match</div></div>
-        <div class="stat"><div class="n" id="batch-n-base">0</div><div class="l">Base account</div></div>
-        <div class="stat"><div class="n" id="batch-n-missing">0</div><div class="l">No account found</div></div>
-      </div>
-
-      <div class="toolbar" id="batch-toolbar" style="display:none;">
-        <span class="hint" id="batch-summary"></span>
-        <button class="btn btn-ghost" id="batch-export">Export CSV</button>
-      </div>
-      <div id="batch-table"></div>
+      <div id="batch-table" class="tablewrap" style="flex:1 1 auto;"></div>
     </div>
   </section>
 
-  <!-- FULL LOG -->
+  <!-- ══════════════ LOG ══════════════ -->
   <section class="tab" id="tab-log">
-    <div class="card">
+    <div class="purpose-strip"><strong>Purpose:</strong> the full record history, for reference — nothing is deleted, every activation stays visible here.</div>
+    <div class="card" style="flex:0 0 auto;">
       <div class="toolbar">
-        <h2 style="margin:0;">Full log</h2>
+        <div class="stat-row" id="log-stats"></div>
         <button class="btn btn-ghost" id="export-csv">Export CSV</button>
       </div>
-      <div class="stat-row">
-        <div class="stat acc-active"><div class="n" id="log-n-active">0</div><div class="l">Active (all riders)</div></div>
-        <div class="stat acc-inactive"><div class="n" id="log-n-inactive">0</div><div class="l">Inactive</div></div>
-        <div class="stat acc-expired"><div class="n" id="log-n-expired">0</div><div class="l">Expired</div></div>
-        <div class="stat"><div class="n" id="log-n-total">0</div><div class="l">Total records</div></div>
-      </div>
-      <div class="filters">
-        <div>
-          <label>EID</label>
-          <select id="f-eid"><option value="">All</option></select>
-        </div>
-        <div>
-          <label>AccType</label>
-          <select id="f-acctype"><option value="">All</option></select>
-        </div>
+      <div class="filters" style="margin-top:10px;">
+        <div><label>EID</label><select id="f-eid"><option value="">All</option></select></div>
+        <div><label>AccType</label><select id="f-acctype"><option value="">All</option></select></div>
         <div>
           <label>Status</label>
           <select id="f-status">
             <option value="">All</option>
-            <option value="active">Active only</option>
-            <option value="inactive">Inactive only</option>
-            <option value="expired">Expired only</option>
-            <option value="upcoming">Upcoming only</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="partial-inactive">P-Inactive (overlapping)</option>
+            <option value="expired">Expired</option>
+            <option value="upcoming">Upcoming</option>
           </select>
         </div>
         <div>
@@ -378,7 +233,9 @@
           </select>
         </div>
       </div>
-      <div id="log-table"></div>
+    </div>
+    <div class="card scroll-card">
+      <div id="log-table" class="tablewrap" style="flex:1 1 auto;"></div>
     </div>
   </section>
   </div>
@@ -388,15 +245,13 @@
 'use strict';
 
 /* ═══════════════════════════════════════════════════════
-   CACHE — reads ap2_accLog (and ap2_employee, for the EID
-   dropdown) via the shared cacheWatcher.js, with the same safe
-   local fallback pattern upLog.html / docPortal.html use: if
-   cacheWatcher.js hasn't loaded (blocked, 404, stale cached
-   copy, etc.) this must NOT throw and must NOT stop manual/CSV
-   entry from working.
+   CACHE — ap2_accLog + ap2_employee, same mechanism upLog.html /
+   docPortal.html use: shared cacheWatcher.js first, a direct IDB
+   read as fallback if that script hasn't loaded, plus a parent
+   postMessage handshake. Never throws; never blocks manual/CSV entry.
 ═══════════════════════════════════════════════════════ */
 const _AP2_CACHE_KEY = 'ap2_accLog';
-const _AP2_CACHE_KEY_EMP = 'ap2_employee'; // same key docPortal.html / allEmp.html read
+const _AP2_CACHE_KEY_EMP = 'ap2_employee';
 
 if (typeof window.AP2CacheWatcher === 'undefined') {
   console.warn('[accLog] cacheWatcher.js did not load — using local fallback');
@@ -414,10 +269,8 @@ if (typeof window.AP2CacheWatcher === 'undefined') {
       });
     }
     return {
-      init() {},
-      subscribe() { return () => {}; },
-      notifyNow() {},
-      getStatus() { return { healthy: false, mode: 'local-fallback', lastError: 'cacheWatcher.js not loaded' }; },
+      init() {}, subscribe() { return () => {}; }, notifyNow() {},
+      getStatus() { return { healthy: false, mode: 'local-fallback' }; },
       async readKey(key) {
         try {
           const db = await _open();
@@ -437,12 +290,7 @@ if (typeof window.AP2CacheWatcher === 'undefined') {
     };
   })();
 }
-async function _readCache_bareArray(key) { return AP2CacheWatcher.readKey(key || _AP2_CACHE_KEY); }
-
-/* cacheWatcher.js's readKey() only gives back the data array — but we also
-   want the write timestamp (rec.ts) so "last coming" ordering and the
-   Timestamp column for cache-sourced rows reflect the real sync time, same
-   trick docPortal.html uses alongside the shared watcher. */
+async function _readCache_bareArray(key) { return AP2CacheWatcher.readKey(key); }
 const _IDB_NAME_TS = 'ap2_fleet_cache', _IDB_STORE_TS = 'datasets';
 let _idbConnTs = null;
 function _getDBTs() {
@@ -468,15 +316,14 @@ async function _readRawTs(key) {
 async function _readCache(key) {
   const data = await _readCache_bareArray(key);
   if (!data || !Array.isArray(data) || !data.length) return null;
-  const ts = await _readRawTs(key || _AP2_CACHE_KEY);
+  const ts = await _readRawTs(key);
   return { ts: ts || Date.now(), data };
 }
 
 /* ═══════════════════════════════════════════════════════
-   DATE PARSING — same convention as upLog.html: timestamps
-   land as a bare 14-digit DDMMYYYYHHMMSS (no separators), but
-   accept ISO 'YYYY-MM-DD' (manual <input type=date>), Excel
-   serials, epoch-ms, or locale strings too.
+   DATE PARSING — bare 14-digit DDMMYYYYHHMMSS (ap2_accLog's own
+   convention), or ISO 'YYYY-MM-DD' (CSV / manual), Excel serials,
+   epoch-ms, or locale strings.
 ═══════════════════════════════════════════════════════ */
 function _parseDdmmyyyyhhmmss(raw) {
   const s = String(raw).trim();
@@ -494,72 +341,63 @@ function _parseDate(raw) {
   if (ddmmyyyy) return ddmmyyyy;
   let d = null;
   if (raw instanceof Date) { d = raw; }
-  else if (typeof raw === 'number') {
-    d = raw > 1e11 ? new Date(raw) : new Date(Date.UTC(1899, 11, 30) + raw * 86400000);
-  } else {
-    const s = String(raw).trim();
-    const parsed = new Date(s);
-    d = isNaN(parsed.getTime()) ? null : parsed;
-  }
+  else if (typeof raw === 'number') { d = raw > 1e11 ? new Date(raw) : new Date(Date.UTC(1899, 11, 30) + raw * 86400000); }
+  else { const s = String(raw).trim(); const parsed = new Date(s); d = isNaN(parsed.getTime()) ? null : parsed; }
   return (!d || isNaN(d.getTime())) ? null : d;
 }
 function pad2(n){ return String(n).padStart(2,'0'); }
 function toISO(d){ return d ? `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}` : ''; }
+function todayISO(){ return toISO(new Date()); }
+function fmtTs(ms){
+  if(!ms) return '—';
+  return new Date(ms).toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
 
 /* ═══════════════════════════════════════════════════════
    STATE
 ═══════════════════════════════════════════════════════ */
 let AUTO_RECORDS = [];   // live, read-only, from ap2_accLog
-let RECORDS = [];        // manual + CSV, persisted locally
-let AUTO_EMPLOYEES = []; // live, read-only, from ap2_employee (same cache docPortal.html reads)
-let EMPLOYEES = [];      // manual/CSV employee list, persisted locally — only used when the live cache has nothing for an EID
-let BATCH_SHEET = [];    // ad-hoc {eid,name} list for the WPS Batch tab
+let RECORDS = [];        // manual/CSV, persisted locally
+let AUTO_EMPLOYEES = []; // live, read-only, from ap2_employee
+let EMPLOYEES = [];      // manual/CSV employee list, persisted locally (fallback only)
+let BATCH_SHEET = [];    // this run's {eid,name} list, persisted locally
+let ROW_PURPOSE = {};    // per-EID purpose override chosen in the Download table, session-only
 let loaded = false;
-let currentMode = 'WPS';
-let currentBatchMode = 'WPS';
-let cacheReady = false;
-let lastSync = null;
-let empCacheReady = false;
-let empLastSync = null;
+let cacheReady = false, empCacheReady = false, lastSync = null;
 
 function uid(){ return 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function esc(s){ return (s??'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function todayISO(){ return toISO(new Date()); }
 function normType(t){ return (t||'').trim().toUpperCase(); }
+function allRecords(){ return AUTO_RECORDS.concat(RECORDS); }
 function allEmployees(){
-  // Live ap2_employee wins on EmpID collisions — the CSV list is only a
-  // manual supplement for EIDs the live cache doesn't have (yet).
   const byId = {};
   EMPLOYEES.forEach(e=>{ if(e.empid) byId[e.empid]=e; });
-  AUTO_EMPLOYEES.forEach(e=>{ if(e.empid) byId[e.empid]=e; });
+  AUTO_EMPLOYEES.forEach(e=>{ if(e.empid) byId[e.empid]=e; }); // live cache wins on collision
   return Object.values(byId);
 }
 function nameForEid(eid){
   const a = AUTO_EMPLOYEES.find(x=>x.empid===eid); if(a) return a.name;
   const e = EMPLOYEES.find(x=>x.empid===eid); return e ? e.name : '';
 }
-function allRecords(){ return AUTO_RECORDS.concat(RECORDS); }
-
 function isActive(r){
   const t = todayISO();
   if(r.expDate && r.expDate < t) return false;
   if(r.startDate && r.startDate > t) return false;
   return true;
 }
-// A "special / timed" record is one with BOTH a start and an expiry — a
-// deliberately time-boxed account, as opposed to an ordinary ongoing one.
-function isSpecial(r){ return !!(r.startDate && r.expDate); }
+function isSpecial(r){ return !!(r.startDate && r.expDate); } // timed/override account
 
 /* ═══════════════════════════════════════════════════════
-   ACTIVATION ENGINE — single source of truth for Active/Inactive.
-   Nothing is stored as "the active flag" on a record; status is always
-   computed live from the group of records sharing the same EID+AccType:
-     1) Any timed record (StartDate+ExpDate) currently inside its window
-        wins, always — regardless of when anything else was activated.
-     2) Otherwise, whichever currently-valid record has the newest
-        activatedAt ("last coming") wins.
-   Everything else in that group is Inactive. Expired/future-dated and
-   superseded records are never deleted — they just aren't the winner.
+   ACTIVATION ENGINE — single source of truth.
+     1) Any timed (StartDate+ExpDate) record inside its window wins,
+        always, for its EID+AccType — regardless of anything else.
+     2) If more than one timed record overlaps, the one activated most
+        recently wins; the other stays P-INACTIVE (still a valid, dated
+        account — just currently overlapped/outranked).
+     3) With no timed record in play, whichever ordinary record was
+        activated most recently ("last coming") wins.
+   Nothing is ever deleted — expired/future/overlapped records just
+   aren't the winner, and stay visible in the Log.
 ═══════════════════════════════════════════════════════ */
 function groupFor(eid, type){
   const T = normType(type);
@@ -573,45 +411,62 @@ function computeActiveRecord(eid, type){
   pool.sort((a,b) => (b.activatedAt||0) - (a.activatedAt||0));
   return pool[0];
 }
-/* What would be Active for this EID+type if timed accounts weren't given
-   automatic priority — i.e. the plain "last coming" pick among ordinary
-   (non-timed) currently-valid accounts. Used to detect + explain an
-   override: when a timed account is the actual winner but a *different*
-   account would otherwise be active, that's an override worth flagging. */
 function wouldBeWithoutTimed(eid, type){
   const eligible = groupFor(eid, type).filter(isActive).filter(r=>!isSpecial(r));
   if(!eligible.length) return null;
   eligible.sort((a,b) => (b.activatedAt||0) - (a.activatedAt||0));
   return eligible[0];
 }
-/* Per-record status shown everywhere: Active / Inactive / Expired / Upcoming.
-   A timed record past its ExpDate is EXPIRED (not just "inactive") so it's
-   visually distinct that the account itself lapsed, vs. simply being
-   superseded by something newer. A timed record whose StartDate hasn't
-   arrived yet is UPCOMING. */
 function recordStatus(r){
+  const t = todayISO();
   if(isSpecial(r)){
-    const t = todayISO();
     if(r.expDate && r.expDate < t) return 'expired';
     if(r.startDate && r.startDate > t) return 'upcoming';
+    const winner = computeActiveRecord(r.eid, r.accType);
+    if(winner && winner.id === r.id) return 'active';
+    return 'partial-inactive'; // overlapping timed account, currently outranked
   }
   const winner = computeActiveRecord(r.eid, r.accType);
   return (winner && winner.id === r.id) ? 'active' : 'inactive';
 }
-function activeCount(){ return allRecords().filter(r=>recordStatus(r)==='active').length; }
-function inactiveCount(){ return allRecords().filter(r=>recordStatus(r)!=='active').length; }
+function statusBadge(s){
+  const map = {
+    active: '<span class="badge badge-active">ACTIVE</span>',
+    inactive: '<span class="badge badge-inactive">INACTIVE</span>',
+    'partial-inactive': '<span class="badge badge-partial">P-INACTIVE</span>',
+    expired: '<span class="badge badge-expired">EXPIRED</span>',
+    upcoming: '<span class="badge badge-upcoming">UPCOMING</span>'
+  };
+  return map[s] || map.inactive;
+}
+/* The purpose that should be pre-selected for a rider in the Download
+   sheet: whichever purpose currently has an active timed/override
+   account (so the override "shows by default"), else WPS. */
+function defaultPurposeFor(eid){
+  const P = ['WPS','Salary','Advance'];
+  for(const p of P){
+    const rec = computeActiveRecord(eid, p);
+    if(rec && isSpecial(rec)) return p;
+  }
+  return 'WPS';
+}
+function resolve(eid, purpose){
+  const rec = computeActiveRecord(eid, purpose);
+  if(!rec) return null;
+  let overriding = null;
+  if(isSpecial(rec)){
+    const alt = wouldBeWithoutTimed(eid, purpose);
+    if(alt && alt.accountNo !== rec.accountNo) overriding = alt;
+  }
+  return { rec, special: isSpecial(rec), overriding };
+}
+function distinctEIDs(){ return [...new Set(allRecords().map(r=>r.eid))].filter(Boolean).sort(); }
 
-/* Column mapping for each row cached under ap2_accLog — EID first, then
-   AccType, then AccountNo, matching the same convention as the CSV
-   template/manual form here and ap2_employee's own EmpID-first layout.
-   Adjust here if the real sheet's column order differs — everything else
-   downstream (resolver, batch, portal, log) just consumes the normalised
-   record shape below, so nothing else needs to change.
-   activatedAt drives "last coming" ordering + the Timestamp column; since
-   ap2_accLog's cached rows don't carry a per-row timestamp, every row in
-   one sync shares the cache's write time (cacheTs), nudged by its position
-   in the array (idx ms) so original sheet order is preserved as the
-   tie-break — i.e. a later row in the sheet counts as more recent. */
+/* ═══════════════════════════════════════════════════════
+   ap2_accLog row mapping — EID first, then AccType, then AccountNo,
+   matching the CSV template/manual convention and ap2_employee's own
+   EmpID-first layout. Adjust here if the real sheet differs.
+═══════════════════════════════════════════════════════ */
 function mapRawRow(row, idx, cacheTs){
   if(!Array.isArray(row) || row.length < 2) return null;
   const [eid, accType, accountNo, addDetail, comment, startRaw, expRaw] = row;
@@ -626,7 +481,6 @@ function mapRawRow(row, idx, cacheTs){
     accType: String(accType).trim(),
     accountNo: String(accountNo),
     addDetail: (addDetail ?? '').toString().trim(),
-    comment: (comment ?? '').toString().trim(),
     startDate: sd ? toISO(sd) : '',
     expDate: ed ? toISO(ed) : '',
     activatedAt: base + idx,
@@ -634,8 +488,6 @@ function mapRawRow(row, idx, cacheTs){
   };
 }
 function applyCacheData(payload){
-  // Accepts either the {ts,data} shape from _readCache(), a bare array
-  // (postMessage push / pasted snapshot), or a {ts,data,fingerprint} snapshot.
   const data = Array.isArray(payload) ? payload : (payload && payload.data);
   const ts = Array.isArray(payload) ? Date.now() : (payload && payload.ts) || Date.now();
   if(!Array.isArray(data)) return false;
@@ -644,35 +496,18 @@ function applyCacheData(payload){
   lastSync = new Date(ts);
   return true;
 }
-
-/* ═══════════════════════════════════════════════════════
-   ap2_employee — same cache docPortal.html / allEmp.html read,
-   same column map, ported straight from docPortal.html's
-   normaliseEmp() so the EID dropdown here matches those pages:
-     [0]EmpID [1]Name [2]EID [3]DOB [4]Mobile [5]Emergency
-     [6]Ref   [7]TS   [8]HR  [9]COExc
-     [10]EIDExp [11]LicExp [12]LabourExp [13]InsuranceExp
-   This resolver only needs EmpID/Name for the dropdown, but the
-   other fields are kept on the object in case a future view wants
-   them (e.g. surfacing HR status next to a resolved account).
-═══════════════════════════════════════════════════════ */
 const _s = v => (v!==null && v!==undefined && v!=='') ? String(v).trim() : '';
 function normaliseEmp(r, i){
   if(!r) return null;
   if(!Array.isArray(r)){
     if(!r['Name']) return null;
-    return { empid: String(r['Emp ID'] || (i+1)), name: r['Name'],
-             eid: _s(r['EID Number']), mobile: _s(r['UAE Mobile No']),
-             status: _s(r['HR_Status']) || 'Active' };
+    return { empid: String(r['Emp ID'] || (i+1)), name: r['Name'] };
   }
   if(_s(r[0])==='Emp ID') return null; // header row
   const rawId = r[0];
   const empid = String((rawId!==null && rawId!==undefined && rawId!=='') ? rawId : (i+1));
   const name  = _s(r[1]); if(!name) return null;
-  return {
-    empid, name, eid: _s(r[2]), dob: _s(r[3]), mobile: _s(r[4]),
-    emergency: _s(r[5]), hrStatus: _s(r[8]), status: _s(r[8]) || 'Active'
-  };
+  return { empid, name };
 }
 function applyEmpCacheData(data){
   if(!Array.isArray(data) || !data.length) return false;
@@ -680,127 +515,72 @@ function applyEmpCacheData(data){
   if(!fresh.length) return false;
   AUTO_EMPLOYEES = fresh;
   empCacheReady = true;
-  empLastSync = new Date();
   return true;
 }
 
 /* ═══════════════════════════════════════════════════════
-   LOCAL PERSISTENCE (manual/CSV records + employee master)
+   LOCAL PERSISTENCE
 ═══════════════════════════════════════════════════════ */
 async function loadLocal(){
-  try{
-    const res = await window.storage.get('wps-resolver-records');
-    if(res && res.value){ RECORDS = JSON.parse(res.value); }
-  }catch(e){ /* nothing saved yet */ }
-  try{
-    const res2 = await window.storage.get('wps-employee-master');
-    if(res2 && res2.value){ EMPLOYEES = JSON.parse(res2.value); }
-  }catch(e){ /* nothing cached yet */ }
-  try{
-    const res3 = await window.storage.get('wps-batch-sheet');
-    if(res3 && res3.value){ BATCH_SHEET = JSON.parse(res3.value); }
-  }catch(e){ /* nothing cached yet */ }
+  try{ const r = await window.storage.get('wps-resolver-records'); if(r && r.value) RECORDS = JSON.parse(r.value); }catch(e){}
+  try{ const r = await window.storage.get('wps-employee-master'); if(r && r.value) EMPLOYEES = JSON.parse(r.value); }catch(e){}
+  try{ const r = await window.storage.get('wps-batch-sheet'); if(r && r.value) BATCH_SHEET = JSON.parse(r.value); }catch(e){}
 }
-async function saveData(){
-  try{ await window.storage.set('wps-resolver-records', JSON.stringify(RECORDS)); }
-  catch(e){ console.error('Storage error', e); alert('Could not save — please try again.'); }
-}
-async function saveEmployees(){
-  try{ await window.storage.set('wps-employee-master', JSON.stringify(EMPLOYEES)); }
-  catch(e){ console.error('Storage error', e); alert('Could not save employee cache — please try again.'); }
-}
-async function saveBatchSheet(){
-  try{ await window.storage.set('wps-batch-sheet', JSON.stringify(BATCH_SHEET)); }
-  catch(e){ console.error('Storage error', e); }
-}
+async function saveData(){ try{ await window.storage.set('wps-resolver-records', JSON.stringify(RECORDS)); }catch(e){ alert('Could not save — please try again.'); } }
+async function saveEmployees(){ try{ await window.storage.set('wps-employee-master', JSON.stringify(EMPLOYEES)); }catch(e){ alert('Could not save employee list — please try again.'); } }
+async function saveBatchSheet(){ try{ await window.storage.set('wps-batch-sheet', JSON.stringify(BATCH_SHEET)); }catch(e){} }
 
 /* ═══════════════════════════════════════════════════════
-   SYNC BAR
+   SYNC BAR + CACHE LOAD
 ═══════════════════════════════════════════════════════ */
 function renderSyncBar(){
   const bar = document.getElementById('syncbar');
   const label = document.getElementById('sync-label');
   const anyLive = cacheReady || empCacheReady;
-  if(anyLive){
-    bar.classList.add('live'); bar.classList.remove('none');
-    const t = lastSync ? lastSync.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '';
-    const accLogPart = cacheReady
-      ? `<strong>ap2_accLog</strong> live, ${AUTO_RECORDS.length} record(s)${t ? ' · synced ' + esc(t) : ''}`
-      : `<strong>ap2_accLog</strong> not connected — using manual/CSV records (${RECORDS.length})`;
-    const empPart = empCacheReady
-      ? `<strong>ap2_employee</strong> live, ${AUTO_EMPLOYEES.length} employee(s)`
-      : `<strong>ap2_employee</strong> not connected — using manual/CSV list (${EMPLOYEES.length})`;
-    label.innerHTML = `${accLogPart} &nbsp;·&nbsp; ${empPart}`;
-  } else {
-    bar.classList.add('none'); bar.classList.remove('live');
-    label.innerHTML = `<strong>ap2_accLog</strong> / <strong>ap2_employee</strong> — no live cache found yet. Using manual/CSV data only (${RECORDS.length} records, ${EMPLOYEES.length} employees). Paste a snapshot below or open this page inside the app.`;
-  }
-  const cs = document.getElementById('cache-summary');
-  if(cs) cs.textContent = cacheReady
-    ? `${AUTO_RECORDS.length} record(s) currently live from ap2_accLog.`
-    : 'Not connected yet.';
-  const es = document.getElementById('emp-cache-summary');
-  if(es) es.textContent = empCacheReady
-    ? `${AUTO_EMPLOYEES.length} employee(s) currently live from ap2_employee.`
-    : 'Not connected yet — dropdown below falls back to the manual CSV list.';
+  bar.classList.toggle('live', anyLive);
+  bar.classList.toggle('none', !anyLive);
+  const accPart = cacheReady ? `<strong>ap2_accLog</strong> live (${AUTO_RECORDS.length})` : `<strong>ap2_accLog</strong> not connected (${RECORDS.length} manual)`;
+  const empPart = empCacheReady ? `<strong>ap2_employee</strong> live (${AUTO_EMPLOYEES.length})` : `<strong>ap2_employee</strong> not connected (${EMPLOYEES.length} manual)`;
+  label.innerHTML = `${accPart} &nbsp;·&nbsp; ${empPart}`;
 }
-document.getElementById('sync-refresh').addEventListener('click', async ()=>{
-  await tryApplyCache();
-  await tryApplyEmpCache();
-  renderAll();
-});
+document.getElementById('sync-refresh').addEventListener('click', async ()=>{ await tryApplyCache(); await tryApplyEmpCache(); renderAll(); });
 
-/* ═══════════════════════════════════════════════════════
-   CACHE LOAD / LIVE UPDATES
-═══════════════════════════════════════════════════════ */
 async function tryApplyCache(){
-  try{
-    const data = await _readCache(_AP2_CACHE_KEY);
-    if(data){ applyCacheData(data); return true; }
-  }catch(e){ console.error('[accLog] cache read error:', e); }
+  try{ const rec = await _readCache(_AP2_CACHE_KEY); if(rec){ applyCacheData(rec); return true; } }
+  catch(e){ console.error('[accLog] cache read error:', e); }
   return false;
 }
 async function tryApplyEmpCache(){
-  try{
-    const rec = await _readCache(_AP2_CACHE_KEY_EMP);
-    if(rec && rec.data){ return applyEmpCacheData(rec.data); }
-  }catch(e){ console.error('[accLog] ap2_employee cache read error:', e); }
+  try{ const rec = await _readCache(_AP2_CACHE_KEY_EMP); if(rec && rec.data){ return applyEmpCacheData(rec.data); } }
+  catch(e){ console.error('[accLog] ap2_employee cache read error:', e); }
   return false;
 }
 async function loadAllWithRetries(){
   const gotAcc = await tryApplyCache();
   const gotEmp = await tryApplyEmpCache();
-  if(gotAcc && gotEmp){ renderSyncBar(); renderAll(); return; }
+  if(gotAcc && gotEmp){ renderAll(); return; }
   for(let attempt=0; attempt<6; attempt++){
     await new Promise(r=>setTimeout(r, 300 + attempt*200));
     if(!cacheReady) await tryApplyCache();
     if(!empCacheReady) await tryApplyEmpCache();
-    if(cacheReady && empCacheReady){ renderSyncBar(); renderAll(); return; }
+    if(cacheReady && empCacheReady){ renderAll(); return; }
   }
-  renderSyncBar(); renderAll();
+  renderAll();
 }
-
 try{
   AP2CacheWatcher.init();
-  AP2CacheWatcher.subscribe(async ()=>{ await tryApplyCache(); await tryApplyEmpCache(); renderSyncBar(); renderAll(); });
-}catch(e){ console.warn('[accLog] cacheWatcher wiring failed, continuing without live updates:', e.message); }
-
+  AP2CacheWatcher.subscribe(async ()=>{ await tryApplyCache(); await tryApplyEmpCache(); renderAll(); });
+}catch(e){ console.warn('[accLog] cacheWatcher wiring failed:', e.message); }
 window.addEventListener('message', (e)=>{
   if(!e.data) return;
   if(e.data.type === 'ap-cache-preload' && e.data.datasets){
-    const accData = e.data.datasets[_AP2_CACHE_KEY];
-    const empData = e.data.datasets[_AP2_CACHE_KEY_EMP];
     let changed = false;
-    if(accData){ applyCacheData(accData); changed = true; }
-    if(empData){ applyEmpCacheData(empData); changed = true; }
-    if(changed){ renderSyncBar(); renderAll(); }
+    if(e.data.datasets[_AP2_CACHE_KEY]){ applyCacheData(e.data.datasets[_AP2_CACHE_KEY]); changed = true; }
+    if(e.data.datasets[_AP2_CACHE_KEY_EMP]){ applyEmpCacheData(e.data.datasets[_AP2_CACHE_KEY_EMP]); changed = true; }
+    if(changed) renderAll();
   }
-  if(e.data.type === 'ap-cache-ready' && e.data.key === _AP2_CACHE_KEY){
-    if(e.data.data){ applyCacheData(e.data.data); renderSyncBar(); renderAll(); }
-  }
-  if(e.data.type === 'ap-cache-ready' && e.data.key === _AP2_CACHE_KEY_EMP){
-    if(e.data.data){ applyEmpCacheData(e.data.data); renderSyncBar(); renderAll(); }
-  }
+  if(e.data.type === 'ap-cache-ready' && e.data.key === _AP2_CACHE_KEY && e.data.data){ applyCacheData(e.data.data); renderAll(); }
+  if(e.data.type === 'ap-cache-ready' && e.data.key === _AP2_CACHE_KEY_EMP && e.data.data){ applyEmpCacheData(e.data.data); renderAll(); }
   if(e.data.type === 'ap-cache-updated'){
     try{
       window.parent.postMessage({ type:'ap-cache-request', key:_AP2_CACHE_KEY }, '*');
@@ -813,26 +593,6 @@ try{
   window.parent.postMessage({ type:'ap-cache-request', key:_AP2_CACHE_KEY_EMP }, '*');
 }catch(e){}
 
-/* ---------- Manual snapshot paste (testing / no-parent fallback) ---------- */
-document.getElementById('snap-load').addEventListener('click', ()=>{
-  const raw = document.getElementById('snap-json').value.trim();
-  const errEl = document.getElementById('snap-error');
-  errEl.textContent = '';
-  if(!raw){ errEl.textContent = 'Paste a snapshot first.'; return; }
-  let parsed;
-  try{ parsed = JSON.parse(raw); }catch(e){ errEl.textContent = 'Could not parse that as JSON.'; return; }
-  const valid = Array.isArray(parsed) || (parsed && Array.isArray(parsed.data));
-  if(!valid){ errEl.textContent = 'Expected either a bare array, or an object with a "data" array.'; return; }
-  applyCacheData(parsed);
-  renderSyncBar(); renderAll();
-  alert(`Loaded ${AUTO_RECORDS.length} record(s) from the pasted snapshot.`);
-});
-document.getElementById('snap-clear').addEventListener('click', ()=>{
-  AUTO_RECORDS = []; cacheReady = false; lastSync = null;
-  document.getElementById('snap-json').value = '';
-  renderSyncBar(); renderAll();
-});
-
 // ---------- TABS ----------
 document.querySelectorAll('nav.tabs button').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -840,91 +600,10 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     document.querySelectorAll('section.tab').forEach(s=>s.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
-    renderAll();
   });
 });
 
-// ---------- EMPLOYEE MASTER (ap2_employee) ----------
-function refreshEidSelect(){
-  const sel = document.getElementById('r-eid');
-  const cur = sel.value;
-  const list = allEmployees();
-  if(list.length){
-    const sorted = list.slice().sort((a,b)=> a.empid.localeCompare(b.empid));
-    sel.innerHTML = '<option value="">Select employee…</option>' +
-      sorted.map(e=>`<option value="${esc(e.empid)}">${esc(e.empid)} – ${esc(e.name)}${e.status && e.status!=='Active' ? ' (' + esc(e.status) + ')' : ''}</option>`).join('');
-  } else {
-    sel.innerHTML = '<option value="">No employees yet — connect ap2_employee or upload a CSV list</option>';
-  }
-  if([...sel.options].some(o=>o.value===cur)) sel.value = cur;
-}
-function refreshEmpSummary(){
-  const parts = [];
-  if(empCacheReady) parts.push(`${AUTO_EMPLOYEES.length} live from ap2_employee`);
-  if(EMPLOYEES.length) parts.push(`${EMPLOYEES.length} manual/CSV`);
-  document.getElementById('emp-summary').textContent = parts.length
-    ? parts.join(' · ') + ` — ${allEmployees().length} total in the dropdown.`
-    : 'No employees yet — connect ap2_employee or upload a CSV list below.';
-}
-document.getElementById('emp-csv-template').addEventListener('click', ()=>{
-  const blob = new Blob(['EmpID,Name\n40231,Amir Farooq\n40232,Sana Iqbal'], {type:'text/csv'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download='ap2_employee-template.csv'; a.click();
-  URL.revokeObjectURL(url);
-});
-document.getElementById('emp-csv-import').addEventListener('click', async ()=>{
-  const fileInput = document.getElementById('emp-csv-file');
-  const errEl = document.getElementById('emp-csv-error');
-  errEl.textContent = '';
-  if(!fileInput.files.length){ errEl.textContent = 'Choose a CSV file first.'; return; }
-  const text = await fileInput.files[0].text();
-  let rows;
-  try{ rows = parseCSV(text); } catch(e){ errEl.textContent = 'Could not read that file as CSV.'; return; }
-  if(!rows.length){ errEl.textContent = 'No rows found in the file.'; return; }
-  let added = 0, updated = 0;
-  rows.forEach(row=>{
-    const empid = (row.empid||'').trim();
-    const name = (row.name||'').trim();
-    if(!empid) return;
-    const existing = EMPLOYEES.find(e=>e.empid===empid);
-    if(existing){ existing.name = name; updated++; }
-    else{ EMPLOYEES.push({ empid, name }); added++; }
-  });
-  await saveEmployees();
-  fileInput.value = '';
-  refreshEidSelect(); refreshEmpSummary(); renderAll();
-  alert(`Cached ${added} new employee(s), updated ${updated} existing.`);
-});
-document.getElementById('emp-clear').addEventListener('click', async ()=>{
-  if(!confirm('Clear the cached employee list? Existing account records are unaffected.')) return;
-  EMPLOYEES = [];
-  await saveEmployees();
-  refreshEidSelect(); refreshEmpSummary(); renderAll();
-});
-
-// ---------- ADD RECORD (manual) ----------
-function newRecord(fields){
-  return Object.assign({ id: uid(), activatedAt: Date.now(), source: 'manual' }, fields);
-}
-document.getElementById('r-save').addEventListener('click', async ()=>{
-  const eid = document.getElementById('r-eid').value.trim();
-  const accType = document.getElementById('r-acctype').value;
-  const accountNo = document.getElementById('r-accno').value.trim();
-  const addDetail = document.getElementById('r-adddetail').value.trim();
-  const comment = document.getElementById('r-comment').value.trim();
-  const startDate = document.getElementById('r-start').value;
-  const expDate = document.getElementById('r-exp').value;
-  const errEl = document.getElementById('r-error');
-  if(!eid){ errEl.textContent = 'EID is required.'; return; }
-  if(!accountNo){ errEl.textContent = 'Account No is required.'; return; }
-  errEl.textContent = '';
-  RECORDS.push(newRecord({ eid, accType, accountNo, addDetail, comment, startDate, expDate }));
-  ['r-eid','r-accno','r-adddetail','r-comment','r-start','r-exp'].forEach(id=>document.getElementById(id).value='');
-  await saveData();
-  renderAll();
-});
-
-// ---------- CSV PARSER (shared) ----------
+// ---------- CSV PARSER ----------
 function parseCSV(text){
   const lines = text.replace(/\r/g,'').split('\n').filter(l=>l.trim().length);
   if(!lines.length) return [];
@@ -947,16 +626,21 @@ function parseCSV(text){
     return row;
   });
 }
-
-// ---------- BULK CSV IMPORT (manual records) ----------
-document.getElementById('csv-template').addEventListener('click', ()=>{
-  const header = 'EID,AccType,Account No,AddDetail,Comment,StartDate,ExpDate';
-  const r1 = '40231,WPS,AE070331234567890123456,Emirates NBD,Primary WPS account,2026-01-01,';
-  const r2 = '40231,Advance,AE07033123456789ADVANCE,Emirates NBD,July advance,2026-07-01,2026-07-16';
-  const blob = new Blob([[header,r1,r2].join('\n')], {type:'text/csv'});
+function newRecord(fields){ return Object.assign({ id: uid(), activatedAt: Date.now(), source: 'manual' }, fields); }
+function downloadCSV(filename, header, rows){
+  const lines = [header.join(',')].concat(rows.map(row => row.map(v => `"${(v??'').toString().replace(/"/g,'""')}"`).join(',')));
+  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download='wps-resolver-template.csv'; a.click();
+  const a = document.createElement('a'); a.href=url; a.download=filename; a.click();
   URL.revokeObjectURL(url);
+}
+
+// ---------- UPLOAD: account records ----------
+document.getElementById('csv-template').addEventListener('click', ()=>{
+  downloadCSV('wps-accounts-template.csv',
+    ['EID','AccType','Account No','AddDetail','StartDate','ExpDate'],
+    [['40231','WPS','AE070331234567890123456','Emirates NBD','',''],
+     ['40231','Advance','AE07033123456789ADVANCE','Emirates NBD','2026-07-19','2026-07-19']]);
 });
 document.getElementById('csv-import').addEventListener('click', async ()=>{
   const fileInput = document.getElementById('csv-file');
@@ -974,120 +658,92 @@ document.getElementById('csv-import').addEventListener('click', async ()=>{
     const accountNo = (row.accountno||'').trim();
     if(!eid || !accountNo) return;
     RECORDS.push(newRecord({
-      eid,
-      accType: (row.acctype||'').trim() || 'Other',
-      accountNo,
+      eid, accType: (row.acctype||'').trim() || 'Other', accountNo,
       addDetail: (row.adddetail||'').trim(),
-      comment: (row.comment||'').trim(),
-      startDate: (row.startdate||'').trim(),
-      expDate: (row.expdate||'').trim(),
+      startDate: (row.startdate||'').trim(), expDate: (row.expdate||'').trim(),
       activatedAt: base + i
     }));
     added++;
   });
   await saveData();
-  renderAll();
   fileInput.value = '';
-  alert(`Imported ${added} record(s).`);
+  renderAll();
+  alert(`Saved ${added} record(s).`);
 });
 function removeRecord(id){
-  if(!confirm('Remove this record permanently? It will also disappear from the Full Log.')) return;
+  if(!confirm('Remove this record permanently? It will also disappear from the Log.')) return;
   RECORDS = RECORDS.filter(r=>r.id!==id);
   saveData().then(renderAll);
 }
 
-// ---------- RESOLVER LOGIC (thin wrapper over the activation engine) ----------
-function distinctEIDs(){
-  return [...new Set(allRecords().map(r=>r.eid))].filter(Boolean).sort();
-}
-function statusFor(eid, type){
-  const all = groupFor(eid, type);
-  if(!all.length) return 'missing';
-  if(computeActiveRecord(eid, type)) return 'active';
-  // No current winner — report the most recent record's own status
-  // (expired / upcoming / inactive) so the overview explains why.
-  const mostRecent = all.slice().sort((a,b)=>(b.activatedAt||0)-(a.activatedAt||0))[0];
-  return recordStatus(mostRecent);
-}
-function resolve(eid, mode){
-  const rec = computeActiveRecord(eid, mode);
-  if(!rec) return null;
-  let overriding = null;
-  if(isSpecial(rec)){
-    const alt = wouldBeWithoutTimed(eid, mode);
-    if(alt && alt.accountNo !== rec.accountNo) overriding = alt;
-  }
-  return { rec, usedType: rec.accType, special: isSpecial(rec), overriding };
-}
-
-document.querySelectorAll('.mode-btn[data-mode]').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.mode-btn[data-mode]').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    currentMode = btn.dataset.mode;
-    renderResolver();
+// ---------- UPLOAD: employee list ----------
+document.getElementById('emp-csv-template').addEventListener('click', ()=>{
+  downloadCSV('ap2_employee-template.csv', ['EmpID','Name'], [['40231','Amir Farooq'],['40232','Sana Iqbal']]);
+});
+document.getElementById('emp-csv-import').addEventListener('click', async ()=>{
+  const fileInput = document.getElementById('emp-csv-file');
+  const errEl = document.getElementById('emp-csv-error');
+  errEl.textContent = '';
+  if(!fileInput.files.length){ errEl.textContent = 'Choose a CSV file first.'; return; }
+  const text = await fileInput.files[0].text();
+  let rows;
+  try{ rows = parseCSV(text); } catch(e){ errEl.textContent = 'Could not read that file as CSV.'; return; }
+  if(!rows.length){ errEl.textContent = 'No rows found in the file.'; return; }
+  let added = 0, updated = 0;
+  rows.forEach(row=>{
+    const empid = (row.empid||'').trim();
+    const name = (row.name||'').trim();
+    if(!empid) return;
+    const existing = EMPLOYEES.find(e=>e.empid===empid);
+    if(existing){ existing.name = name; updated++; } else { EMPLOYEES.push({ empid, name }); added++; }
   });
+  await saveEmployees();
+  fileInput.value = '';
+  renderAll();
+  alert(`Saved ${added} new employee(s), updated ${updated} existing.`);
+});
+document.getElementById('emp-clear').addEventListener('click', async ()=>{
+  if(!confirm('Clear the manual employee list? The live ap2_employee cache (if connected) is unaffected.')) return;
+  EMPLOYEES = [];
+  await saveEmployees();
+  renderAll();
 });
 
-function usedBadge(result){
-  if(result.special) return `<span class="badge badge-special">${esc(result.usedType)} · timed</span>`;
-  return `<span class="badge badge-type">${esc(result.usedType)}</span>`;
-}
+// ---------- UPLOAD: preview ----------
+function renderUpload(){
+  const all = allRecords();
+  document.getElementById('import-summary').textContent = `${all.length} record(s) on file (${AUTO_RECORDS.length} live from ap2_accLog, ${RECORDS.length} manual/CSV) across ${distinctEIDs().length} EID(s).`;
+  document.getElementById('emp-summary').textContent = `${allEmployees().length} employee(s) known (${AUTO_EMPLOYEES.length} live, ${EMPLOYEES.length} manual).`;
 
-function renderResolver(){
-  const el = document.getElementById('resolver-table');
-  const eids = distinctEIDs();
-  const rows = [];
-  eids.forEach(eid=>{
-    const result = resolve(eid, currentMode);
-    if(!result) return;
-    const r = result.rec;
-    const overrideCell = result.overriding
-      ? `<span class="badge badge-special">TIMED</span> overrides <span class="mono">${esc(result.overriding.accountNo)}</span>`
-      : '—';
-    rows.push(`<tr>
-      <td class="mono">${esc(eid)}</td>
-      <td>${esc(nameForEid(eid)||'—')}</td>
-      <td class="mono" style="font-weight:700;font-size:13.5px;">${esc(r.accountNo)}</td>
-      <td>${usedBadge(result)}</td>
-      <td>${esc(r.addDetail||'—')}</td>
-      <td class="mono">${esc(r.startDate||'—')} → ${esc(r.expDate||'no expiry')}</td>
-      <td>${overrideCell}</td>
-    </tr>`);
-  });
-  if(!rows.length){ el.innerHTML = `<div class="empty">No EID currently has a valid ${esc(currentMode)} account.</div>`; return; }
-  el.innerHTML = `<div class="tablewrap"><table><thead><tr>
-    <th>EID</th><th>Name</th><th>Active Account No</th><th>Used as</th><th>AddDetail</th><th>Validity</th><th>Override</th>
-  </tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
-}
+  const statuses = all.map(recordStatus);
+  document.getElementById('upload-stats').innerHTML = [
+    ['s-active','Active', statuses.filter(s=>s==='active').length],
+    ['s-inactive','Inactive', statuses.filter(s=>s==='inactive').length],
+    ['s-partial','P-Inactive', statuses.filter(s=>s==='partial-inactive').length],
+    ['s-expired','Expired', statuses.filter(s=>s==='expired').length],
+    ['s-upcoming','Upcoming', statuses.filter(s=>s==='upcoming').length],
+  ].map(([cls,label,n])=>`<div class="stat ${cls}"><div class="n">${n}</div><div class="l">${label}</div></div>`).join('');
 
-function statusBadge(s){
-  if(s==='active') return '<span class="badge badge-active">ACTIVE</span>';
-  if(s==='expired') return '<span class="badge badge-expired">EXPIRED</span>';
-  if(s==='upcoming') return '<span class="badge badge-upcoming">UPCOMING</span>';
-  if(s==='inactive') return '<span class="badge badge-inactive">INACTIVE</span>';
-  return '<span class="badge badge-missing">—</span>';
-}
-function renderStatusTable(){
-  const el = document.getElementById('status-table');
-  const eids = distinctEIDs();
-  if(!eids.length){ el.innerHTML = '<div class="empty">No records yet.</div>'; return; }
-  const rows = eids.map(eid=>`<tr>
-    <td class="mono">${esc(eid)}</td>
-    <td>${esc(nameForEid(eid)||'—')}</td>
-    <td>${statusBadge(statusFor(eid,'WPS'))}</td>
-    <td>${statusBadge(statusFor(eid,'SALARY'))}</td>
-    <td>${statusBadge(statusFor(eid,'ADVANCE'))}</td>
+  const el = document.getElementById('upload-preview');
+  if(!all.length){ el.innerHTML = '<div class="empty">No account records yet — upload a CSV above.</div>'; return; }
+  const rows = all.slice().sort((a,b)=>(b.activatedAt||0)-(a.activatedAt||0)).map(r=>`<tr>
+    <td class="mono">${esc(fmtTs(r.activatedAt))}</td>
+    <td class="mono">${esc(r.eid)}</td>
+    <td>${esc(nameForEid(r.eid)||'—')}</td>
+    <td><span class="badge badge-type">${esc(r.accType)}</span></td>
+    <td class="acc-cell">${esc(r.accountNo)}</td>
+    <td>${statusBadge(recordStatus(r))}</td>
+    <td class="mono">${esc(r.startDate||'—')} → ${esc(r.expDate||'no expiry')}</td>
+    <td>${r.source==='auto' ? '' : `<button class="small-btn" onclick="removeRecord('${r.id}')">Remove</button>`}</td>
   </tr>`).join('');
-  el.innerHTML = `<div class="tablewrap"><table><thead><tr><th>EID</th><th>Name</th><th>WPS</th><th>Salary</th><th>Advance</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  el.innerHTML = `<div class="tablewrap"><table><thead><tr>
+    <th>Timestamp</th><th>EID</th><th>Name</th><th>AccType</th><th>Account No</th><th>Status</th><th>Validity</th><th></th>
+  </tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
-// ---------- WPS BATCH ----------
+// ---------- DOWNLOAD ----------
 document.getElementById('batch-csv-template').addEventListener('click', ()=>{
-  const blob = new Blob(['EmpID,Name\n40231,Amir Farooq\n40232,Sana Iqbal'], {type:'text/csv'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download='wps-run-template.csv'; a.click();
-  URL.revokeObjectURL(url);
+  downloadCSV('wps-run-template.csv', ['EmpID','Name'], [['40231','Amir Farooq'],['40232','Sana Iqbal']]);
 });
 document.getElementById('batch-csv-load').addEventListener('click', async ()=>{
   const fileInput = document.getElementById('batch-csv-file');
@@ -1098,101 +754,83 @@ document.getElementById('batch-csv-load').addEventListener('click', async ()=>{
   let rows;
   try{ rows = parseCSV(text); } catch(e){ errEl.textContent = 'Could not read that file as CSV.'; return; }
   if(!rows.length){ errEl.textContent = 'No rows found in the file.'; return; }
-  BATCH_SHEET = rows.map(row=>({
-    eid: (row.empid||row.eid||'').trim(),
-    name: (row.name||'').trim()
-  })).filter(r=>r.eid);
+  BATCH_SHEET = rows.map(row=>({ eid: (row.empid||row.eid||'').trim(), name: (row.name||'').trim() })).filter(r=>r.eid);
+  ROW_PURPOSE = {};
   await saveBatchSheet();
   fileInput.value = '';
-  renderBatch();
+  renderDownload();
 });
 document.getElementById('batch-clear').addEventListener('click', async ()=>{
-  BATCH_SHEET = [];
+  BATCH_SHEET = []; ROW_PURPOSE = {};
   await saveBatchSheet();
-  renderBatch();
+  renderDownload();
 });
-document.querySelectorAll('.mode-btn[data-batch-mode]').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.mode-btn[data-batch-mode]').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    currentBatchMode = btn.dataset.batchMode;
-    renderBatch();
-  });
+document.getElementById('batch-table').addEventListener('change', (e)=>{
+  if(e.target.classList.contains('purpose-select')){
+    ROW_PURPOSE[e.target.dataset.eid] = e.target.value;
+    renderDownload();
+  }
 });
 
-let LAST_BATCH_RESULTS = [];
-function renderBatch(){
+function renderDownload(){
   const statsEl = document.getElementById('batch-stats');
-  const toolbarEl = document.getElementById('batch-toolbar');
   const el = document.getElementById('batch-table');
   if(!BATCH_SHEET.length){
-    statsEl.style.display='none'; toolbarEl.style.display='none';
-    el.innerHTML = '<div class="empty">No sheet loaded yet — upload one above.</div>';
+    statsEl.innerHTML = '';
+    el.innerHTML = '<div class="empty">No sheet loaded yet — upload the riders for this run above.</div>';
     return;
   }
-  let nSpecial=0, nBase=0, nMissing=0;
-  const results = BATCH_SHEET.map(({eid,name})=>{
-    const result = resolve(eid, currentBatchMode);
-    if(!result){ nMissing++; return {eid,name,result:null}; }
-    if(result.special) nSpecial++; else nBase++;
-    return {eid,name,result};
-  });
-  LAST_BATCH_RESULTS = results;
-
-  document.getElementById('batch-n-total').textContent = BATCH_SHEET.length;
-  document.getElementById('batch-n-special').textContent = nSpecial;
-  document.getElementById('batch-n-base').textContent = nBase;
-  document.getElementById('batch-n-missing').textContent = nMissing;
-  statsEl.style.display='flex';
-  toolbarEl.style.display='flex';
-  document.getElementById('batch-summary').textContent =
-    `${currentBatchMode} run · ${BATCH_SHEET.length} employee(s) · ${nMissing} missing an account`;
-
-  const rows = results.map(({eid,name,result})=>{
+  let nFound=0, nOverride=0, nMissing=0;
+  const rowsHtml = BATCH_SHEET.map(({eid,name})=>{
+    const purpose = ROW_PURPOSE[eid] || defaultPurposeFor(eid);
+    const result = resolve(eid, purpose);
+    const opts = ['WPS','Salary','Advance'].map(p=>`<option value="${p}" ${p===purpose?'selected':''}>${p}</option>`).join('');
+    const selectHtml = `<select class="purpose-select" data-eid="${esc(eid)}">${opts}</select>`;
     if(!result){
+      nMissing++;
       return `<tr>
         <td class="mono">${esc(eid)}</td><td>${esc(name||nameForEid(eid)||'—')}</td>
-        <td><span class="badge badge-missing">NO ACCOUNT</span></td>
-        <td colspan="5" class="hint">No currently Active ${esc(currentBatchMode)} account found for this EID.</td>
+        <td>${selectHtml}</td>
+        <td colspan="4" class="hint">No currently active ${esc(purpose)} account for this EID.</td>
       </tr>`;
     }
+    if(result.special) nOverride++;
+    nFound++;
     const r = result.rec;
     return `<tr>
-      <td class="mono">${esc(eid)}</td>
-      <td>${esc(name||nameForEid(eid)||'—')}</td>
-      <td>${usedBadge(result)}</td>
-      <td class="mono">${esc(r.accountNo)}</td>
+      <td class="mono">${esc(eid)}</td><td>${esc(name||nameForEid(eid)||'—')}</td>
+      <td>${selectHtml}</td>
+      <td class="acc-cell">${esc(r.accountNo)}</td>
       <td>${esc(r.addDetail||'—')}</td>
-      <td>${esc(r.comment||'—')}</td>
+      <td>${result.special ? `<span class="badge badge-override">OVERRIDE${result.overriding ? ' · was '+esc(result.overriding.accountNo) : ''}</span>` : '—'}</td>
       <td class="mono">${esc(r.startDate||'—')} → ${esc(r.expDate||'no expiry')}</td>
-      <td>${esc(r.source==='auto'?'ap2_accLog':'manual')}</td>
     </tr>`;
   }).join('');
-  el.innerHTML = `<div class="tablewrap"><table><thead><tr>
-    <th>EID</th><th>Name</th><th>Used as</th><th>Account No</th><th>AddDetail</th><th>Comment</th><th>Validity</th><th>Source</th>
-  </tr></thead><tbody>${rows}</tbody></table></div>`;
+
+  statsEl.innerHTML = [
+    ['s-active','Accounts found', nFound],
+    ['s-partial','Using override', nOverride],
+    ['s-expired','Missing', nMissing],
+  ].map(([cls,label,n])=>`<div class="stat ${cls}"><div class="n">${n}</div><div class="l">${label}</div></div>`).join('');
+
+  el.innerHTML = `<table><thead><tr>
+    <th>EID</th><th>Name</th><th>Purpose</th><th>Account No</th><th>AddDetail</th><th>Override</th><th>Validity</th>
+  </tr></thead><tbody>${rowsHtml}</tbody></table>`;
 }
 document.getElementById('batch-export').addEventListener('click', ()=>{
-  const header = ['EID','Name','Purpose','UsedAs','Timed','AccountNo','AddDetail','Comment','StartDate','ExpDate','Source'];
-  const lines = [header.join(',')];
-  LAST_BATCH_RESULTS.forEach(({eid,name,result})=>{
-    if(!result){
-      lines.push([eid,name,currentBatchMode,'NO ACCOUNT','','','','','','',''].map(v=>`"${(v??'').toString().replace(/"/g,'""')}"`).join(','));
-      return;
-    }
+  const rows = BATCH_SHEET.map(({eid,name})=>{
+    const purpose = ROW_PURPOSE[eid] || defaultPurposeFor(eid);
+    const result = resolve(eid, purpose);
+    if(!result) return [eid, name||nameForEid(eid), purpose, 'NO ACCOUNT','','','',''];
     const r = result.rec;
-    const row = [eid, name||nameForEid(eid), currentBatchMode, result.usedType, result.special?'YES':'',
-      r.accountNo, r.addDetail, r.comment, r.startDate, r.expDate, r.source==='auto'?'ap2_accLog':'manual']
-      .map(v => `"${(v??'').toString().replace(/"/g,'""')}"`);
-    lines.push(row.join(','));
-  });
-  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download=`wps-batch-${currentBatchMode.toLowerCase()}-${todayISO()}.csv`; a.click();
-  URL.revokeObjectURL(url);
+    return [eid, name||nameForEid(eid), purpose, r.accountNo, r.addDetail,
+      result.special ? 'YES' : '', r.startDate, r.expDate];
+  }).filter(row => row[3] !== 'NO ACCOUNT'); // "download data for account activated only"
+  downloadCSV(`wps-activated-accounts-${todayISO()}.csv`,
+    ['EID','Name','Purpose','Account No','AddDetail','Override','StartDate','ExpDate'], rows);
 });
 
-// ---------- FULL LOG ----------
+// ---------- LOG ----------
 function refreshLogFilters(){
   const eidSel = document.getElementById('f-eid');
   const curEid = eidSel.value;
@@ -1212,12 +850,6 @@ function refreshLogFilters(){
   document.getElementById(id).addEventListener('change', renderLog);
 });
 
-function fmtTs(ms){
-  if(!ms) return '—';
-  const d = new Date(ms);
-  return d.toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
-}
-
 function renderLog(){
   const eidF = document.getElementById('f-eid').value;
   const typeF = document.getElementById('f-acctype').value;
@@ -1226,10 +858,14 @@ function renderLog(){
 
   const all = allRecords();
   const statuses = all.map(recordStatus);
-  document.getElementById('log-n-active').textContent = statuses.filter(s=>s==='active').length;
-  document.getElementById('log-n-inactive').textContent = statuses.filter(s=>s==='inactive').length;
-  document.getElementById('log-n-expired').textContent = statuses.filter(s=>s==='expired').length;
-  document.getElementById('log-n-total').textContent = all.length;
+  document.getElementById('log-stats').innerHTML = [
+    ['s-active','Active', statuses.filter(s=>s==='active').length],
+    ['s-inactive','Inactive', statuses.filter(s=>s==='inactive').length],
+    ['s-partial','P-Inactive', statuses.filter(s=>s==='partial-inactive').length],
+    ['s-expired','Expired', statuses.filter(s=>s==='expired').length],
+    ['s-upcoming','Upcoming', statuses.filter(s=>s==='upcoming').length],
+  ].map(([cls,label,n])=>`<div class="stat ${cls}"><div class="n">${n}</div><div class="l">${label}</div></div>`).join('')
+    + `<div class="stat"><div class="n">${all.length}</div><div class="l">Total</div></div>`;
 
   let rows = all.filter(r=>{
     if(eidF && r.eid !== eidF) return false;
@@ -1242,191 +878,33 @@ function renderLog(){
 
   const el = document.getElementById('log-table');
   if(!rows.length){ el.innerHTML = '<div class="empty">No records match these filters.</div>'; return; }
-  const html = rows.map(r=>{
-    return `<tr>
+  const html = rows.map(r=>`<tr>
     <td class="mono">${esc(fmtTs(r.activatedAt))}</td>
     <td class="mono">${esc(r.eid||'—')}</td>
-    <td><span class="badge badge-type">${esc(r.accType)}</span>${isSpecial(r) ? ' <span class="badge badge-special">TIMED</span>' : ''}</td>
-    <td class="mono">${esc(r.accountNo)}</td>
+    <td><span class="badge badge-type">${esc(r.accType)}</span>${isSpecial(r) ? ' <span class="badge badge-override">TIMED</span>' : ''}</td>
+    <td class="acc-cell">${esc(r.accountNo)}</td>
     <td>${esc(r.addDetail||'—')}</td>
     <td>${statusBadge(recordStatus(r))}</td>
     <td class="mono">${esc(r.startDate||'—')}</td>
     <td class="mono">${esc(r.expDate||'no expiry')}</td>
     <td><span class="badge ${r.source==='auto'?'badge-auto':'badge-manual'}">${r.source==='auto'?'ap2_accLog':'manual'}</span></td>
     <td>${r.source==='auto' ? '' : `<button class="small-btn" onclick="removeRecord('${r.id}')">Remove</button>`}</td>
-  </tr>`;
-  }).join('');
-  el.innerHTML = `<div class="tablewrap"><table><thead><tr>
+  </tr>`).join('');
+  el.innerHTML = `<table><thead><tr>
     <th>Timestamp</th><th>EID</th><th>AccType</th><th>Account No</th><th>AddDetail</th><th>Status</th><th>StartDate</th><th>ExpDate</th><th>Source</th><th></th>
-  </tr></thead><tbody>${html}</tbody></table></div>`;
+  </tr></thead><tbody>${html}</tbody></table>`;
 }
 document.getElementById('export-csv').addEventListener('click', ()=>{
-  const header = ['Timestamp','EID','AccType','Account No','AddDetail','Status','StartDate','ExpDate','Source'];
-  const lines = [header.join(',')];
-  allRecords().slice().sort((a,b)=>(b.activatedAt||0)-(a.activatedAt||0)).forEach(r=>{
-    const row = [fmtTs(r.activatedAt), r.eid, r.accType, r.accountNo, r.addDetail, recordStatus(r).toUpperCase(), r.startDate, r.expDate, r.source==='auto'?'ap2_accLog':'manual']
-      .map(v => `"${(v??'').toString().replace(/"/g,'""')}"`);
-    lines.push(row.join(','));
-  });
-  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download='wps-full-log.csv'; a.click();
-  URL.revokeObjectURL(url);
+  const rows = allRecords().slice().sort((a,b)=>(b.activatedAt||0)-(a.activatedAt||0)).map(r=>
+    [fmtTs(r.activatedAt), r.eid, r.accType, r.accountNo, r.addDetail, recordStatus(r).toUpperCase(), r.startDate, r.expDate, r.source==='auto'?'ap2_accLog':'manual']);
+  downloadCSV('wps-full-log.csv', ['Timestamp','EID','AccType','Account No','AddDetail','Status','StartDate','ExpDate','Source'], rows);
 });
-
-// ---------- ACTIVATION PORTAL ----------
-let portalEid = '';
-let portalPurpose = '';
-
-function refreshPortalEidSelect(){
-  const sel = document.getElementById('p-eid');
-  const cur = sel.value;
-  const list = allEmployees();
-  const eidsWithRecords = new Set(distinctEIDs());
-  // Show every known employee (even with no accounts yet) plus any EID that
-  // only appears in ap2_accLog but isn't in the employee master yet.
-  const merged = {};
-  list.forEach(e=> merged[e.empid] = e.name);
-  eidsWithRecords.forEach(e=>{ if(!(e in merged)) merged[e] = ''; });
-  const ids = Object.keys(merged).sort();
-  if(ids.length){
-    sel.innerHTML = '<option value="">Select rider…</option>' +
-      ids.map(id=>`<option value="${esc(id)}">${esc(id)}${merged[id] ? ' – ' + esc(merged[id]) : ''}</option>`).join('');
-  } else {
-    sel.innerHTML = '<option value="">No riders yet</option>';
-  }
-  if([...sel.options].some(o=>o.value===cur)) sel.value = cur;
-}
-document.getElementById('p-eid').addEventListener('change', (e)=>{
-  portalEid = e.target.value;
-  portalPurpose = '';
-  document.querySelectorAll('.mode-btn[data-purpose]').forEach(b=>b.classList.remove('active'));
-  renderPortal();
-});
-document.querySelectorAll('.mode-btn[data-purpose]').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    if(!portalEid){ alert('Pick a rider first.'); return; }
-    document.querySelectorAll('.mode-btn[data-purpose]').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    portalPurpose = btn.dataset.purpose;
-    renderPortal();
-  });
-});
-
-function activateExisting(recordId){
-  const src = allRecords().find(r=>r.id===recordId);
-  if(!src) return;
-  // Every activation is a fresh, timestamped event — nothing is overwritten,
-  // so the full history (including who/what was active before) stays intact.
-  RECORDS.push(newRecord({
-    eid: src.eid, accType: src.accType, accountNo: src.accountNo,
-    addDetail: src.addDetail, comment: src.comment,
-    startDate: src.startDate, expDate: src.expDate
-  }));
-  saveData().then(renderAll);
-}
-document.getElementById('p-panel').addEventListener('click', (e)=>{
-  const btn = e.target.closest('button[data-activate]');
-  if(btn) activateExisting(btn.dataset.activate);
-});
-document.getElementById('p-panel').addEventListener('click', (e)=>{
-  if(e.target.id === 'p-add-save') savePortalNewAccount();
-});
-function savePortalNewAccount(){
-  const accountNo = document.getElementById('p-add-accno').value.trim();
-  const addDetail = document.getElementById('p-add-adddetail').value.trim();
-  const startDate = document.getElementById('p-add-start').value;
-  const expDate = document.getElementById('p-add-exp').value;
-  const errEl = document.getElementById('p-add-error');
-  if(!accountNo){ errEl.textContent = 'Account No is required.'; return; }
-  errEl.textContent = '';
-  RECORDS.push(newRecord({ eid: portalEid, accType: portalPurpose, accountNo, addDetail, comment:'', startDate, expDate }));
-  saveData().then(renderAll);
-}
-
-function renderPortal(){
-  refreshPortalEidSelect();
-  const panel = document.getElementById('p-panel');
-  document.querySelectorAll('.mode-btn[data-purpose]').forEach(b=>{
-    b.classList.toggle('active', b.dataset.purpose === portalPurpose);
-  });
-
-  if(!portalEid){
-    panel.innerHTML = '';
-  } else if(!portalPurpose){
-    panel.innerHTML = `<p class="hint" style="margin-top:14px;">Pick WPS, Salary, or Advance above to see or activate an account for this rider.</p>`;
-  } else {
-    const group = groupFor(portalEid, portalPurpose).slice().sort((a,b)=>(b.activatedAt||0)-(a.activatedAt||0));
-    const activeRec = computeActiveRecord(portalEid, portalPurpose);
-    const timedActive = activeRec && isSpecial(activeRec);
-    let html = `<div class="preview-panel">`;
-    html += `<div style="font-size:12.5px;font-weight:600;color:var(--navy);margin-bottom:10px;">${esc(portalPurpose)} accounts for ${esc(portalEid)}${nameForEid(portalEid) ? ' – ' + esc(nameForEid(portalEid)) : ''}</div>`;
-    if(timedActive){
-      html += `<div class="timed-note">A timed account (valid ${esc(activeRec.startDate)} → ${esc(activeRec.expDate)}) is automatically Active for this purpose right now. Activating another one below is still recorded, but it'll only take effect once this timed window ends.</div>`;
-    }
-    if(group.length){
-      group.forEach(r=>{
-        const st = recordStatus(r);
-        html += `<div class="preview-row">
-          <div class="info">
-            <div class="acc">${esc(r.accountNo)} ${isSpecial(r) ? '<span class="badge badge-special">TIMED</span>' : ''}</div>
-            <div class="meta">${esc(r.addDetail||'No add. detail')} · ${esc(r.startDate||'no start')} → ${esc(r.expDate||'no expiry')} · activated ${esc(fmtTs(r.activatedAt))}</div>
-          </div>
-          <span class="badge ${st==='active'?'badge-active':'badge-inactive'}">${st.toUpperCase()}</span>
-          <button class="btn btn-ghost" data-activate="${r.id}">${st==='active' ? 'Re-activate' : 'Activate'}</button>
-        </div>`;
-      });
-    } else {
-      html += `<p class="hint" style="margin-top:0;">No ${esc(portalPurpose)} account on file yet for this rider.</p>`;
-    }
-    html += `<h2 style="margin-top:18px;font-size:13px;">Add a new ${esc(portalPurpose)} account &amp; activate it</h2>
-      <label>Account No</label><input id="p-add-accno" class="mono" placeholder="account / IBAN / card number">
-      <label>AddDetail</label><input id="p-add-adddetail" placeholder="bank name, branch, etc.">
-      <label>StartDate <span class="hint">(leave both dates blank for an ordinary account)</span></label><input id="p-add-start" type="date">
-      <label>ExpDate</label><input id="p-add-exp" type="date">
-      <div id="p-add-error" class="error"></div>
-      <div class="btn-row"><button class="btn btn-primary" id="p-add-save">Add &amp; activate</button></div>`;
-    html += `</div>`;
-    panel.innerHTML = html;
-  }
-
-  const riderRecs = portalEid ? allRecords().filter(r=>r.eid===portalEid) : [];
-  document.getElementById('p-n-active').textContent = riderRecs.filter(r=>recordStatus(r)==='active').length;
-  document.getElementById('p-n-inactive').textContent = riderRecs.filter(r=>recordStatus(r)==='inactive').length;
-  document.getElementById('p-n-total').textContent = riderRecs.length;
-
-  const tblEl = document.getElementById('p-rider-table');
-  if(!portalEid){ tblEl.innerHTML = '<div class="empty">Pick a rider above to see their accounts.</div>'; return; }
-  if(!riderRecs.length){ tblEl.innerHTML = '<div class="empty">No accounts on file for this rider yet.</div>'; return; }
-  const sorted = riderRecs.slice().sort((a,b)=>(b.activatedAt||0)-(a.activatedAt||0));
-  const rows = sorted.map(r=>{
-    const st = recordStatus(r);
-    return `<tr>
-      <td class="mono">${esc(fmtTs(r.activatedAt))}</td>
-      <td class="mono">${esc(r.eid)}</td>
-      <td><span class="badge badge-type">${esc(r.accType)}</span>${isSpecial(r) ? ' <span class="badge badge-special">TIMED</span>' : ''}</td>
-      <td class="mono">${esc(r.accountNo)}</td>
-      <td>${esc(r.addDetail||'—')}</td>
-      <td>${st==='active' ? '<span class="badge badge-active">ACTIVE</span>' : '<span class="badge badge-inactive">INACTIVE</span>'}</td>
-      <td class="mono">${esc(r.startDate||'—')}</td>
-      <td class="mono">${esc(r.expDate||'no expiry')}</td>
-    </tr>`;
-  }).join('');
-  tblEl.innerHTML = `<div class="tablewrap"><table><thead><tr>
-    <th>Timestamp</th><th>EID</th><th>AccType</th><th>Account No</th><th>AddDetail</th><th>Status</th><th>StartDate</th><th>ExpDate</th>
-  </tr></thead><tbody>${rows}</tbody></table></div>`;
-}
 
 // ---------- RENDER ALL ----------
 function renderAll(){
   if(!loaded) return;
-  document.getElementById('import-summary').textContent = `${allRecords().length} record(s) on file (${AUTO_RECORDS.length} live from ap2_accLog, ${RECORDS.length} manual/CSV) across ${distinctEIDs().length} EID(s).`;
-  refreshEidSelect();
-  refreshEmpSummary();
-  renderPortal();
-  renderResolver();
-  renderStatusTable();
-  renderBatch();
+  renderUpload();
+  renderDownload();
   refreshLogFilters();
   renderLog();
   renderSyncBar();
