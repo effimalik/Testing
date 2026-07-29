@@ -376,21 +376,19 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 .theme-dd-wrap{position:relative;flex-shrink:0;}
 
 .tb-theme-btn{
-  display:flex;align-items:center;gap:6px;
-  padding:0 11px;height:28px;
+  display:flex;align-items:center;justify-content:center;
+  width:32px;height:28px;
   border-radius:6px;
   border:1px solid var(--border2);
   background:var(--surface);
   color:var(--text);
-  font-size:11.5px;font-weight:600;cursor:pointer;
-  font-family:var(--font);transition:all .15s;white-space:nowrap;
+  cursor:pointer;
+  font-family:var(--font);transition:all .15s;flex-shrink:0;
   box-shadow:0 1px 3px rgba(0,0,0,.2);
 }
-.tb-theme-btn i.icon-main{font-size:14px;color:var(--accent);}
-.tb-theme-btn .caret{font-size:10px;color:var(--text3);transition:transform .2s;margin-left:1px;}
+.tb-theme-btn i.icon-main{font-size:15px;color:var(--accent);}
 .tb-theme-btn:hover{background:var(--surface2);border-color:var(--accent);box-shadow:0 0 8px var(--accent-glow);}
 .tb-theme-btn.open{border-color:var(--accent);background:var(--surface2);box-shadow:0 0 10px var(--accent-glow);}
-.tb-theme-btn.open .caret{transform:rotate(180deg);}
 
 /* Dropdown — position:fixed so it always renders above all siblings */
 .theme-dropdown{
@@ -460,20 +458,9 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.2);
 }
 .tb-avatar-btn:hover{box-shadow:0 0 0 2px var(--accent-glow);transform:scale(1.05);}
-
-/* logout — professional block button */
-.tb-logout-btn{
-  display:flex;align-items:center;gap:6px;
-  padding:0 12px;height:28px;
-  border-radius:6px;
-  border:1px solid rgba(248,81,73,.3);
-  background:var(--red-dim);color:var(--red);
-  font-size:11.5px;font-weight:600;cursor:pointer;
-  font-family:var(--font);transition:all .15s;white-space:nowrap;flex-shrink:0;
+@media(max-width:520px){
+  .tb-avatar-btn{width:26px;height:26px;font-size:9px;margin-left:auto;}
 }
-.tb-logout-btn i{font-size:14px;}
-.tb-logout-btn:hover{background:var(--red);color:#fff;box-shadow:0 0 8px rgba(248,81,73,.35);}
-@media (max-width:900px){.tb-logout-btn span{display:none;}.tb-logout-btn{padding:0 8px;}}
 
 /* ═══ PROFILE / LOGOUT MODAL ═══ */
 .pm-overlay{
@@ -1002,8 +989,6 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
       <div class="theme-dd-wrap" id="theme-dd-wrap">
         <button class="tb-theme-btn" id="theme-dd-btn" onclick="toggleThemeDropdown(event)" title="Choose theme">
           <i class="ti ti-palette icon-main" id="theme-dd-icon"></i>
-          <span id="theme-dd-label">Dark</span>
-          <i class="ti ti-chevron-down caret"></i>
         </button>
         <!-- Dropdown rendered here but positioned fixed via JS -->
         <div class="theme-dropdown" id="theme-dropdown" role="menu">
@@ -1033,15 +1018,8 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 
       <div class="tb-vsep"></div>
 
-      <!-- Avatar — simple icon button, opens profile popup (Name / Designation) -->
+      <!-- Avatar — simple icon button, opens profile popup (Name / Designation / Logout) -->
       <button class="tb-avatar-btn" id="tb-avatar-btn" onclick="openProfileModal()" title="Loading...">--</button>
-
-      <div class="tb-vsep"></div>
-
-      <!-- Logout — professional block button, opens same popup, OK/Logout signs out -->
-      <button class="tb-logout-btn" id="tb-logout-btn" onclick="openProfileModal()" title="Logout">
-        <i class="ti ti-logout-2"></i><span>Logout</span>
-      </button>
 
     </div>
   </header>
