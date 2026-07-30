@@ -162,14 +162,18 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
   margin-left: auto;
   max-width: 100%;
 }
-.search-group { display: flex; align-items: center; gap: 6px; flex: 1 1 140px; min-width: 90px; max-width: 240px; }
-.search-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: clamp(28px,4vw,34px); height: clamp(28px,4vw,34px); border-radius: var(--radius); border: 1px solid var(--border2); background: var(--surface); color: var(--text3); flex-shrink: 0; cursor: default; font-size: clamp(14px,2vw,17px); }
-.search-input { flex: 1; padding: clamp(6px,1vw,7px) clamp(8px,1.2vw,11px); border: 1px solid var(--border2); border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: var(--font); font-size: clamp(11px,1.3vw,13px); transition: border .18s, box-shadow .18s; min-width: 0; width: 100%; }
+.search-group { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.search-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: clamp(28px,4vw,34px); height: clamp(28px,4vw,34px); border-radius: var(--radius); border: 1px solid var(--border2); background: var(--surface); color: var(--text3); flex-shrink: 0; cursor: pointer; font-size: clamp(14px,2vw,17px); transition: all .18s; padding: 0; }
+.search-icon-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--accent); }
+.search-group.open .search-icon-btn { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
+/* Collapsed by default — width animates open only once the search icon is clicked */
+.search-input { width: 0; padding: 0; border: 1px solid transparent; border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: var(--font); font-size: clamp(11px,1.3vw,13px); transition: width .22s ease, padding .22s ease, border-color .18s, box-shadow .18s; min-width: 0; opacity: 0; pointer-events: none; }
+.search-group.open .search-input { width: clamp(130px, 18vw, 220px); padding: clamp(6px,1vw,7px) clamp(8px,1.2vw,11px); border-color: var(--border2); opacity: 1; pointer-events: auto; }
 .search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
 .search-input::placeholder { color: var(--text3); }
-.hr-filter-pills { display: flex; gap: 5px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
-.hr-filter-btn { display: inline-flex; align-items: center; gap: 5px; padding: clamp(5px,.8vw,7px) clamp(9px,1.2vw,13px); border-radius: 20px; border: 1.5px solid var(--border2); background: var(--surface); color: var(--text2); font-family: var(--font); font-size: clamp(10px,1.1vw,12px); font-weight: 600; cursor: pointer; transition: all .18s; white-space: nowrap; flex-shrink: 0; }
-.hr-filter-btn i { font-size: 15px; flex-shrink: 0; line-height: 1; display: inline-flex; align-items: center; }
+.hr-filter-pills { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.hr-filter-btn { display: inline-flex; align-items: center; justify-content: center; width: clamp(30px,4.2vw,36px); height: clamp(30px,4.2vw,36px); padding: 0; border-radius: 50%; border: 1.5px solid var(--border2); background: var(--surface); color: var(--text2); font-family: var(--font); cursor: pointer; transition: all .18s; flex-shrink: 0; }
+.hr-filter-btn i { font-size: clamp(14px,1.8vw,17px); flex-shrink: 0; line-height: 1; display: inline-flex; align-items: center; }
 .hr-filter-btn:hover { background: var(--surface2); color: var(--text); }
 .hr-filter-btn.active   { background: var(--surface2); color: var(--text); border-color: var(--border2); box-shadow: 0 0 0 2px var(--accent); }
 .hr-filter-btn.expired  { border-color: var(--red);   color: var(--red); }
@@ -179,17 +183,9 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 .hr-filter-btn.valid    { border-color: var(--teal);  color: var(--teal); }
 .hr-filter-btn.valid.active    { background: var(--teal-dim); box-shadow: 0 0 0 2px var(--teal); }
 
-/* On smaller screens the filter buttons drop their labels and become
-   icon-only "chips" so the whole controls row keeps fitting in one line. */
-@media (max-width: 760px) {
-  .hr-filter-btn span { display: none; }
-  .hr-filter-btn { padding: 7px 8px; gap: 0; }
-  .hr-filter-btn i { font-size: 16px; }
-  .search-group { flex: 0 1 120px; min-width: 80px; max-width: 150px; }
-}
 @media (max-width: 420px) {
-  .search-group { flex: 0 1 90px; min-width: 60px; max-width: 110px; }
-  .hr-filter-btn { padding: 6px 7px; }
+  .hr-filter-btn { width: 30px; height: 30px; }
+  .search-group.open .search-input { width: clamp(100px, 30vw, 150px); }
 }
 
 /* ── Table card — flex column so the header row, scrollable body and the
@@ -258,7 +254,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 [class^="ti-"], [class*=" ti-"] { font-style: normal; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
 
 /* ── Row action buttons ── */
-.row-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 6px; border: 1.5px solid; font-family: var(--font); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .16s; white-space: nowrap; line-height: 1; }
+.row-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border-radius: 7px; border: 1.5px solid; font-family: var(--font); cursor: pointer; transition: all .16s; flex-shrink: 0; }
 .row-btn i { font-size: 15px; flex-shrink: 0; line-height: 1; }
 .row-btn-view { background: var(--teal-dim); border-color: var(--teal); color: var(--teal); }
 .row-btn-view:hover { background: var(--teal); color: #fff; box-shadow: 0 0 10px var(--teal-dim); }
@@ -301,6 +297,11 @@ select option { background: var(--surface2); color: var(--text); }
    min-width:0, so it naturally shrinks/"folds" left to share the row
    with the panel — both stay visible at once, like two panes of one
    window, instead of the panel floating on top with a dark backdrop.
+   #side-panel is given the same vertical padding as .page, and .dp-sheet
+   is styled as a rounded card (like .emp-table-card), so the panel sits
+   in the exact same vertical band as the table — top and bottom edges
+   line up, i.e. it opens "parallel" in height to the table, not the
+   raw viewport.
 
    Narrow / mobile widths: there isn't enough room to dock two panes
    side-by-side, so the media query below switches back to the classic
@@ -311,29 +312,41 @@ select option { background: var(--surface2); color: var(--text); }
   width: 0;
   height: 100%;
   overflow: hidden;
-  background: var(--bg2);
-  border-left: 0 solid var(--border2);
-  transition: width .32s cubic-bezier(.4,0,.2,1), border-color .32s;
+  box-sizing: border-box;
+  padding: 0;
+  transition: width .32s cubic-bezier(.4,0,.2,1), padding .32s cubic-bezier(.4,0,.2,1);
 }
-#side-panel.open { width: clamp(460px, 40vw, 620px); border-left: 1px solid var(--border2); }
+#side-panel.open { width: clamp(460px, 40vw, 620px); padding: clamp(8px, 2vw, 24px) clamp(10px, 2.5vw, 24px) clamp(8px, 2vw, 24px) 0; }
 .dp-backdrop { display: none; }
-.dp-sheet { position: relative; width: clamp(460px, 40vw, 620px); height: 100%; max-height: 100%; background: var(--bg2); display: flex; flex-direction: column; overflow: hidden; }
+.dp-sheet {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  background: var(--bg2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
 
 @media (max-width: 880px) {
   body { display: block; }
   .page { width: 100%; }
-  #side-panel { position: fixed; inset: 0; z-index: 300; width: auto; height: 100dvh; pointer-events: none; display: flex; justify-content: flex-end; border-left: none; overflow: visible; transition: none; }
-  #side-panel.open { pointer-events: auto; width: auto; border-left: none; }
+  #side-panel { position: fixed; inset: 0; z-index: 300; width: auto; height: 100dvh; pointer-events: none; display: flex; justify-content: flex-end; padding: 0; overflow: visible; transition: none; }
+  #side-panel.open { pointer-events: auto; width: auto; padding: 0; }
   .dp-backdrop { display: block; position: absolute; inset: 0; background: rgba(0,0,0,.55); backdrop-filter: blur(3px); opacity: 0; transition: opacity .28s; }
   #side-panel.open .dp-backdrop { opacity: 1; }
-  .dp-sheet { position: relative; width: min(440px, 100%); height: 100dvh; max-height: 95dvh; border-left: 1px solid var(--border2); transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); box-shadow: -8px 0 40px rgba(0,0,0,.4); }
+  .dp-sheet { position: relative; width: min(440px, 100%); height: 100dvh; max-height: 95dvh; border-radius: 0; border: none; border-left: 1px solid var(--border2); transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); box-shadow: -8px 0 40px rgba(0,0,0,.4); }
   #side-panel.open .dp-sheet { transform: translateX(0); }
 }
 
 /* ── Header — two clean rows: name+actions on row 1, EMP# detail on row 2,
    so everything below (tabs, stats, table) gets the remaining vertical
    space instead of the header eating into it. ── */
-.dp-header { padding: 16px 20px 14px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; background: var(--bg2); }
+.dp-header { padding: 16px 20px 14px; border-bottom: 1px solid var(--border); border-radius: var(--radius-lg) var(--radius-lg) 0 0; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; background: var(--bg2); }
 .dp-header-row1 { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
 .dp-header-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
 .dp-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
@@ -368,18 +381,17 @@ select option { background: var(--surface2); color: var(--text); }
 .dp-edit-input:focus { outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
 [data-theme="light"] .dp-edit-input { background: var(--bg2); }
 .dp-ex-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 4px; }
-.dp-ex-card { border-radius: 8px; padding: 8px 6px; border: 1.5px solid; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.dp-ex-icon  { font-size: 18px; line-height: 1; }
+.dp-ex-card { border-radius: 8px; padding: 7px 5px; border: 1.5px solid; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: default; }
+.dp-ex-icon  { font-size: 17px; line-height: 1; }
 .dp-ex-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; opacity: .8; }
-.dp-ex-status { font-size: 10.5px; font-weight: 700; }
 .dp-ex-date  { font-size: 9px; font-family: var(--mono); opacity: .75; }
 .dp-ex-valid    { background: var(--teal-dim);  color: var(--teal);  border-color: var(--teal); }
 .dp-ex-expiring { background: var(--amber-dim); color: var(--amber); border-color: var(--amber); }
 .dp-ex-expired  { background: var(--red-dim);   color: var(--red);   border-color: var(--red); }
 .dp-ex-na       { background: var(--surface);   color: var(--text3); border-color: var(--border2); }
-.dp-footer { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px; justify-content: flex-end; flex-shrink: 0; flex-wrap: wrap; background: var(--bg2); }
-.dp-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius); font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; border: 1.5px solid; transition: all .18s; white-space: nowrap; }
-.dp-btn i { font-size: 16px; line-height: 1; flex-shrink: 0; }
+.dp-footer { padding: 14px 22px; border-top: 1px solid var(--border); border-radius: 0 0 var(--radius-lg) var(--radius-lg); display: flex; align-items: center; gap: 10px; justify-content: flex-end; flex-shrink: 0; flex-wrap: wrap; background: var(--bg2); }
+.dp-btn { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; padding: 0; border-radius: var(--radius); font-family: var(--font); cursor: pointer; border: 1.5px solid; transition: all .18s; flex-shrink: 0; }
+.dp-btn i { font-size: 17px; line-height: 1; flex-shrink: 0; }
 .dp-btn-secondary { background: var(--surface); color: var(--text2); border-color: var(--border2); }
 .dp-btn-secondary:hover { background: var(--surface2); color: var(--text); }
 .dp-btn-edit { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
@@ -423,7 +435,6 @@ select option { background: var(--surface2); color: var(--text); }
   .emp-table th:nth-child(5), .emp-table td:nth-child(5) { width: 44%; }
 }
 @media (max-width: 768px) {
-  .dp-sheet { width: 100%; border-left: none; }
   .dp-fl { width: 100px; }
   .dp-ex-grid { grid-template-columns: repeat(2, 1fr); }
 }
@@ -431,8 +442,6 @@ select option { background: var(--surface2); color: var(--text); }
   .emp-table th:nth-child(1), .emp-table td:nth-child(1) { width: 55%; }
   .emp-table th:nth-child(2), .emp-table td:nth-child(2) { width: 0; display:none; }
   .emp-table th:nth-child(5), .emp-table td:nth-child(5) { width: 45%; }
-  .row-btn span { display: none; }
-  .row-btn { padding: 5px 7px; gap: 0; }
   .dp-ex-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 420px) {
@@ -474,15 +483,15 @@ select option { background: var(--surface2); color: var(--text); }
     </div>
 
     <div class="page-header-controls">
-      <div class="search-group">
-        <span class="search-icon-btn" aria-hidden="true"><i class="ti ti-search"></i></span>
-        <input class="search-input" type="text" id="emp-search-input" placeholder="Search name, EID, ID, ref..." oninput="filterEmps(this.value)" />
+      <div class="search-group" id="search-group">
+        <button type="button" class="search-icon-btn" onclick="toggleSearchBox()" title="Search" aria-label="Search"><i class="ti ti-search"></i></button>
+        <input class="search-input" type="text" id="emp-search-input" placeholder="Search name, EID, ID, ref..." oninput="filterEmps(this.value)" onblur="collapseSearchIfEmpty()" onkeydown="if(event.key==='Escape'){this.value='';filterEmps('');collapseSearchIfEmpty();}" />
       </div>
       <div class="hr-filter-pills">
-        <button class="hr-filter-btn active" data-filter="all"          onclick="filterHR('all')"><i class="ti ti-users"></i><span> All</span></button>
-        <button class="hr-filter-btn expired"  data-filter="expired"    onclick="filterHR('expired')"><i class="ti ti-alert-circle"></i><span> Expired</span></button>
-        <button class="hr-filter-btn expiring" data-filter="expiring_soon" onclick="filterHR('expiring_soon')"><i class="ti ti-clock"></i><span> Expiring</span></button>
-        <button class="hr-filter-btn valid"    data-filter="valid"      onclick="filterHR('valid')"><i class="ti ti-circle-check"></i><span> Valid</span></button>
+        <button class="hr-filter-btn active" data-filter="all"          onclick="filterHR('all')" title="All"><i class="ti ti-users"></i></button>
+        <button class="hr-filter-btn expired"  data-filter="expired"    onclick="filterHR('expired')" title="Expired"><i class="ti ti-alert-circle"></i></button>
+        <button class="hr-filter-btn expiring" data-filter="expiring_soon" onclick="filterHR('expiring_soon')" title="Expiring Soon"><i class="ti ti-clock"></i></button>
+        <button class="hr-filter-btn valid"    data-filter="valid"      onclick="filterHR('valid')" title="Valid"><i class="ti ti-circle-check"></i></button>
       </div>
     </div>
   </div>
@@ -643,26 +652,21 @@ const EMIRATE_OPTS = ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ras Al Khaimah', 'Ajman'
 
 function _viewFooterHTML() {
   return `
-    <button class="dp-btn dp-btn-secondary" onclick="SidePanel.close()"><i class="ti ti-x"></i> Close</button>
-    <button class="dp-btn" style="background:var(--accent-dim);color:var(--accent);border-color:var(--accent);" id="dp-hist-btn" onclick="SidePanel.open('hist', SidePanel.currentEmpId)"><i class="ti ti-history"></i> History</button>
-    <button class="dp-btn dp-btn-edit"   id="dp-edit-btn"   onclick="_dpEnterEdit()"><i class="ti ti-pencil"></i> Edit</button>
-    <button class="dp-btn dp-btn-save"   id="dp-save-btn"   onclick="_dpSave()" style="display:none;"><i class="ti ti-device-floppy"></i> Save</button>
-    <button class="dp-btn dp-btn-cancel" id="dp-cancel-btn" onclick="_dpCancelEdit()" style="display:none;"><i class="ti ti-arrow-back-up"></i> Cancel</button>`;
+    <button class="dp-btn dp-btn-secondary" onclick="SidePanel.close()" title="Close"><i class="ti ti-x"></i></button>
+    <button class="dp-btn" style="background:var(--accent-dim);color:var(--accent);border-color:var(--accent);" id="dp-hist-btn" onclick="SidePanel.open('hist', SidePanel.currentEmpId)" title="Work History"><i class="ti ti-history"></i></button>
+    <button class="dp-btn dp-btn-edit"   id="dp-edit-btn"   onclick="_dpEnterEdit()" title="Edit"><i class="ti ti-pencil"></i></button>
+    <button class="dp-btn dp-btn-save"   id="dp-save-btn"   onclick="_dpSave()" style="display:none;" title="Save"><i class="ti ti-device-floppy"></i></button>
+    <button class="dp-btn dp-btn-cancel" id="dp-cancel-btn" onclick="_dpCancelEdit()" style="display:none;" title="Cancel"><i class="ti ti-arrow-back-up"></i></button>`;
 }
 
-async function viewEmployee(empId) {
-  const emp = employees.find(e => String(e.id) === String(empId));
-  if (!emp) return;
-
+function _dpSetViewHeader(emp) {
   const idx      = employees.indexOf(emp);
   const avBg     = AV_BG2[idx % AV_BG2.length];
   const avFg     = AV_FG [idx % AV_FG.length];
   const initials = (emp.name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
-  const ex       = emp.expiry || {};
-  const overall  = calcOverall(ex);
+  const overall  = calcOverall(emp.expiry || {});
   const stBadge  = overall === 'expired' ? 'dp-badge-red' : overall === 'expiring_soon' ? 'dp-badge-amber' : 'dp-badge-green';
   const stLabels = { valid: 'Valid', expiring_soon: 'Expiring Soon', expired: 'Expired' };
-
   SidePanel.setHeader({
     avatarText: initials,
     avatarStyle: `background:${avBg};color:${avFg};`,
@@ -670,6 +674,14 @@ async function viewEmployee(empId) {
     sub: emp.eid ? 'EID: ' + emp.eid : 'No EID on record',
     badge: { text: stLabels[overall] || overall, className: stBadge },
   });
+}
+
+async function viewEmployee(empId) {
+  const emp = employees.find(e => String(e.id) === String(empId));
+  if (!emp) return;
+
+  const ex = emp.expiry || {};
+  _dpSetViewHeader(emp);
 
   SidePanel.setBody(`<div class="dp-loading"><div class="dp-spinner"></div><span>Loading details…</span></div>`);
   SidePanel.setFooter(_viewFooterHTML());
@@ -688,15 +700,15 @@ function _renderEmpDetail(emp, ex) {
     const cls  = s === 'valid' ? 'dp-ex-valid' : s === 'expired' ? 'dp-ex-expired' : s === 'expiring_soon' ? 'dp-ex-expiring' : 'dp-ex-na';
     const icon = s === 'valid' ? 'ti-circle-check' : s === 'expired' ? 'ti-alert-triangle' : s === 'expiring_soon' ? 'ti-clock' : 'ti-circle-off';
     const lbl  = s === 'valid' ? 'Valid' : s === 'expired' ? 'Expired' : s === 'expiring_soon' ? 'Expiring' : 'No Data';
-    return `<div class="dp-ex-card ${cls}"><i class="ti ${icon} dp-ex-icon"></i><div class="dp-ex-label">${label}</div><div class="dp-ex-status">${lbl}</div><div class="dp-ex-date">${d ? fmtDate(d) : '—'}</div></div>`;
+    return `<div class="dp-ex-card ${cls}" title="${label} — ${lbl}"><i class="ti ${icon} dp-ex-icon"></i><div class="dp-ex-label">${label}</div><div class="dp-ex-date">${d ? fmtDate(d) : '—'}</div></div>`;
   }
   const html = `
     <div class="dp-section">
       <div class="dp-section-title"><i class="ti ti-user"></i> Personal Information</div>
       <div class="dp-fields" id="dp-emp-fields">
         <div class="dp-field"><span class="dp-fl">Emp ID</span><span class="dp-fv dp-mono">${emp.id || '—'}</span></div>
-        <div class="dp-field"><span class="dp-fl">Full Name</span><span class="dp-fv" data-field="name" data-type="text">${emp.name || '—'}</span></div>
-        <div class="dp-field"><span class="dp-fl">EID Number</span><span class="dp-fv dp-mono" data-field="eid" data-type="text">${emp.eid || '—'}</span></div>
+        <div class="dp-field" style="display:none;" data-edit-row="name"><span class="dp-fl">Full Name</span><span class="dp-fv" data-field="name" data-type="text">${emp.name || '—'}</span></div>
+        <div class="dp-field" style="display:none;" data-edit-row="eid"><span class="dp-fl">EID Number</span><span class="dp-fv dp-mono" data-field="eid" data-type="text">${emp.eid || '—'}</span></div>
         <div class="dp-field"><span class="dp-fl">Date of Birth</span><span class="dp-fv">${fmtDate(emp.dob)}</span></div>
         <div class="dp-field"><span class="dp-fl">UAE Mobile</span><span class="dp-fv dp-mono" data-field="mobile" data-type="tel">${emp.mobile || '—'}</span></div>
         <div class="dp-field"><span class="dp-fl">Emergency</span><span class="dp-fv dp-mono" data-field="mobilePak" data-type="tel">${emp.mobilePak || emp.emergency || '—'}</span></div>
@@ -763,12 +775,12 @@ function _dpCancelEdit() {
 
 async function _dpSave() {
   const saveBtn = document.getElementById('dp-save-btn');
-  saveBtn.disabled = true; saveBtn.innerHTML = '<i class="ti ti-loader-2"></i> Saving…';
+  saveBtn.disabled = true; saveBtn.innerHTML = '<i class="ti ti-loader-2" style="animation:spin 1s linear infinite;"></i>';
   const vals = {};
   document.querySelectorAll('#sp-body [data-field]').forEach(inp => { vals[inp.dataset.field] = inp.value; });
 
   const emp = employees.find(e => String(e.id) === String(SidePanel.currentEmpId));
-  if (!emp) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="ti ti-device-floppy"></i> Save'; return; }
+  if (!emp) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="ti ti-device-floppy"></i>'; return; }
 
   if (vals.name         !== undefined) emp.name      = vals.name;
   if (vals.eid          !== undefined) emp.eid       = vals.eid;
@@ -781,10 +793,10 @@ async function _dpSave() {
   if (vals.insExpiry    !== undefined) emp.expiry.insurance = computeExpiry(vals.insExpiry);
 
   renderEmpTable(employees);
-  _dpResetButtons(); _renderEmpDetail(emp, emp.expiry || {});
+  _dpResetButtons(); _dpSetViewHeader(emp); _renderEmpDetail(emp, emp.expiry || {});
 
   toast('Employee saved.');
-  saveBtn.disabled = false; saveBtn.innerHTML = '<i class="ti ti-device-floppy"></i> Save';
+  saveBtn.disabled = false; saveBtn.innerHTML = '<i class="ti ti-device-floppy"></i>';
 }
 
 SidePanel.register('view', {
@@ -839,8 +851,8 @@ function _visaMonthsRemaining(emp) {
 
 function _advFooterHTML() {
   return `
-    <button class="dp-btn dp-btn-secondary" onclick="SidePanel.close()"><i class="ti ti-x"></i> Cancel</button>
-    <button class="dp-btn dp-btn-edit" style="background:var(--accent);color:#fff;border-color:var(--accent);" onclick="advSubmitRequest()"><i class="ti ti-send"></i> Submit Request</button>`;
+    <button class="dp-btn dp-btn-secondary" onclick="SidePanel.close()" title="Cancel"><i class="ti ti-x"></i></button>
+    <button class="dp-btn dp-btn-edit" style="background:var(--accent);color:#fff;border-color:var(--accent);" onclick="advSubmitRequest()" title="Submit Request"><i class="ti ti-send"></i></button>`;
 }
 
 function openAdvModal(empId) {
@@ -1026,7 +1038,7 @@ function _fmtCioDate(iso) {
 }
 
 function _histFooterHTML() {
-  return `<button class="dp-btn dp-btn-secondary" onclick="SidePanel.close()"><i class="ti ti-x"></i> Close</button>`;
+  return `<button class="dp-btn dp-btn-secondary" onclick="SidePanel.close()" title="Close"><i class="ti ti-x"></i></button>`;
 }
 
 function openHistoryModal(empId) {
@@ -1521,16 +1533,16 @@ function buildEmpRow(emp, idx) {
   let advBtn;
   if (advDisabled) {
     advBtn = `<button class="row-btn row-btn-adv" disabled title="Advance unavailable — employee documents expired" style="opacity:.38;cursor:not-allowed;filter:grayscale(.6);">
-      <i class="ti ti-cash"></i><span>Advance</span>
+      <i class="ti ti-cash"></i>
     </button>`;
   } else if (overall === 'expired' && (hasHROverride || hasCOOverride)) {
     const overrideLabel = hasHROverride ? `HR: ${emp.hrStatus}` : `CO: ${emp.checkoutException}`;
     advBtn = `<button class="row-btn row-btn-adv" title="Override active — ${overrideLabel}" data-action="adv" data-emp-id="${emp.id}" style="border-style:dashed;">
-      <i class="ti ti-cash"></i><span>Advance</span>
+      <i class="ti ti-cash"></i>
     </button>`;
   } else {
     advBtn = `<button class="row-btn row-btn-adv" title="Advance request" data-action="adv" data-emp-id="${emp.id}">
-      <i class="ti ti-cash"></i><span>Advance</span>
+      <i class="ti ti-cash"></i>
     </button>`;
   }
 
@@ -1554,9 +1566,9 @@ function buildEmpRow(emp, idx) {
       <td>${coExc}</td>
       <td style="white-space:nowrap;padding:8px 12px;">
         <div style="display:flex;gap:5px;align-items:center;flex-wrap:nowrap;">
-          <button class="row-btn row-btn-view" title="View details" data-action="view" data-emp-id="${emp.id}"><i class="ti ti-eye"></i><span>View</span></button>
+          <button class="row-btn row-btn-view" title="View details" data-action="view" data-emp-id="${emp.id}"><i class="ti ti-eye"></i></button>
           ${advBtn}
-          <button class="row-btn row-btn-hist" title="Work history" data-action="hist" data-emp-id="${emp.id}"><i class="ti ti-history"></i><span>History</span></button>
+          <button class="row-btn row-btn-hist" title="Work history" data-action="hist" data-emp-id="${emp.id}"><i class="ti ti-history"></i></button>
         </div>
       </td>
     </tr>`;
@@ -1806,6 +1818,27 @@ function filterEmps(q) {
   empSearchQuery = q || '';
   renderEmpTable(employees);
   document.querySelector('.emp-table-wrap')?.scrollTo({ top: 0 });
+}
+
+/* Search box opens on click of the icon button instead of always sitting
+   expanded — keeps the header controls compact/icon-only until needed. */
+function toggleSearchBox() {
+  const grp = document.getElementById('search-group');
+  const input = document.getElementById('emp-search-input');
+  if (!grp || !input) return;
+  const opening = !grp.classList.contains('open');
+  grp.classList.toggle('open', opening);
+  if (opening) {
+    requestAnimationFrame(() => input.focus());
+  } else if (input.value) {
+    input.value = '';
+    filterEmps('');
+  }
+}
+function collapseSearchIfEmpty() {
+  const grp = document.getElementById('search-group');
+  const input = document.getElementById('emp-search-input');
+  if (grp && input && !input.value) grp.classList.remove('open');
 }
 
 function filterHR(type) {
