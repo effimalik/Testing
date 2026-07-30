@@ -115,6 +115,10 @@
   .stat-chip{flex:1;background:var(--panel-raised);border:1px solid var(--border-soft);border-radius:8px;padding:9px 8px;text-align:center;}
   .stat-chip .n{font-family:var(--font-mono);font-size:18px;font-weight:600;}
   .stat-chip .l{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;}
+  .access-chip{font-size:10px;font-family:var(--font-mono);border:1px solid var(--border-soft);color:var(--text-dim);background:var(--panel-raised);padding:3px 7px;border-radius:5px;display:inline-flex;align-items:center;gap:5px;}
+  .access-chip .flags{color:var(--teal);font-weight:700;letter-spacing:1px;}
+  .access-chip.no-access{color:var(--text-muted);}
+  .access-chip.no-access .flags{display:none;}
 
   h1.page-title{font-family:var(--font-display);font-size:24px;margin:0 0 4px;}
   .page-sub{color:var(--text-muted);font-size:13.5px;margin:0 0 20px;}
@@ -140,6 +144,7 @@
   .status-chip{font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;white-space:nowrap;}
   .st-Open{background:var(--blue-dim);color:var(--blue);}
   .st-Forwarded{background:var(--blue-dim);color:var(--blue);}
+  .st-InProgress{background:var(--blue-dim);color:var(--blue);}
   .st-Pending{background:var(--amber-dim);color:var(--amber);}
   .st-Postponed{background:var(--amber-dim);color:var(--amber);}
   .st-Resolved{background:var(--teal-dim);color:var(--teal);}
@@ -261,36 +266,108 @@
 
 <script>
 /* =========================================================================
-   OPSDECK — front-end only prototype
-   Data model mirrors the two append-only Google Sheets described in the spec:
-     SHEET1  Log_ID | Ticket_ID | Created By(action) | Priority | Type | Assigned to | Name(actor) | Notes
-     SHEET2  Ticket_ID | Status | Last Status | ID
-   All data lives in memory for this demo (no backend). A "demo clock" lets
-   you fast-forward time to see the reminder/escalation engine fire without
-   waiting real hours.
+   OPSDECK — Ticket & Task Portal
+   ---------------------------------------------------------------------
+   IDENTITY
+   Real identity comes from sessionStorage['ap_session'] — the same object
+   the rest of the OpsDeck suite writes on login:
+     { email, name, role: "<Designation> | <Team>", loginAt, permissions }
+   The ticket log itself is keyed by EMAIL for "Assigned By" / "Assigned to"
+   (not synthetic ids), so this file works unchanged once more than one
+   email shows up in the log — everything below resolves people by email.
+   Only one email exists in the sample log right now, so every ticket
+   currently belongs to that one signed-in person; add more employees to
+   EXTRA_EMPLOYEES (or more real sessions) and the portal fans out
+   automatically (department queues, oversight, Flow Finder, Org Overview).
+
+   TICKET LOG
+   Two append-only logs, mirroring the two sheets behind this app:
+     LOG   Log_ID | Ticket_ID | Assigned By | Action | Priority | Category
+           | Subject | Assigned to | Notes
+     STATUS (derived) Ticket_ID | Status | Last Status | Log_ID
+   The STATUS sheet isn't hand-typed here — it's derived from each Action
+   string by parseAction() below, exactly the same way your sheet would be
+   computed from the log. That keeps the two sheets impossible to get out
+   of sync, and means new action phrasing just needs one more regex line.
    ========================================================================= */
 
-// ---------- Reference data ----------
-const DEPARTMENTS = [
-  {id:'D1', name:'Engineering', headId:'u10'},
-  {id:'D2', name:'Human Resources', headId:'u4'},
-  {id:'D3', name:'Finance', headId:'u2'},
-  {id:'D4', name:'Operations', headId:'u7'},
-];
+// ---------- Session / identity ----------
+function _readSession(){
+  try{
+    const raw = sessionStorage.getItem('ap_session');
+    if(!raw) return null;
+    const parsed = JSON.parse(raw);
+    const s = Array.isArray(parsed) ? parsed[0] : parsed;
+    if(!s || !s.email) return null;
+    return s;
+  }catch(e){ return null; }
+}
+// Fallback used only when this file is opened standalone (no ap_session yet)
+// so the portal still renders something sensible while you wire up login.
+const FALLBACK_SESSION = {
+  sessionId:'demo', token:'demo',
+  email:'afanhaidarzia@gmail.com',
+  name:'Afan Haidar',
+  role:'OIC | Delivero',
+  loginAt: Date.now() - 3600000,
+  lastActive: Date.now(),
+  permissions:{
+    ap2_accLog:{label:'Accounts', apiKey:'accLog', paramKey:'type', access:{view:true,add:false,editDelete:false}},
+    ap2_bike:{label:'Bikes', apiKey:'bike', paramKey:'type', access:{view:true,add:true,editDelete:true}},
+    ap2_cioLog:{label:'Check in/out', apiKey:'cioLog', paramKey:'type', access:{view:true,add:false,editDelete:false}},
+    ap2_dedLog:{label:'Ded Log', apiKey:'dedLog', paramKey:'type', access:{view:true,add:false,editDelete:false}},
+    ap2_docLog:{label:'Doc Log', apiKey:'docLog', paramKey:'type', access:{view:true,add:false,editDelete:false}},
+    ap2_employee:{label:'Employees', apiKey:'employee', paramKey:'type', access:{view:true,add:false,editDelete:false}},
+    ap2_loginData:{label:'User Admin', apiKey:'loginData', paramKey:'type', access:{view:false,add:false,editDelete:false}},
+    ap2_master:{label:'Master Sheet', apiKey:'master', paramKey:'type', access:{view:true,add:false,editDelete:false}},
+    ap2_sim:{label:'SIMs', apiKey:'sim', paramKey:'type', access:{view:true,add:true,editDelete:true}},
+  }
+};
 
-const EMPLOYEES = [
-  {id:'u1', name:'Amara Osei',   title:'Requester',        dept:'D3', role:'worker'},
-  {id:'u2', name:'Daniel Cho',   title:'Finance Lead',      dept:'D3', role:'manager'},
-  {id:'u3', name:'Priya Nair',   title:'Finance Analyst',   dept:'D3', role:'worker'},
-  {id:'u4', name:'Marcus Webb',  title:'HR Director',       dept:'D2', role:'manager'},
-  {id:'u5', name:'Sofia Reyes',  title:'HR Executive',      dept:'D2', role:'worker'},
-  {id:'u6', name:'Leo Fischer',  title:'Ops Analyst',       dept:'D4', role:'worker'},
-  {id:'u7', name:'Grace Kim',    title:'Ops Lead',          dept:'D4', role:'manager'},
-  {id:'u8', name:'Tariq Hassan', title:'Software Engineer', dept:'D1', role:'worker'},
-  {id:'u9', name:'Wren Delacroix', title:'QA Engineer',     dept:'D1', role:'worker'},
-  {id:'u10',name:'Nadia Volkov', title:'Eng Director',      dept:'D1', role:'manager'},
-  {id:'u11',name:'Olivia Grant', title:'General Manager',   dept:null, role:'gm'},
-];
+function _classifyTier(designation){
+  const d = (designation||'').toLowerCase();
+  if(/\bgm\b|general manager/.test(d)) return 'gm';
+  if(/\bhead\b|manager|director|lead|oic|officer in charge|supervisor|coordinator/.test(d)) return 'manager';
+  return 'worker';
+}
+
+// ---------- Reference data (built around whoever is actually signed in) ----------
+const DEPARTMENTS = [];
+const EMPLOYEES = [];
+
+// Extra teammates can be dropped in here later (or, better, just start
+// appearing in the ticket log with their own email) — the portal doesn't
+// need anything hardcoded beyond this to support them.
+const EXTRA_EMPLOYEES = [];
+
+let ME = null; // the signed-in employee record, set by bootstrapIdentity()
+
+function bootstrapIdentity(){
+  const session = _readSession() || FALLBACK_SESSION;
+  const parts = (session.role || '').split('|').map(s => (s||'').trim()).filter(Boolean);
+  const designation = parts[0] || 'Team Member';
+  const teamName = parts[1] || 'Operations';
+  const tier = _classifyTier(designation);
+
+  let d = DEPARTMENTS.find(x => x.name.toLowerCase() === teamName.toLowerCase());
+  if(!d){ d = {id:'D_'+teamName.replace(/[^a-z0-9]/gi,'').toUpperCase(), name:teamName, headId:null}; DEPARTMENTS.push(d); }
+  if(tier === 'manager' || tier === 'gm') d.headId = session.email;
+
+  const me = {
+    id: session.email,
+    email: session.email,
+    name: session.name || session.email,
+    title: designation,
+    dept: tier === 'gm' ? null : d.id,
+    role: tier,
+    permissions: session.permissions || null,
+    loginAt: session.loginAt || null,
+    lastActive: session.lastActive || null,
+  };
+  EMPLOYEES.push(me);
+  EXTRA_EMPLOYEES.forEach(e => EMPLOYEES.push(e));
+  return me;
+}
 
 function isManager(empId){ const e=emp(empId); return !!e && e.role==='manager'; }
 function isGM(empId){ const e=emp(empId); return !!e && e.role==='gm'; }
@@ -298,60 +375,8 @@ function isWorker(empId){ const e=emp(empId); return !!e && e.role==='worker'; }
 function headOf(deptId){ const d=DEPARTMENTS.find(d=>d.id===deptId); return d?d.headId:null; }
 function emp(id){ return EMPLOYEES.find(e=>e.id===id); }
 function dept(id){ return DEPARTMENTS.find(d=>d.id===id); }
-function isDeptId(id){ return typeof id==='string' && id[0]==='D'; }
-
-/* ── Real signed-in user — resolves tier (worker/manager/gm) and department
-   from Auth.getUser(), then injects one real employee record into the
-   existing EMPLOYEES/DEPARTMENTS model above. Ticket data stays demo/fake
-   until that's wired up separately — this only decides WHICH portal view
-   (My Portal / Department / Org Overview) the signed-in viewer sees. ── */
-function _classifyTier(designation) {
-  const d = (designation || '').toLowerCase();
-  if (/\bgm\b|general manager/.test(d)) return 'gm';
-  if (/\bhead\b|manager|director|lead/.test(d)) return 'manager';
-  return 'worker';
-}
-
-function _resolveRealUser() {
-  const u = (window.Auth && typeof window.Auth.getUser === 'function') ? window.Auth.getUser() : null;
-
-  const email = (u && u.email) || 'sas.ds.llc@gmail.com';
-  const name  = (u && u.name)  || 'Afan Haidar';
-  const rawRole = (u && u.role) || 'Head Operations|Talabat';
-
-  const parts = rawRole.split('|').map(s => (s || '').trim()).filter(Boolean);
-  const designation = parts[0] || rawRole;
-  const company     = parts[1] || '';
-
-  const tier = _classifyTier(designation);
-
-  // Match the real company/department name onto an existing demo department
-  // (by name, case-insensitive); if there's no match, create one on the fly
-  // so the rest of the app's dept-scoped views work unchanged.
-  let deptId = null;
-  if (tier !== 'gm' && company) {
-    let d = DEPARTMENTS.find(d => d.name.toLowerCase() === company.toLowerCase());
-    if (!d) {
-      d = { id: 'D_REAL', name: company, headId: null };
-      DEPARTMENTS.push(d);
-    }
-    deptId = d.id;
-    // A manager/head is the head of their own department
-    if (tier === 'manager') d.headId = 'real-user';
-  }
-
-  EMPLOYEES.push({
-    id: 'real-user',
-    name,
-    title: designation,
-    dept: deptId,
-    role: tier,
-    email,
-  });
-
-  state.currentUserId = 'real-user';
-}
-function deptWorkers(deptId){ return EMPLOYEES.filter(e=>e.dept===deptId); } // includes the manager themself
+function isDeptId(id){ return typeof id==='string' && id.indexOf('D_')===0; }
+function deptWorkers(deptId){ return EMPLOYEES.filter(e=>e.dept===deptId); }
 function nameOf(assignedTo){
   if(!assignedTo) return '—';
   if(isDeptId(assignedTo)) return dept(assignedTo) ? dept(assignedTo).name+' (Dept)' : assignedTo;
@@ -359,8 +384,6 @@ function nameOf(assignedTo){
 }
 
 // ---------- Time helpers ----------
-// Real epoch ms + a manually-advanced demo offset, so the reminder engine
-// can be fast-forwarded for demonstration purposes.
 let demoOffsetMs = 0;
 function nowMs(){ return Date.now() + demoOffsetMs; }
 function fmtTs(ms){
@@ -379,21 +402,21 @@ function fmtDur(ms){
   const dd=Math.floor(h/24);
   return dd+'d '+(h%24)+'h';
 }
+function statusClass(s){ return 'st-'+String(s||'').replace(/\s+/g,''); }
 
 // ---------- The two logs ----------
-let SHEET1 = [];
-let SHEET2 = [];
-let TICKET_TITLES = {}; // ticketId -> free-text title (UI convenience; not a literal sheet column)
+let SHEET1 = []; // the log: one row per action, append-only
+let SHEET2 = []; // the derived status sheet: one row per action, same logId
+let TICKET_TITLES = {};
 let seq = 0;
-function genId(){ return nowMs()*1000 + (seq++); } // sub-ms uniqueness for demo speed
+function genId(){ return nowMs()*1000 + (seq++); }
 
-function s1(logId,ticketId,action,priority,type,assignedTo,actorId,notes){
-  SHEET1.push({logId,ticketId,action,priority,type,assignedTo,actorId,notes});
+function s1(logId,ticketId,action,priority,type,assignedTo,actorId,notes,dueAt,target,subject){
+  SHEET1.push({logId,ticketId,action,priority,type,assignedTo,actorId,notes:notes||'',dueAt:dueAt||null,target:target||null,subject:subject||null});
 }
 function s2(ticketId,status,lastStatus,id){
   SHEET2.push({ticketId,status,lastStatus,id});
 }
-
 function latestS2(ticketId){
   const rows = SHEET2.filter(r=>r.ticketId===ticketId);
   if(!rows.length) return null;
@@ -404,7 +427,11 @@ function currentOwner(ticketId){
   const latest = latestS2(ticketId);
   if(!latest) return null;
   const row = s1ByLogId(latest.id);
-  return row ? {assignedTo: row.assignedTo, status: latest.status, lastStatus: latest.lastStatus, sinceMs: latest.id, priority: row.priority, type: row.type} : null;
+  return row ? {
+    assignedTo: row.assignedTo, status: latest.status, lastStatus: latest.lastStatus,
+    sinceMs: latest.id, priority: row.priority, type: row.type,
+    dueAt: row.dueAt, target: row.target, subject: row.subject,
+  } : null;
 }
 function allTicketIds(){ return [...new Set(SHEET1.map(r=>r.ticketId))]; }
 function ticketTimeline(ticketId){
@@ -413,13 +440,187 @@ function ticketTimeline(ticketId){
     .map(r=>({...r, s2: SHEET2.find(s=>s.id===r.logId) || null}));
 }
 function ticketTitle(ticketId){ return TICKET_TITLES[ticketId] || 'Untitled ticket'; }
-
 function isTerminal(status){ return status==='Resolved' || status==='Done'; }
 
+// ---------- Action → status derivation ----------
+// Reads one "Action" cell from the log and returns what the status sheet
+// row should be. Anything not recognised just carries the previous status
+// forward (an informational log line, e.g. a permission grant) instead of
+// silently breaking the chain.
+function parseAction(action, logTime){
+  const a = String(action||'').trim();
+  let m;
+  if(/^ticket raised/i.test(a)) return {status:'Open', lastStatus:null};
+  if(/^attended\b/i.test(a)) return {status:'In Progress', lastStatus:null};
+  if(/^reminder triggered/i.test(a)) return {status:'In Progress', lastStatus:null};
+  if(m = a.match(/^status changed to ([A-Za-z ]+)/i)) return {status:m[1].trim(), lastStatus:null};
+  if(m = a.match(/^status set to ([A-Za-z ]+?)(?:\s*\(|$)/i)) return {status:m[1].trim(), lastStatus:null};
+  if(m = a.match(/^reminder set for after ([\d.]+)\s*hour/i)) return {status:'Pending', lastStatus:'Reminder', dueAt: logTime + parseFloat(m[1])*3600000};
+  if(m = a.match(/^reminder set for date (\d{4}-\d{2}-\d{2})/i)) return {status:'Pending', lastStatus:'Reminder', dueAt: new Date(m[1]+'T09:00:00').getTime()};
+  if(m = a.match(/^forwarded to department\s*\(([^)]+)\)/i)) return {status:'Forwarded', lastStatus:'Department', target:m[1].trim()};
+  if(m = a.match(/^auto-routed to (.+?) queue/i)) return {status:'Forwarded', lastStatus:'Department', target:m[1].trim()};
+  if(m = a.match(/^re-forwarded to person\s*\(([^)]+)\)/i)) return {status:'Forwarded', lastStatus:'Person', target:m[1].trim()};
+  if(m = a.match(/^forwarded to person\s*\(([^)]+)\)/i)) return {status:'Forwarded', lastStatus:'Person', target:m[1].trim()};
+  if(m = a.match(/^auto-assigned to (.+)$/i)) return {status:'Forwarded', lastStatus:'Person', target:m[1].trim()};
+  if(m = a.match(/^assigned to (.+)$/i)) return {status:'Forwarded', lastStatus:'Person', target:m[1].trim()};
+  if(/^escalation permission granted/i.test(a)) return {carryForward:true};
+  return {carryForward:true};
+}
+
+function ingestTicket(ticketId, title, actorEmail, rows){
+  TICKET_TITLES[ticketId] = title;
+  let prev = {status:null,lastStatus:null,dueAt:null,target:null};
+  rows.forEach(row=>{
+    const [action, priority, subject, notes, gapMins] = row;
+    clockCursor += gapMins*60000;
+    const t = clockCursor;
+    const parsed = parseAction(action, t);
+    let cur;
+    if(parsed.carryForward) cur = {...prev};
+    else cur = {status:parsed.status, lastStatus:parsed.lastStatus||null, dueAt:parsed.dueAt||null, target:parsed.target||null};
+    s1(t, ticketId, action, priority, 'Ticket', actorEmail, actorEmail, notes||'', cur.dueAt, cur.target, subject);
+    s2(ticketId, cur.status, cur.lastStatus, t);
+    prev = cur;
+  });
+}
+
+// ---------- Seed: the actual log, transcribed row for row ----------
+// base clock starts "yesterday" so untouched items read as already overdue
+// without needing to touch the fast-forward control — exactly like a real
+// queue you're opening for the first time this morning.
+let clockCursor = new Date('2026-07-29T07:00:00.000').getTime();
+
+function seedFromLog(actorEmail){
+  ingestTicket('TK-3001','Leave balance query', actorEmail, [
+    ['Ticket raised','Low','Employee','Leave balance query',0],
+    ['Attended','Low','Employee','Balance shared',10],
+    ['Status changed to Done','Low','Employee','Closed, no escalation needed',5],
+  ]);
+  ingestTicket('TK-3002','IT status check', actorEmail, [
+    ['Ticket raised','Medium','Department','IT status check requested',25],
+    ['Reminder set for after 1 hour','Low','Department','',2],
+    ['Reminder triggered — Attended','Medium','Department','',65],
+    ['Status changed to Done','Low','Department','Resolved by individual',8],
+  ]);
+  ingestTicket('TK-3003','Transaction mismatch — TXN45210', actorEmail, [
+    ['Ticket raised','High','Transaction','Mismatch in TXN45210',20],
+    ['Forwarded to Department (Finance)','High','Transaction','',5],
+    ['Attended — verified logs','Medium','Transaction','',40],
+    ['Status changed to Resolved','Low','Transaction','Resolved by department',15],
+  ]);
+  ingestTicket('TK-3004','Fine waiver request', actorEmail, [
+    ['Ticket raised','Medium','Fine','Fine waiver requested',25],
+    ['Forwarded to Person (Compliance Officer)','Medium','Fine','',5],
+    ['Attended — reviewed history','Low','Fine','',30],
+    ['Status changed to Done','Low','Fine','Resolved by individual',10],
+  ]);
+  ingestTicket('TK-3005','Payslip discrepancy', actorEmail, [
+    ['Ticket raised','High','Employee','Payslip discrepancy',18],
+    ['Assigned to Priya Nair','Medium','Employee','',6],
+    ['Reminder set for date 2026-08-05','Low','Employee','Follow up post payroll cycle',4],
+    ['Reminder triggered — Attended','Medium','Employee','',6],
+    ['Status changed to Done','Low','Employee','Resolved by individual',18],
+  ]);
+  ingestTicket('TK-3006','HR policy clarification', actorEmail, [
+    ['Ticket raised','Low','Department','HR policy clarification',15],
+    ['Auto-routed to HR queue','Low','Department','',2],
+    ['Attended','Medium','Department','',50],
+    ['Status changed to Done','Low','Department','Resolved by department',12],
+  ]);
+  ingestTicket('TK-3007','Refund request — TXN-98213', actorEmail, [
+    ['Ticket raised','High','Transaction','Refund request TXN-98213',10],
+    ['Escalation permission granted (ledger adjustment)','High','Transaction','Named permission, not generic',8],
+    ['Status changed to In Progress','Medium','Transaction','',20],
+    ['Status changed to Resolved','Low','Transaction','',25],
+  ]);
+  ingestTicket('TK-3008','Parking fine dispute', actorEmail, [
+    ['Ticket raised','Medium','Fine','Parking fine dispute',22],
+    ['Forwarded to Department (Admin)','Medium','Fine','',5],
+    ['Reminder set for after 1 hour','Low','Fine','Awaiting footage',3],
+    ['Attended — footage reviewed','Medium','Fine','',65],
+    ['Status changed to Done','Low','Fine','Resolved by department',10],
+  ]);
+  ingestTicket('TK-3009','Attendance correction', actorEmail, [
+    ['Ticket raised','Medium','Employee','Attendance correction',30],
+    ['Auto-assigned to Ramesh Iyer','Low','Employee','No human dispatcher involved',2],
+    ['Attended — correcting biometric log','High','Employee','',35],
+    ['Status changed to Resolved','Low','Employee','Resolved by individual',15],
+  ]);
+  ingestTicket('TK-3010','Asset return request', actorEmail, [
+    ['Ticket raised','Low','Asset','Asset return request',12],
+    ['Reminder set for date 2026-08-10','Low','Asset','Confirm receipt',3],
+    ['Attended — asset verified','Medium','Asset','',40],
+    ['Status changed to Done','Low','Asset','Resolved by individual',10],
+  ]);
+  ingestTicket('TK-3011','Budget query', actorEmail, [
+    ['Ticket raised','Medium','Department','Budget query — routed only, not yet worked',20],
+  ]);
+  ingestTicket('TK-3012','ID card reissue', actorEmail, [
+    ['Ticket raised','Low','Employee','ID card reissue — awaiting pickup',15],
+    ['Status set to Pending (no reminder yet)','Low','Employee','Plain pending, no active reminder',5],
+  ]);
+  ingestTicket('TK-3013','Duplicate charge dispute', actorEmail, [
+    ['Ticket raised','High','Transaction','Duplicate charge — forwarded to Person',18],
+    ['Forwarded to Person (u5 – Ops Manager)','High','Transaction','First-level forward',5],
+    ['Re-forwarded to Person (u6 – Compliance Officer)','High','Transaction','Second-level forward',8],
+    ['Attended — verified duplicate','Medium','Transaction','',35],
+    ['Status changed to Done','Low','Transaction','Resolved by individual',12],
+  ]);
+  ingestTicket('TK-3014','Late fine — duplicate of TK-3009', actorEmail, [
+    ['Ticket raised','Medium','Fine','Late fine — forwarded, points to existing ticket TK-3009',20],
+  ]);
+}
+
+// ---------- App state ----------
+const state = {
+  currentUserId: null,
+  view: 'my', // 'my' | 'dept' | 'new' | 'flow' | 'org'
+  deptSubtab: 'queue', // 'queue' | 'oversight'
+  ffMode: 'ticket', // 'ticket' | 'employee' | 'department'
+  ffQuery: '',
+  ffSelectedTicket: null,
+  respondModal: null,
+};
+function currentUser(){ return emp(state.currentUserId); }
+
+// ---------- Reminder engine (computed live) ----------
+function overdueInfo(ownerState){
+  if(!ownerState) return {overdue:false};
+  if(isTerminal(ownerState.status)) return {overdue:false};
+  if(ownerState.status==='Postponed') return {overdue:false};
+  // "Pending, no reminder yet" is an explicit no-clock state — don't flag it.
+  if(ownerState.status==='Pending' && ownerState.lastStatus!=='Reminder') return {overdue:false};
+  const now = nowMs();
+  if(ownerState.dueAt){
+    if(now < ownerState.dueAt) return {overdue:false, dueAt:ownerState.dueAt};
+    const elapsed = now - ownerState.dueAt;
+    return {overdue:true, elapsed, escalations: Math.floor(elapsed/3600000)+1};
+  }
+  const elapsed = now - ownerState.sinceMs;
+  const hoursOverdue = elapsed/3600000 - 1; // 1hr grace before first ring
+  if(hoursOverdue < 0) return {overdue:false, elapsed};
+  return {overdue:true, elapsed, escalations: Math.floor(hoursOverdue)+1};
+}
+
+// Auto-escalates anything sitting untouched too long into a "Reminder" —
+// only runs once you've fast-forwarded the demo clock, so opening the app
+// doesn't instantly rewrite the seeded history you're looking at.
+function tickReminderEngine(){
+  if(demoOffsetMs<=0) return;
+  allTicketIds().forEach(tid=>{
+    const owner = currentOwner(tid);
+    if(!owner || isTerminal(owner.status) || owner.status==='Postponed') return;
+    const od = overdueInfo(owner);
+    if(od.overdue && owner.status!=='Pending'){
+      fireReminder(tid);
+    }
+  });
+}
+
 // ---------- Mutations (append-only) ----------
-function createTicket({creatorId, title, description, priority, type, assignedTo}){
+function createTicket({creatorId, title, description, priority, subject, assignedTo}){
   const t = genId();
-  s1(t, t, 'Created', priority, type, assignedTo, creatorId, description);
+  s1(t, t, 'Ticket raised', priority, 'Ticket', assignedTo, creatorId, description, null, null, subject);
   s2(t, 'Open', null, t);
   TICKET_TITLES[t] = title;
   return t;
@@ -428,155 +629,38 @@ function forwardTicket({ticketId, actorId, toAssignee, note}){
   const owner = currentOwner(ticketId);
   const l = genId();
   const label = isDeptId(toAssignee) ? nameOf(toAssignee) : nameOf(toAssignee);
-  s1(l, ticketId, `Forwarded to ${label}`, owner.priority, owner.type, toAssignee, actorId, note || 'Forwarded.');
+  s1(l, ticketId, `Forwarded to ${label}`, owner.priority, owner.type, toAssignee, actorId, note || 'Forwarded.', null, label, owner.subject);
   s2(ticketId, 'Forwarded', isDeptId(toAssignee)?'Department':'Person', l);
 }
 function claimPersonally({ticketId, actorId, note}){
   const owner = currentOwner(ticketId);
   const l = genId();
-  s1(l, ticketId, 'Taken on personally', owner.priority, owner.type, actorId, actorId, note || 'Handling this directly.');
+  s1(l, ticketId, 'Taken on personally', owner.priority, owner.type, actorId, actorId, note || 'Handling this directly.', null, null, owner.subject);
   s2(ticketId, 'Forwarded', 'Person', l);
 }
 function fireReminder(ticketId){
   const owner = currentOwner(ticketId);
   const l = genId();
-  s1(l, ticketId, 'Reminder set', owner.priority, owner.type, owner.assignedTo, owner.assignedTo, 'Automated: no response after 1 hour.');
+  s1(l, ticketId, 'Reminder set', owner.priority, owner.type, owner.assignedTo, owner.assignedTo, 'Automated: no response after grace period.', null, owner.target, owner.subject);
   s2(ticketId, 'Pending', 'Reminder', l);
 }
 function respondSnooze({ticketId, actorId, comment, snoozeUntilMs}){
   const owner = currentOwner(ticketId);
-  const l = snoozeUntilMs;
-  s1(l, ticketId, 'Snoozed', owner.priority, owner.type, owner.assignedTo, actorId, comment);
+  const l = genId();
+  s1(l, ticketId, 'Snoozed', owner.priority, owner.type, owner.assignedTo, actorId, comment, snoozeUntilMs, owner.target, owner.subject);
   s2(ticketId, 'Pending', 'Reminder', l);
 }
 function respondPostpone({ticketId, actorId, comment, days}){
   const owner = currentOwner(ticketId);
   const l = genId();
-  s1(l, ticketId, `Postponed ${days} day(s)`, owner.priority, owner.type, owner.assignedTo, actorId, comment);
+  s1(l, ticketId, `Postponed ${days} day(s)`, owner.priority, owner.type, owner.assignedTo, actorId, comment, null, owner.target, owner.subject);
   s2(ticketId, 'Postponed', 'Reminder', l);
 }
 function respondDone({ticketId, actorId, comment}){
   const owner = currentOwner(ticketId);
   const l = genId();
-  s1(l, ticketId, 'Status changed to Resolved', owner.priority, owner.type, owner.assignedTo, actorId, comment);
-  s2(ticketId, 'Resolved', null, l);
-}
-function resultReceived({ticketId, actorId, comment}){
-  const owner = currentOwner(ticketId);
-  const l = genId();
-  s1(l, ticketId, 'Result received', owner.priority, owner.type, owner.assignedTo, actorId, comment);
-  s2(ticketId, 'In Progress', 'Result In', l);
-}
-
-// ---------- Seed data (mirrors the worked example in the spec, plus extras) ----------
-(function seed(){
-  const base = new Date('2026-07-29T09:00:00.123').getTime();
-  // Worked example from the build doc: Finance -> HR -> resolved
-  const t1 = base;
-  s1(t1, t1, 'Created', 'Medium', 'Ticket', 'D3', 'u1', 'Need budget clarification for new hires');
-  TICKET_TITLES[t1] = 'New-hire budget clarification';
-  s2(t1, 'Open', null, t1);
-  const t1b = base + 312000; // 09:05:12.045 offset approx
-  s1(t1b, t1, 'Forwarded to HR for policy input', 'Medium', 'Ticket', 'D2', 'u2', "Finance needs HR's policy stance before answering");
-  s2(t1, 'Forwarded', 'Department', t1b);
-  const t1c = base + 360377;
-  s1(t1c, t1, 'Reminder set', 'Low', 'Ticket', 'D3', 'u3', "Waiting on HR's policy answer — cannot close budget question until HR responds. Remind in 4h.");
-  s2(t1, 'Pending', 'Reminder', t1c);
-  const t1d = base + 14805777;
-  s1(t1d, t1, 'Result received from HR', 'Medium', 'Ticket', 'D3', 'u5', 'Policy confirmed: standard onboarding budget applies');
-  s2(t1, 'In Progress', 'Result In', t1d);
-  const t1e = base + 15419988;
-  s1(t1e, t1, 'Status changed to Resolved', 'Low', 'Ticket', 'D3', 'u3', "Budget confirmed and finalized using HR's policy answer");
-  s2(t1, 'Resolved', null, t1e);
-
-  // A ticket sitting in a department queue, untouched long enough to be overdue
-  const t2 = base + 3*3600*1000;
-  s1(t2, t2, 'Created', 'High', 'Ticket', 'D1', 'u6', 'Deployment pipeline failing on release branch — need engineering triage');
-  TICKET_TITLES[t2] = 'Release pipeline failure';
-  s2(t2, 'Open', null, t2);
-  demoOffsetMs = 0; // relative overdue math is computed live against nowMs()
-
-  // A task assigned directly to a person, forwarded once
-  const t3 = base + 5*3600*1000;
-  s1(t3, t3, 'Created', 'Medium', 'Task', 'u8', 'u10', 'Rotate the staging DB credentials this week');
-  TICKET_TITLES[t3] = 'Rotate staging DB credentials';
-  s2(t3, 'Open', null, t3);
-
-  // A task already snoozed once, waiting on a person
-  const t4 = base + 6*3600*1000;
-  s1(t4, t4, 'Created', 'Low', 'Task', 'u9', 'u10', 'Write regression tests for the export flow');
-  TICKET_TITLES[t4] = 'Export flow regression tests';
-  s2(t4, 'Open', null, t4);
-  const t4b = base + 6*3600*1000 + 1500000;
-  s1(t4b, t4, 'Snoozed', 'Low', 'Task', 'u9', 'u9', 'On it after the sprint review, snoozing till tomorrow morning.');
-  s2(t4, 'Pending', 'Reminder', t4b);
-
-  // A resolved task for history / stats
-  const t5 = base - 2*3600*1000;
-  s1(t5, t5, 'Created', 'Medium', 'Task', 'u3', 'u2', 'Reconcile July travel expense report');
-  TICKET_TITLES[t5] = 'July travel expense reconciliation';
-  s2(t5, 'Open', null, t5);
-  const t5b = base - 1.5*3600*1000;
-  s1(t5b, t5, 'Status changed to Resolved', 'Medium', 'Task', 'u3', 'u3', 'Reconciled and filed.');
-  s2(t5, 'Resolved', null, t5b);
-
-  // A ticket forwarded department to department (Ops waiting on Engineering)
-  const t6 = base + 8*3600*1000;
-  s1(t6, t6, 'Created', 'High', 'Ticket', 'D4', 'u1', 'Warehouse scanner outage affecting shipments');
-  TICKET_TITLES[t6] = 'Warehouse scanner outage';
-  s2(t6, 'Open', null, t6);
-  const t6b = base + 8*3600*1000 + 240000;
-  s1(t6b, t6, 'Forwarded to Engineering (hardware suspected)', 'High', 'Ticket', 'D1', 'u7', 'Ops thinks this is a firmware/hardware issue — routing to Engineering.');
-  s2(t6, 'Forwarded', 'Department', t6b);
-})();
-
-// ---------- App state ----------
-const state = {
-  currentUserId: 'u3',
-  view: 'my', // 'my' | 'dept' | 'new' | 'flow' | 'org'
-  deptSubtab: 'queue', // 'queue' | 'oversight'
-  ffMode: 'ticket', // 'ticket' | 'employee' | 'department'
-  ffQuery: '',
-  ffSelectedTicket: null,
-  respondModal: null, // {ticketId, kind}
-};
-
-function currentUser(){
-  return emp(state.currentUserId);
-}
-
-// ---------- Reminder engine (computed live) ----------
-function overdueInfo(ownerState){
-  if(!ownerState) return {overdue:false};
-  if(isTerminal(ownerState.status)) return {overdue:false};
-  const elapsed = nowMs() - ownerState.sinceMs;
-  const hoursOverdue = elapsed/3600000 - 1; // grace period of 1hr before first ring
-  if(hoursOverdue < 0) return {overdue:false, elapsed};
-  return {overdue:true, elapsed, escalations: Math.floor(hoursOverdue)+1};
-}
-
-// runs the "check every ticket, auto-fire reminder rows" step of the engine
-function tickReminderEngine(){
-  let changed = false;
-  allTicketIds().forEach(tid=>{
-    const owner = currentOwner(tid);
-    if(!owner || isTerminal(owner.status)) return;
-    if(owner.status==='Postponed') return; // postponed tickets pause the clock in this demo
-    const elapsed = nowMs() - owner.sinceMs;
-    if(elapsed >= 3600000){
-      // has a reminder already been logged for this exact owner-state? check most recent row action
-      const last = ticketTimeline(tid).slice(-1)[0];
-      const alreadyPending = owner.status==='Pending';
-      // only auto-fire once per hour boundary crossed without a newer log row
-      const hourBoundary = Math.floor(elapsed/3600000);
-      const lastFireHour = last && last.action==='Reminder set' ? Math.floor((owner.sinceMs - 0)/1) : null;
-      if(!alreadyPending){
-        fireReminder(tid);
-        changed = true;
-      }
-    }
-  });
-  return changed;
+  s1(l, ticketId, 'Status changed to Done', owner.priority, owner.type, owner.assignedTo, actorId, comment, null, null, owner.subject);
+  s2(ticketId, 'Done', null, l);
 }
 
 // ---------- Rendering ----------
@@ -600,7 +684,7 @@ function myOpenCount(empId){
 function deptQueueCount(deptId){
   return allTicketIds().filter(tid=>{
     const o = currentOwner(tid);
-    return o && o.assignedTo===deptId && !isTerminal(o.status);
+    return o && emp(o.assignedTo) && emp(o.assignedTo).dept===deptId && !isTerminal(o.status);
   }).length;
 }
 function orgOpenCount(){
@@ -612,7 +696,7 @@ function renderTopbar(u){
   const gm = isGM(u.id);
   const roleLabel = gm ? 'general manager' : manager ? 'manager' : 'worker';
   const myCount = myOpenCount(u.id);
-  const dCount = manager ? deptQueueCount(u.dept) : 0;
+  const dCount = manager && u.dept ? deptQueueCount(u.dept) : 0;
   const orgCount = gm ? orgOpenCount() : 0;
   return `
   <div class="topbar">
@@ -620,7 +704,7 @@ function renderTopbar(u){
       <div class="brand"><span class="dot"></span>OpsDeck</div>
       <nav class="tabs">
         <button data-view="my" class="${state.view==='my'?'active':''}">My Portal${myCount?`<span class="badge-count">${myCount}</span>`:''}</button>
-        ${manager ? `<button data-view="dept" class="${state.view==='dept'?'active':''}">Department${dCount?`<span class="badge-count">${dCount}</span>`:''}</button>`:''}
+        ${manager && u.dept ? `<button data-view="dept" class="${state.view==='dept'?'active':''}">Department${dCount?`<span class="badge-count">${dCount}</span>`:''}</button>`:''}
         ${!gm && !manager ? `<button data-view="dept" class="${state.view==='dept'?'active':''}">Department tasks</button>`:''}
         ${!isWorker(u.id) ? `<button data-view="new" class="${state.view==='new'?'active':''}">New Ticket</button>`:''}
         ${!isWorker(u.id) ? `<button data-view="flow" class="${state.view==='flow'?'active':''}">Flow Finder</button>`:''}
@@ -645,7 +729,6 @@ function renderTopbar(u){
 
 function renderView(u){
   const manager = isManager(u.id), gm = isGM(u.id), worker = isWorker(u.id);
-  // guard against unreachable views for the current role
   if(worker && state.view==='new') state.view='my';
   if(worker && state.view==='flow' && !state.ffSelectedTicket) state.view='my';
   if(!gm && state.view==='org') state.view='my';
@@ -659,22 +742,22 @@ function renderView(u){
   }
 }
 
-
 // ----- Ticket row renderer -----
 function ticketRow(tid, opts={}){
   const owner = currentOwner(tid);
   const title = ticketTitle(tid);
   const od = overdueInfo(owner);
   const created = ticketTimeline(tid)[0];
+  const subLabel = opts.subLabel || (owner.target ? `Forwarded to ${owner.target}` : `With ${nameOf(owner.assignedTo)}`);
   return `
   <div class="ticket-row" data-open-ticket="${tid}">
     <div class="pri-flag pri-${owner.priority}"></div>
     <div class="t-main">
-      <div class="t-title">${title} <span class="tid">#${tid}</span> <span class="type-chip">${owner.type}</span></div>
-      <div class="t-sub">${opts.subLabel || (isDeptId(owner.assignedTo) ? `Queued in ${nameOf(owner.assignedTo)}` : `With ${nameOf(owner.assignedTo)}`)} · created by ${nameOf(created.actorId)}</div>
+      <div class="t-title">${title} <span class="tid">#${tid}</span> ${owner.subject?`<span class="type-chip">${owner.subject}</span>`:''}</div>
+      <div class="t-sub">${subLabel} · raised by ${nameOf(created.actorId)}</div>
     </div>
     ${od.overdue ? `<div class="overdue-flag">⚠ ${od.escalations>1?`x${od.escalations} `:''}overdue ${fmtDur(od.elapsed)}</div>` : ''}
-    <div class="status-chip st-${owner.status}">${owner.status}</div>
+    <div class="status-chip ${statusClass(owner.status)}">${owner.status}</div>
   </div>`;
 }
 
@@ -695,7 +778,7 @@ function renderMyPortal(u){
     ${profileCard(u)}
     <div>
       <h1 class="page-title">My Portal</h1>
-      <p class="page-sub">Tickets and tasks currently assigned to you. Tap one to respond.</p>
+      <p class="page-sub">Tickets currently assigned to you. Tap one to see the full timeline and respond.</p>
       <div class="section-label">Needs attention (${open.length})</div>
       ${open.length ? `<div class="ticket-list">${open.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty"><b>All clear.</b>Nothing waiting on you right now.</div>`}
       ${done.length ? `
@@ -705,9 +788,24 @@ function renderMyPortal(u){
   </div>`;
 }
 
+function renderPermissionChips(perms){
+  if(!perms) return '';
+  const items = Object.values(perms);
+  if(!items.length) return '';
+  return `
+  <div class="section-label" style="margin-top:18px;">System access</div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;">
+    ${items.map(p=>{
+      const a = p.access||{};
+      const flags = [a.view?'V':'', a.add?'A':'', a.editDelete?'E':''].filter(Boolean).join('');
+      return `<span class="access-chip ${flags?'':'no-access'}" title="${p.label}${flags?` — ${[a.view&&'view',a.add&&'add',a.editDelete&&'edit/delete'].filter(Boolean).join(', ')}`:' — no access'}">${p.label}${flags?` <span class="flags">${flags}</span>`:''}</span>`;
+    }).join('')}
+  </div>`;
+}
+
 function profileCard(u){
   const d = u.dept ? dept(u.dept) : null;
-  const initials = u.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+  const initials = u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
   const openCt = myOpenCount(u.id);
   const resolvedCt = allTicketIds().filter(tid=>{
     const o=currentOwner(tid); return o && o.assignedTo===u.id && isTerminal(o.status);
@@ -718,19 +816,27 @@ function profileCard(u){
     <div class="avatar">${initials}</div>
     <h2>${u.name}</h2>
     <p class="role-line">${u.title}${d?` · ${d.name}`:''}</p>
-    ${d ? `<div class="meta-row"><span>Department</span><span>${d.name}</span></div>` : ''}
+    <div class="meta-row"><span>Email</span><span>${u.email||'—'}</span></div>
+    ${d ? `<div class="meta-row"><span>Team</span><span>${d.name}</span></div>` : ''}
     <div class="meta-row"><span>Role</span><span>${roleName}</span></div>
+    ${u.loginAt ? `<div class="meta-row"><span>Signed in</span><span>${new Date(u.loginAt).toLocaleString()}</span></div>` : ''}
     <div class="stat-strip">
       <div class="stat-chip"><div class="n">${openCt}</div><div class="l">Open</div></div>
       <div class="stat-chip"><div class="n">${resolvedCt}</div><div class="l">Resolved</div></div>
     </div>
+    ${renderPermissionChips(u.permissions)}
   </div>`;
 }
 
-// ----- Department Portal (manager: full triage rights) -----
+// ----- Department Portal (manager: triage rights) -----
 function renderDeptPortal(u){
-  if(!isManager(u.id)) return renderMyPortal(u);
+  if(!isManager(u.id) || !u.dept) return renderMyPortal(u);
   const d = dept(u.dept);
+  if(deptWorkers(d.id).length<=1){
+    // Solo team right now — a queue/oversight split has nothing to show yet,
+    // so just mirror everything the department touches in one list.
+    return renderDeptReadOnly(u, {manager:true});
+  }
   const queue = allTicketIds().filter(tid=>{
     const o = currentOwner(tid);
     return o && o.assignedTo===d.id;
@@ -740,7 +846,6 @@ function renderDeptPortal(u){
     const o = currentOwner(tid);
     return everInDept && o && !isDeptId(o.assignedTo);
   });
-
   return `
   <div class="grid2">
     ${profileCard(u)}
@@ -762,47 +867,37 @@ function renderDeptPortal(u){
   </div>`;
 }
 
-// ----- Department Portal (worker: read-only visibility into own department) -----
-function renderDeptReadOnly(u){
-  const d = dept(u.dept);
+// ----- Department Portal (worker: read-only, or solo-team manager view) -----
+function renderDeptReadOnly(u, opts={}){
+  const d = u.dept ? dept(u.dept) : null;
   if(!d) return renderMyPortal(u);
   const inDept = allTicketIds().filter(tid=>{
     const o = currentOwner(tid);
-    if(!o) return false;
-    const currentlyHere = isDeptId(o.assignedTo) ? o.assignedTo===d.id : (emp(o.assignedTo) && emp(o.assignedTo).dept===d.id);
-    const everHere = SHEET1.some(r=>r.ticketId===tid && (r.assignedTo===d.id || (emp(r.assignedTo) && emp(r.assignedTo).dept===d.id)));
-    return currentlyHere || everHere;
+    return o && emp(o.assignedTo) && emp(o.assignedTo).dept===d.id;
   });
   return `
   <div class="grid2">
     ${profileCard(u)}
     <div>
-      <h1 class="page-title">${d.name} — Department tasks</h1>
-      <p class="page-sub">Read-only view of everything that has passed through ${d.name}. Your own items are in My Portal.</p>
-      ${inDept.length ? `<div class="ticket-list">${inDept.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty"><b>Nothing here yet.</b>Tickets and tasks in ${d.name} will show up here.</div>`}
+      <h1 class="page-title">${d.name} — Department</h1>
+      <p class="page-sub">${opts.manager ? `You're currently the only member of ${d.name}, so this mirrors My Portal — invite teammates to build out a real queue.` : `Read-only view of everything that has passed through ${d.name}. Your own items are in My Portal.`}</p>
+      ${inDept.length ? `<div class="ticket-list">${inDept.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty"><b>Nothing here yet.</b>Tickets in ${d.name} will show up here.</div>`}
     </div>
   </div>`;
 }
 
 // ----- New ticket -----
-let newTicketForm = {type:'Ticket', priority:'Medium', assignedTo:'', title:'', description:''};
+let newTicketForm = {priority:'Medium', subject:'Employee', assignedTo:'', title:'', description:''};
 function renderNewTicket(u){
   const f = newTicketForm;
+  const subjects = ['Employee','Department','Transaction','Fine','Asset'];
   return `
-  <h1 class="page-title">New Ticket / Task</h1>
-  <p class="page-sub">This writes one row to the action log and one row to the status log, exactly like every later event on this item.</p>
+  <h1 class="page-title">New Ticket</h1>
+  <p class="page-sub">This writes one row to the log — exactly like every later event on this ticket.</p>
   <div class="card" style="max-width:640px;">
     <div class="field">
-      <label>Type</label>
-      <div class="seg">
-        <button data-newtype="Ticket" class="${f.type==='Ticket'?'sel':''}">Ticket</button>
-        <button data-newtype="Task" class="${f.type==='Task'?'sel':''}">Task</button>
-      </div>
-      <span class="hint">${f.type==='Task' ? 'Tasks are always assigned to a specific person.' : 'Tickets can go to a person or a whole department.'}</span>
-    </div>
-    <div class="field">
       <label>Ticket name</label>
-      <input type="text" id="nt-title" placeholder="e.g. Budget clarification for new hires" value="${f.title.replace(/"/g,'&quot;')}">
+      <input type="text" id="nt-title" placeholder="e.g. Payslip discrepancy" value="${f.title.replace(/"/g,'&quot;')}">
     </div>
     <div class="field">
       <label>Description</label>
@@ -816,41 +911,43 @@ function renderNewTicket(u){
         </select>
       </div>
       <div class="field">
-        <label>Assigned to</label>
-        <select id="nt-assignee">
-          <option value="">Select…</option>
-          ${f.type==='Ticket' ? `<optgroup label="Departments">${DEPARTMENTS.map(d=>`<option value="${d.id}" ${f.assignedTo===d.id?'selected':''}>${d.name}</option>`).join('')}</optgroup>`:''}
-          <optgroup label="People">${assignablePeopleFor(u).map(e=>`<option value="${e.id}" ${f.assignedTo===e.id?'selected':''}>${e.name} — ${e.title}</option>`).join('')}</optgroup>
+        <label>Subject</label>
+        <select id="nt-subject">
+          ${subjects.map(s=>`<option ${f.subject===s?'selected':''}>${s}</option>`).join('')}
         </select>
-        ${isManager(u.id) ? `<span class="hint">As a manager, you can assign tasks to people in ${dept(u.dept).name} only.</span>` : ''}
       </div>
     </div>
+    <div class="field">
+      <label>Assigned to</label>
+      <select id="nt-assignee">
+        <option value="">Select…</option>
+        ${assignablePeopleFor(u).map(e=>`<option value="${e.id}" ${f.assignedTo===e.id?'selected':''}>${e.name} — ${e.title}</option>`).join('')}
+      </select>
+      ${isManager(u.id) && u.dept ? `<span class="hint">As a manager, you can assign to people in ${dept(u.dept).name}.</span>` : ''}
+    </div>
     <div class="btn-row">
-      <button class="btn btn-primary" id="nt-submit">Create ${f.type}</button>
+      <button class="btn btn-primary" id="nt-submit">Create ticket</button>
       <button class="btn btn-ghost" id="nt-reset">Clear</button>
     </div>
   </div>`;
 }
 
-// people a given user is allowed to hand a Task/Ticket to directly
 function assignablePeopleFor(u){
   if(isGM(u.id)) return EMPLOYEES;
-  if(isManager(u.id)) return deptWorkers(u.dept);
-  return [u]; // workers can't create/route in this build, but fall back safely
+  if(isManager(u.id) && u.dept) return deptWorkers(u.dept);
+  return [u];
 }
 
 // ----- Flow Finder -----
 function ticketTouchesDept(tid, deptId){
   return SHEET1.some(r=>r.ticketId===tid && (
-    r.assignedTo===deptId ||
     (emp(r.assignedTo) && emp(r.assignedTo).dept===deptId) ||
     (emp(r.actorId) && emp(r.actorId).dept===deptId)
   ));
 }
 function renderFlowFinder(u){
-  const scoped = isManager(u.id); // managers see their own department only; GM sees everything
+  const scoped = isManager(u.id) && u.dept;
   const modeOpts = [['ticket','Ticket'],['employee','Employee'],['department','Department']];
-  let resultsHtml = '';
   let matches = [];
 
   if(state.ffMode==='ticket'){
@@ -858,7 +955,7 @@ function renderFlowFinder(u){
       if(scoped && !ticketTouchesDept(tid, u.dept)) return false;
       if(!state.ffQuery) return true;
       const q = state.ffQuery.toLowerCase();
-      return String(tid).includes(q) || ticketTitle(tid).toLowerCase().includes(q);
+      return String(tid).toLowerCase().includes(q) || ticketTitle(tid).toLowerCase().includes(q);
     });
   } else if(state.ffMode==='employee'){
     matches = state.ffQuery ? allTicketIds().filter(tid=>{
@@ -867,11 +964,11 @@ function renderFlowFinder(u){
   } else if(state.ffMode==='department'){
     const targetDept = scoped ? u.dept : state.ffQuery;
     matches = targetDept ? allTicketIds().filter(tid=>{
-      return SHEET1.some(r=>r.ticketId===tid && r.assignedTo===targetDept);
+      return SHEET1.some(r=>r.ticketId===tid && emp(r.assignedTo) && emp(r.assignedTo).dept===targetDept);
     }) : [];
   }
 
-  resultsHtml = matches.length ? matches.map(t=>ticketRow(t)).join('') :
+  const resultsHtml = matches.length ? matches.map(t=>ticketRow(t)).join('') :
     `<div class="empty"><b>No matches.</b>Try a different search.</div>`;
 
   const employeeOptions = scoped ? deptWorkers(u.dept) : EMPLOYEES;
@@ -892,7 +989,7 @@ function renderFlowFinder(u){
 
   return `
   <h1 class="page-title">Flow Finder</h1>
-  <p class="page-sub">${scoped ? `Search tickets and tasks that have passed through ${dept(u.dept).name}.` : 'Search across every ticket and task ever logged.'} Open one for the full timeline.</p>
+  <p class="page-sub">${scoped ? `Search tickets that have passed through ${dept(u.dept).name}.` : 'Search across every ticket ever logged.'} Open one for the full timeline.</p>
   <div class="subtabs">
     ${modeOpts.map(([k,l])=>`<button data-ffmode="${k}" class="${state.ffMode===k?'active':''}">${l}</button>`).join('')}
   </div>
@@ -902,11 +999,11 @@ function renderFlowFinder(u){
 }
 
 function kindOfAction(action){
-  if(action==='Created') return 'created';
-  if(action.startsWith('Forwarded') || action==='Taken on personally') return 'forward';
-  if(action==='Reminder set' || action.startsWith('Snoozed') || action.startsWith('Postponed')) return 'reminder';
-  if(action==='Result received') return 'result';
-  if(action.startsWith('Status changed to Resolved')) return 'resolved';
+  if(/^ticket raised/i.test(action)) return 'created';
+  if(/forward|auto-routed|auto-assigned|^assigned to|^taken on personally/i.test(action)) return 'forward';
+  if(/^reminder set|^snoozed|^postponed/i.test(action)) return 'reminder';
+  if(/^reminder triggered/i.test(action)) return 'result';
+  if(/resolved|status changed to (done|resolved)/i.test(action)) return 'resolved';
   return 'forward';
 }
 function kindIcon(k){
@@ -919,6 +1016,7 @@ function renderTimelineView(tid, u){
   rows.forEach((r,i)=>{
     const k = kindOfAction(r.action);
     const gap = i>0 ? fmtDur(r.logId - rows[i-1].logId) : null;
+    const whoLine = `${nameOf(r.actorId)}${r.target ? ` → ${r.target}` : (r.assignedTo ? ` → ${nameOf(r.assignedTo)}` : '')}`;
     items += `
     <div class="tl-item k-${k}">
       ${gap ? `<div class="tl-gap">+${gap}</div>` : ''}
@@ -928,8 +1026,8 @@ function renderTimelineView(tid, u){
           <span class="tl-action">${r.action}</span>
           <span class="tl-ts">${fmtTs(r.logId)}</span>
         </div>
-        <div class="tl-who">${nameOf(r.actorId)}${r.assignedTo? ` → ${nameOf(r.assignedTo)}`:''} · <span class="status-chip st-${r.s2?r.s2.status:''}" style="padding:1px 7px;font-size:10px;">${r.s2?r.s2.status:''}</span></div>
-        <div class="tl-notes">${r.notes}</div>
+        <div class="tl-who">${whoLine} · <span class="status-chip ${statusClass(r.s2?r.s2.status:'')}" style="padding:1px 7px;font-size:10px;">${r.s2?r.s2.status:''}</span></div>
+        ${r.notes ? `<div class="tl-notes">${r.notes}</div>` : ''}
       </div>
     </div>`;
   });
@@ -946,10 +1044,6 @@ function renderTimelineView(tid, u){
 }
 
 // Permission gate: who is allowed to act on a ticket right now.
-//  - GM: read-only oversight everywhere, never acts.
-//  - Manager: can triage their own department's queue (assign out / take personally),
-//    and can respond as the owner when a ticket/task is sitting with them personally.
-//  - Worker: can only respond when a task/ticket is assigned directly to them, and can only mark it done.
 function respondPermission(tid, u){
   const owner = currentOwner(tid);
   if(isTerminal(owner.status)) return {mode:'none'};
@@ -971,7 +1065,7 @@ function renderRespondPanel(tid, u){
   if(perm.mode==='triage'){
     return `
     <div class="card" style="margin-top:14px;">
-      <div class="section-label" style="margin-top:0;">Triage this ${owner.type.toLowerCase()}</div>
+      <div class="section-label" style="margin-top:0;">Triage this ticket</div>
       <div class="btn-row">
         <button class="btn btn-sm" data-respond="forward" data-tid="${tid}">Assign to person</button>
         <button class="btn btn-sm" data-respond="claim" data-tid="${tid}">Handle personally</button>
@@ -981,22 +1075,22 @@ function renderRespondPanel(tid, u){
   if(perm.mode==='done-only'){
     return `
     <div class="card" style="margin-top:14px;">
-      <div class="section-label" style="margin-top:0;">Respond to this ${owner.type.toLowerCase()}</div>
-      <p class="hint" style="margin-bottom:10px;">As a worker, you can mark your own tasks done. Reassigning or postponing is a manager action.</p>
+      <div class="section-label" style="margin-top:0;">Respond to this ticket</div>
+      <p class="hint" style="margin-bottom:10px;">As a worker, you can mark your own tickets done. Reassigning or postponing is a manager action.</p>
       <div class="btn-row">
         <button class="btn btn-primary btn-sm" data-respond="done" data-tid="${tid}">Mark done</button>
       </div>
     </div>`;
   }
-  // full: manager (or anyone non-worker) acting on their own item
+  const teammates = (u.dept ? deptWorkers(u.dept) : []).filter(e=>e.id!==u.id);
   return `
   <div class="card" style="margin-top:14px;">
-    <div class="section-label" style="margin-top:0;">Respond to this ${owner.type.toLowerCase()}</div>
+    <div class="section-label" style="margin-top:0;">Respond to this ticket</div>
     <div class="btn-row">
       <button class="btn btn-amber btn-sm" data-respond="snooze" data-tid="${tid}">Snooze</button>
       <button class="btn btn-sm" data-respond="postpone" data-tid="${tid}">Postpone</button>
       <button class="btn btn-primary btn-sm" data-respond="done" data-tid="${tid}">Mark done</button>
-      ${isManager(u.id) ? `<button class="btn btn-sm" data-respond="reassign" data-tid="${tid}">Reassign to teammate</button>` : ''}
+      ${isManager(u.id) && teammates.length ? `<button class="btn btn-sm" data-respond="reassign" data-tid="${tid}">Reassign to teammate</button>` : ''}
     </div>
   </div>`;
 }
@@ -1006,13 +1100,13 @@ function renderOrgOverview(u){
   const groups = DEPARTMENTS.map(d=>{
     const tids = allTicketIds().filter(tid=>{
       const o = currentOwner(tid);
-      return o && (isDeptId(o.assignedTo) ? o.assignedTo===d.id : (emp(o.assignedTo) && emp(o.assignedTo).dept===d.id));
+      return o && emp(o.assignedTo) && emp(o.assignedTo).dept===d.id;
     });
     return {dept:d, tids};
   });
   return `
   <h1 class="page-title">Org Overview</h1>
-  <p class="page-sub">Read-only view across every department's tickets and tasks, wherever they currently sit. Use Flow Finder to inspect any of them in detail.</p>
+  <p class="page-sub">Read-only view across every department's tickets, wherever they currently sit. Use Flow Finder to inspect any of them in detail.</p>
   ${groups.map(g=>`
     <div class="section-label">${g.dept.name} (${g.tids.length})</div>
     ${g.tids.length ? `<div class="ticket-list">${g.tids.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty">Nothing currently in ${g.dept.name}.</div>`}
@@ -1032,7 +1126,6 @@ function toast(msg){
 
 // ---------- Modal for respond actions ----------
 function openRespondModal(kind, tid){
-  const owner = currentOwner(tid);
   const actor = currentUser();
   const backdrop = document.createElement('div');
   backdrop.className='modal-backdrop';
@@ -1045,7 +1138,7 @@ function openRespondModal(kind, tid){
   } else if(kind==='forward' || kind==='reassign'){
     const people = assignablePeopleFor(actor).filter(e=>e.id!==actor.id || kind==='forward');
     extra = `<div class="field"><label>Assign to</label><select id="rm-person">${people.map(e=>`<option value="${e.id}">${e.name} — ${e.title}</option>`).join('')}</select></div>
-             <span class="hint">${isManager(actor.id) ? `Limited to ${dept(actor.dept).name}.` : ''}</span>`;
+             <span class="hint">${isManager(actor.id) && actor.dept ? `Limited to ${dept(actor.dept).name}.` : ''}</span>`;
   }
   backdrop.innerHTML = `
     <div class="modal">
@@ -1074,7 +1167,7 @@ function openRespondModal(kind, tid){
       toast(`Postponed ${days} day(s).`);
     } else if(kind==='done'){
       respondDone({ticketId:tid, actorId, comment});
-      toast('Marked resolved. No further alerts for this ticket.');
+      toast('Marked done. No further alerts for this ticket.');
     } else if(kind==='forward' || kind==='reassign'){
       const person = backdrop.querySelector('#rm-person').value;
       forwardTicket({ticketId:tid, actorId, toAssignee:person, note:comment});
@@ -1090,12 +1183,6 @@ function openRespondModal(kind, tid){
 
 // ---------- Wiring ----------
 function wireGlobal(){
-  document.getElementById('userSwitch').onchange = (e)=>{
-    state.currentUserId = e.target.value;
-    state.view = 'my';
-    state.ffSelectedTicket = null;
-    render();
-  };
   document.querySelectorAll('[data-ff]').forEach(b=>{
     b.onclick = ()=>{
       if(b.dataset.ff==='reset') demoOffsetMs = 0;
@@ -1119,7 +1206,7 @@ function wireGlobal(){
   }
   document.querySelectorAll('[data-open-ticket]').forEach(row=>{
     row.onclick=()=>{
-      const tid = Number(row.dataset.openTicket);
+      const tid = row.dataset.openTicket;
       state.view='flow';
       state.ffSelectedTicket = tid;
       render();
@@ -1129,34 +1216,23 @@ function wireGlobal(){
   if(ffBack) ffBack.onclick=()=>{ state.ffSelectedTicket=null; render(); };
 
   document.querySelectorAll('[data-respond]').forEach(b=>{
-    b.onclick=()=> openRespondModal(b.dataset.respond, Number(b.dataset.tid));
+    b.onclick=()=> openRespondModal(b.dataset.respond, b.dataset.tid);
   });
 
-  // New ticket form wiring
-  const ntType = document.querySelectorAll('[data-newtype]');
-  ntType.forEach(b=>{
-    b.onclick=()=>{
-      newTicketForm.type = b.dataset.newtype;
-      if(newTicketForm.type==='Task' && isDeptId(newTicketForm.assignedTo)) newTicketForm.assignedTo='';
-      syncNewTicketFields();
-      render();
-    };
-  });
   const ntSubmit = document.getElementById('nt-submit');
   if(ntSubmit) ntSubmit.onclick=()=>{
     syncNewTicketFields();
     const f = newTicketForm;
     if(!f.title.trim()){ toast('Give this a name first.'); return; }
     if(!f.assignedTo){ toast('Choose who this is assigned to.'); return; }
-    if(f.type==='Task' && isDeptId(f.assignedTo)){ toast('Tasks can only be assigned to a person.'); return; }
-    const tid = createTicket({creatorId: state.currentUserId, title:f.title, description:f.description||'(no description provided)', priority:f.priority, type:f.type, assignedTo:f.assignedTo});
-    toast(`${f.type} created and routed to ${nameOf(f.assignedTo)}.`);
-    newTicketForm = {type:'Ticket', priority:'Medium', assignedTo:'', title:'', description:''};
+    const tid = createTicket({creatorId: state.currentUserId, title:f.title, description:f.description||'(no description provided)', priority:f.priority, subject:f.subject, assignedTo:f.assignedTo});
+    toast(`Ticket created and routed to ${nameOf(f.assignedTo)}.`);
+    newTicketForm = {priority:'Medium', subject:'Employee', assignedTo:'', title:'', description:''};
     state.view='flow'; state.ffSelectedTicket=tid;
     render();
   };
   const ntReset = document.getElementById('nt-reset');
-  if(ntReset) ntReset.onclick=()=>{ newTicketForm = {type:'Ticket', priority:'Medium', assignedTo:'', title:'', description:''}; render(); };
+  if(ntReset) ntReset.onclick=()=>{ newTicketForm = {priority:'Medium', subject:'Employee', assignedTo:'', title:'', description:''}; render(); };
   bindNewTicketLiveFields();
 }
 
@@ -1164,6 +1240,7 @@ function syncNewTicketFields(){
   const t = document.getElementById('nt-title'); if(t) newTicketForm.title = t.value;
   const d = document.getElementById('nt-desc'); if(d) newTicketForm.description = d.value;
   const p = document.getElementById('nt-priority'); if(p) newTicketForm.priority = p.value;
+  const s = document.getElementById('nt-subject'); if(s) newTicketForm.subject = s.value;
   const a = document.getElementById('nt-assignee'); if(a) newTicketForm.assignedTo = a.value;
 }
 function bindNewTicketLiveFields(){
@@ -1171,16 +1248,21 @@ function bindNewTicketLiveFields(){
   if(a) a.onchange = ()=>{ newTicketForm.assignedTo = a.value; };
   const p = document.getElementById('nt-priority');
   if(p) p.onchange = ()=>{ newTicketForm.priority = p.value; };
+  const s = document.getElementById('nt-subject');
+  if(s) s.onchange = ()=>{ newTicketForm.subject = s.value; };
 }
 
-// periodic re-render so overdue flags / reminder engine stay live without user action
+// periodic re-render so overdue flags stay live without user action
 setInterval(()=>{
-  // light touch: only re-render if we're looking at a ticket list view (avoid disrupting typing in forms)
-  if(state.view==='my' || state.view==='dept' || (state.view==='flow' && !state.ffSelectedTicket) || state.view==='admin'){
+  if(state.view==='my' || state.view==='dept' || (state.view==='flow' && !state.ffSelectedTicket) || state.view==='org'){
     render();
   }
 }, 15000);
 
+// ---------- Boot ----------
+ME = bootstrapIdentity();
+state.currentUserId = ME.id;
+seedFromLog(ME.email);
 render();
 </script>
 </body>
