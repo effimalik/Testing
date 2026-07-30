@@ -88,15 +88,19 @@
 }
 
 html, body { height: 100%; overflow: hidden; }
-body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: clamp(12px, 1.5vw, 15px); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow: hidden; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: clamp(12px, 1.5vw, 15px); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow: hidden; display: flex; flex-direction: row; align-items: stretch; }
 
 /* ── Page wrapper — fills the available viewport/iframe height and clips
-     everything to its own box so no child can ever spill outside #allEmp ── */
+     everything to its own box so no child can ever spill outside #allEmp ──
+     flex:1 + min-width:0 lets it shrink ("fold" left) when the docked side
+     panel opens next to it, instead of being hidden under an overlay. ── */
 .page {
   display: flex;
   flex-direction: column;
-  width: 100%;
+  flex: 1 1 auto;
+  width: auto;
   max-width: 100%;
+  min-width: 0;
   height: 100%;
   max-height: 100dvh;
   min-height: 0;
@@ -104,6 +108,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
   padding: clamp(8px, 2vw, 24px) clamp(10px, 2.5vw, 24px);
   box-sizing: border-box;
   overflow: hidden;
+  transition: width .32s cubic-bezier(.4,0,.2,1);
 }
 
 /* ── Page header — heading, description, search box and filter buttons
@@ -288,19 +293,53 @@ select option { background: var(--surface2); color: var(--text); }
 
 /* ── Shared right-side panel/window ──
    ONE panel shell reused by every row-action button (View / Advance /
-   History / any future button) — see panel-core.js. */
-#side-panel { position: fixed; inset: 0; z-index: 300; pointer-events: none; display: flex; justify-content: flex-end; }
-#side-panel.open { pointer-events: auto; }
-.dp-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.55); backdrop-filter: blur(3px); opacity: 0; transition: opacity .28s; }
-#side-panel.open .dp-backdrop { opacity: 1; }
-.dp-sheet { position: relative; width: min(440px, 100%); height: 100dvh; max-height: 95dvh; background: var(--bg2); border-left: 1px solid var(--border2); display: flex; flex-direction: column; transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); box-shadow: -8px 0 40px rgba(0,0,0,.4); overflow: hidden; }
-#side-panel.open .dp-sheet { transform: translateX(0); }
-.dp-header { padding: 20px 22px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-shrink: 0; background: var(--bg2); }
+   History / any future button) — see panel-core.js.
+
+   Desktop/tablet: DOCKED, not an overlay. #side-panel is a normal flex
+   sibling of .page (see body{display:flex} above) that animates its own
+   width from 0 → a real column width. The table (.page) has flex:1 and
+   min-width:0, so it naturally shrinks/"folds" left to share the row
+   with the panel — both stay visible at once, like two panes of one
+   window, instead of the panel floating on top with a dark backdrop.
+
+   Narrow / mobile widths: there isn't enough room to dock two panes
+   side-by-side, so the media query below switches back to the classic
+   fixed overlay + backdrop behaviour. ── */
+#side-panel {
+  position: relative;
+  flex-shrink: 0;
+  width: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg2);
+  border-left: 0 solid var(--border2);
+  transition: width .32s cubic-bezier(.4,0,.2,1), border-color .32s;
+}
+#side-panel.open { width: clamp(460px, 40vw, 620px); border-left: 1px solid var(--border2); }
+.dp-backdrop { display: none; }
+.dp-sheet { position: relative; width: clamp(460px, 40vw, 620px); height: 100%; max-height: 100%; background: var(--bg2); display: flex; flex-direction: column; overflow: hidden; }
+
+@media (max-width: 880px) {
+  body { display: block; }
+  .page { width: 100%; }
+  #side-panel { position: fixed; inset: 0; z-index: 300; width: auto; height: 100dvh; pointer-events: none; display: flex; justify-content: flex-end; border-left: none; overflow: visible; transition: none; }
+  #side-panel.open { pointer-events: auto; width: auto; border-left: none; }
+  .dp-backdrop { display: block; position: absolute; inset: 0; background: rgba(0,0,0,.55); backdrop-filter: blur(3px); opacity: 0; transition: opacity .28s; }
+  #side-panel.open .dp-backdrop { opacity: 1; }
+  .dp-sheet { position: relative; width: min(440px, 100%); height: 100dvh; max-height: 95dvh; border-left: 1px solid var(--border2); transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1); box-shadow: -8px 0 40px rgba(0,0,0,.4); }
+  #side-panel.open .dp-sheet { transform: translateX(0); }
+}
+
+/* ── Header — two clean rows: name+actions on row 1, EMP# detail on row 2,
+   so everything below (tabs, stats, table) gets the remaining vertical
+   space instead of the header eating into it. ── */
+.dp-header { padding: 16px 20px 14px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; background: var(--bg2); }
+.dp-header-row1 { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
 .dp-header-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
 .dp-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .dp-avatar { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; }
-.dp-name { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -.01em; }
-.dp-sub  { font-size: 12px; color: var(--text3); margin-top: 2px; font-family: var(--mono); }
+.dp-name { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.dp-sub  { font-size: 12px; color: var(--text3); font-family: var(--mono); padding-left: 56px; }
 .dp-status-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; border: 1.5px solid; }
 .dp-badge-green  { background: var(--teal-dim);  color: var(--teal);  border-color: var(--teal); }
 .dp-badge-amber  { background: var(--amber-dim); color: var(--amber); border-color: var(--amber); }
@@ -357,8 +396,9 @@ select option { background: var(--surface2); color: var(--text); }
 #adv-repay-preview { margin-bottom: 10px; }
 
 /* ── History tabs ── */
-.hist-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
-.hist-tab { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 20px; border: 1.5px solid var(--border2); background: var(--surface); color: var(--text2); font-family: var(--font); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .18s; white-space: nowrap; }
+.hist-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.hist-tab { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 8px; border-radius: 10px; border: 1.5px solid var(--border2); background: var(--surface); color: var(--text2); font-family: var(--font); font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all .18s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.hist-tab i { font-size: 16px; flex-shrink: 0; }
 .hist-tab.active-bike  { background: var(--teal-dim);   color: var(--teal);   border-color: var(--teal); box-shadow: 0 0 0 2px var(--teal); }
 .hist-tab.active-sim   { background: var(--purple-dim); color: var(--purple); border-color: var(--purple); box-shadow: 0 0 0 2px var(--purple); }
 .hist-tab.active-rider { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
@@ -482,17 +522,17 @@ select option { background: var(--surface2); color: var(--text); }
   <div class="dp-backdrop" onclick="SidePanel.close()"></div>
   <div class="dp-sheet">
     <div class="dp-header">
-      <div class="dp-header-info">
-        <div class="dp-avatar" id="sp-avatar"></div>
-        <div>
+      <div class="dp-header-row1">
+        <div class="dp-header-info">
+          <div class="dp-avatar" id="sp-avatar"></div>
           <div class="dp-name" id="sp-name">—</div>
-          <div class="dp-sub"  id="sp-sub">—</div>
+        </div>
+        <div class="dp-header-actions">
+          <span class="dp-status-badge" id="sp-badge" style="display:none;"></span>
+          <button class="dp-close-btn" onclick="SidePanel.close()" title="Close"><i class="ti ti-x"></i></button>
         </div>
       </div>
-      <div class="dp-header-actions">
-        <span class="dp-status-badge" id="sp-badge" style="display:none;"></span>
-        <button class="dp-close-btn" onclick="SidePanel.close()" title="Close"><i class="ti ti-x"></i></button>
-      </div>
+      <div class="dp-sub" id="sp-sub">—</div>
     </div>
     <div class="dp-body" id="sp-body"></div>
     <div class="dp-footer" id="sp-footer"></div>
