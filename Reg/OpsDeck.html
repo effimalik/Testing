@@ -1,0 +1,1187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpsDeck — Ticket &amp; Task Portal</title>
+<script src="https://effimalik.github.io/Testing/shared/auth.js?v=5"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1720;
+    --bg-grid: #131D27;
+    --panel:#172029;
+    --panel-raised:#1D2833;
+    --panel-hover:#212E3A;
+    --border:#28333F;
+    --border-soft:#1E2830;
+    --text:#EAEEF2;
+    --text-dim:#B3BEC9;
+    --text-muted:#7C8998;
+    --teal:#4FD1C5;
+    --teal-dim:#2C4A48;
+    --amber:#F2A93B;
+    --amber-dim:#4A3A1E;
+    --red:#E8574B;
+    --red-dim:#4A2420;
+    --blue:#5B8DEF;
+    --blue-dim:#22314F;
+    --font-display:'Space Grotesk', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+    --font-body:'Inter', sans-serif;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px) 0 0/100% 28px,
+      var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    min-height:100vh;
+  }
+  ::selection{background:var(--teal-dim);color:var(--text);}
+  a{color:inherit;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:40;
+    display:flex;flex-direction:column;gap:10px;
+    padding:14px 24px;
+    background:rgba(15,23,32,0.94);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+  }
+  .topbar-row1{display:flex;align-items:center;gap:16px;}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:19px;letter-spacing:0.2px;flex-shrink:0;}
+  .brand .dot{width:9px;height:9px;border-radius:2px;background:var(--amber);box-shadow:0 0 10px var(--amber);animation:pulse 2.2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+  .topbar-spacer{flex:1;}
+  nav.tabs{
+    display:flex;gap:2px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;padding-bottom:1px;
+  }
+  nav.tabs::-webkit-scrollbar{display:none;}
+  nav.tabs button{
+    background:none;border:none;color:var(--text-muted);font-size:13.5px;font-weight:500;
+    padding:8px 14px;border-radius:7px;transition:all .15s;position:relative;white-space:nowrap;flex-shrink:0;
+  }
+  nav.tabs button:hover{color:var(--text);background:var(--panel-raised);}
+  nav.tabs button.active{color:var(--bg);background:var(--teal);}
+  .badge-count{
+    display:inline-block;min-width:16px;padding:0 4px;margin-left:6px;border-radius:20px;
+    background:var(--red);color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;
+  }
+  nav.tabs button.active .badge-count{background:rgba(15,23,32,.55);color:#fff;}
+  .userbox{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .userbox select{
+    background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:7px;
+    padding:7px 10px;font-size:13px;max-width:190px;
+  }
+  .role-pill{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--teal);border:1px solid var(--teal-dim);background:var(--teal-dim);padding:3px 8px;border-radius:20px;font-family:var(--font-mono);white-space:nowrap;flex-shrink:0;}
+
+  @media (max-width:760px){
+    .topbar{padding:12px 14px;}
+    .topbar-row1{flex-wrap:wrap;row-gap:10px;}
+    .userbox{width:100%;justify-content:space-between;order:3;}
+    .userbox select{max-width:none;flex:1;}
+    nav.tabs{width:100%;order:2;}
+    .topbar-spacer{display:none;}
+  }
+
+  /* ---------- Layout ---------- */
+  .page{max-width:1180px;margin:0 auto;padding:28px 24px 80px;}
+  .grid2{display:grid;grid-template-columns:280px 1fr;gap:22px;align-items:start;}
+  @media (max-width:820px){.grid2{grid-template-columns:1fr;}}
+
+  .card{
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:20px;
+  }
+  .profile-card .avatar{
+    width:52px;height:52px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:700;font-size:19px;background:var(--panel-raised);
+    color:var(--teal);border:1px solid var(--border);margin-bottom:14px;
+  }
+  .profile-card h2{font-family:var(--font-display);font-size:19px;margin:0 0 4px;}
+  .profile-card .role-line{color:var(--text-muted);font-size:13px;margin:0 0 14px;}
+  .profile-card .meta-row{display:flex;justify-content:space-between;font-size:12.5px;padding:8px 0;border-top:1px solid var(--border-soft);color:var(--text-dim);}
+  .profile-card .meta-row span:first-child{color:var(--text-muted);}
+  .stat-strip{display:flex;gap:10px;margin-top:14px;}
+  .stat-chip{flex:1;background:var(--panel-raised);border:1px solid var(--border-soft);border-radius:8px;padding:9px 8px;text-align:center;}
+  .stat-chip .n{font-family:var(--font-mono);font-size:18px;font-weight:600;}
+  .stat-chip .l{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;}
+
+  h1.page-title{font-family:var(--font-display);font-size:24px;margin:0 0 4px;}
+  .page-sub{color:var(--text-muted);font-size:13.5px;margin:0 0 20px;}
+  .section-label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin:26px 0 10px;display:flex;align-items:center;gap:8px;}
+  .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  /* ---------- Ticket rows ---------- */
+  .ticket-list{display:flex;flex-direction:column;gap:8px;}
+  .ticket-row{
+    background:var(--panel);border:1px solid var(--border);border-radius:9px;
+    padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:.12s;
+  }
+  .ticket-row:hover{background:var(--panel-hover);border-color:#37444F;}
+  .pri-flag{width:4px;align-self:stretch;border-radius:3px;flex-shrink:0;}
+  .pri-High{background:var(--red);}
+  .pri-Medium{background:var(--amber);}
+  .pri-Low{background:var(--teal);}
+  .t-main{flex:1;min-width:0;}
+  .t-title{font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;}
+  .t-title .tid{font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted);font-weight:400;}
+  .t-sub{font-size:12px;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .type-chip{font-size:10px;text-transform:uppercase;letter-spacing:.4px;font-family:var(--font-mono);padding:2px 6px;border-radius:4px;border:1px solid var(--border);color:var(--text-dim);}
+  .status-chip{font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;white-space:nowrap;}
+  .st-Open{background:var(--blue-dim);color:var(--blue);}
+  .st-Forwarded{background:var(--blue-dim);color:var(--blue);}
+  .st-Pending{background:var(--amber-dim);color:var(--amber);}
+  .st-Postponed{background:var(--amber-dim);color:var(--amber);}
+  .st-Resolved{background:var(--teal-dim);color:var(--teal);}
+  .st-Done{background:var(--teal-dim);color:var(--teal);}
+  .overdue-flag{
+    font-family:var(--font-mono);font-size:10.5px;color:#fff;background:var(--red);
+    padding:3px 8px;border-radius:5px;display:flex;align-items:center;gap:5px;animation:ring 1.6s ease-in-out infinite;
+  }
+  @keyframes ring{0%,100%{transform:rotate(0);}20%{transform:rotate(-8deg);}40%{transform:rotate(8deg);}60%{transform:rotate(-4deg);}80%{transform:rotate(4deg);}}
+  .empty{
+    text-align:center;padding:50px 20px;color:var(--text-muted);border:1px dashed var(--border);border-radius:var(--radius);font-size:13.5px;
+  }
+  .empty b{display:block;color:var(--text-dim);font-family:var(--font-display);font-size:16px;margin-bottom:6px;font-weight:600;}
+
+  /* ---------- Buttons ---------- */
+  .btn{border:1px solid var(--border);background:var(--panel-raised);color:var(--text);padding:8px 14px;border-radius:7px;font-size:13px;font-weight:500;transition:.12s;}
+  .btn:hover{background:var(--panel-hover);border-color:#3A4753;}
+  .btn-primary{background:var(--teal);color:#062522;border-color:var(--teal);font-weight:600;}
+  .btn-primary:hover{background:#69dbd0;}
+  .btn-amber{background:var(--amber);color:#2a1c04;border-color:var(--amber);font-weight:600;}
+  .btn-amber:hover{background:#f7bb5c;}
+  .btn-ghost{background:none;border-color:transparent;color:var(--text-muted);}
+  .btn-ghost:hover{color:var(--text);background:var(--panel-raised);}
+  .btn-sm{padding:6px 11px;font-size:12px;}
+  .btn-block{width:100%;}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+
+  /* ---------- Tabs (dept portal) ---------- */
+  .subtabs{display:flex;gap:4px;margin-bottom:16px;background:var(--panel-raised);padding:4px;border-radius:9px;width:fit-content;}
+  .subtabs button{background:none;border:none;color:var(--text-muted);font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:6px;}
+  .subtabs button.active{background:var(--panel);color:var(--text);}
+
+  /* ---------- Forms ---------- */
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+  .field.full{grid-column:1/-1;}
+  .field label{font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;}
+  .field input[type=text],.field textarea,.field select,.field input[type=date]{
+    background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:10px 11px;font-size:13.5px;
+  }
+  .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--teal);}
+  .field textarea{resize:vertical;min-height:70px;}
+  .seg{display:flex;gap:6px;}
+  .seg button{flex:1;background:var(--panel-raised);border:1px solid var(--border);color:var(--text-dim);padding:9px;border-radius:7px;font-size:13px;font-weight:600;}
+  .seg button.sel{border-color:var(--teal);color:var(--teal);background:var(--teal-dim);}
+  .hint{font-size:11.5px;color:var(--text-muted);margin-top:-4px;}
+  .warn-hint{font-size:11.5px;color:var(--amber);}
+
+  /* ---------- Flow finder ---------- */
+  .ff-searchbar{display:flex;gap:8px;margin-bottom:16px;}
+  .ff-searchbar select, .ff-searchbar input{flex:0 0 auto;}
+  .ff-results{display:flex;flex-direction:column;gap:8px;}
+
+  .timeline{position:relative;padding-left:26px;margin-top:6px;}
+  .timeline::before{content:'';position:absolute;left:9px;top:4px;bottom:4px;width:2px;background:linear-gradient(var(--border),var(--border) 70%,transparent);}
+  .tl-item{position:relative;padding:0 0 26px 20px;}
+  .tl-item:last-child{padding-bottom:0;}
+  .tl-dot{position:absolute;left:-26px;top:2px;width:20px;height:20px;border-radius:50%;background:var(--panel-raised);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;}
+  .tl-item.k-created .tl-dot{border-color:var(--blue);color:var(--blue);}
+  .tl-item.k-forward .tl-dot{border-color:var(--blue);color:var(--blue);}
+  .tl-item.k-reminder .tl-dot{border-color:var(--amber);color:var(--amber);}
+  .tl-item.k-result .tl-dot{border-color:var(--teal);color:var(--teal);}
+  .tl-item.k-resolved .tl-dot{border-color:var(--teal);background:var(--teal);color:#062522;}
+  .tl-gap{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);position:absolute;left:-90px;top:2px;width:60px;text-align:right;}
+  .tl-card{background:var(--panel-raised);border:1px solid var(--border-soft);border-radius:8px;padding:11px 13px;}
+  .tl-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px;flex-wrap:wrap;}
+  .tl-action{font-weight:700;font-size:13.5px;}
+  .tl-ts{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);}
+  .tl-who{font-size:12px;color:var(--text-dim);margin-bottom:6px;}
+  .tl-notes{font-size:13px;color:var(--text-dim);line-height:1.5;}
+  .tl-wrap{padding-left:70px;}
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(6,10,14,.7);backdrop-filter:blur(2px);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:14px;max-width:480px;width:100%;padding:22px;}
+  .modal h3{font-family:var(--font-display);margin:0 0 4px;font-size:17px;}
+  .modal .modal-sub{color:var(--text-muted);font-size:12.5px;margin:0 0 16px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
+
+  /* ---------- Demo fast-forward control ---------- */
+  .demo-clock{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+  .demo-clock .dc-label{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-right:2px;white-space:nowrap;}
+  .demo-clock .dc-offset{font-family:var(--font-mono);font-size:10.5px;color:var(--amber);white-space:nowrap;}
+  .demo-clock button{
+    background:var(--panel-raised);border:1px solid var(--border);color:var(--text-dim);
+    padding:5px 8px;border-radius:5px;font-family:var(--font-mono);font-size:11px;flex-shrink:0;
+  }
+  .demo-clock button:hover{color:var(--amber);border-color:var(--amber-dim);}
+  @media (max-width:760px){
+    .demo-clock{width:100%;order:4;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+    .demo-clock::-webkit-scrollbar{display:none;}
+  }
+
+  /* ---------- Page-wide responsive rules ---------- */
+  @media (max-width:640px){
+    .page{padding:20px 14px 60px;}
+    .page-title{font-size:20px;}
+    .form-grid{grid-template-columns:1fr;}
+    .ticket-row{flex-wrap:wrap;}
+    .t-main{min-width:160px;}
+    .tl-wrap{padding-left:0;}
+    .tl-gap{display:none;}
+    .stat-strip{flex-wrap:wrap;}
+    .ff-searchbar{flex-direction:column;}
+    .modal{padding:18px;}
+    nav.tabs button{font-size:12.5px;padding:7px 10px;}
+  }
+
+  .toast-wrap{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;}
+  .toast{background:var(--panel-raised);border:1px solid var(--teal-dim);border-left:3px solid var(--teal);color:var(--text);padding:11px 16px;border-radius:8px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:slidein .25s ease;}
+  @keyframes slidein{from{transform:translateX(20px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+  .kicker{font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* =========================================================================
+   OPSDECK — front-end only prototype
+   Data model mirrors the two append-only Google Sheets described in the spec:
+     SHEET1  Log_ID | Ticket_ID | Created By(action) | Priority | Type | Assigned to | Name(actor) | Notes
+     SHEET2  Ticket_ID | Status | Last Status | ID
+   All data lives in memory for this demo (no backend). A "demo clock" lets
+   you fast-forward time to see the reminder/escalation engine fire without
+   waiting real hours.
+   ========================================================================= */
+
+// ---------- Reference data ----------
+const DEPARTMENTS = [
+  {id:'D1', name:'Engineering', headId:'u10'},
+  {id:'D2', name:'Human Resources', headId:'u4'},
+  {id:'D3', name:'Finance', headId:'u2'},
+  {id:'D4', name:'Operations', headId:'u7'},
+];
+
+const EMPLOYEES = [
+  {id:'u1', name:'Amara Osei',   title:'Requester',        dept:'D3', role:'worker'},
+  {id:'u2', name:'Daniel Cho',   title:'Finance Lead',      dept:'D3', role:'manager'},
+  {id:'u3', name:'Priya Nair',   title:'Finance Analyst',   dept:'D3', role:'worker'},
+  {id:'u4', name:'Marcus Webb',  title:'HR Director',       dept:'D2', role:'manager'},
+  {id:'u5', name:'Sofia Reyes',  title:'HR Executive',      dept:'D2', role:'worker'},
+  {id:'u6', name:'Leo Fischer',  title:'Ops Analyst',       dept:'D4', role:'worker'},
+  {id:'u7', name:'Grace Kim',    title:'Ops Lead',          dept:'D4', role:'manager'},
+  {id:'u8', name:'Tariq Hassan', title:'Software Engineer', dept:'D1', role:'worker'},
+  {id:'u9', name:'Wren Delacroix', title:'QA Engineer',     dept:'D1', role:'worker'},
+  {id:'u10',name:'Nadia Volkov', title:'Eng Director',      dept:'D1', role:'manager'},
+  {id:'u11',name:'Olivia Grant', title:'General Manager',   dept:null, role:'gm'},
+];
+
+function isManager(empId){ const e=emp(empId); return !!e && e.role==='manager'; }
+function isGM(empId){ const e=emp(empId); return !!e && e.role==='gm'; }
+function isWorker(empId){ const e=emp(empId); return !!e && e.role==='worker'; }
+function headOf(deptId){ const d=DEPARTMENTS.find(d=>d.id===deptId); return d?d.headId:null; }
+function emp(id){ return EMPLOYEES.find(e=>e.id===id); }
+function dept(id){ return DEPARTMENTS.find(d=>d.id===id); }
+function isDeptId(id){ return typeof id==='string' && id[0]==='D'; }
+
+/* ── Real signed-in user — resolves tier (worker/manager/gm) and department
+   from Auth.getUser(), then injects one real employee record into the
+   existing EMPLOYEES/DEPARTMENTS model above. Ticket data stays demo/fake
+   until that's wired up separately — this only decides WHICH portal view
+   (My Portal / Department / Org Overview) the signed-in viewer sees. ── */
+function _classifyTier(designation) {
+  const d = (designation || '').toLowerCase();
+  if (/\bgm\b|general manager/.test(d)) return 'gm';
+  if (/\bhead\b|manager|director|lead/.test(d)) return 'manager';
+  return 'worker';
+}
+
+function _resolveRealUser() {
+  const u = (window.Auth && typeof window.Auth.getUser === 'function') ? window.Auth.getUser() : null;
+
+  const email = (u && u.email) || 'sas.ds.llc@gmail.com';
+  const name  = (u && u.name)  || 'Afan Haidar';
+  const rawRole = (u && u.role) || 'Head Operations|Talabat';
+
+  const parts = rawRole.split('|').map(s => (s || '').trim()).filter(Boolean);
+  const designation = parts[0] || rawRole;
+  const company     = parts[1] || '';
+
+  const tier = _classifyTier(designation);
+
+  // Match the real company/department name onto an existing demo department
+  // (by name, case-insensitive); if there's no match, create one on the fly
+  // so the rest of the app's dept-scoped views work unchanged.
+  let deptId = null;
+  if (tier !== 'gm' && company) {
+    let d = DEPARTMENTS.find(d => d.name.toLowerCase() === company.toLowerCase());
+    if (!d) {
+      d = { id: 'D_REAL', name: company, headId: null };
+      DEPARTMENTS.push(d);
+    }
+    deptId = d.id;
+    // A manager/head is the head of their own department
+    if (tier === 'manager') d.headId = 'real-user';
+  }
+
+  EMPLOYEES.push({
+    id: 'real-user',
+    name,
+    title: designation,
+    dept: deptId,
+    role: tier,
+    email,
+  });
+
+  state.currentUserId = 'real-user';
+}
+function deptWorkers(deptId){ return EMPLOYEES.filter(e=>e.dept===deptId); } // includes the manager themself
+function nameOf(assignedTo){
+  if(!assignedTo) return '—';
+  if(isDeptId(assignedTo)) return dept(assignedTo) ? dept(assignedTo).name+' (Dept)' : assignedTo;
+  const e = emp(assignedTo); return e ? e.name : assignedTo;
+}
+
+// ---------- Time helpers ----------
+// Real epoch ms + a manually-advanced demo offset, so the reminder engine
+// can be fast-forwarded for demonstration purposes.
+let demoOffsetMs = 0;
+function nowMs(){ return Date.now() + demoOffsetMs; }
+function fmtTs(ms){
+  const d = new Date(ms);
+  const pad=(n,l=2)=>String(n).padStart(l,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(),3)}`;
+}
+function fmtDur(ms){
+  if(ms<1000) return ms+'ms';
+  const s=Math.floor(ms/1000);
+  if(s<60) return s+'s';
+  const m=Math.floor(s/60);
+  if(m<60) return m+'m '+(s%60)+'s';
+  const h=Math.floor(m/60);
+  if(h<48) return h+'h '+(m%60)+'m';
+  const dd=Math.floor(h/24);
+  return dd+'d '+(h%24)+'h';
+}
+
+// ---------- The two logs ----------
+let SHEET1 = [];
+let SHEET2 = [];
+let TICKET_TITLES = {}; // ticketId -> free-text title (UI convenience; not a literal sheet column)
+let seq = 0;
+function genId(){ return nowMs()*1000 + (seq++); } // sub-ms uniqueness for demo speed
+
+function s1(logId,ticketId,action,priority,type,assignedTo,actorId,notes){
+  SHEET1.push({logId,ticketId,action,priority,type,assignedTo,actorId,notes});
+}
+function s2(ticketId,status,lastStatus,id){
+  SHEET2.push({ticketId,status,lastStatus,id});
+}
+
+function latestS2(ticketId){
+  const rows = SHEET2.filter(r=>r.ticketId===ticketId);
+  if(!rows.length) return null;
+  return rows.reduce((a,b)=> b.id>a.id ? b : a);
+}
+function s1ByLogId(logId){ return SHEET1.find(r=>r.logId===logId); }
+function currentOwner(ticketId){
+  const latest = latestS2(ticketId);
+  if(!latest) return null;
+  const row = s1ByLogId(latest.id);
+  return row ? {assignedTo: row.assignedTo, status: latest.status, lastStatus: latest.lastStatus, sinceMs: latest.id, priority: row.priority, type: row.type} : null;
+}
+function allTicketIds(){ return [...new Set(SHEET1.map(r=>r.ticketId))]; }
+function ticketTimeline(ticketId){
+  return SHEET1.filter(r=>r.ticketId===ticketId)
+    .sort((a,b)=>a.logId-b.logId)
+    .map(r=>({...r, s2: SHEET2.find(s=>s.id===r.logId) || null}));
+}
+function ticketTitle(ticketId){ return TICKET_TITLES[ticketId] || 'Untitled ticket'; }
+
+function isTerminal(status){ return status==='Resolved' || status==='Done'; }
+
+// ---------- Mutations (append-only) ----------
+function createTicket({creatorId, title, description, priority, type, assignedTo}){
+  const t = genId();
+  s1(t, t, 'Created', priority, type, assignedTo, creatorId, description);
+  s2(t, 'Open', null, t);
+  TICKET_TITLES[t] = title;
+  return t;
+}
+function forwardTicket({ticketId, actorId, toAssignee, note}){
+  const owner = currentOwner(ticketId);
+  const l = genId();
+  const label = isDeptId(toAssignee) ? nameOf(toAssignee) : nameOf(toAssignee);
+  s1(l, ticketId, `Forwarded to ${label}`, owner.priority, owner.type, toAssignee, actorId, note || 'Forwarded.');
+  s2(ticketId, 'Forwarded', isDeptId(toAssignee)?'Department':'Person', l);
+}
+function claimPersonally({ticketId, actorId, note}){
+  const owner = currentOwner(ticketId);
+  const l = genId();
+  s1(l, ticketId, 'Taken on personally', owner.priority, owner.type, actorId, actorId, note || 'Handling this directly.');
+  s2(ticketId, 'Forwarded', 'Person', l);
+}
+function fireReminder(ticketId){
+  const owner = currentOwner(ticketId);
+  const l = genId();
+  s1(l, ticketId, 'Reminder set', owner.priority, owner.type, owner.assignedTo, owner.assignedTo, 'Automated: no response after 1 hour.');
+  s2(ticketId, 'Pending', 'Reminder', l);
+}
+function respondSnooze({ticketId, actorId, comment, snoozeUntilMs}){
+  const owner = currentOwner(ticketId);
+  const l = snoozeUntilMs;
+  s1(l, ticketId, 'Snoozed', owner.priority, owner.type, owner.assignedTo, actorId, comment);
+  s2(ticketId, 'Pending', 'Reminder', l);
+}
+function respondPostpone({ticketId, actorId, comment, days}){
+  const owner = currentOwner(ticketId);
+  const l = genId();
+  s1(l, ticketId, `Postponed ${days} day(s)`, owner.priority, owner.type, owner.assignedTo, actorId, comment);
+  s2(ticketId, 'Postponed', 'Reminder', l);
+}
+function respondDone({ticketId, actorId, comment}){
+  const owner = currentOwner(ticketId);
+  const l = genId();
+  s1(l, ticketId, 'Status changed to Resolved', owner.priority, owner.type, owner.assignedTo, actorId, comment);
+  s2(ticketId, 'Resolved', null, l);
+}
+function resultReceived({ticketId, actorId, comment}){
+  const owner = currentOwner(ticketId);
+  const l = genId();
+  s1(l, ticketId, 'Result received', owner.priority, owner.type, owner.assignedTo, actorId, comment);
+  s2(ticketId, 'In Progress', 'Result In', l);
+}
+
+// ---------- Seed data (mirrors the worked example in the spec, plus extras) ----------
+(function seed(){
+  const base = new Date('2026-07-29T09:00:00.123').getTime();
+  // Worked example from the build doc: Finance -> HR -> resolved
+  const t1 = base;
+  s1(t1, t1, 'Created', 'Medium', 'Ticket', 'D3', 'u1', 'Need budget clarification for new hires');
+  TICKET_TITLES[t1] = 'New-hire budget clarification';
+  s2(t1, 'Open', null, t1);
+  const t1b = base + 312000; // 09:05:12.045 offset approx
+  s1(t1b, t1, 'Forwarded to HR for policy input', 'Medium', 'Ticket', 'D2', 'u2', "Finance needs HR's policy stance before answering");
+  s2(t1, 'Forwarded', 'Department', t1b);
+  const t1c = base + 360377;
+  s1(t1c, t1, 'Reminder set', 'Low', 'Ticket', 'D3', 'u3', "Waiting on HR's policy answer — cannot close budget question until HR responds. Remind in 4h.");
+  s2(t1, 'Pending', 'Reminder', t1c);
+  const t1d = base + 14805777;
+  s1(t1d, t1, 'Result received from HR', 'Medium', 'Ticket', 'D3', 'u5', 'Policy confirmed: standard onboarding budget applies');
+  s2(t1, 'In Progress', 'Result In', t1d);
+  const t1e = base + 15419988;
+  s1(t1e, t1, 'Status changed to Resolved', 'Low', 'Ticket', 'D3', 'u3', "Budget confirmed and finalized using HR's policy answer");
+  s2(t1, 'Resolved', null, t1e);
+
+  // A ticket sitting in a department queue, untouched long enough to be overdue
+  const t2 = base + 3*3600*1000;
+  s1(t2, t2, 'Created', 'High', 'Ticket', 'D1', 'u6', 'Deployment pipeline failing on release branch — need engineering triage');
+  TICKET_TITLES[t2] = 'Release pipeline failure';
+  s2(t2, 'Open', null, t2);
+  demoOffsetMs = 0; // relative overdue math is computed live against nowMs()
+
+  // A task assigned directly to a person, forwarded once
+  const t3 = base + 5*3600*1000;
+  s1(t3, t3, 'Created', 'Medium', 'Task', 'u8', 'u10', 'Rotate the staging DB credentials this week');
+  TICKET_TITLES[t3] = 'Rotate staging DB credentials';
+  s2(t3, 'Open', null, t3);
+
+  // A task already snoozed once, waiting on a person
+  const t4 = base + 6*3600*1000;
+  s1(t4, t4, 'Created', 'Low', 'Task', 'u9', 'u10', 'Write regression tests for the export flow');
+  TICKET_TITLES[t4] = 'Export flow regression tests';
+  s2(t4, 'Open', null, t4);
+  const t4b = base + 6*3600*1000 + 1500000;
+  s1(t4b, t4, 'Snoozed', 'Low', 'Task', 'u9', 'u9', 'On it after the sprint review, snoozing till tomorrow morning.');
+  s2(t4, 'Pending', 'Reminder', t4b);
+
+  // A resolved task for history / stats
+  const t5 = base - 2*3600*1000;
+  s1(t5, t5, 'Created', 'Medium', 'Task', 'u3', 'u2', 'Reconcile July travel expense report');
+  TICKET_TITLES[t5] = 'July travel expense reconciliation';
+  s2(t5, 'Open', null, t5);
+  const t5b = base - 1.5*3600*1000;
+  s1(t5b, t5, 'Status changed to Resolved', 'Medium', 'Task', 'u3', 'u3', 'Reconciled and filed.');
+  s2(t5, 'Resolved', null, t5b);
+
+  // A ticket forwarded department to department (Ops waiting on Engineering)
+  const t6 = base + 8*3600*1000;
+  s1(t6, t6, 'Created', 'High', 'Ticket', 'D4', 'u1', 'Warehouse scanner outage affecting shipments');
+  TICKET_TITLES[t6] = 'Warehouse scanner outage';
+  s2(t6, 'Open', null, t6);
+  const t6b = base + 8*3600*1000 + 240000;
+  s1(t6b, t6, 'Forwarded to Engineering (hardware suspected)', 'High', 'Ticket', 'D1', 'u7', 'Ops thinks this is a firmware/hardware issue — routing to Engineering.');
+  s2(t6, 'Forwarded', 'Department', t6b);
+})();
+
+// ---------- App state ----------
+const state = {
+  currentUserId: 'u3',
+  view: 'my', // 'my' | 'dept' | 'new' | 'flow' | 'org'
+  deptSubtab: 'queue', // 'queue' | 'oversight'
+  ffMode: 'ticket', // 'ticket' | 'employee' | 'department'
+  ffQuery: '',
+  ffSelectedTicket: null,
+  respondModal: null, // {ticketId, kind}
+};
+
+function currentUser(){
+  return emp(state.currentUserId);
+}
+
+// ---------- Reminder engine (computed live) ----------
+function overdueInfo(ownerState){
+  if(!ownerState) return {overdue:false};
+  if(isTerminal(ownerState.status)) return {overdue:false};
+  const elapsed = nowMs() - ownerState.sinceMs;
+  const hoursOverdue = elapsed/3600000 - 1; // grace period of 1hr before first ring
+  if(hoursOverdue < 0) return {overdue:false, elapsed};
+  return {overdue:true, elapsed, escalations: Math.floor(hoursOverdue)+1};
+}
+
+// runs the "check every ticket, auto-fire reminder rows" step of the engine
+function tickReminderEngine(){
+  let changed = false;
+  allTicketIds().forEach(tid=>{
+    const owner = currentOwner(tid);
+    if(!owner || isTerminal(owner.status)) return;
+    if(owner.status==='Postponed') return; // postponed tickets pause the clock in this demo
+    const elapsed = nowMs() - owner.sinceMs;
+    if(elapsed >= 3600000){
+      // has a reminder already been logged for this exact owner-state? check most recent row action
+      const last = ticketTimeline(tid).slice(-1)[0];
+      const alreadyPending = owner.status==='Pending';
+      // only auto-fire once per hour boundary crossed without a newer log row
+      const hourBoundary = Math.floor(elapsed/3600000);
+      const lastFireHour = last && last.action==='Reminder set' ? Math.floor((owner.sinceMs - 0)/1) : null;
+      if(!alreadyPending){
+        fireReminder(tid);
+        changed = true;
+      }
+    }
+  });
+  return changed;
+}
+
+// ---------- Rendering ----------
+const app = document.getElementById('app');
+function render(){
+  tickReminderEngine();
+  const u = currentUser();
+  app.innerHTML = `
+    ${renderTopbar(u)}
+    <div class="page">${renderView(u)}</div>
+  `;
+  wireGlobal();
+}
+
+function myOpenCount(empId){
+  return allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.assignedTo===empId && !isTerminal(o.status);
+  }).length;
+}
+function deptQueueCount(deptId){
+  return allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.assignedTo===deptId && !isTerminal(o.status);
+  }).length;
+}
+function orgOpenCount(){
+  return allTicketIds().filter(tid=>!isTerminal(currentOwner(tid).status)).length;
+}
+
+function renderTopbar(u){
+  const manager = isManager(u.id);
+  const gm = isGM(u.id);
+  const roleLabel = gm ? 'general manager' : manager ? 'manager' : 'worker';
+  const myCount = myOpenCount(u.id);
+  const dCount = manager ? deptQueueCount(u.dept) : 0;
+  const orgCount = gm ? orgOpenCount() : 0;
+  return `
+  <div class="topbar">
+    <div class="topbar-row1">
+      <div class="brand"><span class="dot"></span>OpsDeck</div>
+      <nav class="tabs">
+        <button data-view="my" class="${state.view==='my'?'active':''}">My Portal${myCount?`<span class="badge-count">${myCount}</span>`:''}</button>
+        ${manager ? `<button data-view="dept" class="${state.view==='dept'?'active':''}">Department${dCount?`<span class="badge-count">${dCount}</span>`:''}</button>`:''}
+        ${!gm && !manager ? `<button data-view="dept" class="${state.view==='dept'?'active':''}">Department tasks</button>`:''}
+        ${!isWorker(u.id) ? `<button data-view="new" class="${state.view==='new'?'active':''}">New Ticket</button>`:''}
+        ${!isWorker(u.id) ? `<button data-view="flow" class="${state.view==='flow'?'active':''}">Flow Finder</button>`:''}
+        ${gm ? `<button data-view="org" class="${state.view==='org'?'active':''}">Org Overview${orgCount?`<span class="badge-count">${orgCount}</span>`:''}</button>`:''}
+      </nav>
+      <div class="topbar-spacer"></div>
+      <div class="userbox">
+        <span class="role-pill">${roleLabel}</span>
+        <span class="userbox-name" title="${u.email || ''}">${u.name}</span>
+      </div>
+    </div>
+    <div class="demo-clock" title="Fast-forward time to see the reminder engine escalate without waiting real hours">
+      <span class="dc-label">Fast-forward</span>
+      <button data-ff="900000">+15m</button>
+      <button data-ff="3600000">+1h</button>
+      <button data-ff="14400000">+4h</button>
+      <button data-ff="reset">reset</button>
+      ${demoOffsetMs>0 ? `<span class="dc-offset">+${fmtDur(demoOffsetMs)} ahead</span>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderView(u){
+  const manager = isManager(u.id), gm = isGM(u.id), worker = isWorker(u.id);
+  // guard against unreachable views for the current role
+  if(worker && state.view==='new') state.view='my';
+  if(worker && state.view==='flow' && !state.ffSelectedTicket) state.view='my';
+  if(!gm && state.view==='org') state.view='my';
+  switch(state.view){
+    case 'my': return renderMyPortal(u);
+    case 'dept': return manager ? renderDeptPortal(u) : renderDeptReadOnly(u);
+    case 'new': return renderNewTicket(u);
+    case 'flow': return renderFlowFinder(u);
+    case 'org': return renderOrgOverview(u);
+    default: return '';
+  }
+}
+
+
+// ----- Ticket row renderer -----
+function ticketRow(tid, opts={}){
+  const owner = currentOwner(tid);
+  const title = ticketTitle(tid);
+  const od = overdueInfo(owner);
+  const created = ticketTimeline(tid)[0];
+  return `
+  <div class="ticket-row" data-open-ticket="${tid}">
+    <div class="pri-flag pri-${owner.priority}"></div>
+    <div class="t-main">
+      <div class="t-title">${title} <span class="tid">#${tid}</span> <span class="type-chip">${owner.type}</span></div>
+      <div class="t-sub">${opts.subLabel || (isDeptId(owner.assignedTo) ? `Queued in ${nameOf(owner.assignedTo)}` : `With ${nameOf(owner.assignedTo)}`)} · created by ${nameOf(created.actorId)}</div>
+    </div>
+    ${od.overdue ? `<div class="overdue-flag">⚠ ${od.escalations>1?`x${od.escalations} `:''}overdue ${fmtDur(od.elapsed)}</div>` : ''}
+    <div class="status-chip st-${owner.status}">${owner.status}</div>
+  </div>`;
+}
+
+// ----- My Portal -----
+function renderMyPortal(u){
+  const mine = allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.assignedTo===u.id;
+  }).sort((a,b)=>{
+    const oa=currentOwner(a), ob=currentOwner(b);
+    return (oa.sinceMs) - (ob.sinceMs);
+  });
+  const open = mine.filter(tid=>!isTerminal(currentOwner(tid).status));
+  const done = mine.filter(tid=>isTerminal(currentOwner(tid).status));
+
+  return `
+  <div class="grid2">
+    ${profileCard(u)}
+    <div>
+      <h1 class="page-title">My Portal</h1>
+      <p class="page-sub">Tickets and tasks currently assigned to you. Tap one to respond.</p>
+      <div class="section-label">Needs attention (${open.length})</div>
+      ${open.length ? `<div class="ticket-list">${open.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty"><b>All clear.</b>Nothing waiting on you right now.</div>`}
+      ${done.length ? `
+      <div class="section-label">Resolved (${done.length})</div>
+      <div class="ticket-list">${done.map(t=>ticketRow(t)).join('')}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function profileCard(u){
+  const d = u.dept ? dept(u.dept) : null;
+  const initials = u.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+  const openCt = myOpenCount(u.id);
+  const resolvedCt = allTicketIds().filter(tid=>{
+    const o=currentOwner(tid); return o && o.assignedTo===u.id && isTerminal(o.status);
+  }).length;
+  const roleName = isGM(u.id) ? 'General Manager' : isManager(u.id) ? 'Manager' : 'Worker';
+  return `
+  <div class="card profile-card">
+    <div class="avatar">${initials}</div>
+    <h2>${u.name}</h2>
+    <p class="role-line">${u.title}${d?` · ${d.name}`:''}</p>
+    ${d ? `<div class="meta-row"><span>Department</span><span>${d.name}</span></div>` : ''}
+    <div class="meta-row"><span>Role</span><span>${roleName}</span></div>
+    <div class="stat-strip">
+      <div class="stat-chip"><div class="n">${openCt}</div><div class="l">Open</div></div>
+      <div class="stat-chip"><div class="n">${resolvedCt}</div><div class="l">Resolved</div></div>
+    </div>
+  </div>`;
+}
+
+// ----- Department Portal (manager: full triage rights) -----
+function renderDeptPortal(u){
+  if(!isManager(u.id)) return renderMyPortal(u);
+  const d = dept(u.dept);
+  const queue = allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.assignedTo===d.id;
+  });
+  const assignedOut = allTicketIds().filter(tid=>{
+    const everInDept = SHEET1.some(r=>r.ticketId===tid && r.assignedTo===d.id);
+    const o = currentOwner(tid);
+    return everInDept && o && !isDeptId(o.assignedTo);
+  });
+
+  return `
+  <div class="grid2">
+    ${profileCard(u)}
+    <div>
+      <h1 class="page-title">${d.name} — Department Portal</h1>
+      <p class="page-sub">Triage the department queue, or track what you've already handed out to your team.</p>
+      <div class="subtabs">
+        <button data-subtab="queue" class="${state.deptSubtab==='queue'?'active':''}">Queue (${queue.length})</button>
+        <button data-subtab="oversight" class="${state.deptSubtab==='oversight'?'active':''}">Assigned out (${assignedOut.length})</button>
+      </div>
+      ${state.deptSubtab==='queue' ? (
+        queue.length ? `<div class="ticket-list">${queue.map(t=>ticketRow(t,{subLabel:'Waiting for you to triage'})).join('')}</div>`
+        : `<div class="empty"><b>Queue is empty.</b>Nothing waiting on ${d.name} right now.</div>`
+      ) : (
+        assignedOut.length ? `<div class="ticket-list">${assignedOut.map(t=>ticketRow(t)).join('')}</div>`
+        : `<div class="empty"><b>Nothing tracked yet.</b>Tickets you assign out will show up here for oversight.</div>`
+      )}
+    </div>
+  </div>`;
+}
+
+// ----- Department Portal (worker: read-only visibility into own department) -----
+function renderDeptReadOnly(u){
+  const d = dept(u.dept);
+  if(!d) return renderMyPortal(u);
+  const inDept = allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    if(!o) return false;
+    const currentlyHere = isDeptId(o.assignedTo) ? o.assignedTo===d.id : (emp(o.assignedTo) && emp(o.assignedTo).dept===d.id);
+    const everHere = SHEET1.some(r=>r.ticketId===tid && (r.assignedTo===d.id || (emp(r.assignedTo) && emp(r.assignedTo).dept===d.id)));
+    return currentlyHere || everHere;
+  });
+  return `
+  <div class="grid2">
+    ${profileCard(u)}
+    <div>
+      <h1 class="page-title">${d.name} — Department tasks</h1>
+      <p class="page-sub">Read-only view of everything that has passed through ${d.name}. Your own items are in My Portal.</p>
+      ${inDept.length ? `<div class="ticket-list">${inDept.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty"><b>Nothing here yet.</b>Tickets and tasks in ${d.name} will show up here.</div>`}
+    </div>
+  </div>`;
+}
+
+// ----- New ticket -----
+let newTicketForm = {type:'Ticket', priority:'Medium', assignedTo:'', title:'', description:''};
+function renderNewTicket(u){
+  const f = newTicketForm;
+  return `
+  <h1 class="page-title">New Ticket / Task</h1>
+  <p class="page-sub">This writes one row to the action log and one row to the status log, exactly like every later event on this item.</p>
+  <div class="card" style="max-width:640px;">
+    <div class="field">
+      <label>Type</label>
+      <div class="seg">
+        <button data-newtype="Ticket" class="${f.type==='Ticket'?'sel':''}">Ticket</button>
+        <button data-newtype="Task" class="${f.type==='Task'?'sel':''}">Task</button>
+      </div>
+      <span class="hint">${f.type==='Task' ? 'Tasks are always assigned to a specific person.' : 'Tickets can go to a person or a whole department.'}</span>
+    </div>
+    <div class="field">
+      <label>Ticket name</label>
+      <input type="text" id="nt-title" placeholder="e.g. Budget clarification for new hires" value="${f.title.replace(/"/g,'&quot;')}">
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="nt-desc" placeholder="What's going on, and what do you need?">${f.description}</textarea>
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Priority</label>
+        <select id="nt-priority">
+          ${['High','Medium','Low'].map(p=>`<option ${f.priority===p?'selected':''}>${p}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Assigned to</label>
+        <select id="nt-assignee">
+          <option value="">Select…</option>
+          ${f.type==='Ticket' ? `<optgroup label="Departments">${DEPARTMENTS.map(d=>`<option value="${d.id}" ${f.assignedTo===d.id?'selected':''}>${d.name}</option>`).join('')}</optgroup>`:''}
+          <optgroup label="People">${assignablePeopleFor(u).map(e=>`<option value="${e.id}" ${f.assignedTo===e.id?'selected':''}>${e.name} — ${e.title}</option>`).join('')}</optgroup>
+        </select>
+        ${isManager(u.id) ? `<span class="hint">As a manager, you can assign tasks to people in ${dept(u.dept).name} only.</span>` : ''}
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="nt-submit">Create ${f.type}</button>
+      <button class="btn btn-ghost" id="nt-reset">Clear</button>
+    </div>
+  </div>`;
+}
+
+// people a given user is allowed to hand a Task/Ticket to directly
+function assignablePeopleFor(u){
+  if(isGM(u.id)) return EMPLOYEES;
+  if(isManager(u.id)) return deptWorkers(u.dept);
+  return [u]; // workers can't create/route in this build, but fall back safely
+}
+
+// ----- Flow Finder -----
+function ticketTouchesDept(tid, deptId){
+  return SHEET1.some(r=>r.ticketId===tid && (
+    r.assignedTo===deptId ||
+    (emp(r.assignedTo) && emp(r.assignedTo).dept===deptId) ||
+    (emp(r.actorId) && emp(r.actorId).dept===deptId)
+  ));
+}
+function renderFlowFinder(u){
+  const scoped = isManager(u.id); // managers see their own department only; GM sees everything
+  const modeOpts = [['ticket','Ticket'],['employee','Employee'],['department','Department']];
+  let resultsHtml = '';
+  let matches = [];
+
+  if(state.ffMode==='ticket'){
+    matches = allTicketIds().filter(tid=>{
+      if(scoped && !ticketTouchesDept(tid, u.dept)) return false;
+      if(!state.ffQuery) return true;
+      const q = state.ffQuery.toLowerCase();
+      return String(tid).includes(q) || ticketTitle(tid).toLowerCase().includes(q);
+    });
+  } else if(state.ffMode==='employee'){
+    matches = state.ffQuery ? allTicketIds().filter(tid=>{
+      return SHEET1.some(r=>r.ticketId===tid && r.actorId===state.ffQuery);
+    }) : [];
+  } else if(state.ffMode==='department'){
+    const targetDept = scoped ? u.dept : state.ffQuery;
+    matches = targetDept ? allTicketIds().filter(tid=>{
+      return SHEET1.some(r=>r.ticketId===tid && r.assignedTo===targetDept);
+    }) : [];
+  }
+
+  resultsHtml = matches.length ? matches.map(t=>ticketRow(t)).join('') :
+    `<div class="empty"><b>No matches.</b>Try a different search.</div>`;
+
+  const employeeOptions = scoped ? deptWorkers(u.dept) : EMPLOYEES;
+
+  const queryControl = state.ffMode==='ticket'
+    ? `<input type="text" id="ffQuery" placeholder="Search by ticket ID or name…" value="${state.ffQuery.replace(/"/g,'&quot;')}" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">`
+    : state.ffMode==='employee'
+    ? `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
+         <option value="">Choose an employee…</option>
+         ${employeeOptions.map(e=>`<option value="${e.id}" ${state.ffQuery===e.id?'selected':''}>${e.name}</option>`).join('')}
+       </select>`
+    : scoped
+    ? `<div class="hint" style="padding:9px 0;">Scoped to ${dept(u.dept).name} — managers see their own department only.</div>`
+    : `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
+         <option value="">Choose a department…</option>
+         ${DEPARTMENTS.map(d=>`<option value="${d.id}" ${state.ffQuery===d.id?'selected':''}>${d.name}</option>`).join('')}
+       </select>`;
+
+  return `
+  <h1 class="page-title">Flow Finder</h1>
+  <p class="page-sub">${scoped ? `Search tickets and tasks that have passed through ${dept(u.dept).name}.` : 'Search across every ticket and task ever logged.'} Open one for the full timeline.</p>
+  <div class="subtabs">
+    ${modeOpts.map(([k,l])=>`<button data-ffmode="${k}" class="${state.ffMode===k?'active':''}">${l}</button>`).join('')}
+  </div>
+  <div class="ff-searchbar">${queryControl}</div>
+  ${state.ffSelectedTicket ? renderTimelineView(state.ffSelectedTicket, u) : `<div class="ff-results">${resultsHtml}</div>`}
+  `;
+}
+
+function kindOfAction(action){
+  if(action==='Created') return 'created';
+  if(action.startsWith('Forwarded') || action==='Taken on personally') return 'forward';
+  if(action==='Reminder set' || action.startsWith('Snoozed') || action.startsWith('Postponed')) return 'reminder';
+  if(action==='Result received') return 'result';
+  if(action.startsWith('Status changed to Resolved')) return 'resolved';
+  return 'forward';
+}
+function kindIcon(k){
+  return {created:'◆', forward:'→', reminder:'⏰', result:'↩', resolved:'✓'}[k] || '•';
+}
+
+function renderTimelineView(tid, u){
+  const rows = ticketTimeline(tid);
+  let items = '';
+  rows.forEach((r,i)=>{
+    const k = kindOfAction(r.action);
+    const gap = i>0 ? fmtDur(r.logId - rows[i-1].logId) : null;
+    items += `
+    <div class="tl-item k-${k}">
+      ${gap ? `<div class="tl-gap">+${gap}</div>` : ''}
+      <div class="tl-dot">${kindIcon(k)}</div>
+      <div class="tl-card">
+        <div class="tl-head">
+          <span class="tl-action">${r.action}</span>
+          <span class="tl-ts">${fmtTs(r.logId)}</span>
+        </div>
+        <div class="tl-who">${nameOf(r.actorId)}${r.assignedTo? ` → ${nameOf(r.assignedTo)}`:''} · <span class="status-chip st-${r.s2?r.s2.status:''}" style="padding:1px 7px;font-size:10px;">${r.s2?r.s2.status:''}</span></div>
+        <div class="tl-notes">${r.notes}</div>
+      </div>
+    </div>`;
+  });
+  return `
+  <button class="btn btn-ghost btn-sm" id="ffBack">← Back to results</button>
+  <div class="card" style="margin-top:12px;">
+    <div class="kicker">Ticket #${tid}</div>
+    <h2 style="font-family:var(--font-display);margin:0 0 4px;">${ticketTitle(tid)}</h2>
+    <p class="page-sub" style="margin-bottom:0;">Every logged event for this ticket, oldest to newest — timestamps to the millisecond.</p>
+    <div class="tl-wrap"><div class="timeline">${items}</div></div>
+  </div>
+  ${renderRespondPanel(tid, u)}
+  `;
+}
+
+// Permission gate: who is allowed to act on a ticket right now.
+//  - GM: read-only oversight everywhere, never acts.
+//  - Manager: can triage their own department's queue (assign out / take personally),
+//    and can respond as the owner when a ticket/task is sitting with them personally.
+//  - Worker: can only respond when a task/ticket is assigned directly to them, and can only mark it done.
+function respondPermission(tid, u){
+  const owner = currentOwner(tid);
+  if(isTerminal(owner.status)) return {mode:'none'};
+  if(isGM(u.id)) return {mode:'none'};
+  if(isDeptId(owner.assignedTo)){
+    if(isManager(u.id) && u.dept===owner.assignedTo) return {mode:'triage'};
+    return {mode:'none'};
+  }
+  if(owner.assignedTo===u.id){
+    return {mode: isWorker(u.id) ? 'done-only' : 'full'};
+  }
+  return {mode:'none'};
+}
+
+function renderRespondPanel(tid, u){
+  const perm = respondPermission(tid, u);
+  const owner = currentOwner(tid);
+  if(perm.mode==='none') return '';
+  if(perm.mode==='triage'){
+    return `
+    <div class="card" style="margin-top:14px;">
+      <div class="section-label" style="margin-top:0;">Triage this ${owner.type.toLowerCase()}</div>
+      <div class="btn-row">
+        <button class="btn btn-sm" data-respond="forward" data-tid="${tid}">Assign to person</button>
+        <button class="btn btn-sm" data-respond="claim" data-tid="${tid}">Handle personally</button>
+      </div>
+    </div>`;
+  }
+  if(perm.mode==='done-only'){
+    return `
+    <div class="card" style="margin-top:14px;">
+      <div class="section-label" style="margin-top:0;">Respond to this ${owner.type.toLowerCase()}</div>
+      <p class="hint" style="margin-bottom:10px;">As a worker, you can mark your own tasks done. Reassigning or postponing is a manager action.</p>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-sm" data-respond="done" data-tid="${tid}">Mark done</button>
+      </div>
+    </div>`;
+  }
+  // full: manager (or anyone non-worker) acting on their own item
+  return `
+  <div class="card" style="margin-top:14px;">
+    <div class="section-label" style="margin-top:0;">Respond to this ${owner.type.toLowerCase()}</div>
+    <div class="btn-row">
+      <button class="btn btn-amber btn-sm" data-respond="snooze" data-tid="${tid}">Snooze</button>
+      <button class="btn btn-sm" data-respond="postpone" data-tid="${tid}">Postpone</button>
+      <button class="btn btn-primary btn-sm" data-respond="done" data-tid="${tid}">Mark done</button>
+      ${isManager(u.id) ? `<button class="btn btn-sm" data-respond="reassign" data-tid="${tid}">Reassign to teammate</button>` : ''}
+    </div>
+  </div>`;
+}
+
+// ----- Org Overview (GM: read-only, org-wide, grouped by department) -----
+function renderOrgOverview(u){
+  const groups = DEPARTMENTS.map(d=>{
+    const tids = allTicketIds().filter(tid=>{
+      const o = currentOwner(tid);
+      return o && (isDeptId(o.assignedTo) ? o.assignedTo===d.id : (emp(o.assignedTo) && emp(o.assignedTo).dept===d.id));
+    });
+    return {dept:d, tids};
+  });
+  return `
+  <h1 class="page-title">Org Overview</h1>
+  <p class="page-sub">Read-only view across every department's tickets and tasks, wherever they currently sit. Use Flow Finder to inspect any of them in detail.</p>
+  ${groups.map(g=>`
+    <div class="section-label">${g.dept.name} (${g.tids.length})</div>
+    ${g.tids.length ? `<div class="ticket-list">${g.tids.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty">Nothing currently in ${g.dept.name}.</div>`}
+  `).join('')}
+  `;
+}
+
+// ---------- Toast ----------
+function toast(msg){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className='toast';
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(()=>el.remove(), 3200);
+}
+
+// ---------- Modal for respond actions ----------
+function openRespondModal(kind, tid){
+  const owner = currentOwner(tid);
+  const actor = currentUser();
+  const backdrop = document.createElement('div');
+  backdrop.className='modal-backdrop';
+  const titles = {snooze:'Snooze', postpone:'Postpone', done:'Mark as done', forward:'Assign to a person', claim:'Handle personally', reassign:'Reassign to teammate'};
+  let extra = '';
+  if(kind==='snooze'){
+    extra = `<div class="field"><label>Snooze for</label><select id="rm-time"><option value="1800000">30 minutes</option><option value="3600000" selected>1 hour</option><option value="14400000">4 hours</option><option value="86400000">1 day</option></select></div>`;
+  } else if(kind==='postpone'){
+    extra = `<div class="field"><label>Postpone by (days)</label><input type="text" id="rm-days" value="1"></div>`;
+  } else if(kind==='forward' || kind==='reassign'){
+    const people = assignablePeopleFor(actor).filter(e=>e.id!==actor.id || kind==='forward');
+    extra = `<div class="field"><label>Assign to</label><select id="rm-person">${people.map(e=>`<option value="${e.id}">${e.name} — ${e.title}</option>`).join('')}</select></div>
+             <span class="hint">${isManager(actor.id) ? `Limited to ${dept(actor.dept).name}.` : ''}</span>`;
+  }
+  backdrop.innerHTML = `
+    <div class="modal">
+      <h3>${titles[kind]}</h3>
+      <p class="modal-sub">#${tid} · ${ticketTitle(tid)}</p>
+      ${extra}
+      <div class="field"><label>Comment (required)</label><textarea id="rm-comment" placeholder="What's the update?"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="rm-cancel">Cancel</button>
+        <button class="btn btn-primary" id="rm-confirm">Confirm</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector('#rm-cancel').onclick=()=>backdrop.remove();
+  backdrop.querySelector('#rm-confirm').onclick=()=>{
+    const comment = backdrop.querySelector('#rm-comment').value.trim();
+    if(!comment){ toast('A comment is required before you can respond.'); return; }
+    const actorId = state.currentUserId;
+    if(kind==='snooze'){
+      const mins = parseInt(backdrop.querySelector('#rm-time').value,10);
+      respondSnooze({ticketId:tid, actorId, comment, snoozeUntilMs: nowMs()+mins});
+      toast('Snoozed. The countdown resets from the new time.');
+    } else if(kind==='postpone'){
+      const days = parseInt(backdrop.querySelector('#rm-days').value,10) || 1;
+      respondPostpone({ticketId:tid, actorId, comment, days});
+      toast(`Postponed ${days} day(s).`);
+    } else if(kind==='done'){
+      respondDone({ticketId:tid, actorId, comment});
+      toast('Marked resolved. No further alerts for this ticket.');
+    } else if(kind==='forward' || kind==='reassign'){
+      const person = backdrop.querySelector('#rm-person').value;
+      forwardTicket({ticketId:tid, actorId, toAssignee:person, note:comment});
+      toast(`Assigned to ${nameOf(person)}.`);
+    } else if(kind==='claim'){
+      claimPersonally({ticketId:tid, actorId, note:comment});
+      toast('Taken on personally.');
+    }
+    backdrop.remove();
+    render();
+  };
+}
+
+// ---------- Wiring ----------
+function wireGlobal(){
+  document.getElementById('userSwitch').onchange = (e)=>{
+    state.currentUserId = e.target.value;
+    state.view = 'my';
+    state.ffSelectedTicket = null;
+    render();
+  };
+  document.querySelectorAll('[data-ff]').forEach(b=>{
+    b.onclick = ()=>{
+      if(b.dataset.ff==='reset') demoOffsetMs = 0;
+      else demoOffsetMs += parseInt(b.dataset.ff,10);
+      render();
+    };
+  });
+  document.querySelectorAll('[data-view]').forEach(b=>{
+    b.onclick=()=>{ state.view=b.dataset.view; state.ffSelectedTicket=null; render(); };
+  });
+  document.querySelectorAll('[data-subtab]').forEach(b=>{
+    b.onclick=()=>{ state.deptSubtab=b.dataset.subtab; render(); };
+  });
+  document.querySelectorAll('[data-ffmode]').forEach(b=>{
+    b.onclick=()=>{ state.ffMode=b.dataset.ffmode; state.ffQuery=''; state.ffSelectedTicket=null; render(); };
+  });
+  const ffq = document.getElementById('ffQuery');
+  if(ffq){
+    const ev = state.ffMode==='ticket' ? 'input' : 'change';
+    ffq.addEventListener(ev, ()=>{ state.ffQuery = ffq.value; render(); });
+  }
+  document.querySelectorAll('[data-open-ticket]').forEach(row=>{
+    row.onclick=()=>{
+      const tid = Number(row.dataset.openTicket);
+      state.view='flow';
+      state.ffSelectedTicket = tid;
+      render();
+    };
+  });
+  const ffBack = document.getElementById('ffBack');
+  if(ffBack) ffBack.onclick=()=>{ state.ffSelectedTicket=null; render(); };
+
+  document.querySelectorAll('[data-respond]').forEach(b=>{
+    b.onclick=()=> openRespondModal(b.dataset.respond, Number(b.dataset.tid));
+  });
+
+  // New ticket form wiring
+  const ntType = document.querySelectorAll('[data-newtype]');
+  ntType.forEach(b=>{
+    b.onclick=()=>{
+      newTicketForm.type = b.dataset.newtype;
+      if(newTicketForm.type==='Task' && isDeptId(newTicketForm.assignedTo)) newTicketForm.assignedTo='';
+      syncNewTicketFields();
+      render();
+    };
+  });
+  const ntSubmit = document.getElementById('nt-submit');
+  if(ntSubmit) ntSubmit.onclick=()=>{
+    syncNewTicketFields();
+    const f = newTicketForm;
+    if(!f.title.trim()){ toast('Give this a name first.'); return; }
+    if(!f.assignedTo){ toast('Choose who this is assigned to.'); return; }
+    if(f.type==='Task' && isDeptId(f.assignedTo)){ toast('Tasks can only be assigned to a person.'); return; }
+    const tid = createTicket({creatorId: state.currentUserId, title:f.title, description:f.description||'(no description provided)', priority:f.priority, type:f.type, assignedTo:f.assignedTo});
+    toast(`${f.type} created and routed to ${nameOf(f.assignedTo)}.`);
+    newTicketForm = {type:'Ticket', priority:'Medium', assignedTo:'', title:'', description:''};
+    state.view='flow'; state.ffSelectedTicket=tid;
+    render();
+  };
+  const ntReset = document.getElementById('nt-reset');
+  if(ntReset) ntReset.onclick=()=>{ newTicketForm = {type:'Ticket', priority:'Medium', assignedTo:'', title:'', description:''}; render(); };
+  bindNewTicketLiveFields();
+}
+
+function syncNewTicketFields(){
+  const t = document.getElementById('nt-title'); if(t) newTicketForm.title = t.value;
+  const d = document.getElementById('nt-desc'); if(d) newTicketForm.description = d.value;
+  const p = document.getElementById('nt-priority'); if(p) newTicketForm.priority = p.value;
+  const a = document.getElementById('nt-assignee'); if(a) newTicketForm.assignedTo = a.value;
+}
+function bindNewTicketLiveFields(){
+  const a = document.getElementById('nt-assignee');
+  if(a) a.onchange = ()=>{ newTicketForm.assignedTo = a.value; };
+  const p = document.getElementById('nt-priority');
+  if(p) p.onchange = ()=>{ newTicketForm.priority = p.value; };
+}
+
+// periodic re-render so overdue flags / reminder engine stay live without user action
+setInterval(()=>{
+  // light touch: only re-render if we're looking at a ticket list view (avoid disrupting typing in forms)
+  if(state.view==='my' || state.view==='dept' || (state.view==='flow' && !state.ffSelectedTicket) || state.view==='admin'){
+    render();
+  }
+}, 15000);
+
+render();
+</script>
+</body>
+</html>
