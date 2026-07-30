@@ -162,13 +162,32 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
   margin-left: auto;
   max-width: 100%;
 }
-.search-group { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.search-group { position: relative; display: flex; align-items: center; flex-shrink: 0; z-index: 40; }
 .search-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: clamp(28px,4vw,34px); height: clamp(28px,4vw,34px); border-radius: var(--radius); border: 1px solid var(--border2); background: var(--surface); color: var(--text3); flex-shrink: 0; cursor: pointer; font-size: clamp(14px,2vw,17px); transition: all .18s; padding: 0; }
 .search-icon-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--accent); }
 .search-group.open .search-icon-btn { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
-/* Collapsed by default — width animates open only once the search icon is clicked */
-.search-input { width: 0; padding: 0; border: 1px solid transparent; border-radius: var(--radius); background: var(--surface); color: var(--text); font-family: var(--font); font-size: clamp(11px,1.3vw,13px); transition: width .22s ease, padding .22s ease, border-color .18s, box-shadow .18s; min-width: 0; opacity: 0; pointer-events: none; }
-.search-group.open .search-input { width: clamp(130px, 18vw, 220px); padding: clamp(6px,1vw,7px) clamp(8px,1.2vw,11px); border-color: var(--border2); opacity: 1; pointer-events: auto; }
+/* Dropdown — positioned OUT OF FLOW (absolute) so opening it never shifts the
+   icon row (search + filter buttons stay put, same row, always). It drops
+   down below the row and floats ABOVE the table/page content (z-index),
+   which stays put behind it. Auto-hides after 3s of no typing/activity. */
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 45;
+  width: clamp(220px, 32vw, 320px);
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 8px;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity .16s ease, transform .16s ease;
+}
+.search-group.open .search-dropdown { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.search-input { width: 100%; box-sizing: border-box; padding: clamp(7px,1vw,9px) clamp(9px,1.3vw,12px); border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg3); color: var(--text); font-family: var(--font); font-size: clamp(11px,1.3vw,13px); transition: border-color .18s, box-shadow .18s; }
 .search-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
 .search-input::placeholder { color: var(--text3); }
 .hr-filter-pills { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
@@ -185,7 +204,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
 
 @media (max-width: 420px) {
   .hr-filter-btn { width: 30px; height: 30px; }
-  .search-group.open .search-input { width: clamp(100px, 30vw, 150px); }
+  .search-dropdown { width: clamp(180px, 60vw, 260px); right: -8px; }
 }
 
 /* ── Table card — flex column so the header row, scrollable body and the
@@ -485,7 +504,9 @@ select option { background: var(--surface2); color: var(--text); }
     <div class="page-header-controls">
       <div class="search-group" id="search-group">
         <button type="button" class="search-icon-btn" onclick="toggleSearchBox()" title="Search" aria-label="Search"><i class="ti ti-search"></i></button>
-        <input class="search-input" type="text" id="emp-search-input" placeholder="Search name, EID, ID, ref..." oninput="filterEmps(this.value)" onblur="collapseSearchIfEmpty()" onkeydown="if(event.key==='Escape'){this.value='';filterEmps('');collapseSearchIfEmpty();}" />
+        <div class="search-dropdown" id="search-dropdown">
+          <input class="search-input" type="text" id="emp-search-input" placeholder="Search name, EID, ID, ref..." oninput="onSearchInput(this.value)" onkeydown="if(event.key==='Escape'){this.value='';filterEmps('');closeSearchBox();}" />
+        </div>
       </div>
       <div class="hr-filter-pills">
         <button class="hr-filter-btn active" data-filter="all"          onclick="filterHR('all')" title="All"><i class="ti ti-users"></i></button>
@@ -1820,25 +1841,37 @@ function filterEmps(q) {
   document.querySelector('.emp-table-wrap')?.scrollTo({ top: 0 });
 }
 
-/* Search box opens on click of the icon button instead of always sitting
-   expanded — keeps the header controls compact/icon-only until needed. */
+/* Search opens as a floating dropdown below the icon (not inline), so the
+   icon row itself (search + filter buttons) never shifts or reflows. It
+   floats above the table (z-index) and auto-hides after 3s of no typing
+   activity — any keystroke resets the idle timer. */
+let _searchHideTimer = null;
+
 function toggleSearchBox() {
   const grp = document.getElementById('search-group');
   const input = document.getElementById('emp-search-input');
   if (!grp || !input) return;
-  const opening = !grp.classList.contains('open');
-  grp.classList.toggle('open', opening);
-  if (opening) {
+  if (grp.classList.contains('open')) {
+    closeSearchBox();
+  } else {
+    grp.classList.add('open');
     requestAnimationFrame(() => input.focus());
-  } else if (input.value) {
-    input.value = '';
-    filterEmps('');
+    _armSearchAutoHide();
   }
 }
-function collapseSearchIfEmpty() {
+function closeSearchBox() {
   const grp = document.getElementById('search-group');
-  const input = document.getElementById('emp-search-input');
-  if (grp && input && !input.value) grp.classList.remove('open');
+  if (grp) grp.classList.remove('open');
+  clearTimeout(_searchHideTimer);
+  _searchHideTimer = null;
+}
+function _armSearchAutoHide() {
+  clearTimeout(_searchHideTimer);
+  _searchHideTimer = setTimeout(closeSearchBox, 3000);
+}
+function onSearchInput(v) {
+  filterEmps(v);
+  _armSearchAutoHide(); // any activity resets the 3s idle countdown
 }
 
 function filterHR(type) {
