@@ -681,6 +681,79 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 .tb-cache-btn .cache-dot.stale{background:var(--amber);box-shadow:0 0 4px rgba(227,179,65,.7);}
 .tb-cache-btn .cache-dot.error{background:var(--red);box-shadow:0 0 4px rgba(248,81,73,.7);}
 
+/* ══ ALERT BELL ══ */
+.bell-wrap{position:relative;flex-shrink:0;}
+.tb-bell-btn{
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+  width:32px;height:28px;
+  border-radius:6px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text2);
+  cursor:pointer;font-family:var(--font);transition:all .15s;flex-shrink:0;
+}
+.tb-bell-btn i{font-size:14px;}
+.tb-bell-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--border2);}
+.tb-bell-btn.active{background:var(--accent-dim);color:var(--accent);border-color:rgba(88,166,255,.3);}
+
+/* pulse dot — bottom-right corner, mirrors the cache signal dot */
+.bell-dot{
+  position:absolute;bottom:4px;right:4px;
+  width:7px;height:7px;border-radius:50%;
+  border:1px solid var(--bg2);
+  display:none;
+}
+.bell-dot.show{display:block;}
+.bell-dot::before{
+  content:'';position:absolute;inset:-3px;border-radius:50%;
+  animation:bellPulse 1.6s ease-out infinite;
+}
+.bell-dot.green{background:var(--teal);}
+.bell-dot.green::before{background:var(--teal);}
+.bell-dot.red{background:var(--red);}
+.bell-dot.red::before{background:var(--red);}
+@keyframes bellPulse{0%{transform:scale(1);opacity:.6;}100%{transform:scale(2.6);opacity:0;}}
+
+/* numeric count badge — top-right corner */
+.bell-count{
+  position:absolute;top:-4px;right:-4px;
+  min-width:15px;height:15px;padding:0 3px;
+  border-radius:20px;background:var(--red);color:#fff;
+  font-size:9px;font-weight:700;line-height:1;
+  align-items:center;justify-content:center;
+  border:1.5px solid var(--bg2);display:none;
+}
+.bell-count.show{display:flex;}
+
+/* dropdown panel — position:fixed, same pattern as the theme dropdown */
+.bell-panel{
+  position:fixed;display:none;
+  width:260px;max-width:calc(100vw - 16px);
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:10px;box-shadow:0 10px 32px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.3);
+  z-index:99999;animation:ddIn .15s ease;overflow:hidden;
+}
+.bell-panel.open{display:block;}
+.bell-panel-header{
+  display:flex;align-items:center;gap:6px;
+  padding:10px 12px;font-size:11.5px;font-weight:700;color:var(--text);
+  border-bottom:1px solid var(--border);
+}
+.bell-panel-header i{color:var(--accent);font-size:14px;}
+.bell-panel-body{max-height:280px;overflow-y:auto;padding:6px;}
+.bell-empty{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:26px 10px;color:var(--text3);font-size:11px;text-align:center;
+}
+.bell-empty i{font-size:22px;opacity:.5;}
+/* row style ready for real alert items later */
+.bell-item{display:flex;gap:8px;padding:8px;border-radius:7px;font-size:11px;color:var(--text2);cursor:pointer;}
+.bell-item:hover{background:var(--surface2);}
+.bell-item i{font-size:15px;flex-shrink:0;margin-top:1px;}
+.bell-item.critical i{color:var(--red);}
+.bell-item.info i{color:var(--teal);}
+.bell-item-title{font-weight:600;color:var(--text);}
+.bell-item-sub{font-size:10px;color:var(--text3);margin-top:1px;}
+
 /* ══ CACHE PANEL ══ */
 .cache-panel{
   position:fixed;
@@ -975,6 +1048,24 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
       </div>
 
       <div class="tb-gap"></div>
+
+      <!-- Alerts Bell — icon + pulse dot; real alert data wired in later -->
+      <div class="bell-wrap" id="bell-wrap">
+        <button class="tb-bell-btn" id="bell-btn" onclick="toggleBellPanel(event)" title="Alerts">
+          <i class="ti ti-bell"></i>
+          <span class="bell-dot" id="bell-dot"></span>
+          <span class="bell-count" id="bell-count"></span>
+        </button>
+        <div class="bell-panel" id="bell-panel" role="menu">
+          <div class="bell-panel-header"><i class="ti ti-bell"></i> Alerts</div>
+          <div class="bell-panel-body" id="bell-panel-body">
+            <div class="bell-empty">
+              <i class="ti ti-bell-off"></i>
+              <span>No alerts yet</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Cache Status Button — icon + signal dot only -->
       <button class="tb-cache-btn" id="cache-status-btn" onclick="toggleCachePanel(event)" title="Cache Status">
@@ -1803,6 +1894,76 @@ function outsideClose(e) {
 function closeThemeDropdown() {
   document.getElementById('theme-dropdown')?.classList.remove('open');
   document.getElementById('theme-dd-btn')?.classList.remove('open');
+}
+
+/* ══ ALERT BELL — panel toggle + public hook for real data later ══ */
+function toggleBellPanel(e) {
+  e.stopPropagation();
+  const panel = document.getElementById('bell-panel');
+  const btn   = document.getElementById('bell-btn');
+  if (panel.classList.contains('open')) { closeBellPanel(); return; }
+  // Close other fixed panels so they don't overlap
+  closeThemeDropdown();
+  if (typeof closeCachePanel === 'function') closeCachePanel();
+  const rect = btn.getBoundingClientRect();
+  const w = 260;
+  let left = rect.right - w;
+  if (left < 6) left = 6;
+  panel.style.top   = (rect.bottom + 8) + 'px';
+  panel.style.left  = left + 'px';
+  panel.style.right = 'auto';
+  panel.classList.add('open');
+  btn.classList.add('active');
+  setTimeout(() => document.addEventListener('click', bellOutsideClose), 0);
+}
+
+function closeBellPanel() {
+  document.getElementById('bell-panel')?.classList.remove('open');
+  document.getElementById('bell-btn')?.classList.remove('active');
+  document.removeEventListener('click', bellOutsideClose);
+}
+
+function bellOutsideClose(e) {
+  const panel = document.getElementById('bell-panel');
+  const btn   = document.getElementById('bell-btn');
+  if (panel && !panel.contains(e.target) && btn && !btn.contains(e.target)) {
+    closeBellPanel();
+  }
+}
+
+/* Public hook — call this once real alert data is wired up.
+   level: 'none' | 'info' (green pulse) | 'critical' (red pulse)
+   count: optional badge number */
+function setAlertStatus(level, count) {
+  const dot = document.getElementById('bell-dot');
+  const countEl = document.getElementById('bell-count');
+  if (dot) {
+    dot.className = 'bell-dot' + (level === 'critical' ? ' show red' : level === 'info' ? ' show green' : '');
+  }
+  if (countEl) {
+    if (count > 0) { countEl.textContent = count > 99 ? '99+' : String(count); countEl.classList.add('show'); }
+    else { countEl.classList.remove('show'); countEl.textContent = ''; }
+  }
+}
+
+/* Public hook — replace the "No alerts yet" placeholder with real rows.
+   items: [{ level:'critical'|'info', icon:'ti-alert-triangle', title, sub }] */
+function renderAlertList(items) {
+  const body = document.getElementById('bell-panel-body');
+  if (!body) return;
+  if (!items || !items.length) {
+    body.innerHTML = '<div class="bell-empty"><i class="ti ti-bell-off"></i><span>No alerts yet</span></div>';
+    return;
+  }
+  body.innerHTML = items.map(it => `
+    <div class="bell-item ${it.level === 'critical' ? 'critical' : 'info'}">
+      <i class="ti ${it.icon || 'ti-alert-circle'}"></i>
+      <div>
+        <div class="bell-item-title">${it.title || ''}</div>
+        ${it.sub ? `<div class="bell-item-sub">${it.sub}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
 }
 
 /* ── Clock — HH:MM only ── */
