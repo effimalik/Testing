@@ -1,0 +1,1674 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpsDeck — Ticket &amp; Task Portal</title>
+<script src="https://effimalik.github.io/Testing/shared/auth.js?v=5"></script>
+<script src="https://effimalik.github.io/Testing/shared/code.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/devPre.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/cacheWatcher.js?v=1"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1720;
+    --bg-grid: #131D27;
+    --panel:#172029;
+    --panel-raised:#1D2833;
+    --panel-hover:#212E3A;
+    --border:#28333F;
+    --border-soft:#1E2830;
+    --text:#EAEEF2;
+    --text-dim:#B3BEC9;
+    --text-muted:#7C8998;
+    --teal:#4FD1C5;
+    --teal-dim:#2C4A48;
+    --amber:#F2A93B;
+    --amber-dim:#4A3A1E;
+    --red:#E8574B;
+    --red-dim:#4A2420;
+    --blue:#5B8DEF;
+    --blue-dim:#22314F;
+    --font-display:'Space Grotesk', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+    --font-body:'Inter', sans-serif;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px) 0 0/100% 28px,
+      var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    min-height:100vh;
+  }
+  ::selection{background:var(--teal-dim);color:var(--text);}
+  a{color:inherit;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:40;
+    display:flex;flex-direction:column;gap:10px;
+    padding:14px 24px;
+    background:rgba(15,23,32,0.94);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+  }
+  .topbar-row1{display:flex;align-items:center;gap:16px;}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:19px;letter-spacing:0.2px;flex-shrink:0;}
+  .brand .dot{width:9px;height:9px;border-radius:2px;background:var(--amber);box-shadow:0 0 10px var(--amber);animation:pulse 2.2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+  .topbar-spacer{flex:1;}
+  nav.tabs{
+    display:flex;gap:2px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;padding-bottom:1px;
+  }
+  nav.tabs::-webkit-scrollbar{display:none;}
+  nav.tabs button{
+    background:none;border:none;color:var(--text-muted);font-size:13.5px;font-weight:500;
+    padding:8px 14px;border-radius:7px;transition:all .15s;position:relative;white-space:nowrap;flex-shrink:0;
+  }
+  nav.tabs button:hover{color:var(--text);background:var(--panel-raised);}
+  nav.tabs button.active{color:var(--bg);background:var(--teal);}
+  .badge-count{
+    display:inline-block;min-width:16px;padding:0 4px;margin-left:6px;border-radius:20px;
+    background:var(--red);color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;
+  }
+  nav.tabs button.active .badge-count{background:rgba(15,23,32,.55);color:#fff;}
+  .userbox{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .userbox select{
+    background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:7px;
+    padding:7px 10px;font-size:13px;max-width:190px;
+  }
+  .role-pill{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--teal);border:1px solid var(--teal-dim);background:var(--teal-dim);padding:3px 8px;border-radius:20px;font-family:var(--font-mono);white-space:nowrap;flex-shrink:0;}
+
+  @media (max-width:760px){
+    .topbar{padding:12px 14px;}
+    .topbar-row1{flex-wrap:wrap;row-gap:10px;}
+    .userbox{width:100%;justify-content:space-between;order:3;}
+    .userbox select{max-width:none;flex:1;}
+    nav.tabs{width:100%;order:2;}
+    .topbar-spacer{display:none;}
+  }
+
+  /* ---------- Layout ---------- */
+  .page{max-width:1180px;margin:0 auto;padding:28px 24px 80px;}
+  .grid2{display:grid;grid-template-columns:280px 1fr;gap:22px;align-items:start;}
+  @media (max-width:820px){.grid2{grid-template-columns:1fr;}}
+
+  .card{
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:20px;
+  }
+  .profile-card .avatar{
+    width:52px;height:52px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:700;font-size:19px;background:var(--panel-raised);
+    color:var(--teal);border:1px solid var(--border);margin-bottom:14px;
+  }
+  .profile-card h2{font-family:var(--font-display);font-size:19px;margin:0 0 4px;}
+  .profile-card .role-line{color:var(--text-muted);font-size:13px;margin:0 0 14px;}
+  .profile-card .meta-row{display:flex;justify-content:space-between;font-size:12.5px;padding:8px 0;border-top:1px solid var(--border-soft);color:var(--text-dim);}
+  .profile-card .meta-row span:first-child{color:var(--text-muted);}
+  .stat-strip{display:flex;gap:10px;margin-top:14px;}
+  .stat-chip{flex:1;background:var(--panel-raised);border:1px solid var(--border-soft);border-radius:8px;padding:9px 8px;text-align:center;}
+  .stat-chip .n{font-family:var(--font-mono);font-size:18px;font-weight:600;}
+  .stat-chip .l{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;}
+  .access-chip{font-size:10px;font-family:var(--font-mono);border:1px solid var(--border-soft);color:var(--text-dim);background:var(--panel-raised);padding:3px 7px;border-radius:5px;display:inline-flex;align-items:center;gap:5px;}
+  .access-chip .flags{color:var(--teal);font-weight:700;letter-spacing:1px;}
+  .access-chip.no-access{color:var(--text-muted);}
+  .access-chip.no-access .flags{display:none;}
+
+  h1.page-title{font-family:var(--font-display);font-size:24px;margin:0 0 4px;}
+  .page-sub{color:var(--text-muted);font-size:13.5px;margin:0 0 20px;}
+  .section-label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin:26px 0 10px;display:flex;align-items:center;gap:8px;}
+  .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  /* ---------- Ticket rows ---------- */
+  .ticket-list{display:flex;flex-direction:column;gap:8px;}
+  .ticket-row{
+    background:var(--panel);border:1px solid var(--border);border-radius:9px;
+    padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:.12s;
+  }
+  .ticket-row:hover{background:var(--panel-hover);border-color:#37444F;}
+  .pri-flag{width:4px;align-self:stretch;border-radius:3px;flex-shrink:0;}
+  .pri-High{background:var(--red);}
+  .pri-Medium{background:var(--amber);}
+  .pri-Low{background:var(--teal);}
+  .t-main{flex:1;min-width:0;}
+  .t-title{font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;}
+  .t-title .tid{font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted);font-weight:400;}
+  .t-sub{font-size:12px;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .type-chip{font-size:10px;text-transform:uppercase;letter-spacing:.4px;font-family:var(--font-mono);padding:2px 6px;border-radius:4px;border:1px solid var(--border);color:var(--text-dim);}
+  .status-chip{font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;white-space:nowrap;}
+  .st-Open{background:var(--blue-dim);color:var(--blue);}
+  .st-Forwarded{background:var(--blue-dim);color:var(--blue);}
+  .st-InProgress{background:var(--blue-dim);color:var(--blue);}
+  .st-Pending{background:var(--amber-dim);color:var(--amber);}
+  .st-Postponed{background:var(--amber-dim);color:var(--amber);}
+  .st-Resolved{background:var(--teal-dim);color:var(--teal);}
+  .st-Done{background:var(--teal-dim);color:var(--teal);}
+  .overdue-flag{
+    font-family:var(--font-mono);font-size:10.5px;color:#fff;background:var(--red);
+    padding:3px 8px;border-radius:5px;display:flex;align-items:center;gap:5px;animation:ring 1.6s ease-in-out infinite;
+  }
+  @keyframes ring{0%,100%{transform:rotate(0);}20%{transform:rotate(-8deg);}40%{transform:rotate(8deg);}60%{transform:rotate(-4deg);}80%{transform:rotate(4deg);}}
+  .empty{
+    text-align:center;padding:50px 20px;color:var(--text-muted);border:1px dashed var(--border);border-radius:var(--radius);font-size:13.5px;
+  }
+  .empty b{display:block;color:var(--text-dim);font-family:var(--font-display);font-size:16px;margin-bottom:6px;font-weight:600;}
+
+  /* ---------- Buttons ---------- */
+  .btn{border:1px solid var(--border);background:var(--panel-raised);color:var(--text);padding:8px 14px;border-radius:7px;font-size:13px;font-weight:500;transition:.12s;}
+  .btn:hover{background:var(--panel-hover);border-color:#3A4753;}
+  .btn-primary{background:var(--teal);color:#062522;border-color:var(--teal);font-weight:600;}
+  .btn-primary:hover{background:#69dbd0;}
+  .btn-amber{background:var(--amber);color:#2a1c04;border-color:var(--amber);font-weight:600;}
+  .btn-amber:hover{background:#f7bb5c;}
+  .btn-ghost{background:none;border-color:transparent;color:var(--text-muted);}
+  .btn-ghost:hover{color:var(--text);background:var(--panel-raised);}
+  .btn-sm{padding:6px 11px;font-size:12px;}
+  .btn-block{width:100%;}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+
+  /* ---------- Tabs (dept portal) ---------- */
+  .subtabs{display:flex;gap:4px;margin-bottom:16px;background:var(--panel-raised);padding:4px;border-radius:9px;width:fit-content;}
+
+  /* ---------- Filter pills (status filter — same pattern as the fleet pages) ---------- */
+  .filter-pills{display:flex;gap:6px;flex-wrap:wrap;}
+  .filter-btn{
+    display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:20px;
+    border:1.5px solid var(--border);background:var(--panel-raised);color:var(--text-dim);
+    font-family:var(--font-body);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;white-space:nowrap;
+  }
+  .filter-btn:hover{background:var(--panel-hover);color:var(--text);}
+  .filter-btn.active{background:var(--teal-dim);color:var(--teal);border-color:var(--teal-dim);box-shadow:0 0 0 2px var(--teal-dim);}
+  .subtabs button{background:none;border:none;color:var(--text-muted);font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:6px;}
+  .subtabs button.active{background:var(--panel);color:var(--text);}
+
+  /* ---------- Forms ---------- */
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+  .field.full{grid-column:1/-1;}
+  .field label{font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;}
+  .field input[type=text],.field textarea,.field select,.field input[type=date]{
+    background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:10px 11px;font-size:13.5px;
+  }
+  .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--teal);}
+  .field textarea{resize:vertical;min-height:70px;}
+  .seg{display:flex;gap:6px;}
+  .seg button{flex:1;background:var(--panel-raised);border:1px solid var(--border);color:var(--text-dim);padding:9px;border-radius:7px;font-size:13px;font-weight:600;}
+  .seg button.sel{border-color:var(--teal);color:var(--teal);background:var(--teal-dim);}
+  .hint{font-size:11.5px;color:var(--text-muted);margin-top:-4px;}
+  .warn-hint{font-size:11.5px;color:var(--amber);}
+
+  /* ---------- Flow finder ---------- */
+  .ff-searchbar{display:flex;gap:8px;margin-bottom:16px;}
+  .ff-searchbar select, .ff-searchbar input{flex:0 0 auto;}
+  .ff-results{display:flex;flex-direction:column;gap:8px;}
+
+  .timeline{position:relative;padding-left:26px;margin-top:6px;}
+  .timeline::before{content:'';position:absolute;left:9px;top:4px;bottom:4px;width:2px;background:linear-gradient(var(--border),var(--border) 70%,transparent);}
+  .tl-item{position:relative;padding:0 0 26px 20px;}
+  .tl-item:last-child{padding-bottom:0;}
+  .tl-dot{position:absolute;left:-26px;top:2px;width:20px;height:20px;border-radius:50%;background:var(--panel-raised);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;}
+  .tl-item.k-created .tl-dot{border-color:var(--blue);color:var(--blue);}
+  .tl-item.k-forward .tl-dot{border-color:var(--blue);color:var(--blue);}
+  .tl-item.k-reminder .tl-dot{border-color:var(--amber);color:var(--amber);}
+  .tl-item.k-result .tl-dot{border-color:var(--teal);color:var(--teal);}
+  .tl-item.k-resolved .tl-dot{border-color:var(--teal);background:var(--teal);color:#062522;}
+  .tl-gap{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);position:absolute;left:-90px;top:2px;width:60px;text-align:right;}
+  .tl-card{background:var(--panel-raised);border:1px solid var(--border-soft);border-radius:8px;padding:11px 13px;}
+  .tl-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px;flex-wrap:wrap;}
+  .tl-action{font-weight:700;font-size:13.5px;}
+  .tl-ts{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);}
+  .tl-who{font-size:12px;color:var(--text-dim);margin-bottom:6px;}
+  .tl-notes{font-size:13px;color:var(--text-dim);line-height:1.5;}
+  .tl-wrap{padding-left:70px;}
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(6,10,14,.7);backdrop-filter:blur(2px);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:14px;max-width:480px;width:100%;padding:22px;}
+  .modal h3{font-family:var(--font-display);margin:0 0 4px;font-size:17px;}
+  .modal .modal-sub{color:var(--text-muted);font-size:12.5px;margin:0 0 16px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
+
+  /* ---------- Demo fast-forward control ---------- */
+  .demo-clock{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+  .demo-clock .dc-label{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-right:2px;white-space:nowrap;}
+  .demo-clock .dc-offset{font-family:var(--font-mono);font-size:10.5px;color:var(--amber);white-space:nowrap;}
+  .demo-clock button{
+    background:var(--panel-raised);border:1px solid var(--border);color:var(--text-dim);
+    padding:5px 8px;border-radius:5px;font-family:var(--font-mono);font-size:11px;flex-shrink:0;
+  }
+  .demo-clock button:hover{color:var(--amber);border-color:var(--amber-dim);}
+  @media (max-width:760px){
+    .demo-clock{width:100%;order:4;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+    .demo-clock::-webkit-scrollbar{display:none;}
+  }
+
+  /* ---------- Page-wide responsive rules ---------- */
+  @media (max-width:640px){
+    .page{padding:20px 14px 60px;}
+    .page-title{font-size:20px;}
+    .form-grid{grid-template-columns:1fr;}
+    .ticket-row{flex-wrap:wrap;}
+    .t-main{min-width:160px;}
+    .tl-wrap{padding-left:0;}
+    .tl-gap{display:none;}
+    .stat-strip{flex-wrap:wrap;}
+    .ff-searchbar{flex-direction:column;}
+    .modal{padding:18px;}
+    nav.tabs button{font-size:12.5px;padding:7px 10px;}
+  }
+
+  .toast-wrap{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;}
+  .toast{background:var(--panel-raised);border:1px solid var(--teal-dim);border-left:3px solid var(--teal);color:var(--text);padding:11px 16px;border-radius:8px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:slidein .25s ease;}
+  @keyframes slidein{from{transform:translateX(20px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+  .kicker{font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* =========================================================================
+   OPSDECK — Ticket & Task Portal
+   ---------------------------------------------------------------------
+   IDENTITY
+   Real identity comes from sessionStorage['ap_session'] — the same object
+   the rest of the OpsDeck suite writes on login:
+     { email, name, role: "<Designation> | <Team>", loginAt, permissions }
+   The ticket log itself is keyed by EMAIL for "Assigned By" / "Assigned to"
+   (not synthetic ids), so this file works unchanged once more than one
+   email shows up in the log — everything below resolves people by email.
+   Only one email exists in the sample log right now, so every ticket
+   currently belongs to that one signed-in person; add more employees to
+   EXTRA_EMPLOYEES (or more real sessions) and the portal fans out
+   automatically (department queues, oversight, Flow Finder, Org Overview).
+
+   TICKET LOG
+   Two append-only logs, mirroring the two sheets behind this app:
+     LOG   Log_ID | Ticket_ID | Assigned By | Action | Priority | Category
+           | Subject | Assigned to | Notes
+     STATUS (derived) Ticket_ID | Status | Last Status | Log_ID
+   The STATUS sheet isn't hand-typed here — it's derived from each Action
+   string by parseAction() below, exactly the same way your sheet would be
+   computed from the log. That keeps the two sheets impossible to get out
+   of sync, and means new action phrasing just needs one more regex line.
+   ========================================================================= */
+
+// ---------- Session / identity ----------
+function _readSession(){
+  try{
+    const raw = sessionStorage.getItem('ap_session');
+    if(!raw) return null;
+    const parsed = JSON.parse(raw);
+    const s = Array.isArray(parsed) ? parsed[0] : parsed;
+    if(!s || !s.email) return null;
+    return s;
+  }catch(e){ return null; }
+}
+// Fallback used only when this file is opened standalone (no ap_session yet)
+// so the portal still renders something sensible while you wire up login.
+const FALLBACK_SESSION = {
+  sessionId:'demo', token:'demo',
+  email:'afanhaidarzia@gmail.com',
+  name:'Afan Haidar',
+  role:'OIC | Delivero',
+  loginAt: Date.now() - 3600000,
+  lastActive: Date.now(),
+  permissions:{
+    ap2_accLog:{label:'Accounts', apiKey:'accLog', paramKey:'type', access:{view:true,add:false,editDelete:false}},
+    ap2_bike:{label:'Bikes', apiKey:'bike', paramKey:'type', access:{view:true,add:true,editDelete:true}},
+    ap2_cioLog:{label:'Check in/out', apiKey:'cioLog', paramKey:'type', access:{view:true,add:false,editDelete:false}},
+    ap2_dedLog:{label:'Ded Log', apiKey:'dedLog', paramKey:'type', access:{view:true,add:false,editDelete:false}},
+    ap2_docLog:{label:'Doc Log', apiKey:'docLog', paramKey:'type', access:{view:true,add:false,editDelete:false}},
+    ap2_employee:{label:'Employees', apiKey:'employee', paramKey:'type', access:{view:true,add:false,editDelete:false}},
+    ap2_loginData:{label:'User Admin', apiKey:'loginData', paramKey:'type', access:{view:false,add:false,editDelete:false}},
+    ap2_master:{label:'Master Sheet', apiKey:'master', paramKey:'type', access:{view:true,add:false,editDelete:false}},
+    ap2_sim:{label:'SIMs', apiKey:'sim', paramKey:'type', access:{view:true,add:true,editDelete:true}},
+  }
+};
+
+function _classifyTier(designation){
+  const d = (designation||'').toLowerCase().trim();
+  if(/\bgm\b|general manager/.test(d)) return 'gm';
+  if(d==='visitor') return 'visitor';
+  if(/\bhead\b|manager|director|lead|oic|officer in charge|supervisor|coordinator/.test(d)) return 'manager';
+  return 'worker';
+}
+
+// ---------- Reference data ----------
+// IMPORTANT: this roster is independent of whoever happens to be signed in.
+// The two sources of truth, and nothing else:
+//   1) ap_session (login) — the ONLY source for a person's real name,
+//      title, and department. Whoever is actually signed in gets their
+//      record built/enriched from this every time they log in.
+//   2) ap2_ticLog (the cache) — the ONLY source for WHO ELSE exists. Every
+//      email seen in "Assigned By" / "Assigned to" across the log becomes
+//      a real employee record automatically. No fixed roster to maintain.
+// A discovered email that has never logged in has no known department yet
+// (there's no separate employee/roster cache to pull that from) — it
+// defaults to the current viewer's own department as the closest available
+// signal (people appearing on the same tickets as you are, most likely,
+// on your team), and gets replaced with the truth automatically the moment
+// that person logs in themselves.
+const DEPARTMENTS = [];
+const EMPLOYEES = [];
+
+function deptIdFor(name){
+  const key = (name || 'Operations').trim();
+  let d = DEPARTMENTS.find(x => x.name.toLowerCase() === key.toLowerCase());
+  if(!d){ d = {id:'D_'+(key.replace(/[^a-z0-9]/gi,'').toUpperCase()||'OPS'), name:key, headId:null}; DEPARTMENTS.push(d); }
+  return d;
+}
+
+// Registers (or updates, if already present) one employee by email.
+// deptName===null means "unknown for now" (no department fabricated).
+function registerEmployee({email, name, title, deptName, tier}){
+  if(!email) return null;
+  const d = (tier==='gm' || !deptName) ? null : deptIdFor(deptName);
+  const rec = {
+    id: email, email, name: name || email, title: title || 'Team Member',
+    dept: d ? d.id : null, role: tier || 'worker',
+  };
+  if(d && (tier==='manager' || tier==='gm') && !d.headId) d.headId = email;
+  const existing = EMPLOYEES.find(e=>e.id===email);
+  if(existing){ Object.assign(existing, rec); return existing; }
+  EMPLOYEES.push(rec);
+  return rec;
+}
+
+// Best-effort display name for an email nobody has logged in with yet —
+// e.g. 'sas.ds.llc@gmail.com' -> 'Sas Ds Llc'. Replaced automatically with
+// their real name the moment they actually sign in (see registerEmployee).
+function nameFromEmail(email){
+  const local = String(email||'').split('@')[0];
+  return local.split(/[._\-]+/).filter(Boolean).map(w=>w[0].toUpperCase()+w.slice(1)).join(' ') || email;
+}
+
+// Shared "Designation | Department" parser — the same convention used by
+// ap_session's role field is also used by users.json's role field. No pipe
+// (e.g. "GM", "Manager", "Visitor") means a global role with no department.
+function parseRoleString(roleStr){
+  const parts = String(roleStr||'').split('|').map(s=>(s||'').trim()).filter(Boolean);
+  const designation = parts[0] || 'Team Member';
+  const teamName = parts[1] || null;
+  return { designation, teamName, tier: _classifyTier(designation) };
+}
+
+// Scans ap2_ticLog's raw rows for every distinct email and makes sure each
+// one has an employee record — this is the "dynamic module" part: the
+// people directory grows automatically from the cache, nothing hardcoded.
+function discoverEmployeesFromCache(ticLogRows, inferredDeptName){
+  const seen = new Set();
+  (ticLogRows||[]).forEach(r=>{
+    [_pick(r,['Assigned By','assignedBy']), _pick(r,['Assigned to','Assigned To','assignedTo'])].forEach(email=>{
+      email = String(email||'').trim();
+      if(email) seen.add(email);
+    });
+  });
+  seen.forEach(email=>{
+    if(emp(email)) return; // already known (from users.json or a real login) — never downgrade it
+    registerEmployee({ email, name: nameFromEmail(email), title:'Team member (auto-detected)', deptName: inferredDeptName, tier:'worker' });
+  });
+}
+
+/* ═══════════ REAL USER DIRECTORY — users.json ═══════════
+   The authoritative roster: every real person's email, name and
+   "Designation | Department" role, loaded from users.json sitting in the
+   same folder as this file (same pattern as ap2_ticLog — read the real
+   source, don't hand-maintain a copy in code). This is what actually
+   populates every "assigned to" / "transfer to" dropdown in the app; the
+   ticLog-based auto-discovery above only ever fills gaps for emails this
+   file doesn't (yet) know about.
+   ════════════════════════════════════════════════════════════════════════ */
+const USERS_JSON_PATH = './users.json';
+// Used only if the fetch fails (e.g. opened as a local file with no server
+// behind it) — an exact copy of the real users.json content, so the portal
+// still works standalone. When deployed for real, the fetch always wins.
+const FALLBACK_USERS_DIRECTORY = [
+  {email:'afanhaidarzia@gmail.com', name:'Afan Haidar', role:'OIC | Delivero'},
+  {email:'sas.ds.llc@gmail.com', name:'Afan Haidar', role:'GM'},
+  {email:'asifkhanshehzad.130@gmail.com', name:'Asif Mustafa', role:'Visitor'},
+  {email:'invoget1@gmail.com', name:'Mudassir', role:'Visitor'},
+  {email:'afan@gmail.com', name:'usman', role:'Visitor'},
+  {email:'afanha@gmail.com', name:'afanha', role:'Visitor'},
+  {email:'smashbuddies517@gmail.com', name:'SmashBuddies', role:'Visitor'},
+  {email:'amorthopadics@gmail.com', name:'Ansar Mustafa', role:'Visitor'},
+  {email:'jobinmundackal188143@gmail.com', name:'jobin', role:'Visitor'},
+  {email:'tds.dxb.uae@gmail.com', name:'usman', role:'Visitor'},
+  {email:'ganeshlaxmanrathod@gmail.com', name:'Ganesh', role:'Visitor'},
+  {email:'uhaidermalik.28@gmail.com', name:'Usman Haidar', role:'Manager'},
+];
+
+function applyUsersDirectory(list){
+  (list||[]).forEach(u=>{
+    if(!u || !u.email) return;
+    const {designation, teamName, tier} = parseRoleString(u.role);
+    registerEmployee({ email:u.email, name:u.name, title:designation, deptName:teamName, tier });
+  });
+}
+
+async function loadUsersDirectory(){
+  try{
+    const res = await fetch(USERS_JSON_PATH, {cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const list = await res.json();
+    applyUsersDirectory(list);
+  }catch(e){
+    console.warn('[OpsDeck] users.json fetch failed, using embedded fallback directory:', e.message);
+    applyUsersDirectory(FALLBACK_USERS_DIRECTORY);
+  }
+  // Re-apply whoever is actually signed in right now on top, in case
+  // users.json is momentarily stale — the live session always wins for you.
+  if(ME){
+    const session = _readSession() || FALLBACK_SESSION;
+    const {designation, teamName, tier} = parseRoleString(session.role);
+    registerEmployee({email:session.email, name:session.name, title:designation, deptName:teamName, tier});
+    ME = emp(session.email);
+  }
+  render();
+}
+
+let ME = null; // the signed-in employee record, set by bootstrapIdentity()
+
+function bootstrapIdentity(){
+  const session = _readSession() || FALLBACK_SESSION;
+  const {designation, teamName, tier} = parseRoleString(session.role);
+
+  // The session is the source of truth for whoever is actually logged in —
+  // it creates (or updates) their record with the real name/title/team
+  // reported at login. This always wins over anything auto-detected.
+  const me = registerEmployee({ email: session.email, name: session.name, title: designation, deptName: teamName, tier });
+  me.permissions = session.permissions || null;
+  me.loginAt = session.loginAt || null;
+  me.lastActive = session.lastActive || null;
+  return me;
+}
+
+function isManager(empId){ const e=emp(empId); return !!e && e.role==='manager'; }
+function isGM(empId){ const e=emp(empId); return !!e && e.role==='gm'; }
+function isWorker(empId){ const e=emp(empId); return !!e && e.role==='worker'; }
+function isVisitor(empId){ const e=emp(empId); return !!e && e.role==='visitor'; }
+function headOf(deptId){ const d=DEPARTMENTS.find(d=>d.id===deptId); return d?d.headId:null; }
+function emp(id){ return EMPLOYEES.find(e=>e.id===id); }
+function dept(id){ return DEPARTMENTS.find(d=>d.id===id); }
+function isDeptId(id){ return typeof id==='string' && id.indexOf('D_')===0; }
+function deptWorkers(deptId){ return EMPLOYEES.filter(e=>e.dept===deptId); }
+function nameOf(assignedTo){
+  if(!assignedTo) return '—';
+  if(isDeptId(assignedTo)) return dept(assignedTo) ? dept(assignedTo).name+' (Dept)' : assignedTo;
+  const e = emp(assignedTo); return e ? e.name : assignedTo;
+}
+// A visitor exists in the directory (so their name/email resolve fine in
+// history) but never receives real work — visitors are excluded from every
+// "assign to" / "transfer to" list.
+function assignableEmployees(){ return EMPLOYEES.filter(e=>e.role!=='visitor'); }
+
+// ---------- Time helpers ----------
+let demoOffsetMs = 0;
+function nowMs(){ return Date.now() + demoOffsetMs; }
+function fmtTs(ms){
+  const d = new Date(ms);
+  const pad=(n,l=2)=>String(n).padStart(l,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(),3)}`;
+}
+function fmtDur(ms){
+  if(ms<1000) return ms+'ms';
+  const s=Math.floor(ms/1000);
+  if(s<60) return s+'s';
+  const m=Math.floor(s/60);
+  if(m<60) return m+'m '+(s%60)+'s';
+  const h=Math.floor(m/60);
+  if(h<48) return h+'h '+(m%60)+'m';
+  const dd=Math.floor(h/24);
+  return dd+'d '+(h%24)+'h';
+}
+function statusClass(s){ return 'st-'+String(s||'').replace(/\s+/g,''); }
+
+// ---------- The two logs (rebuilt from cache on every load/refresh) ----------
+let SHEET1 = []; // the log: one row per action, append-only
+let SHEET2 = []; // the derived status sheet: one row per action, same logId
+let TICKET_TITLES = {};
+let seq = 0;
+function genId(){ return nowMs()*1000 + (seq++); }
+
+/* ═══════════ CACHE — via shared cacheWatcher.js, with a safe fallback ═══════════
+   Same pattern as allBike.html: if cacheWatcher.js fails to load in time,
+   build a tiny local stand-in with the same shape, reading straight out of
+   the same ap2_fleet_cache IndexedDB the rest of the app suite uses.
+   One difference from allBike.html: ap2_bike's cached .data is a flat array
+   of bike rows, but ap2_ticLog's .data is an OBJECT — { Ticket: [...],
+   ticLog: [...] } — the pre-computed status-chain sheet plus the raw action
+   log. So the fallback's readKey accepts either shape and lets the caller
+   (loadTickets/ingestFromCachePayload below) sort out which is which.
+   ════════════════════════════════════════════════════════════════════════ */
+const _AP2_CACHE_KEY = 'ap2_ticLog';
+
+if(typeof window.AP2CacheWatcher === 'undefined'){
+  console.warn('[OpsDeck] cacheWatcher.js did not load — using local fallback');
+  window.AP2CacheWatcher = (function(){
+    const _IDB_NAME = 'ap2_fleet_cache', _IDB_STORE = 'datasets';
+    let _conn = null;
+    function _open(){
+      if(_conn) return Promise.resolve(_conn);
+      return new Promise((res, rej)=>{
+        let done = false;
+        const req = indexedDB.open(_IDB_NAME);
+        const t = setTimeout(()=>{ if(!done){ done=true; rej(new Error('idb-open-timeout')); } }, 2000);
+        req.onsuccess = e=>{ if(!done){ done=true; clearTimeout(t); _conn=e.target.result; res(_conn); } };
+        req.onerror   = e=>{ if(!done){ done=true; clearTimeout(t); rej(e.target.error); } };
+      });
+    }
+    return {
+      init(){},
+      subscribe(){ return ()=>{}; },
+      notifyNow(){},
+      getStatus(){ return {healthy:false, mode:'local-fallback', lastError:'cacheWatcher.js not loaded'}; },
+      async readKey(key){
+        try{
+          const db = await _open();
+          if(!db.objectStoreNames.contains(_IDB_STORE)) return null; // cache not warmed yet — normal
+          const rec = await new Promise((res, rej)=>{
+            const r = db.transaction(_IDB_STORE, 'readonly').objectStore(_IDB_STORE).get(key);
+            r.onsuccess = ()=>res(r.result || null);
+            r.onerror   = ()=>rej(r.error);
+          });
+          // Accept either shape: a flat array (like ap2_bike) or an object of
+          // named arrays (like ap2_ticLog's { Ticket, ticLog }).
+          if(!rec || !rec.data) return null;
+          if(Array.isArray(rec.data)) return rec.data.length ? rec.data : null;
+          if(typeof rec.data==='object') return rec.data;
+          return null;
+        }catch(e){
+          if(e && e.name==='NotFoundError') return null;
+          console.warn('[OpsDeck] fallback read failed:', e.message);
+          return null;
+        }
+      }
+    };
+  })();
+}
+
+// Thin wrapper kept so the rest of this file doesn't need to change — actual
+// read lives centrally in cacheWatcher.js when it's available, or in the
+// fallback above when it isn't.
+async function _readCache(){
+  return AP2CacheWatcher.readKey(_AP2_CACHE_KEY);
+}
+
+// Local-only overlay: tickets/actions created *in this browser* through this
+// portal's own UI (New Ticket, Snooze, Done, etc.) aren't written back into
+// the real ap2_ticLog cache — this page doesn't know the backend's write
+// API. They're kept in a small localStorage overlay instead, and replayed on
+// top of whatever the real cache contains every time it (re)loads, so your
+// own actions survive a reload without ever pretending to be the source of
+// truth for data that actually lives in ap2_ticLog.
+const LOCAL_OVERLAY_KEY = 'opsdeck_local_overlay_v1';
+function saveOverlay(){
+  try{
+    const localRows = SHEET1.filter(r=>r.local);
+    localStorage.setItem(LOCAL_OVERLAY_KEY, JSON.stringify({rows: localRows, titles: TICKET_TITLES, seq}));
+  }catch(e){ /* localStorage unavailable — local actions just won't survive a reload */ }
+}
+function loadOverlay(){
+  try{
+    const raw = localStorage.getItem(LOCAL_OVERLAY_KEY);
+    if(!raw) return null;
+    const data = JSON.parse(raw);
+    if(!data || !Array.isArray(data.rows)) return null;
+    return data;
+  }catch(e){ return null; }
+}
+function applyOverlay(){
+  const data = loadOverlay();
+  if(!data) return;
+  data.rows.forEach(r=>{
+    SHEET1.push(r);
+    // Recompute this row's status via the same rules used when it was
+    // first created, so it stacks correctly on whatever the fresh cache
+    // pull just rebuilt.
+    const parsed = parseAction(r.action, r.logId);
+    const prevLatest = latestS2(r.ticketId);
+    let cur;
+    if(parsed.carryForward) cur = prevLatest ? {status:prevLatest.status, lastStatus:prevLatest.lastStatus} : {status:'Open', lastStatus:null};
+    else cur = {status:parsed.status, lastStatus:parsed.lastStatus||null};
+    s2(r.ticketId, cur.status, cur.lastStatus, r.logId);
+  });
+  Object.assign(TICKET_TITLES, data.titles || {});
+  if(data.seq) seq = Math.max(seq, data.seq);
+}
+
+function s1(logId,ticketId,action,priority,type,assignedTo,actorId,notes,dueAt,target,subject,local){
+  SHEET1.push({logId,ticketId,action,priority,type,assignedTo,actorId,notes:notes||'',dueAt:dueAt||null,target:target||null,subject:subject||null,local:!!local});
+}
+function s2(ticketId,status,lastStatus,id){
+  SHEET2.push({ticketId,status,lastStatus,id});
+}
+function latestS2(ticketId){
+  const rows = SHEET2.filter(r=>r.ticketId===ticketId);
+  if(!rows.length) return null;
+  return rows.reduce((a,b)=> b.id>a.id ? b : a);
+}
+function s1ByLogId(logId){ return SHEET1.find(r=>r.logId===logId); }
+
+// TICKET_CHAIN resolves a ticket id to its authoritative CURRENT status by
+// walking the pre-computed status-chain sheet (ap2_ticLog's "Ticket" array)
+// exactly the way it's structured: each row's ID field, when present, points
+// to the row that supersedes it (including synthetic follow-up ids like
+// R_/D_/P_/E_ prefixes for reminders/forwards, or even another real ticket
+// id for a duplicate-merge like TK-3014 → TK-3009). The chain's *last* node
+// is always the true current state — earlier hops never need re-checking.
+let TICKET_CHAIN = null;
+function buildChainIndex(ticketRows){
+  const byId = {};
+  (ticketRows||[]).forEach(r=>{ if(r && r.Ticket_ID) byId[String(r.Ticket_ID)] = r; });
+  return {
+    resolve(ticketId){
+      let cur = byId[String(ticketId)];
+      if(!cur) return null;
+      let hops = 0;
+      while(cur.ID && byId[String(cur.ID)] && hops++ < 25){
+        cur = byId[String(cur.ID)];
+      }
+      return {
+        status: cur.Status || 'Open',
+        lastStatus: cur['Last Status'] || null,
+        detail: cur['Timestamp/Detail'] || null,
+      };
+    }
+  };
+}
+
+function currentOwner(ticketId){
+  const latest = latestS2(ticketId);
+  if(!latest) return null;
+  const row = s1ByLogId(latest.id);
+  if(!row) return null;
+  // The chain sheet (when we have real cache data) is the authoritative
+  // current status; the log itself always supplies who/what/when.
+  const chain = TICKET_CHAIN ? TICKET_CHAIN.resolve(ticketId) : null;
+  return {
+    assignedTo: row.assignedTo,
+    status: chain ? chain.status : latest.status,
+    lastStatus: chain ? chain.lastStatus : latest.lastStatus,
+    sinceMs: latest.id, priority: row.priority, type: row.type,
+    dueAt: row.dueAt, target: row.target, subject: row.subject,
+  };
+}
+function allTicketIds(){ return [...new Set(SHEET1.map(r=>r.ticketId))]; }
+function ticketTimeline(ticketId){
+  return SHEET1.filter(r=>r.ticketId===ticketId)
+    .sort((a,b)=>a.logId-b.logId)
+    .map(r=>({...r, s2: SHEET2.find(s=>s.id===r.logId) || null}));
+}
+function ticketTitle(ticketId){ return TICKET_TITLES[ticketId] || 'Untitled ticket'; }
+function isTerminal(status){ return status==='Resolved' || status==='Done'; }
+
+// ---------- Action → status derivation ----------
+// Reads one "Action" cell from the log and returns what the status sheet
+// row should be. Anything not recognised just carries the previous status
+// forward (an informational log line, e.g. a permission grant) instead of
+// silently breaking the chain.
+function parseAction(action, logTime){
+  const a = String(action||'').trim();
+  let m;
+  if(/^ticket raised/i.test(a)) return {status:'Open', lastStatus:null};
+  if(/^attended\b/i.test(a)) return {status:'In Progress', lastStatus:null};
+  if(/^reminder triggered/i.test(a)) return {status:'In Progress', lastStatus:null};
+  if(m = a.match(/^status changed to ([A-Za-z ]+)/i)) return {status:m[1].trim(), lastStatus:null};
+  if(m = a.match(/^status set to ([A-Za-z ]+?)(?:\s*\(|$)/i)) return {status:m[1].trim(), lastStatus:null};
+  if(m = a.match(/^reminder set for after ([\d.]+)\s*hour/i)) return {status:'Pending', lastStatus:'Reminder', dueAt: logTime + parseFloat(m[1])*3600000};
+  if(m = a.match(/^reminder set for date (\d{4}-\d{2}-\d{2})/i)) return {status:'Pending', lastStatus:'Reminder', dueAt: new Date(m[1]+'T09:00:00').getTime()};
+  if(m = a.match(/^forwarded to department\s*\(([^)]+)\)/i)) return {status:'Forwarded', lastStatus:'Department', target:m[1].trim()};
+  if(m = a.match(/^auto-routed to (.+?) queue/i)) return {status:'Forwarded', lastStatus:'Department', target:m[1].trim()};
+  if(m = a.match(/^re-forwarded to person\s*\(([^)]+)\)/i)) return {status:'Forwarded', lastStatus:'Person', target:m[1].trim()};
+  if(m = a.match(/^forwarded to person\s*\(([^)]+)\)/i)) return {status:'Forwarded', lastStatus:'Person', target:m[1].trim()};
+  if(m = a.match(/^auto-assigned to (.+)$/i)) return {status:'Forwarded', lastStatus:'Person', target:m[1].trim()};
+  if(m = a.match(/^assigned to (.+)$/i)) return {status:'Forwarded', lastStatus:'Person', target:m[1].trim()};
+  if(/^escalation permission granted/i.test(a)) return {carryForward:true};
+  return {carryForward:true};
+}
+
+// Reusable bulk-log importer: turns a plain [action, priority, subject,
+// notes, gapMins] row list into proper SHEET1/SHEET2 entries via
+// parseAction(), advancing a shared clock. Not called anywhere by default —
+// wire it up if you ever need to import a real historical log in bulk.
+let clockCursor = Date.now();
+function ingestTicket(ticketId, title, actorEmail, rows){
+  TICKET_TITLES[ticketId] = title;
+  let prev = {status:null,lastStatus:null,dueAt:null,target:null};
+  rows.forEach(row=>{
+    const [action, priority, subject, notes, gapMins] = row;
+    clockCursor += gapMins*60000;
+    const t = clockCursor;
+    const parsed = parseAction(action, t);
+    let cur;
+    if(parsed.carryForward) cur = {...prev};
+    else cur = {status:parsed.status, lastStatus:parsed.lastStatus||null, dueAt:parsed.dueAt||null, target:parsed.target||null};
+    s1(t, ticketId, action, priority, 'Ticket', actorEmail, actorEmail, notes||'', cur.dueAt, cur.target, subject);
+    s2(ticketId, cur.status, cur.lastStatus, t);
+    prev = cur;
+  });
+}
+
+/* ═══════════ REAL CACHE INGESTION — ap2_ticLog ═══════════
+   ap2_ticLog's cached .data is { Ticket: [...], ticLog: [...] }:
+     ticLog — the raw append-only action log (one row per event, exactly
+       what this portal's timeline is built from): Log_ID, Ticket_ID,
+       Assigned By, Action, Priority, Category, Subject, Assigned to, Notes
+     Ticket — the pre-computed status-chain sheet: Ticket_ID, Status,
+       Last Status, Timestamp/Detail, ID — where a non-empty ID means "this
+       row has been superseded, walk to that id for the real current state"
+       (including synthetic follow-up ids like R_/D_/P_/E_ prefixes, or even
+       another real ticket id for a duplicate-merge).
+   Handles both object-keyed rows (Google-Sheets-header style, as above) and
+   plain arrays in the same column order, the same defensive way
+   allBike.html's normaliseRow() handles both shapes for bikes.
+   ════════════════════════════════════════════════════════════════════════ */
+function _pick(obj, keys){
+  for(const k of keys){ if(obj[k]!==undefined && obj[k]!==null && obj[k]!=='') return obj[k]; }
+  return '';
+}
+const TICLOG_COLUMNS = ['Log_ID','Ticket_ID','Assigned By','Action','Priority','Category','Subject','Assigned to','Notes'];
+function parseTicLogRow(r){
+  if(!r) return null;
+  if(Array.isArray(r)){
+    const o = {}; TICLOG_COLUMNS.forEach((k,i)=>o[k]=r[i]); r = o;
+  }
+  const ticketId = String(_pick(r,['Ticket_ID','ticketId','Ticket Id'])||'').trim();
+  const action = String(_pick(r,['Action','action'])||'').trim();
+  if(!ticketId || !action) return null;
+  return {
+    logIdRaw: String(_pick(r,['Log_ID','logId','Log Id'])||'').trim(),
+    ticketId,
+    actorEmail: String(_pick(r,['Assigned By','assignedBy','Assigned_By'])||'').trim(),
+    action,
+    priority: String(_pick(r,['Priority','priority'])||'Medium').trim(),
+    type: String(_pick(r,['Category','category','Type'])||'Ticket').trim(),
+    subject: String(_pick(r,['Subject','subject'])||'').trim(),
+    assignedToEmail: String(_pick(r,['Assigned to','Assigned To','assignedTo'])||'').trim(),
+    notes: String(_pick(r,['Notes','notes','Note'])||'').trim(),
+  };
+}
+const TICKET_STATUS_COLUMNS = ['Ticket_ID','Status','Last Status','Timestamp/Detail','ID'];
+function parseTicketStatusRow(r){
+  if(!r) return null;
+  if(Array.isArray(r)){
+    const o = {}; TICKET_STATUS_COLUMNS.forEach((k,i)=>o[k]=r[i]); r = o;
+  }
+  const ticketId = String(_pick(r,['Ticket_ID','ticketId'])||'').trim();
+  if(!ticketId) return null;
+  return {
+    Ticket_ID: ticketId,
+    Status: String(_pick(r,['Status','status'])||'').trim(),
+    'Last Status': String(_pick(r,['Last Status','lastStatus'])||'').trim(),
+    'Timestamp/Detail': String(_pick(r,['Timestamp/Detail','detail'])||'').trim(),
+    ID: String(_pick(r,['ID','id'])||'').trim(),
+  };
+}
+// Sortable order out of Log_ID values like 'L23' — falls back to array
+// position if the id doesn't carry a trailing number.
+function logIdSortKey(raw, fallbackIndex){
+  const m = String(raw||'').match(/(\d+)\s*$/);
+  return m ? parseInt(m[1],10) : fallbackIndex;
+}
+
+function rebuildFromRealCache(ticLogRaw, ticketStatusRaw){
+  SHEET1 = []; SHEET2 = []; TICKET_TITLES = {}; seq = 0;
+  const rows = (ticLogRaw||[]).map(parseTicLogRow).filter(Boolean);
+  rows.sort((a,b)=> logIdSortKey(a.logIdRaw,0) - logIdSortKey(b.logIdRaw,0));
+
+  // The people directory grows from the cache itself — no fixed roster.
+  const me = emp(state.currentUserId);
+  discoverEmployeesFromCache(ticLogRaw, me ? (dept(me.dept) ? dept(me.dept).name : null) : null);
+
+  const prevByTicket = {};
+  rows.forEach((r,i)=>{
+    const t = logIdSortKey(r.logIdRaw, i) * 60000; // spread onto a real timeline for duration math
+    const parsed = parseAction(r.action, t);
+    const prev = prevByTicket[r.ticketId] || {status:null,lastStatus:null,dueAt:null,target:null};
+    let cur;
+    if(parsed.carryForward) cur = {...prev};
+    else cur = {status:parsed.status, lastStatus:parsed.lastStatus||null, dueAt:parsed.dueAt||null, target:parsed.target||null};
+    prevByTicket[r.ticketId] = cur;
+    s1(t, r.ticketId, r.action, r.priority, r.type, r.assignedToEmail || r.actorEmail, r.actorEmail, r.notes, cur.dueAt, cur.target, r.subject, false);
+    s2(r.ticketId, cur.status, cur.lastStatus, t);
+    // No explicit title column in the real schema — derive a readable one
+    // from the first meaningful note/subject seen for this ticket.
+    if(!TICKET_TITLES[r.ticketId]){
+      TICKET_TITLES[r.ticketId] = r.notes || (r.subject ? `${r.subject} ticket` : r.ticketId);
+    }
+  });
+
+  const statusRows = (ticketStatusRaw||[]).map(parseTicketStatusRow).filter(Boolean);
+  TICKET_CHAIN = statusRows.length ? buildChainIndex(statusRows) : null;
+
+  applyOverlay(); // replay this browser's own local actions on top
+}
+
+function ingestFromCachePayload(payload){
+  if(!payload) return false;
+  const ticLogRows = Array.isArray(payload.ticLog) ? payload.ticLog
+    : (Array.isArray(payload) ? payload : null);
+  if(!ticLogRows || !ticLogRows.length) return false;
+  const ticketRows = Array.isArray(payload.Ticket) ? payload.Ticket : [];
+  rebuildFromRealCache(ticLogRows, ticketRows);
+  return true;
+}
+
+/* ═══════════ LOAD — same shape as allBike.html's loadBikes() ═══════════ */
+async function loadTickets(){
+  const alreadyHaveData = SHEET1.some(r=>!r.local);
+  try{
+    const payload = await _readCache();
+    const applied = ingestFromCachePayload(payload);
+    if(applied){
+      render();
+    } else if(!alreadyHaveData){
+      applyOverlay(); // no real cache yet — at least show this browser's own local tickets
+      render();
+    }
+  }catch(err){
+    console.error('[OpsDeck] loadTickets error:', err);
+  }
+}
+
+/* ═══════════ SILENT REFRESH — subsequent updates, no full reset flash ═══════ */
+let _emptyReadStreak = 0;
+async function _applyFromCache(){
+  try{
+    const payload = await _readCache();
+    const applied = ingestFromCachePayload(payload);
+    if(applied){
+      _emptyReadStreak = 0;
+      render();
+    } else if(SHEET1.some(r=>!r.local)){
+      _emptyReadStreak++;
+      if(_emptyReadStreak>=2){ SHEET1 = SHEET1.filter(r=>r.local); SHEET2=[]; TICKET_TITLES={}; TICKET_CHAIN=null; applyOverlay(); render(); _emptyReadStreak=0; }
+    }
+  }catch(e){
+    console.warn('[OpsDeck] background refresh error:', e.message);
+  }
+}
+
+try{
+  AP2CacheWatcher.init();
+  AP2CacheWatcher.subscribe(()=>{ _applyFromCache(); });
+}catch(e){
+  console.warn('[OpsDeck] cacheWatcher wiring failed, continuing without live updates:', e.message);
+}
+
+/* ── Message listener from parent index.html — same pattern as allBike.html ── */
+window.addEventListener('message', (e)=>{
+  if(!e.data) return;
+  if(e.origin !== window.location.origin && e.origin !== 'null' && !e.origin.startsWith('https://effimalik.github.io')) return;
+
+  if(e.data.type==='ap-theme' && e.data.theme){
+    document.documentElement.setAttribute('data-theme', e.data.theme);
+  }
+  if(e.data.type==='ap-cache-preload' && e.data.datasets){
+    const payload = e.data.datasets[_AP2_CACHE_KEY];
+    if(ingestFromCachePayload(payload)) render();
+  }
+  if(e.data.type==='ap-cache-ready' && e.data.key===_AP2_CACHE_KEY){
+    if(ingestFromCachePayload(e.data.data)) render();
+  }
+  if(e.data.type==='ap-cache-updated'){
+    try{ window.parent.postMessage({type:'ap-cache-request', key:_AP2_CACHE_KEY}, '*'); }catch(err){}
+  }
+});
+try{ window.parent.postMessage({type:'ap-cache-request', key:_AP2_CACHE_KEY}, '*'); }catch(e){}
+
+
+// ---------- App state ----------
+const state = {
+  currentUserId: null,
+  view: 'my', // 'my' | 'dept' | 'new' | 'flow' | 'org'
+  deptSubtab: 'queue', // 'queue' | 'oversight'
+  ffMode: 'ticket', // 'ticket' | 'employee' | 'department'
+  ffQuery: '',
+  ffSelectedTicket: null,
+  respondModal: null,
+  myStatusFilter: 'all',   // 'all' | 'open' | 'Open' | 'Pending' | 'Forwarded' | 'In Progress' | 'done'
+  deptStatusFilter: 'all',
+};
+function currentUser(){ return emp(state.currentUserId); }
+
+// Status filter pills shared by My Portal / Department — 'open' groups every
+// non-terminal status together (the common "what still needs work" view),
+// 'done' groups Done/Resolved, and each real status is also selectable
+// individually for a genuinely practical filter, not just an open/closed toggle.
+const STATUS_FILTERS = ['all','open','Open','Pending','Forwarded','In Progress','done'];
+function statusFilterLabel(f){
+  return {all:'All', open:'Needs attention', done:'Resolved'}[f] || f;
+}
+function matchesStatusFilter(status, filter){
+  if(filter==='all') return true;
+  if(filter==='open') return !isTerminal(status);
+  if(filter==='done') return isTerminal(status);
+  return status===filter;
+}
+function statusFilterBar(current, dataAttr){
+  return `<div class="filter-pills" style="margin-bottom:14px;">
+    ${STATUS_FILTERS.map(f=>`<button class="filter-btn ${current===f?'active':''}" data-${dataAttr}="${f}">${statusFilterLabel(f)}</button>`).join('')}
+  </div>`;
+}
+
+// ---------- Reminder engine (computed live) ----------
+function overdueInfo(ownerState){
+  if(!ownerState) return {overdue:false};
+  if(isTerminal(ownerState.status)) return {overdue:false};
+  if(ownerState.status==='Postponed') return {overdue:false};
+  // "Pending, no reminder yet" is an explicit no-clock state — don't flag it.
+  if(ownerState.status==='Pending' && ownerState.lastStatus!=='Reminder') return {overdue:false};
+  const now = nowMs();
+  if(ownerState.dueAt){
+    if(now < ownerState.dueAt) return {overdue:false, dueAt:ownerState.dueAt};
+    const elapsed = now - ownerState.dueAt;
+    return {overdue:true, elapsed, escalations: Math.floor(elapsed/3600000)+1};
+  }
+  const elapsed = now - ownerState.sinceMs;
+  const hoursOverdue = elapsed/3600000 - 1; // 1hr grace before first ring
+  if(hoursOverdue < 0) return {overdue:false, elapsed};
+  return {overdue:true, elapsed, escalations: Math.floor(hoursOverdue)+1};
+}
+
+// Auto-escalates anything sitting untouched too long into a "Reminder" —
+// only runs once you've fast-forwarded the demo clock, so opening the app
+// doesn't instantly rewrite the seeded history you're looking at.
+function tickReminderEngine(){
+  if(demoOffsetMs<=0) return;
+  allTicketIds().forEach(tid=>{
+    const owner = currentOwner(tid);
+    if(!owner || isTerminal(owner.status) || owner.status==='Postponed') return;
+    const od = overdueInfo(owner);
+    if(od.overdue && owner.status!=='Pending'){
+      fireReminder(tid);
+    }
+  });
+}
+
+// ---------- Mutations (append-only) ----------
+function createTicket({creatorId, title, description, priority, subject, assignedTo}){
+  const logId = genId();
+  const ticketId = 'T' + logId; // always a string — logId (numeric) would silently
+                                 // fail strict-equality lookups once it round-trips
+                                 // through an HTML data-* attribute as a string
+  s1(logId, ticketId, 'Ticket raised', priority, 'Ticket', assignedTo, creatorId, description, null, null, subject, true);
+  s2(ticketId, 'Open', null, logId);
+  TICKET_TITLES[ticketId] = title;
+  saveOverlay();
+  return ticketId;
+}
+function forwardTicket({ticketId, actorId, toAssignee, note}){
+  const owner = currentOwner(ticketId);
+  const l = genId();
+  const label = isDeptId(toAssignee) ? nameOf(toAssignee) : nameOf(toAssignee);
+  s1(l, ticketId, `Forwarded to ${label}`, owner.priority, owner.type, toAssignee, actorId, note || 'Forwarded.', null, label, owner.subject, true);
+  s2(ticketId, 'Forwarded', isDeptId(toAssignee)?'Department':'Person', l);
+  saveOverlay();
+}
+function claimPersonally({ticketId, actorId, note}){
+  const owner = currentOwner(ticketId);
+  const l = genId();
+  s1(l, ticketId, 'Taken on personally', owner.priority, owner.type, actorId, actorId, note || 'Handling this directly.', null, null, owner.subject, true);
+  s2(ticketId, 'Forwarded', 'Person', l);
+  saveOverlay();
+}
+function fireReminder(ticketId){
+  const owner = currentOwner(ticketId);
+  const l = genId();
+  s1(l, ticketId, 'Reminder set', owner.priority, owner.type, owner.assignedTo, owner.assignedTo, 'Automated: no response after grace period.', null, owner.target, owner.subject, true);
+  s2(ticketId, 'Pending', 'Reminder', l);
+  saveOverlay();
+}
+function respondSnooze({ticketId, actorId, comment, snoozeUntilMs}){
+  const owner = currentOwner(ticketId);
+  const l = genId();
+  s1(l, ticketId, 'Snoozed', owner.priority, owner.type, owner.assignedTo, actorId, comment, snoozeUntilMs, owner.target, owner.subject, true);
+  s2(ticketId, 'Pending', 'Reminder', l);
+  saveOverlay();
+}
+function respondPostpone({ticketId, actorId, comment, days}){
+  const owner = currentOwner(ticketId);
+  const l = genId();
+  s1(l, ticketId, `Postponed ${days} day(s)`, owner.priority, owner.type, owner.assignedTo, actorId, comment, null, owner.target, owner.subject, true);
+  s2(ticketId, 'Postponed', 'Reminder', l);
+  saveOverlay();
+}
+function respondDone({ticketId, actorId, comment}){
+  const owner = currentOwner(ticketId);
+  const l = genId();
+  s1(l, ticketId, 'Status changed to Done', owner.priority, owner.type, owner.assignedTo, actorId, comment, null, null, owner.subject, true);
+  s2(ticketId, 'Done', null, l);
+  saveOverlay();
+}
+
+// ---------- Rendering ----------
+const app = document.getElementById('app');
+function render(){
+  tickReminderEngine();
+  const u = currentUser();
+  app.innerHTML = `
+    ${renderTopbar(u)}
+    <div class="page">${renderView(u)}</div>
+  `;
+  wireGlobal();
+}
+
+function myOpenCount(empId){
+  return allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.assignedTo===empId && !isTerminal(o.status);
+  }).length;
+}
+function deptQueueCount(deptId){
+  return allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && emp(o.assignedTo) && emp(o.assignedTo).dept===deptId && !isTerminal(o.status);
+  }).length;
+}
+function orgOpenCount(){
+  return allTicketIds().filter(tid=>!isTerminal(currentOwner(tid).status)).length;
+}
+
+function renderTopbar(u){
+  const manager = isManager(u.id);
+  const gm = isGM(u.id);
+  const roleLabel = gm ? 'general manager' : manager ? 'manager' : 'worker';
+  const myCount = myOpenCount(u.id);
+  const dCount = manager && u.dept ? deptQueueCount(u.dept) : 0;
+  const orgCount = gm ? orgOpenCount() : 0;
+  return `
+  <div class="topbar">
+    <div class="topbar-row1">
+      <div class="brand"><span class="dot"></span>OpsDeck</div>
+      <nav class="tabs">
+        <button data-view="my" class="${state.view==='my'?'active':''}">My Portal${myCount?`<span class="badge-count">${myCount}</span>`:''}</button>
+        ${manager && u.dept ? `<button data-view="dept" class="${state.view==='dept'?'active':''}">Department${dCount?`<span class="badge-count">${dCount}</span>`:''}</button>`:''}
+        ${!gm && !manager ? `<button data-view="dept" class="${state.view==='dept'?'active':''}">Department tasks</button>`:''}
+        ${!isWorker(u.id) ? `<button data-view="new" class="${state.view==='new'?'active':''}">New Ticket</button>`:''}
+        ${!isWorker(u.id) ? `<button data-view="flow" class="${state.view==='flow'?'active':''}">Flow Finder</button>`:''}
+        ${gm ? `<button data-view="org" class="${state.view==='org'?'active':''}">Org Overview${orgCount?`<span class="badge-count">${orgCount}</span>`:''}</button>`:''}
+      </nav>
+      <div class="topbar-spacer"></div>
+      <div class="userbox">
+        <span class="role-pill">${roleLabel}</span>
+        <span class="userbox-name" title="${u.email || ''}">${u.name}</span>
+      </div>
+    </div>
+    <div class="demo-clock" title="Fast-forward time to see the reminder engine escalate without waiting real hours">
+      <span class="dc-label">Fast-forward</span>
+      <button data-ff="900000">+15m</button>
+      <button data-ff="3600000">+1h</button>
+      <button data-ff="14400000">+4h</button>
+      <button data-ff="reset">reset</button>
+      ${demoOffsetMs>0 ? `<span class="dc-offset">+${fmtDur(demoOffsetMs)} ahead</span>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderView(u){
+  const manager = isManager(u.id), gm = isGM(u.id), worker = isWorker(u.id);
+  if(worker && state.view==='new') state.view='my';
+  if(worker && state.view==='flow' && !state.ffSelectedTicket) state.view='my';
+  if(!gm && state.view==='org') state.view='my';
+  switch(state.view){
+    case 'my': return renderMyPortal(u);
+    case 'dept': return manager ? renderDeptPortal(u) : renderDeptReadOnly(u);
+    case 'new': return renderNewTicket(u);
+    case 'flow': return renderFlowFinder(u);
+    case 'org': return renderOrgOverview(u);
+    default: return '';
+  }
+}
+
+// ----- Ticket row renderer -----
+function ticketRow(tid, opts={}){
+  const owner = currentOwner(tid);
+  const title = ticketTitle(tid);
+  const od = overdueInfo(owner);
+  const created = ticketTimeline(tid)[0];
+  const subLabel = opts.subLabel || (owner.target ? `Forwarded to ${owner.target}` : `With ${nameOf(owner.assignedTo)}`);
+  return `
+  <div class="ticket-row" data-open-ticket="${tid}">
+    <div class="pri-flag pri-${owner.priority}"></div>
+    <div class="t-main">
+      <div class="t-title">${title} <span class="tid">#${tid}</span> ${owner.subject?`<span class="type-chip">${owner.subject}</span>`:''}</div>
+      <div class="t-sub">${subLabel} · raised by ${nameOf(created.actorId)}</div>
+    </div>
+    ${od.overdue ? `<div class="overdue-flag">⚠ ${od.escalations>1?`x${od.escalations} `:''}overdue ${fmtDur(od.elapsed)}</div>` : ''}
+    <div class="status-chip ${statusClass(owner.status)}">${owner.status}</div>
+  </div>`;
+}
+
+// ----- My Portal -----
+function renderMyPortal(u){
+  // Filter 1: user-based — only tickets currently assigned to *this* email.
+  const mine = allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.assignedTo===u.id;
+  }).sort((a,b)=> currentOwner(a).sinceMs - currentOwner(b).sinceMs);
+
+  // Filter 2: status — the pill bar above the list.
+  const filter = state.myStatusFilter;
+  const filtered = mine.filter(tid=> matchesStatusFilter(currentOwner(tid).status, filter));
+
+  const body = filter==='all'
+    ? (()=>{
+        const open = mine.filter(tid=>!isTerminal(currentOwner(tid).status));
+        const done = mine.filter(tid=>isTerminal(currentOwner(tid).status));
+        return `
+        <div class="section-label">Needs attention (${open.length})</div>
+        ${open.length ? `<div class="ticket-list">${open.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty"><b>All clear.</b>Nothing waiting on you right now.</div>`}
+        ${done.length ? `
+        <div class="section-label">Resolved (${done.length})</div>
+        <div class="ticket-list">${done.map(t=>ticketRow(t)).join('')}</div>` : ''}`;
+      })()
+    : (filtered.length
+        ? `<div class="ticket-list">${filtered.map(t=>ticketRow(t)).join('')}</div>`
+        : `<div class="empty"><b>No matches.</b>Nothing with that status right now.</div>`);
+
+  return `
+  <div class="grid2">
+    ${profileCard(u)}
+    <div>
+      <h1 class="page-title">My Portal</h1>
+      <p class="page-sub">Tickets currently assigned to you. Tap one to see the full timeline and respond.</p>
+      ${statusFilterBar(filter, 'mystatus')}
+      ${body}
+    </div>
+  </div>`;
+}
+
+function renderPermissionChips(perms){
+  if(!perms) return '';
+  const items = Object.values(perms);
+  if(!items.length) return '';
+  return `
+  <div class="section-label" style="margin-top:18px;">System access</div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;">
+    ${items.map(p=>{
+      const a = p.access||{};
+      const flags = [a.view?'V':'', a.add?'A':'', a.editDelete?'E':''].filter(Boolean).join('');
+      return `<span class="access-chip ${flags?'':'no-access'}" title="${p.label}${flags?` — ${[a.view&&'view',a.add&&'add',a.editDelete&&'edit/delete'].filter(Boolean).join(', ')}`:' — no access'}">${p.label}${flags?` <span class="flags">${flags}</span>`:''}</span>`;
+    }).join('')}
+  </div>`;
+}
+
+function profileCard(u){
+  const d = u.dept ? dept(u.dept) : null;
+  const initials = u.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  const openCt = myOpenCount(u.id);
+  const resolvedCt = allTicketIds().filter(tid=>{
+    const o=currentOwner(tid); return o && o.assignedTo===u.id && isTerminal(o.status);
+  }).length;
+  const roleName = isGM(u.id) ? 'General Manager' : isManager(u.id) ? 'Manager' : 'Worker';
+  return `
+  <div class="card profile-card">
+    <div class="avatar">${initials}</div>
+    <h2>${u.name}</h2>
+    <p class="role-line">${u.title}${d?` · ${d.name}`:''}</p>
+    <div class="meta-row"><span>Email</span><span>${u.email||'—'}</span></div>
+    ${d ? `<div class="meta-row"><span>Team</span><span>${d.name}</span></div>` : ''}
+    <div class="meta-row"><span>Role</span><span>${roleName}</span></div>
+    ${u.loginAt ? `<div class="meta-row"><span>Signed in</span><span>${new Date(u.loginAt).toLocaleString()}</span></div>` : ''}
+    <div class="stat-strip">
+      <div class="stat-chip"><div class="n">${openCt}</div><div class="l">Open</div></div>
+      <div class="stat-chip"><div class="n">${resolvedCt}</div><div class="l">Resolved</div></div>
+    </div>
+    ${renderPermissionChips(u.permissions)}
+  </div>`;
+}
+
+// ----- Department Portal (manager: triage rights) -----
+function renderDeptPortal(u){
+  if(!isManager(u.id) || !u.dept) return renderMyPortal(u);
+  // Tickets in this log are always assigned to a person's email, never to a
+  // department id directly — so "department view" means everyone currently
+  // in the department, not a separate unclaimed queue. Managers can still
+  // reassign a teammate's ticket from here (see renderRespondPanel's
+  // 'oversee' mode).
+  return renderDeptReadOnly(u, {manager:true});
+}
+
+// ----- Department Portal (worker: read-only; manager: same list, with
+// reassignment rights on teammates' tickets via the respond panel) -----
+function renderDeptReadOnly(u, opts={}){
+  const d = u.dept ? dept(u.dept) : null;
+  if(!d) return renderMyPortal(u);
+  // Filter 1: department — every ticket currently with anyone in this dept.
+  const inDept = allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && emp(o.assignedTo) && emp(o.assignedTo).dept===d.id;
+  });
+  // Filter 2: status.
+  const filter = state.deptStatusFilter;
+  const filtered = inDept.filter(tid=> matchesStatusFilter(currentOwner(tid).status, filter));
+  const teamCount = deptWorkers(d.id).length;
+  return `
+  <div class="grid2">
+    ${profileCard(u)}
+    <div>
+      <h1 class="page-title">${d.name} — Department</h1>
+      <p class="page-sub">${opts.manager ? `Every ticket currently with anyone in ${d.name} (${teamCount} member${teamCount===1?'':'s'}). Open one to reassign it if needed.` : `Read-only view of everything currently in ${d.name}. Your own items are in My Portal.`}</p>
+      ${statusFilterBar(filter, 'deptstatus')}
+      ${filtered.length ? `<div class="ticket-list">${filtered.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty"><b>Nothing here.</b>${filter==='all' ? `Tickets in ${d.name} will show up here.` : `No tickets with that status right now.`}</div>`}
+    </div>
+  </div>`;
+}
+
+// ----- New ticket -----
+let newTicketForm = {priority:'Medium', subject:'Employee', assignedTo:'', title:'', description:''};
+function renderNewTicket(u){
+  const f = newTicketForm;
+  const subjects = ['Employee','Department','Transaction','Fine','Asset'];
+  return `
+  <h1 class="page-title">New Ticket</h1>
+  <p class="page-sub">This writes one row to the log — exactly like every later event on this ticket.</p>
+  <div class="card" style="max-width:640px;">
+    <div class="field">
+      <label>Ticket name</label>
+      <input type="text" id="nt-title" placeholder="e.g. Payslip discrepancy" value="${f.title.replace(/"/g,'&quot;')}">
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="nt-desc" placeholder="What's going on, and what do you need?">${f.description}</textarea>
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Priority</label>
+        <select id="nt-priority">
+          ${['High','Medium','Low'].map(p=>`<option ${f.priority===p?'selected':''}>${p}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Subject</label>
+        <select id="nt-subject">
+          ${subjects.map(s=>`<option ${f.subject===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Assigned to</label>
+      <select id="nt-assignee">
+        <option value="">Select…</option>
+        ${assignablePeopleFor(u).map(e=>`<option value="${e.id}" ${f.assignedTo===e.id?'selected':''}>${e.name} — ${e.title}</option>`).join('')}
+      </select>
+      ${isManager(u.id) && u.dept ? `<span class="hint">As a manager, you can assign to people in ${dept(u.dept).name}.</span>` : ''}
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="nt-submit">Create ticket</button>
+      <button class="btn btn-ghost" id="nt-reset">Clear</button>
+    </div>
+  </div>`;
+}
+
+function assignablePeopleFor(u){
+  if(isGM(u.id)) return EMPLOYEES;
+  if(isManager(u.id) && u.dept) return deptWorkers(u.dept);
+  return [u];
+}
+
+// ----- Flow Finder -----
+function ticketTouchesDept(tid, deptId){
+  return SHEET1.some(r=>r.ticketId===tid && (
+    (emp(r.assignedTo) && emp(r.assignedTo).dept===deptId) ||
+    (emp(r.actorId) && emp(r.actorId).dept===deptId)
+  ));
+}
+function renderFlowFinder(u){
+  const scoped = isManager(u.id) && u.dept;
+  const modeOpts = [['ticket','Ticket'],['employee','Employee'],['department','Department']];
+  let matches = [];
+
+  if(state.ffMode==='ticket'){
+    matches = allTicketIds().filter(tid=>{
+      if(scoped && !ticketTouchesDept(tid, u.dept)) return false;
+      if(!state.ffQuery) return true;
+      const q = state.ffQuery.toLowerCase();
+      return String(tid).toLowerCase().includes(q) || ticketTitle(tid).toLowerCase().includes(q);
+    });
+  } else if(state.ffMode==='employee'){
+    matches = state.ffQuery ? allTicketIds().filter(tid=>{
+      return SHEET1.some(r=>r.ticketId===tid && r.actorId===state.ffQuery);
+    }) : [];
+  } else if(state.ffMode==='department'){
+    const targetDept = scoped ? u.dept : state.ffQuery;
+    matches = targetDept ? allTicketIds().filter(tid=>{
+      return SHEET1.some(r=>r.ticketId===tid && emp(r.assignedTo) && emp(r.assignedTo).dept===targetDept);
+    }) : [];
+  }
+
+  const resultsHtml = matches.length ? matches.map(t=>ticketRow(t)).join('') :
+    `<div class="empty"><b>No matches.</b>Try a different search.</div>`;
+
+  const employeeOptions = scoped ? deptWorkers(u.dept) : EMPLOYEES;
+
+  const queryControl = state.ffMode==='ticket'
+    ? `<input type="text" id="ffQuery" placeholder="Search by ticket ID or name…" value="${state.ffQuery.replace(/"/g,'&quot;')}" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">`
+    : state.ffMode==='employee'
+    ? `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
+         <option value="">Choose an employee…</option>
+         ${employeeOptions.map(e=>`<option value="${e.id}" ${state.ffQuery===e.id?'selected':''}>${e.name}</option>`).join('')}
+       </select>`
+    : scoped
+    ? `<div class="hint" style="padding:9px 0;">Scoped to ${dept(u.dept).name} — managers see their own department only.</div>`
+    : `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
+         <option value="">Choose a department…</option>
+         ${DEPARTMENTS.map(d=>`<option value="${d.id}" ${state.ffQuery===d.id?'selected':''}>${d.name}</option>`).join('')}
+       </select>`;
+
+  return `
+  <h1 class="page-title">Flow Finder</h1>
+  <p class="page-sub">${scoped ? `Search tickets that have passed through ${dept(u.dept).name}.` : 'Search across every ticket ever logged.'} Open one for the full timeline.</p>
+  <div class="subtabs">
+    ${modeOpts.map(([k,l])=>`<button data-ffmode="${k}" class="${state.ffMode===k?'active':''}">${l}</button>`).join('')}
+  </div>
+  <div class="ff-searchbar">${queryControl}</div>
+  ${state.ffSelectedTicket ? renderTimelineView(state.ffSelectedTicket, u) : `<div class="ff-results">${resultsHtml}</div>`}
+  `;
+}
+
+function kindOfAction(action){
+  if(/^ticket raised/i.test(action)) return 'created';
+  if(/forward|auto-routed|auto-assigned|^assigned to|^taken on personally/i.test(action)) return 'forward';
+  if(/^reminder set|^snoozed|^postponed/i.test(action)) return 'reminder';
+  if(/^reminder triggered/i.test(action)) return 'result';
+  if(/resolved|status changed to (done|resolved)/i.test(action)) return 'resolved';
+  return 'forward';
+}
+function kindIcon(k){
+  return {created:'◆', forward:'→', reminder:'⏰', result:'↩', resolved:'✓'}[k] || '•';
+}
+
+function renderTimelineView(tid, u){
+  const rows = ticketTimeline(tid);
+  let items = '';
+  rows.forEach((r,i)=>{
+    const k = kindOfAction(r.action);
+    const gap = i>0 ? fmtDur(r.logId - rows[i-1].logId) : null;
+    const whoLine = `${nameOf(r.actorId)}${r.target ? ` → ${r.target}` : (r.assignedTo ? ` → ${nameOf(r.assignedTo)}` : '')}`;
+    items += `
+    <div class="tl-item k-${k}">
+      ${gap ? `<div class="tl-gap">+${gap}</div>` : ''}
+      <div class="tl-dot">${kindIcon(k)}</div>
+      <div class="tl-card">
+        <div class="tl-head">
+          <span class="tl-action">${r.action}</span>
+          <span class="tl-ts">${fmtTs(r.logId)}</span>
+        </div>
+        <div class="tl-who">${whoLine} · <span class="status-chip ${statusClass(r.s2?r.s2.status:'')}" style="padding:1px 7px;font-size:10px;">${r.s2?r.s2.status:''}</span></div>
+        ${r.notes ? `<div class="tl-notes">${r.notes}</div>` : ''}
+      </div>
+    </div>`;
+  });
+  return `
+  <button class="btn btn-ghost btn-sm" id="ffBack">← Back to results</button>
+  <div class="card" style="margin-top:12px;">
+    <div class="kicker">Ticket #${tid}</div>
+    <h2 style="font-family:var(--font-display);margin:0 0 4px;">${ticketTitle(tid)}</h2>
+    <p class="page-sub" style="margin-bottom:0;">Every logged event for this ticket, oldest to newest — timestamps to the millisecond.</p>
+    <div class="tl-wrap"><div class="timeline">${items}</div></div>
+  </div>
+  ${renderRespondPanel(tid, u)}
+  `;
+}
+
+// Permission gate: who is allowed to act on a ticket right now.
+function respondPermission(tid, u){
+  const owner = currentOwner(tid);
+  if(isTerminal(owner.status)) return {mode:'none'};
+  if(isGM(u.id)) return {mode:'none'};
+  if(isDeptId(owner.assignedTo)){
+    if(isManager(u.id) && u.dept===owner.assignedTo) return {mode:'triage'};
+    return {mode:'none'};
+  }
+  if(owner.assignedTo===u.id){
+    return {mode: isWorker(u.id) ? 'done-only' : 'full'};
+  }
+  // Manager looking at a teammate's ticket (e.g. from the Department view) —
+  // can reassign it, but marking it done/snoozing stays with the assignee.
+  const ownerEmp = emp(owner.assignedTo);
+  if(isManager(u.id) && u.dept && ownerEmp && ownerEmp.dept===u.dept){
+    return {mode:'oversee'};
+  }
+  return {mode:'none'};
+}
+
+function renderRespondPanel(tid, u){
+  const perm = respondPermission(tid, u);
+  const owner = currentOwner(tid);
+  if(perm.mode==='none') return '';
+  if(perm.mode==='triage'){
+    return `
+    <div class="card" style="margin-top:14px;">
+      <div class="section-label" style="margin-top:0;">Triage this ticket</div>
+      <div class="btn-row">
+        <button class="btn btn-sm" data-respond="forward" data-tid="${tid}">Assign to person</button>
+        <button class="btn btn-sm" data-respond="claim" data-tid="${tid}">Handle personally</button>
+      </div>
+    </div>`;
+  }
+  if(perm.mode==='done-only'){
+    return `
+    <div class="card" style="margin-top:14px;">
+      <div class="section-label" style="margin-top:0;">Respond to this ticket</div>
+      <p class="hint" style="margin-bottom:10px;">As a worker, you can mark your own tickets done. Reassigning or postponing is a manager action.</p>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-sm" data-respond="done" data-tid="${tid}">Mark done</button>
+      </div>
+    </div>`;
+  }
+  if(perm.mode==='oversee'){
+    return `
+    <div class="card" style="margin-top:14px;">
+      <div class="section-label" style="margin-top:0;">Manager oversight</div>
+      <p class="hint" style="margin-bottom:10px;">Currently with ${nameOf(owner.assignedTo)}. You can reassign it within ${u.dept ? dept(u.dept).name : 'your team'}.</p>
+      <div class="btn-row">
+        <button class="btn btn-sm" data-respond="reassign" data-tid="${tid}">Reassign</button>
+      </div>
+    </div>`;
+  }
+  const teammates = (u.dept ? deptWorkers(u.dept) : []).filter(e=>e.id!==u.id);
+  return `
+  <div class="card" style="margin-top:14px;">
+    <div class="section-label" style="margin-top:0;">Respond to this ticket</div>
+    <div class="btn-row">
+      <button class="btn btn-amber btn-sm" data-respond="snooze" data-tid="${tid}">Snooze</button>
+      <button class="btn btn-sm" data-respond="postpone" data-tid="${tid}">Postpone</button>
+      <button class="btn btn-primary btn-sm" data-respond="done" data-tid="${tid}">Mark done</button>
+      ${isManager(u.id) && teammates.length ? `<button class="btn btn-sm" data-respond="reassign" data-tid="${tid}">Reassign to teammate</button>` : ''}
+    </div>
+  </div>`;
+}
+
+// ----- Org Overview (GM: read-only, org-wide, grouped by department) -----
+function renderOrgOverview(u){
+  const groups = DEPARTMENTS.map(d=>{
+    const tids = allTicketIds().filter(tid=>{
+      const o = currentOwner(tid);
+      return o && emp(o.assignedTo) && emp(o.assignedTo).dept===d.id;
+    });
+    return {dept:d, tids};
+  });
+  return `
+  <h1 class="page-title">Org Overview</h1>
+  <p class="page-sub">Read-only view across every department's tickets, wherever they currently sit. Use Flow Finder to inspect any of them in detail.</p>
+  ${groups.map(g=>`
+    <div class="section-label">${g.dept.name} (${g.tids.length})</div>
+    ${g.tids.length ? `<div class="ticket-list">${g.tids.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty">Nothing currently in ${g.dept.name}.</div>`}
+  `).join('')}
+  `;
+}
+
+// ---------- Toast ----------
+function toast(msg){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className='toast';
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(()=>el.remove(), 3200);
+}
+
+// ---------- Modal for respond actions ----------
+function openRespondModal(kind, tid){
+  const actor = currentUser();
+  const backdrop = document.createElement('div');
+  backdrop.className='modal-backdrop';
+  const titles = {snooze:'Snooze', postpone:'Postpone', done:'Mark as done', forward:'Assign to a person', claim:'Handle personally', reassign:'Reassign to teammate'};
+  let extra = '';
+  if(kind==='snooze'){
+    extra = `<div class="field"><label>Snooze for</label><select id="rm-time"><option value="1800000">30 minutes</option><option value="3600000" selected>1 hour</option><option value="14400000">4 hours</option><option value="86400000">1 day</option></select></div>`;
+  } else if(kind==='postpone'){
+    extra = `<div class="field"><label>Postpone by (days)</label><input type="text" id="rm-days" value="1"></div>`;
+  } else if(kind==='forward' || kind==='reassign'){
+    const people = assignablePeopleFor(actor).filter(e=>e.id!==actor.id || kind==='forward');
+    extra = `<div class="field"><label>Assign to</label><select id="rm-person">${people.map(e=>`<option value="${e.id}">${e.name} — ${e.title}</option>`).join('')}</select></div>
+             <span class="hint">${isManager(actor.id) && actor.dept ? `Limited to ${dept(actor.dept).name}.` : ''}</span>`;
+  }
+  backdrop.innerHTML = `
+    <div class="modal">
+      <h3>${titles[kind]}</h3>
+      <p class="modal-sub">#${tid} · ${ticketTitle(tid)}</p>
+      ${extra}
+      <div class="field"><label>Comment (required)</label><textarea id="rm-comment" placeholder="What's the update?"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="rm-cancel">Cancel</button>
+        <button class="btn btn-primary" id="rm-confirm">Confirm</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector('#rm-cancel').onclick=()=>backdrop.remove();
+  backdrop.querySelector('#rm-confirm').onclick=()=>{
+    const comment = backdrop.querySelector('#rm-comment').value.trim();
+    if(!comment){ toast('A comment is required before you can respond.'); return; }
+    const actorId = state.currentUserId;
+    if(kind==='snooze'){
+      const mins = parseInt(backdrop.querySelector('#rm-time').value,10);
+      respondSnooze({ticketId:tid, actorId, comment, snoozeUntilMs: nowMs()+mins});
+      toast('Snoozed. The countdown resets from the new time.');
+    } else if(kind==='postpone'){
+      const days = parseInt(backdrop.querySelector('#rm-days').value,10) || 1;
+      respondPostpone({ticketId:tid, actorId, comment, days});
+      toast(`Postponed ${days} day(s).`);
+    } else if(kind==='done'){
+      respondDone({ticketId:tid, actorId, comment});
+      toast('Marked done. No further alerts for this ticket.');
+    } else if(kind==='forward' || kind==='reassign'){
+      const person = backdrop.querySelector('#rm-person').value;
+      forwardTicket({ticketId:tid, actorId, toAssignee:person, note:comment});
+      toast(`Assigned to ${nameOf(person)}.`);
+    } else if(kind==='claim'){
+      claimPersonally({ticketId:tid, actorId, note:comment});
+      toast('Taken on personally.');
+    }
+    backdrop.remove();
+    render();
+  };
+}
+
+// ---------- Wiring ----------
+function wireGlobal(){
+  document.querySelectorAll('[data-ff]').forEach(b=>{
+    b.onclick = ()=>{
+      if(b.dataset.ff==='reset') demoOffsetMs = 0;
+      else demoOffsetMs += parseInt(b.dataset.ff,10);
+      render();
+    };
+  });
+  document.querySelectorAll('[data-view]').forEach(b=>{
+    b.onclick=()=>{ state.view=b.dataset.view; state.ffSelectedTicket=null; render(); };
+  });
+  document.querySelectorAll('[data-subtab]').forEach(b=>{
+    b.onclick=()=>{ state.deptSubtab=b.dataset.subtab; render(); };
+  });
+  document.querySelectorAll('[data-mystatus]').forEach(b=>{
+    b.onclick=()=>{ state.myStatusFilter=b.dataset.mystatus; render(); };
+  });
+  document.querySelectorAll('[data-deptstatus]').forEach(b=>{
+    b.onclick=()=>{ state.deptStatusFilter=b.dataset.deptstatus; render(); };
+  });
+  document.querySelectorAll('[data-ffmode]').forEach(b=>{
+    b.onclick=()=>{ state.ffMode=b.dataset.ffmode; state.ffQuery=''; state.ffSelectedTicket=null; render(); };
+  });
+  const ffq = document.getElementById('ffQuery');
+  if(ffq){
+    const ev = state.ffMode==='ticket' ? 'input' : 'change';
+    ffq.addEventListener(ev, ()=>{ state.ffQuery = ffq.value; render(); });
+  }
+  document.querySelectorAll('[data-open-ticket]').forEach(row=>{
+    row.onclick=()=>{
+      const tid = row.dataset.openTicket;
+      state.view='flow';
+      state.ffSelectedTicket = tid;
+      render();
+    };
+  });
+  const ffBack = document.getElementById('ffBack');
+  if(ffBack) ffBack.onclick=()=>{ state.ffSelectedTicket=null; render(); };
+
+  document.querySelectorAll('[data-respond]').forEach(b=>{
+    b.onclick=()=> openRespondModal(b.dataset.respond, b.dataset.tid);
+  });
+
+  const ntSubmit = document.getElementById('nt-submit');
+  if(ntSubmit) ntSubmit.onclick=()=>{
+    syncNewTicketFields();
+    const f = newTicketForm;
+    if(!f.title.trim()){ toast('Give this a name first.'); return; }
+    if(!f.assignedTo){ toast('Choose who this is assigned to.'); return; }
+    const tid = createTicket({creatorId: state.currentUserId, title:f.title, description:f.description||'(no description provided)', priority:f.priority, subject:f.subject, assignedTo:f.assignedTo});
+    toast(`Ticket created and routed to ${nameOf(f.assignedTo)}.`);
+    newTicketForm = {priority:'Medium', subject:'Employee', assignedTo:'', title:'', description:''};
+    state.view='flow'; state.ffSelectedTicket=tid;
+    render();
+  };
+  const ntReset = document.getElementById('nt-reset');
+  if(ntReset) ntReset.onclick=()=>{ newTicketForm = {priority:'Medium', subject:'Employee', assignedTo:'', title:'', description:''}; render(); };
+  bindNewTicketLiveFields();
+}
+
+function syncNewTicketFields(){
+  const t = document.getElementById('nt-title'); if(t) newTicketForm.title = t.value;
+  const d = document.getElementById('nt-desc'); if(d) newTicketForm.description = d.value;
+  const p = document.getElementById('nt-priority'); if(p) newTicketForm.priority = p.value;
+  const s = document.getElementById('nt-subject'); if(s) newTicketForm.subject = s.value;
+  const a = document.getElementById('nt-assignee'); if(a) newTicketForm.assignedTo = a.value;
+}
+function bindNewTicketLiveFields(){
+  const a = document.getElementById('nt-assignee');
+  if(a) a.onchange = ()=>{ newTicketForm.assignedTo = a.value; };
+  const p = document.getElementById('nt-priority');
+  if(p) p.onchange = ()=>{ newTicketForm.priority = p.value; };
+  const s = document.getElementById('nt-subject');
+  if(s) s.onchange = ()=>{ newTicketForm.subject = s.value; };
+}
+
+// periodic re-render so overdue flags stay live without user action
+setInterval(()=>{
+  if(state.view==='my' || state.view==='dept' || (state.view==='flow' && !state.ffSelectedTicket) || state.view==='org'){
+    render();
+  }
+}, 15000);
+
+// ---------- Boot ----------
+ME = bootstrapIdentity();
+state.currentUserId = ME.id;
+applyOverlay(); // show this browser's own local tickets immediately, if any
+render();
+loadTickets(); // then read the real ap2_ticLog cache (IndexedDB) and merge it in
+</script>
+</body>
+</html>
