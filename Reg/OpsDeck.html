@@ -1302,10 +1302,9 @@ function renderNewTicket(u){
     <div class="field">
       <label>Assigned to</label>
       <select id="nt-assignee">
-        <option value="">Select…</option>
-        ${assignablePeopleFor(u).map(e=>`<option value="${e.id}" ${f.assignedTo===e.id?'selected':''}>${e.name} — ${e.title}</option>`).join('')}
+        ${groupedAssigneeOptionsHtml(u, assignablePeopleFor(u), f.assignedTo)}
       </select>
-      ${isManager(u.id) && u.dept ? `<span class="hint">As a manager, you can assign to people in ${dept(u.dept).name}.</span>` : ''}
+      <span class="hint">${u.dept ? `${dept(u.dept).name} shows first — you can also send this to any other department.` : 'Pick anyone in the directory, from any department.'}</span>
     </div>
     <div class="btn-row">
       <button class="btn btn-primary" id="nt-submit">Create ticket</button>
@@ -1314,10 +1313,43 @@ function renderNewTicket(u){
   </div>`;
 }
 
+// Every real, non-visitor person in the directory (from users.json) can be
+// assigned or transferred to — this is what enables both intra-department
+// (same team) and inter-department (cross-team) ticket transfers for
+// everyone, not just managers/GM. Visitors never receive work.
 function assignablePeopleFor(u){
-  if(isGM(u.id)) return EMPLOYEES;
-  if(isManager(u.id) && u.dept) return deptWorkers(u.dept);
-  return [u];
+  return assignableEmployees();
+}
+
+// Renders <optgroup> blocks: the acting user's own department first
+// (labeled "your team"), then every other department, then anyone with no
+// department on record. This is what lets a single dropdown offer BOTH
+// same-department and outside-department people, grouped so it's obvious
+// which is which — used for "Assigned to" (new ticket) and "Assign to a
+// person" / "Reassign to teammate" (respond modal).
+function groupedAssigneeOptionsHtml(u, people, selectedId){
+  const ownDeptId = u && u.dept;
+  const own    = people.filter(e=>ownDeptId && e.dept===ownDeptId);
+  const rest   = people.filter(e=>!(ownDeptId && e.dept===ownDeptId));
+
+  const byDept = {};
+  rest.forEach(e=>{
+    const label = e.dept && dept(e.dept) ? dept(e.dept).name : 'No department';
+    (byDept[label] = byDept[label] || []).push(e);
+  });
+
+  const optionsFor = list => list.map(e =>
+    `<option value="${e.id}" ${selectedId===e.id?'selected':''}>${e.name} — ${e.title}</option>`
+  ).join('');
+
+  let html = '<option value="">Select…</option>';
+  if(own.length){
+    html += `<optgroup label="${ownDeptId && dept(ownDeptId) ? dept(ownDeptId).name+' (your team)' : 'Your team'}">${optionsFor(own)}</optgroup>`;
+  }
+  Object.keys(byDept).sort().forEach(label=>{
+    html += `<optgroup label="${label}">${optionsFor(byDept[label])}</optgroup>`;
+  });
+  return html;
 }
 
 // ----- Flow Finder -----
@@ -1535,8 +1567,8 @@ function openRespondModal(kind, tid){
     extra = `<div class="field"><label>Postpone by (days)</label><input type="text" id="rm-days" value="1"></div>`;
   } else if(kind==='forward' || kind==='reassign'){
     const people = assignablePeopleFor(actor).filter(e=>e.id!==actor.id || kind==='forward');
-    extra = `<div class="field"><label>Assign to</label><select id="rm-person">${people.map(e=>`<option value="${e.id}">${e.name} — ${e.title}</option>`).join('')}</select></div>
-             <span class="hint">${isManager(actor.id) && actor.dept ? `Limited to ${dept(actor.dept).name}.` : ''}</span>`;
+    extra = `<div class="field"><label>Assign to</label><select id="rm-person">${groupedAssigneeOptionsHtml(actor, people, '')}</select></div>
+             <span class="hint">${actor.dept ? `${dept(actor.dept).name} shows first — cross-department transfer is available too.` : ''}</span>`;
   }
   backdrop.innerHTML = `
     <div class="modal">
@@ -1668,6 +1700,7 @@ ME = bootstrapIdentity();
 state.currentUserId = ME.id;
 applyOverlay(); // show this browser's own local tickets immediately, if any
 render();
+loadUsersDirectory(); // fetch users.json -> populate EMPLOYEES/DEPARTMENTS for every dropdown
 loadTickets(); // then read the real ap2_ticLog cache (IndexedDB) and merge it in
 </script>
 </body>
