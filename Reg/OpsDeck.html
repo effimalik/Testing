@@ -320,23 +320,7 @@ function _readSession(){
 // Fallback used only when this file is opened standalone (no ap_session yet)
 // so the portal still renders something sensible while you wire up login.
 const FALLBACK_SESSION = {
-  sessionId:'demo', token:'demo',
-  email:'afanhaidarzia@gmail.com',
-  name:'Afan Haidar',
-  role:'OIC | Delivero',
-  loginAt: Date.now() - 3600000,
-  lastActive: Date.now(),
-  permissions:{
-    ap2_accLog:{label:'Accounts', apiKey:'accLog', paramKey:'type', access:{view:true,add:false,editDelete:false}},
-    ap2_bike:{label:'Bikes', apiKey:'bike', paramKey:'type', access:{view:true,add:true,editDelete:true}},
-    ap2_cioLog:{label:'Check in/out', apiKey:'cioLog', paramKey:'type', access:{view:true,add:false,editDelete:false}},
-    ap2_dedLog:{label:'Ded Log', apiKey:'dedLog', paramKey:'type', access:{view:true,add:false,editDelete:false}},
-    ap2_docLog:{label:'Doc Log', apiKey:'docLog', paramKey:'type', access:{view:true,add:false,editDelete:false}},
-    ap2_employee:{label:'Employees', apiKey:'employee', paramKey:'type', access:{view:true,add:false,editDelete:false}},
-    ap2_loginData:{label:'User Admin', apiKey:'loginData', paramKey:'type', access:{view:false,add:false,editDelete:false}},
-    ap2_master:{label:'Master Sheet', apiKey:'master', paramKey:'type', access:{view:true,add:false,editDelete:false}},
-    ap2_sim:{label:'SIMs', apiKey:'sim', paramKey:'type', access:{view:true,add:true,editDelete:true}},
-  }
+
 };
 
 function _classifyTier(designation){
