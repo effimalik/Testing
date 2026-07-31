@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpsDeck — Ticket &amp; Task Portal</title>
 <script src="https://effimalik.github.io/Testing/shared/auth.js?v=5"></script>
+<script src="https://effimalik.github.io/Testing/shared/code.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/cacheWatcher.js?v=1"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -124,6 +127,16 @@
   .page-sub{color:var(--text-muted);font-size:13.5px;margin:0 0 20px;}
   .section-label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin:26px 0 10px;display:flex;align-items:center;gap:8px;}
   .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  /* ---------- Status filter pills ---------- */
+  .filter-pill-row{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 16px;}
+  .status-pill{
+    font-family:var(--font-mono);font-size:11px;font-weight:600;
+    padding:5px 11px;border-radius:20px;border:1px solid var(--border);
+    background:var(--panel);color:var(--text-dim);transition:.12s;
+  }
+  .status-pill:hover{background:var(--panel-hover);color:var(--text);}
+  .status-pill.active{background:var(--teal-dim);color:var(--teal);border-color:var(--teal-dim);}
 
   /* ---------- Ticket rows ---------- */
   .ticket-list{display:flex;flex-direction:column;gap:8px;}
@@ -437,29 +450,159 @@ let TICKET_TITLES = {};
 let seq = 0;
 function genId(){ return nowMs()*1000 + (seq++); }
 
-// Real persistence: everything written through s1()/s2() (ticket creation,
-// forwards, snoozes, done, etc.) is cached in the browser's localStorage,
-// so it survives page reloads without any backend. This is a genuine
-// browser cache, not sample content — a fresh browser/profile starts with
-// an empty portal, exactly like a real, unused install would.
-const STORAGE_KEY = 'opsdeck_ticket_log_v1';
-function saveToCache(){
-  try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({SHEET1, SHEET2, TICKET_TITLES, seq}));
-  }catch(e){ /* localStorage unavailable (private mode, etc.) — app still runs, just won't persist */ }
+/* ═══════════ CACHE — via shared cacheWatcher.js, with a safe fallback ═══════════
+   Same pattern as allBike.html / allSim.html: single source of truth is the
+   ap2_ticLog key inside the shared ap2_fleet_cache IndexedDB, written by
+   dataLayer.js. If cacheWatcher.js fails to load (blocked, 404, iPad flake,
+   etc.) this page must NOT throw and must NOT stop the rest of the script —
+   so when AP2CacheWatcher isn't there, build a tiny local stand-in with the
+   same shape, using the page's own direct (timeout-guarded) IndexedDB read.
+   ════════════════════════════════════════════════════════════════════════ */
+const _AP2_CACHE_KEY = 'ap2_ticLog';
+
+if (typeof window.AP2CacheWatcher === 'undefined') {
+  console.warn('[OpsDeck] cacheWatcher.js did not load — using local fallback');
+  window.AP2CacheWatcher = (function () {
+    const _IDB_NAME = 'ap2_fleet_cache', _IDB_STORE = 'datasets';
+    let _conn = null;
+    function _open() {
+      if (_conn) return Promise.resolve(_conn);
+      return new Promise((res, rej) => {
+        let done = false;
+        const req = indexedDB.open(_IDB_NAME);
+        const t = setTimeout(() => { if (!done) { done = true; rej(new Error('idb-open-timeout')); } }, 2000);
+        req.onsuccess = e => { if (!done) { done = true; clearTimeout(t); _conn = e.target.result; res(_conn); } };
+        req.onerror   = e => { if (!done) { done = true; clearTimeout(t); rej(e.target.error); } };
+      });
+    }
+    return {
+      init() {},
+      subscribe() { return () => {}; }, // no cross-page notifications available in fallback mode
+      notifyNow() {},
+      getStatus() { return { healthy: false, mode: 'local-fallback', lastError: 'cacheWatcher.js not loaded' }; },
+      async readKey(key) {
+        try {
+          const db  = await _open();
+          if (!db.objectStoreNames.contains(_IDB_STORE)) {
+            // Store doesn't exist yet — cache hasn't been warmed in this
+            // browser session yet. That's normal, not an error.
+            return null;
+          }
+          const rec = await new Promise((res, rej) => {
+            const r = db.transaction(_IDB_STORE, 'readonly').objectStore(_IDB_STORE).get(key);
+            r.onsuccess = () => res(r.result || null);
+            r.onerror   = () => rej(r.error);
+          });
+          return (rec && Array.isArray(rec.data) && rec.data.length) ? rec.data : null;
+        } catch (e) {
+          if (e && e.name === 'NotFoundError') return null; // store not created yet — normal
+          console.warn('[OpsDeck] fallback read failed:', e.message);
+          return null;
+        }
+      }
+    };
+  })();
 }
-function loadFromCache(){
+
+// Thin wrapper kept so the rest of this file doesn't need to change —
+// actual read lives centrally in cacheWatcher.js when it's available,
+// or in the fallback above when it isn't.
+async function _readCache(){
+  return AP2CacheWatcher.readKey(_AP2_CACHE_KEY);
+}
+
+// Writes (ticket creation, forwards, snoozes, done, etc.) currently mutate
+// SHEET1/SHEET2 in memory only for the lifetime of this page — same as
+// allBike.html's _dpSave(), which updates its in-memory `bikes` array and
+// relies on the real write path (GAS backend → Sheet → cache) to persist.
+// Wire an actual GAS write call here once the ticket-log write endpoint
+// exists; until then this is a deliberate no-op so it never masks that gap.
+function saveToCache(){ /* no-op — see comment above */ }
+
+/* ═══════════ NORMALISE LOG ROW ═══════════
+   ap2_ticLog rows arrive as objects (mirroring the ticLog sheet), keyed by
+   header name. Handles the header spellings seen in the sheet, defensively,
+   the same way allBike.html's normaliseRow() covers both array and object
+   shapes coming out of the cache.
+   ════════════════════════════════════════════════════════════════════ */
+function normaliseLogRow(r){
+  if(!r) return null;
+  const _s = v => (v !== null && v !== undefined && v !== '') ? String(v).trim() : '';
+  const ticketId = _s(r.Ticket_ID || r.ticketId || r['Ticket ID']);
+  if(!ticketId) return null;
+  return {
+    logIdLabel: _s(r.Log_ID || r.logId || r['Log ID']),
+    ticketId,
+    action:     _s(r.Action || r.action),
+    priority:   _s(r.Priority || r.priority) || 'Medium',
+    type:       _s(r.Type || r.type) || 'Ticket',
+    assignedTo: _s(r['Assigned To'] || r.assignedTo || r['Assigned By'] || r.assignedBy),
+    actorId:    _s(r['Assigned By'] || r.assignedBy || r.actorId),
+    notes:      _s(r.Notes || r.notes || r['Timestamp/Detail']),
+    subject:    _s(r.Subject || r.subject) || null,
+    title:      _s(r.Title || r.title) || null,
+  };
+}
+
+/* ═══════════ BUILD SHEET1/SHEET2 FROM ap2_ticLog ═══════════
+   SHEET1 is the raw log; SHEET2 (status) is derived per row via the same
+   parseAction() used by ingestTicket() — so the two can never drift apart,
+   whether the log came from a bulk import or (as here) the live cache.
+   logId must stay numeric (fmtTs()/timeline gaps subtract it directly), so
+   each row gets a synthetic ms timestamp that preserves the log's own
+   order — 1 minute apart — while logIdLabel keeps the original "L12" text
+   around in case it's ever wanted for display.
+   ════════════════════════════════════════════════════════════════════ */
+function buildFromLogRows(rawRows){
+  const rows = rawRows.map(normaliseLogRow).filter(Boolean);
+  const seqOf = s => { const m = String(s).match(/(\d+)\s*$/); return m ? parseInt(m[1],10) : 0; };
+  rows.sort((a,b)=> seqOf(a.logIdLabel) - seqOf(b.logIdLabel));
+
+  const baseMs = Date.now() - rows.length*60000;
+  const newSheet1 = [], newSheet2 = [], newTitles = {};
+  const prevByTicket = {};
+  rows.forEach((row,i)=>{
+    const t = baseMs + i*60000;
+    const prev = prevByTicket[row.ticketId] || {status:null,lastStatus:null,dueAt:null,target:null};
+    const parsed = parseAction(row.action, t);
+    const cur = parsed.carryForward ? {...prev} : {status:parsed.status, lastStatus:parsed.lastStatus||null, dueAt:parsed.dueAt||null, target:parsed.target||null};
+    prevByTicket[row.ticketId] = cur;
+    newSheet1.push({logId:t, logIdLabel:row.logIdLabel, ticketId:row.ticketId, action:row.action, priority:row.priority, type:row.type, assignedTo:row.assignedTo, actorId:row.actorId, notes:row.notes, dueAt:cur.dueAt, target:cur.target, subject:row.subject});
+    newSheet2.push({ticketId:row.ticketId, status:cur.status, lastStatus:cur.lastStatus, id:t});
+    if(row.title && !newTitles[row.ticketId]) newTitles[row.ticketId] = row.title;
+  });
+  return {newSheet1, newSheet2, newTitles};
+}
+
+// ═══════════ LOAD — cache → SHEET1/SHEET2 → render ═══════════
+let _emptyReadStreak = 0; // guards a single flaky/transient empty read from wiping good data
+async function loadTicketsFromCache(silent){
   try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return false;
-    const data = JSON.parse(raw);
-    if(!data || !Array.isArray(data.SHEET1)) return false;
-    SHEET1 = data.SHEET1;
-    SHEET2 = data.SHEET2 || [];
-    TICKET_TITLES = data.TICKET_TITLES || {};
-    seq = data.seq || 0;
-    return true;
-  }catch(e){ return false; }
+    const rows = await _readCache();
+    if(rows && rows.length){
+      _emptyReadStreak = 0;
+      const {newSheet1, newSheet2, newTitles} = buildFromLogRows(rows);
+      SHEET1 = newSheet1; SHEET2 = newSheet2; TICKET_TITLES = newTitles;
+      if(silent) render();
+      return true;
+    } else if(SHEET1.length){
+      // Don't trust a single empty read (IndexedDB reads can be transient
+      // on iPad) — only treat it as a genuine clear-out after seeing it twice.
+      _emptyReadStreak++;
+      if(_emptyReadStreak >= 2){ SHEET1 = []; SHEET2 = []; TICKET_TITLES = {}; _emptyReadStreak = 0; if(silent) render(); }
+    }
+    return SHEET1.length > 0;
+  }catch(e){
+    console.warn('[OpsDeck] loadTicketsFromCache error:', e.message);
+    return false;
+  }
+}
+
+try {
+  AP2CacheWatcher.init();
+  AP2CacheWatcher.subscribe(() => { loadTicketsFromCache(true); });
+} catch (e) {
+  console.warn('[OpsDeck] cacheWatcher wiring failed, continuing without live updates:', e.message);
 }
 
 function s1(logId,ticketId,action,priority,type,assignedTo,actorId,notes,dueAt,target,subject){
@@ -485,6 +628,36 @@ function currentOwner(ticketId){
   } : null;
 }
 function allTicketIds(){ return [...new Set(SHEET1.map(r=>r.ticketId))]; }
+
+// ---------- Shared filter (user / department / status) ----------
+// One place all views funnel through so "who's it assigned to", "which
+// department", and "what status" stay consistent everywhere instead of
+// each view re-implementing its own .filter() with slightly different logic.
+//   assignedTo — employee id (email) the ticket is currently with
+//   deptId     — department id; matches either a direct dept assignment
+//                or the department of whoever currently holds the ticket
+//   status     — exact current status string (e.g. 'Open', 'Pending')
+function filterTickets({assignedTo, deptId, status} = {}){
+  return allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    if(!o) return false;
+    if(assignedTo && o.assignedTo !== assignedTo) return false;
+    if(deptId){
+      const holderDept = isDeptId(o.assignedTo) ? o.assignedTo : (emp(o.assignedTo) ? emp(o.assignedTo).dept : null);
+      if(holderDept !== deptId) return false;
+    }
+    if(status && o.status !== status) return false;
+    return true;
+  });
+}
+// Distinct statuses currently present, in a sensible fixed display order —
+// used to build status-filter pills without hardcoding a list that could
+// drift out of sync with parseAction()'s actual output.
+const STATUS_ORDER = ['Open','Pending','Forwarded','In Progress','Postponed','Resolved','Done'];
+function statusesPresent(ticketIds){
+  const present = new Set(ticketIds.map(tid=>currentOwner(tid).status));
+  return STATUS_ORDER.filter(s=>present.has(s));
+}
 function ticketTimeline(ticketId){
   return SHEET1.filter(r=>r.ticketId===ticketId)
     .sort((a,b)=>a.logId-b.logId)
@@ -550,6 +723,8 @@ const state = {
   ffQuery: '',
   ffSelectedTicket: null,
   respondModal: null,
+  myStatusFilter: 'all',   // status pill selected on My Portal
+  deptStatusFilter: 'all', // status pill selected on Department view
 };
 function currentUser(){ return emp(state.currentUserId); }
 
@@ -742,14 +917,26 @@ function ticketRow(tid, opts={}){
 }
 
 // ----- My Portal -----
+function statusFilterPills(ticketIds, activeStatus, dataAttr){
+  const statuses = statusesPresent(ticketIds);
+  if(!statuses.length) return '';
+  return `
+  <div class="filter-pill-row" data-status-scope="${dataAttr}">
+    <button class="status-pill ${activeStatus==='all'?'active':''}" data-statusf="all">All (${ticketIds.length})</button>
+    ${statuses.map(s=>{
+      const n = ticketIds.filter(tid=>currentOwner(tid).status===s).length;
+      return `<button class="status-pill ${activeStatus===s?'active':''}" data-statusf="${s}">${s} (${n})</button>`;
+    }).join('')}
+  </div>`;
+}
+
 function renderMyPortal(u){
-  const mine = allTicketIds().filter(tid=>{
-    const o = currentOwner(tid);
-    return o && o.assignedTo===u.id;
-  }).sort((a,b)=>{
+  const mineAll = filterTickets({assignedTo:u.id}).sort((a,b)=>{
     const oa=currentOwner(a), ob=currentOwner(b);
     return (oa.sinceMs) - (ob.sinceMs);
   });
+  const filterVal = state.myStatusFilter;
+  const mine = filterVal==='all' ? mineAll : mineAll.filter(tid=>currentOwner(tid).status===filterVal);
   const open = mine.filter(tid=>!isTerminal(currentOwner(tid).status));
   const done = mine.filter(tid=>isTerminal(currentOwner(tid).status));
 
@@ -759,6 +946,7 @@ function renderMyPortal(u){
     <div>
       <h1 class="page-title">My Portal</h1>
       <p class="page-sub">Tickets currently assigned to you. Tap one to see the full timeline and respond.</p>
+      ${statusFilterPills(mineAll, filterVal, 'my')}
       <div class="section-label">Needs attention (${open.length})</div>
       ${open.length ? `<div class="ticket-list">${open.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty"><b>All clear.</b>Nothing waiting on you right now.</div>`}
       ${done.length ? `
@@ -824,10 +1012,9 @@ function renderDeptPortal(u){
 function renderDeptReadOnly(u, opts={}){
   const d = u.dept ? dept(u.dept) : null;
   if(!d) return renderMyPortal(u);
-  const inDept = allTicketIds().filter(tid=>{
-    const o = currentOwner(tid);
-    return o && emp(o.assignedTo) && emp(o.assignedTo).dept===d.id;
-  });
+  const inDeptAll = filterTickets({deptId:d.id});
+  const filterVal = state.deptStatusFilter;
+  const inDept = filterVal==='all' ? inDeptAll : inDeptAll.filter(tid=>currentOwner(tid).status===filterVal);
   const teamCount = deptWorkers(d.id).length;
   return `
   <div class="grid2">
@@ -835,6 +1022,7 @@ function renderDeptReadOnly(u, opts={}){
     <div>
       <h1 class="page-title">${d.name} — Department</h1>
       <p class="page-sub">${opts.manager ? `Every ticket currently with anyone in ${d.name} (${teamCount} member${teamCount===1?'':'s'}). Open one to reassign it if needed.` : `Read-only view of everything currently in ${d.name}. Your own items are in My Portal.`}</p>
+      ${statusFilterPills(inDeptAll, filterVal, 'dept')}
       ${inDept.length ? `<div class="ticket-list">${inDept.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty"><b>Nothing here yet.</b>Tickets in ${d.name} will show up here.</div>`}
     </div>
   </div>`;
@@ -1166,6 +1354,14 @@ function wireGlobal(){
   document.querySelectorAll('[data-subtab]').forEach(b=>{
     b.onclick=()=>{ state.deptSubtab=b.dataset.subtab; render(); };
   });
+  document.querySelectorAll('[data-statusf]').forEach(b=>{
+    b.onclick=()=>{
+      const scope = b.closest('[data-status-scope]')?.dataset.statusScope;
+      if(scope==='dept') state.deptStatusFilter = b.dataset.statusf;
+      else state.myStatusFilter = b.dataset.statusf;
+      render();
+    };
+  });
   document.querySelectorAll('[data-ffmode]').forEach(b=>{
     b.onclick=()=>{ state.ffMode=b.dataset.ffmode; state.ffQuery=''; state.ffSelectedTicket=null; render(); };
   });
@@ -1229,11 +1425,53 @@ setInterval(()=>{
   }
 }, 15000);
 
+/* ── Message listener from parent index.html ──
+   Same PRIMARY data path used by allBike.html / allSim.html: the parent
+   shell pushes cached datasets straight from its own memory over
+   postMessage, bypassing IndexedDB entirely when running inside the app
+   (the fix for iPad/Safari IDB flakiness). Direct IndexedDB reads via
+   loadTicketsFromCache()/AP2CacheWatcher remain the fallback for when this
+   page is opened standalone. */
+window.addEventListener('message', (e) => {
+  if (!e.data) return;
+  if (e.origin !== window.location.origin &&
+      e.origin !== 'null' /* file:// */ &&
+      !e.origin.startsWith('https://effimalik.github.io')) return;
+
+  if (e.data.type === 'ap-theme' && e.data.theme) {
+    document.documentElement.setAttribute('data-theme', e.data.theme);
+  }
+
+  if (e.data.type === 'ap-cache-preload' && e.data.datasets) {
+    const rows = e.data.datasets[_AP2_CACHE_KEY];
+    if (Array.isArray(rows) && rows.length) {
+      const {newSheet1, newSheet2, newTitles} = buildFromLogRows(rows);
+      SHEET1 = newSheet1; SHEET2 = newSheet2; TICKET_TITLES = newTitles;
+      render();
+    }
+  }
+
+  if (e.data.type === 'ap-cache-ready' && e.data.key === _AP2_CACHE_KEY) {
+    const rows = e.data.data;
+    if (Array.isArray(rows) && rows.length) {
+      const {newSheet1, newSheet2, newTitles} = buildFromLogRows(rows);
+      SHEET1 = newSheet1; SHEET2 = newSheet2; TICKET_TITLES = newTitles;
+      render();
+    }
+  }
+
+  if (e.data.type === 'ap-cache-updated') {
+    try { window.parent.postMessage({ type: 'ap-cache-request', key: _AP2_CACHE_KEY }, '*'); } catch (err) {}
+  }
+});
+
+try { window.parent.postMessage({ type: 'ap-cache-request', key: _AP2_CACHE_KEY }, '*'); } catch (e) {}
+
 // ---------- Boot ----------
 ME = bootstrapIdentity();
 state.currentUserId = ME.id;
-loadFromCache(); // real browser cache — starts empty until real tickets are created
-render();
+render(); // paint immediately (parent preload above may already have filled SHEET1)
+loadTicketsFromCache().then(() => render()); // IndexedDB path — starts empty until ap2_ticLog is populated
 </script>
 </body>
 </html>
