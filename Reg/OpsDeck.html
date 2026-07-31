@@ -432,7 +432,7 @@ function discoverEmployeesFromCache(ticLogRows, inferredDeptName){
    ticLog-based auto-discovery above only ever fills gaps for emails this
    file doesn't (yet) know about.
    ════════════════════════════════════════════════════════════════════════ */
-const USERS_JSON_PATH = './users.json';
+const USERS_JSON_PATH = 'https://effimalik.github.io/Testing/shared/users.json';
 
 function applyUsersDirectory(list){
   (list||[]).forEach(u=>{
