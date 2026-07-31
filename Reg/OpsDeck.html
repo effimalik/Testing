@@ -331,41 +331,67 @@ function _classifyTier(designation){
   return 'worker';
 }
 
-// ---------- Reference data (built around whoever is actually signed in) ----------
+// ---------- Reference data ----------
+// IMPORTANT: this roster is independent of whoever happens to be signed in.
+// Tickets in the log are assigned to fixed emails (see EMAIL_A / EMAIL_B
+// below) — filtering works by matching the CURRENT session's email against
+// that assignedTo field, not by mutating the data to fit the session. That
+// was the earlier bug: the seed re-stamped every ticket with whichever
+// email was currently logged in, so "My Portal" trivially showed everything.
 const DEPARTMENTS = [];
 const EMPLOYEES = [];
 
-// Extra teammates can be dropped in here later (or, better, just start
-// appearing in the ticket log with their own email) — the portal doesn't
-// need anything hardcoded beyond this to support them.
-const EXTRA_EMPLOYEES = [];
+function deptIdFor(name){
+  const key = (name || 'Operations').trim();
+  let d = DEPARTMENTS.find(x => x.name.toLowerCase() === key.toLowerCase());
+  if(!d){ d = {id:'D_'+(key.replace(/[^a-z0-9]/gi,'').toUpperCase()||'OPS'), name:key, headId:null}; DEPARTMENTS.push(d); }
+  return d;
+}
+
+// Registers (or updates, if already present) one employee by email.
+function registerEmployee({email, name, title, deptName, tier}){
+  if(!email) return null;
+  const d = tier==='gm' ? null : deptIdFor(deptName);
+  const rec = {
+    id: email, email, name: name || email, title: title || 'Team Member',
+    dept: d ? d.id : null, role: tier || 'worker',
+  };
+  if(d && (tier==='manager' || tier==='gm') && !d.headId) d.headId = email;
+  const existing = EMPLOYEES.find(e=>e.id===email);
+  if(existing){ Object.assign(existing, rec); return existing; }
+  EMPLOYEES.push(rec);
+  return rec;
+}
+
+// Known teammates, keyed by real email — this is what makes filtering mean
+// something. Add real teammates here (or wire this up to your employee
+// sheet) and department queues / oversight / Flow Finder / Org Overview
+// all pick them up automatically; nothing else needs to change.
+const ROSTER = [
+  {email:'afanhaidarzia@gmail.com', name:'Afan Haidar', title:'OIC', deptName:'Delivero', tier:'manager'},
+  {email:'sas.ds.llc@gmail.com', name:'Sas', title:'Support Executive', deptName:'Delivero', tier:'worker'},
+];
 
 let ME = null; // the signed-in employee record, set by bootstrapIdentity()
 
 function bootstrapIdentity(){
+  // Load the known roster first so department peers exist regardless of
+  // who's currently signed in.
+  ROSTER.forEach(r => registerEmployee(r));
+
   const session = _readSession() || FALLBACK_SESSION;
   const parts = (session.role || '').split('|').map(s => (s||'').trim()).filter(Boolean);
   const designation = parts[0] || 'Team Member';
   const teamName = parts[1] || 'Operations';
   const tier = _classifyTier(designation);
 
-  let d = DEPARTMENTS.find(x => x.name.toLowerCase() === teamName.toLowerCase());
-  if(!d){ d = {id:'D_'+teamName.replace(/[^a-z0-9]/gi,'').toUpperCase(), name:teamName, headId:null}; DEPARTMENTS.push(d); }
-  if(tier === 'manager' || tier === 'gm') d.headId = session.email;
-
-  const me = {
-    id: session.email,
-    email: session.email,
-    name: session.name || session.email,
-    title: designation,
-    dept: tier === 'gm' ? null : d.id,
-    role: tier,
-    permissions: session.permissions || null,
-    loginAt: session.loginAt || null,
-    lastActive: session.lastActive || null,
-  };
-  EMPLOYEES.push(me);
-  EXTRA_EMPLOYEES.forEach(e => EMPLOYEES.push(e));
+  // The session is the source of truth for whoever is actually logged in —
+  // it creates (or updates) their roster entry with the real name/title/team
+  // reported at login, without touching anyone else's record.
+  const me = registerEmployee({ email: session.email, name: session.name, title: designation, deptName: teamName, tier });
+  me.permissions = session.permissions || null;
+  me.loginAt = session.loginAt || null;
+  me.lastActive = session.lastActive || null;
   return me;
 }
 
@@ -410,6 +436,31 @@ let SHEET2 = []; // the derived status sheet: one row per action, same logId
 let TICKET_TITLES = {};
 let seq = 0;
 function genId(){ return nowMs()*1000 + (seq++); }
+
+// Real persistence: everything written through s1()/s2() (ticket creation,
+// forwards, snoozes, done, etc.) is cached in the browser's localStorage,
+// so it survives page reloads without any backend. This is a genuine
+// browser cache, not sample content — a fresh browser/profile starts with
+// an empty portal, exactly like a real, unused install would.
+const STORAGE_KEY = 'opsdeck_ticket_log_v1';
+function saveToCache(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({SHEET1, SHEET2, TICKET_TITLES, seq}));
+  }catch(e){ /* localStorage unavailable (private mode, etc.) — app still runs, just won't persist */ }
+}
+function loadFromCache(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    const data = JSON.parse(raw);
+    if(!data || !Array.isArray(data.SHEET1)) return false;
+    SHEET1 = data.SHEET1;
+    SHEET2 = data.SHEET2 || [];
+    TICKET_TITLES = data.TICKET_TITLES || {};
+    seq = data.seq || 0;
+    return true;
+  }catch(e){ return false; }
+}
 
 function s1(logId,ticketId,action,priority,type,assignedTo,actorId,notes,dueAt,target,subject){
   SHEET1.push({logId,ticketId,action,priority,type,assignedTo,actorId,notes:notes||'',dueAt:dueAt||null,target:target||null,subject:subject||null});
@@ -467,6 +518,11 @@ function parseAction(action, logTime){
   return {carryForward:true};
 }
 
+// Reusable bulk-log importer: turns a plain [action, priority, subject,
+// notes, gapMins] row list into proper SHEET1/SHEET2 entries via
+// parseAction(), advancing a shared clock. Not called anywhere by default —
+// wire it up if you ever need to import a real historical log in bulk.
+let clockCursor = Date.now();
 function ingestTicket(ticketId, title, actorEmail, rows){
   TICKET_TITLES[ticketId] = title;
   let prev = {status:null,lastStatus:null,dueAt:null,target:null};
@@ -484,92 +540,6 @@ function ingestTicket(ticketId, title, actorEmail, rows){
   });
 }
 
-// ---------- Seed: the actual log, transcribed row for row ----------
-// base clock starts "yesterday" so untouched items read as already overdue
-// without needing to touch the fast-forward control — exactly like a real
-// queue you're opening for the first time this morning.
-let clockCursor = new Date('2026-07-29T07:00:00.000').getTime();
-
-function seedFromLog(actorEmail){
-  ingestTicket('TK-3001','Leave balance query', actorEmail, [
-    ['Ticket raised','Low','Employee','Leave balance query',0],
-    ['Attended','Low','Employee','Balance shared',10],
-    ['Status changed to Done','Low','Employee','Closed, no escalation needed',5],
-  ]);
-  ingestTicket('TK-3002','IT status check', actorEmail, [
-    ['Ticket raised','Medium','Department','IT status check requested',25],
-    ['Reminder set for after 1 hour','Low','Department','',2],
-    ['Reminder triggered — Attended','Medium','Department','',65],
-    ['Status changed to Done','Low','Department','Resolved by individual',8],
-  ]);
-  ingestTicket('TK-3003','Transaction mismatch — TXN45210', actorEmail, [
-    ['Ticket raised','High','Transaction','Mismatch in TXN45210',20],
-    ['Forwarded to Department (Finance)','High','Transaction','',5],
-    ['Attended — verified logs','Medium','Transaction','',40],
-    ['Status changed to Resolved','Low','Transaction','Resolved by department',15],
-  ]);
-  ingestTicket('TK-3004','Fine waiver request', actorEmail, [
-    ['Ticket raised','Medium','Fine','Fine waiver requested',25],
-    ['Forwarded to Person (Compliance Officer)','Medium','Fine','',5],
-    ['Attended — reviewed history','Low','Fine','',30],
-    ['Status changed to Done','Low','Fine','Resolved by individual',10],
-  ]);
-  ingestTicket('TK-3005','Payslip discrepancy', actorEmail, [
-    ['Ticket raised','High','Employee','Payslip discrepancy',18],
-    ['Assigned to Priya Nair','Medium','Employee','',6],
-    ['Reminder set for date 2026-08-05','Low','Employee','Follow up post payroll cycle',4],
-    ['Reminder triggered — Attended','Medium','Employee','',6],
-    ['Status changed to Done','Low','Employee','Resolved by individual',18],
-  ]);
-  ingestTicket('TK-3006','HR policy clarification', actorEmail, [
-    ['Ticket raised','Low','Department','HR policy clarification',15],
-    ['Auto-routed to HR queue','Low','Department','',2],
-    ['Attended','Medium','Department','',50],
-    ['Status changed to Done','Low','Department','Resolved by department',12],
-  ]);
-  ingestTicket('TK-3007','Refund request — TXN-98213', actorEmail, [
-    ['Ticket raised','High','Transaction','Refund request TXN-98213',10],
-    ['Escalation permission granted (ledger adjustment)','High','Transaction','Named permission, not generic',8],
-    ['Status changed to In Progress','Medium','Transaction','',20],
-    ['Status changed to Resolved','Low','Transaction','',25],
-  ]);
-  ingestTicket('TK-3008','Parking fine dispute', actorEmail, [
-    ['Ticket raised','Medium','Fine','Parking fine dispute',22],
-    ['Forwarded to Department (Admin)','Medium','Fine','',5],
-    ['Reminder set for after 1 hour','Low','Fine','Awaiting footage',3],
-    ['Attended — footage reviewed','Medium','Fine','',65],
-    ['Status changed to Done','Low','Fine','Resolved by department',10],
-  ]);
-  ingestTicket('TK-3009','Attendance correction', actorEmail, [
-    ['Ticket raised','Medium','Employee','Attendance correction',30],
-    ['Auto-assigned to Ramesh Iyer','Low','Employee','No human dispatcher involved',2],
-    ['Attended — correcting biometric log','High','Employee','',35],
-    ['Status changed to Resolved','Low','Employee','Resolved by individual',15],
-  ]);
-  ingestTicket('TK-3010','Asset return request', actorEmail, [
-    ['Ticket raised','Low','Asset','Asset return request',12],
-    ['Reminder set for date 2026-08-10','Low','Asset','Confirm receipt',3],
-    ['Attended — asset verified','Medium','Asset','',40],
-    ['Status changed to Done','Low','Asset','Resolved by individual',10],
-  ]);
-  ingestTicket('TK-3011','Budget query', actorEmail, [
-    ['Ticket raised','Medium','Department','Budget query — routed only, not yet worked',20],
-  ]);
-  ingestTicket('TK-3012','ID card reissue', actorEmail, [
-    ['Ticket raised','Low','Employee','ID card reissue — awaiting pickup',15],
-    ['Status set to Pending (no reminder yet)','Low','Employee','Plain pending, no active reminder',5],
-  ]);
-  ingestTicket('TK-3013','Duplicate charge dispute', actorEmail, [
-    ['Ticket raised','High','Transaction','Duplicate charge — forwarded to Person',18],
-    ['Forwarded to Person (u5 – Ops Manager)','High','Transaction','First-level forward',5],
-    ['Re-forwarded to Person (u6 – Compliance Officer)','High','Transaction','Second-level forward',8],
-    ['Attended — verified duplicate','Medium','Transaction','',35],
-    ['Status changed to Done','Low','Transaction','Resolved by individual',12],
-  ]);
-  ingestTicket('TK-3014','Late fine — duplicate of TK-3009', actorEmail, [
-    ['Ticket raised','Medium','Fine','Late fine — forwarded, points to existing ticket TK-3009',20],
-  ]);
-}
 
 // ---------- App state ----------
 const state = {
@@ -619,11 +589,15 @@ function tickReminderEngine(){
 
 // ---------- Mutations (append-only) ----------
 function createTicket({creatorId, title, description, priority, subject, assignedTo}){
-  const t = genId();
-  s1(t, t, 'Ticket raised', priority, 'Ticket', assignedTo, creatorId, description, null, null, subject);
-  s2(t, 'Open', null, t);
-  TICKET_TITLES[t] = title;
-  return t;
+  const logId = genId();
+  const ticketId = 'T' + logId; // always a string — logId (numeric) would silently
+                                 // fail strict-equality lookups once it round-trips
+                                 // through an HTML data-* attribute as a string
+  s1(logId, ticketId, 'Ticket raised', priority, 'Ticket', assignedTo, creatorId, description, null, null, subject);
+  s2(ticketId, 'Open', null, logId);
+  TICKET_TITLES[ticketId] = title;
+  saveToCache();
+  return ticketId;
 }
 function forwardTicket({ticketId, actorId, toAssignee, note}){
   const owner = currentOwner(ticketId);
@@ -631,36 +605,42 @@ function forwardTicket({ticketId, actorId, toAssignee, note}){
   const label = isDeptId(toAssignee) ? nameOf(toAssignee) : nameOf(toAssignee);
   s1(l, ticketId, `Forwarded to ${label}`, owner.priority, owner.type, toAssignee, actorId, note || 'Forwarded.', null, label, owner.subject);
   s2(ticketId, 'Forwarded', isDeptId(toAssignee)?'Department':'Person', l);
+  saveToCache();
 }
 function claimPersonally({ticketId, actorId, note}){
   const owner = currentOwner(ticketId);
   const l = genId();
   s1(l, ticketId, 'Taken on personally', owner.priority, owner.type, actorId, actorId, note || 'Handling this directly.', null, null, owner.subject);
   s2(ticketId, 'Forwarded', 'Person', l);
+  saveToCache();
 }
 function fireReminder(ticketId){
   const owner = currentOwner(ticketId);
   const l = genId();
   s1(l, ticketId, 'Reminder set', owner.priority, owner.type, owner.assignedTo, owner.assignedTo, 'Automated: no response after grace period.', null, owner.target, owner.subject);
   s2(ticketId, 'Pending', 'Reminder', l);
+  saveToCache();
 }
 function respondSnooze({ticketId, actorId, comment, snoozeUntilMs}){
   const owner = currentOwner(ticketId);
   const l = genId();
   s1(l, ticketId, 'Snoozed', owner.priority, owner.type, owner.assignedTo, actorId, comment, snoozeUntilMs, owner.target, owner.subject);
   s2(ticketId, 'Pending', 'Reminder', l);
+  saveToCache();
 }
 function respondPostpone({ticketId, actorId, comment, days}){
   const owner = currentOwner(ticketId);
   const l = genId();
   s1(l, ticketId, `Postponed ${days} day(s)`, owner.priority, owner.type, owner.assignedTo, actorId, comment, null, owner.target, owner.subject);
   s2(ticketId, 'Postponed', 'Reminder', l);
+  saveToCache();
 }
 function respondDone({ticketId, actorId, comment}){
   const owner = currentOwner(ticketId);
   const l = genId();
   s1(l, ticketId, 'Status changed to Done', owner.priority, owner.type, owner.assignedTo, actorId, comment, null, null, owner.subject);
   s2(ticketId, 'Done', null, l);
+  saveToCache();
 }
 
 // ---------- Rendering ----------
@@ -831,43 +811,16 @@ function profileCard(u){
 // ----- Department Portal (manager: triage rights) -----
 function renderDeptPortal(u){
   if(!isManager(u.id) || !u.dept) return renderMyPortal(u);
-  const d = dept(u.dept);
-  if(deptWorkers(d.id).length<=1){
-    // Solo team right now — a queue/oversight split has nothing to show yet,
-    // so just mirror everything the department touches in one list.
-    return renderDeptReadOnly(u, {manager:true});
-  }
-  const queue = allTicketIds().filter(tid=>{
-    const o = currentOwner(tid);
-    return o && o.assignedTo===d.id;
-  });
-  const assignedOut = allTicketIds().filter(tid=>{
-    const everInDept = SHEET1.some(r=>r.ticketId===tid && r.assignedTo===d.id);
-    const o = currentOwner(tid);
-    return everInDept && o && !isDeptId(o.assignedTo);
-  });
-  return `
-  <div class="grid2">
-    ${profileCard(u)}
-    <div>
-      <h1 class="page-title">${d.name} — Department Portal</h1>
-      <p class="page-sub">Triage the department queue, or track what you've already handed out to your team.</p>
-      <div class="subtabs">
-        <button data-subtab="queue" class="${state.deptSubtab==='queue'?'active':''}">Queue (${queue.length})</button>
-        <button data-subtab="oversight" class="${state.deptSubtab==='oversight'?'active':''}">Assigned out (${assignedOut.length})</button>
-      </div>
-      ${state.deptSubtab==='queue' ? (
-        queue.length ? `<div class="ticket-list">${queue.map(t=>ticketRow(t,{subLabel:'Waiting for you to triage'})).join('')}</div>`
-        : `<div class="empty"><b>Queue is empty.</b>Nothing waiting on ${d.name} right now.</div>`
-      ) : (
-        assignedOut.length ? `<div class="ticket-list">${assignedOut.map(t=>ticketRow(t)).join('')}</div>`
-        : `<div class="empty"><b>Nothing tracked yet.</b>Tickets you assign out will show up here for oversight.</div>`
-      )}
-    </div>
-  </div>`;
+  // Tickets in this log are always assigned to a person's email, never to a
+  // department id directly — so "department view" means everyone currently
+  // in the department, not a separate unclaimed queue. Managers can still
+  // reassign a teammate's ticket from here (see renderRespondPanel's
+  // 'oversee' mode).
+  return renderDeptReadOnly(u, {manager:true});
 }
 
-// ----- Department Portal (worker: read-only, or solo-team manager view) -----
+// ----- Department Portal (worker: read-only; manager: same list, with
+// reassignment rights on teammates' tickets via the respond panel) -----
 function renderDeptReadOnly(u, opts={}){
   const d = u.dept ? dept(u.dept) : null;
   if(!d) return renderMyPortal(u);
@@ -875,12 +828,13 @@ function renderDeptReadOnly(u, opts={}){
     const o = currentOwner(tid);
     return o && emp(o.assignedTo) && emp(o.assignedTo).dept===d.id;
   });
+  const teamCount = deptWorkers(d.id).length;
   return `
   <div class="grid2">
     ${profileCard(u)}
     <div>
       <h1 class="page-title">${d.name} — Department</h1>
-      <p class="page-sub">${opts.manager ? `You're currently the only member of ${d.name}, so this mirrors My Portal — invite teammates to build out a real queue.` : `Read-only view of everything that has passed through ${d.name}. Your own items are in My Portal.`}</p>
+      <p class="page-sub">${opts.manager ? `Every ticket currently with anyone in ${d.name} (${teamCount} member${teamCount===1?'':'s'}). Open one to reassign it if needed.` : `Read-only view of everything currently in ${d.name}. Your own items are in My Portal.`}</p>
       ${inDept.length ? `<div class="ticket-list">${inDept.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty"><b>Nothing here yet.</b>Tickets in ${d.name} will show up here.</div>`}
     </div>
   </div>`;
@@ -1055,6 +1009,12 @@ function respondPermission(tid, u){
   if(owner.assignedTo===u.id){
     return {mode: isWorker(u.id) ? 'done-only' : 'full'};
   }
+  // Manager looking at a teammate's ticket (e.g. from the Department view) —
+  // can reassign it, but marking it done/snoozing stays with the assignee.
+  const ownerEmp = emp(owner.assignedTo);
+  if(isManager(u.id) && u.dept && ownerEmp && ownerEmp.dept===u.dept){
+    return {mode:'oversee'};
+  }
   return {mode:'none'};
 }
 
@@ -1079,6 +1039,16 @@ function renderRespondPanel(tid, u){
       <p class="hint" style="margin-bottom:10px;">As a worker, you can mark your own tickets done. Reassigning or postponing is a manager action.</p>
       <div class="btn-row">
         <button class="btn btn-primary btn-sm" data-respond="done" data-tid="${tid}">Mark done</button>
+      </div>
+    </div>`;
+  }
+  if(perm.mode==='oversee'){
+    return `
+    <div class="card" style="margin-top:14px;">
+      <div class="section-label" style="margin-top:0;">Manager oversight</div>
+      <p class="hint" style="margin-bottom:10px;">Currently with ${nameOf(owner.assignedTo)}. You can reassign it within ${u.dept ? dept(u.dept).name : 'your team'}.</p>
+      <div class="btn-row">
+        <button class="btn btn-sm" data-respond="reassign" data-tid="${tid}">Reassign</button>
       </div>
     </div>`;
   }
@@ -1262,7 +1232,7 @@ setInterval(()=>{
 // ---------- Boot ----------
 ME = bootstrapIdentity();
 state.currentUserId = ME.id;
-seedFromLog(ME.email);
+loadFromCache(); // real browser cache — starts empty until real tickets are created
 render();
 </script>
 </body>
