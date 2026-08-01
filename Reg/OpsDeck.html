@@ -1279,7 +1279,9 @@ function renderNewTicket(u){
       <label>Assigned to</label>
       <select id="nt-assignee">
         <option value="">Select…</option>
-        ${assignablePeopleFor(u).map(e=>`<option value="${e.id}" ${f.assignedTo===e.id?'selected':''}>${e.name} — ${e.title}</option>`).join('')}
+        ${f.subject==='Department'
+          ? assignableDepartmentsFor(u).map(d=>`<option value="${d.id}" ${f.assignedTo===d.id?'selected':''}>${d.name}</option>`).join('')
+          : assignablePeopleFor(u).map(e=>`<option value="${e.id}" ${f.assignedTo===e.id?'selected':''}>${e.name} — ${e.title}</option>`).join('')}
       </select>
       ${isManager(u.id) && u.dept ? `<span class="hint">As a manager, you can assign to people in ${dept(u.dept).name}.</span>` : ''}
     </div>
@@ -1294,6 +1296,10 @@ function assignablePeopleFor(u){
   if(isGM(u.id)) return EMPLOYEES;
   if(isManager(u.id) && u.dept) return deptWorkers(u.dept);
   return [u];
+}
+function assignableDepartmentsFor(u){
+  if(isManager(u.id) && u.dept) return DEPARTMENTS.filter(d=>d.id===u.dept);
+  return DEPARTMENTS;
 }
 
 // ----- Flow Finder -----
@@ -1629,7 +1635,7 @@ function bindNewTicketLiveFields(){
   const p = document.getElementById('nt-priority');
   if(p) p.onchange = ()=>{ newTicketForm.priority = p.value; };
   const s = document.getElementById('nt-subject');
-  if(s) s.onchange = ()=>{ newTicketForm.subject = s.value; };
+  if(s) s.onchange = ()=>{ syncNewTicketFields(); newTicketForm.subject = s.value; newTicketForm.assignedTo=''; render(); };
 }
 
 // periodic re-render so overdue flags stay live without user action
