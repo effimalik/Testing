@@ -1292,7 +1292,7 @@ function renderNewTicket(u){
 
 function assignablePeopleFor(u){
   if(isGM(u.id)) return EMPLOYEES;
-  if(isManager(u.id) && u.dept) return deptWorkers(u.dept);
+  if(u.dept) return deptWorkers(u.dept); // any employee (worker or manager) with a department sees their department mates
   return [u];
 }
 
@@ -1512,7 +1512,7 @@ function openRespondModal(kind, tid){
   } else if(kind==='forward' || kind==='reassign'){
     const people = assignablePeopleFor(actor).filter(e=>e.id!==actor.id || kind==='forward');
     extra = `<div class="field"><label>Assign to</label><select id="rm-person">${people.map(e=>`<option value="${e.id}">${e.name} — ${e.title}</option>`).join('')}</select></div>
-             <span class="hint">${isManager(actor.id) && actor.dept ? `Limited to ${dept(actor.dept).name}.` : ''}</span>`;
+             <span class="hint">${!isGM(actor.id) && actor.dept ? `Limited to ${dept(actor.dept).name}.` : ''}</span>`;
   }
   backdrop.innerHTML = `
     <div class="modal">
