@@ -1303,17 +1303,16 @@ function assignablePeopleFor(u){
 }
 
 // ----- Cache-driven Subject → Assigned-to dependent dropdowns -----
-// Subject options are whatever the real log has actually seen, falling back
-// to the historical fixed list only when the cache hasn't loaded/has nothing
-// yet (first paint, before loadTickets() resolves).
+// Subject options come entirely from what the real log has actually seen —
+// no fixed/hardcoded list. Before the cache has loaded (or if it's ever
+// empty) this is simply empty and the dropdown shows nothing to pick yet.
 function subjectOptionsFromCache(){
   const seen = new Map(); // lower-cased key -> first-seen display casing
   SHEET1.forEach(r=>{
     const s = String(r.subject||'').trim();
     if(s && !seen.has(s.toLowerCase())) seen.set(s.toLowerCase(), s);
   });
-  const list = [...seen.values()];
-  return list.length ? list : ['Employee','Department','Transaction','Fine','Asset'];
+  return [...seen.values()];
 }
 // Unique "Assigned to" destinations that have actually shown up for a given
 // Subject in the real log — the dependent dropdown only ever offers
@@ -1352,7 +1351,17 @@ function renderFlowFinder(u){
       if(scoped && !ticketTouchesDept(tid, u.dept)) return false;
       if(!state.ffQuery) return true;
       const q = state.ffQuery.toLowerCase();
-      return String(tid).toLowerCase().includes(q) || ticketTitle(tid).toLowerCase().includes(q);
+      if(String(tid).toLowerCase().includes(q)) return true;
+      if(ticketTitle(tid).toLowerCase().includes(q)) return true;
+      // Also match on any employee or department name that has touched this
+      // ticket — nameOf() falls back to the raw cache string (e.g. a
+      // department destination like "Talabat") when it isn't a known
+      // employee, so this covers plain department names too.
+      return SHEET1.some(r=>r.ticketId===tid && (
+        nameOf(r.assignedTo).toLowerCase().includes(q) ||
+        nameOf(r.actorId).toLowerCase().includes(q) ||
+        (emp(r.assignedTo) && emp(r.assignedTo).dept && dept(emp(r.assignedTo).dept) && dept(emp(r.assignedTo).dept).name.toLowerCase().includes(q))
+      ));
     });
   } else if(state.ffMode==='employee'){
     matches = state.ffQuery ? allTicketIds().filter(tid=>{
@@ -1377,7 +1386,7 @@ function renderFlowFinder(u){
   const departmentOptions = uniqueAssignedToForSubject('Department');
 
   const queryControl = state.ffMode==='ticket'
-    ? `<input type="text" id="ffQuery" placeholder="Search by ticket ID or name…" value="${state.ffQuery.replace(/"/g,'&quot;')}" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">`
+    ? `<input type="text" id="ffQuery" placeholder="Search by ticket #, name, employee, or department…" value="${state.ffQuery.replace(/"/g,'&quot;')}" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">`
     : state.ffMode==='employee'
     ? `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
          <option value="">${employeeOptions.length ? 'Choose an employee…' : 'Select…'}</option>
