@@ -393,15 +393,23 @@ function parseRoleString(roleStr){
 // Scans ap2_ticLog's raw rows for every distinct email and makes sure each
 // one has an employee record — this is the "dynamic module" part: the
 // people directory grows automatically from the cache, nothing hardcoded.
+// Rows where Subject="Department" carry a department NAME (e.g. "Talabat")
+// in the Assigned-to column, not an email — those must become real
+// DEPARTMENTS entries (via deptIdFor), never a fake employee record keyed
+// by the department's name.
 function discoverEmployeesFromCache(ticLogRows, inferredDeptName){
-  const seen = new Set();
+  const seenEmails = new Set();
   (ticLogRows||[]).forEach(r=>{
-    [_pick(r,['Assigned By','assignedBy']), _pick(r,['Assigned to','Assigned To','assignedTo'])].forEach(email=>{
-      email = String(email||'').trim();
-      if(email) seen.add(email);
-    });
+    const subject = String(_pick(r,['Subject','subject'])||'').trim();
+    const assignedBy = String(_pick(r,['Assigned By','assignedBy'])||'').trim();
+    const assignedTo = String(_pick(r,['Assigned to','Assigned To','assignedTo'])||'').trim();
+    if(assignedBy) seenEmails.add(assignedBy);
+    if(assignedTo){
+      if(subject==='Department') deptIdFor(assignedTo); // registers/reuses the real department
+      else seenEmails.add(assignedTo);
+    }
   });
-  seen.forEach(email=>{
+  seenEmails.forEach(email=>{
     if(emp(email)) return; // already known (from users.json or a real login) — never downgrade it
     registerEmployee({ email, name: nameFromEmail(email), title:'Team member (auto-detected)', deptName: inferredDeptName, tier:'worker' });
   });
@@ -816,7 +824,14 @@ function rebuildFromRealCache(ticLogRaw, ticketStatusRaw){
     if(parsed.carryForward) cur = {...prev};
     else cur = {status:parsed.status, lastStatus:parsed.lastStatus||null, dueAt:parsed.dueAt||null, target:parsed.target||null};
     prevByTicket[r.ticketId] = cur;
-    s1(t, r.ticketId, r.action, r.priority, r.type, r.assignedToEmail || r.actorEmail, r.actorEmail, r.notes, cur.dueAt, cur.target, r.subject, false);
+    // Normalize "Assigned to" to the internal id shape the rest of the app
+    // expects: a D_... department id for Subject=Department rows (the raw
+    // cache value here is a plain department name like "Talabat"), or the
+    // email as-is for everything else.
+    const assignedTo = r.subject==='Department'
+      ? (r.assignedToEmail ? deptIdFor(r.assignedToEmail).id : r.actorEmail)
+      : (r.assignedToEmail || r.actorEmail);
+    s1(t, r.ticketId, r.action, r.priority, r.type, assignedTo, r.actorEmail, r.notes, cur.dueAt, cur.target, r.subject, false);
     s2(r.ticketId, cur.status, cur.lastStatus, t);
     // No explicit title column in the real schema — derive a readable one
     // from the first meaningful note/subject seen for this ticket.
