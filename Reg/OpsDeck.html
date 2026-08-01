@@ -393,23 +393,15 @@ function parseRoleString(roleStr){
 // Scans ap2_ticLog's raw rows for every distinct email and makes sure each
 // one has an employee record — this is the "dynamic module" part: the
 // people directory grows automatically from the cache, nothing hardcoded.
-// Rows where Subject="Department" carry a department NAME (e.g. "Talabat")
-// in the Assigned-to column, not an email — those must become real
-// DEPARTMENTS entries (via deptIdFor), never a fake employee record keyed
-// by the department's name.
 function discoverEmployeesFromCache(ticLogRows, inferredDeptName){
-  const seenEmails = new Set();
+  const seen = new Set();
   (ticLogRows||[]).forEach(r=>{
-    const subject = String(_pick(r,['Subject','subject'])||'').trim();
-    const assignedBy = String(_pick(r,['Assigned By','assignedBy'])||'').trim();
-    const assignedTo = String(_pick(r,['Assigned to','Assigned To','assignedTo'])||'').trim();
-    if(assignedBy) seenEmails.add(assignedBy);
-    if(assignedTo){
-      if(subject==='Department') deptIdFor(assignedTo); // registers/reuses the real department
-      else seenEmails.add(assignedTo);
-    }
+    [_pick(r,['Assigned By','assignedBy']), _pick(r,['Assigned to','Assigned To','assignedTo'])].forEach(email=>{
+      email = String(email||'').trim();
+      if(email) seen.add(email);
+    });
   });
-  seenEmails.forEach(email=>{
+  seen.forEach(email=>{
     if(emp(email)) return; // already known (from users.json or a real login) — never downgrade it
     registerEmployee({ email, name: nameFromEmail(email), title:'Team member (auto-detected)', deptName: inferredDeptName, tier:'worker' });
   });
@@ -824,14 +816,7 @@ function rebuildFromRealCache(ticLogRaw, ticketStatusRaw){
     if(parsed.carryForward) cur = {...prev};
     else cur = {status:parsed.status, lastStatus:parsed.lastStatus||null, dueAt:parsed.dueAt||null, target:parsed.target||null};
     prevByTicket[r.ticketId] = cur;
-    // Normalize "Assigned to" to the internal id shape the rest of the app
-    // expects: a D_... department id for Subject=Department rows (the raw
-    // cache value here is a plain department name like "Talabat"), or the
-    // email as-is for everything else.
-    const assignedTo = r.subject==='Department'
-      ? (r.assignedToEmail ? deptIdFor(r.assignedToEmail).id : r.actorEmail)
-      : (r.assignedToEmail || r.actorEmail);
-    s1(t, r.ticketId, r.action, r.priority, r.type, assignedTo, r.actorEmail, r.notes, cur.dueAt, cur.target, r.subject, false);
+    s1(t, r.ticketId, r.action, r.priority, r.type, r.assignedToEmail || r.actorEmail, r.actorEmail, r.notes, cur.dueAt, cur.target, r.subject, false);
     s2(r.ticketId, cur.status, cur.lastStatus, t);
     // No explicit title column in the real schema — derive a readable one
     // from the first meaningful note/subject seen for this ticket.
@@ -1263,7 +1248,13 @@ function renderDeptReadOnly(u, opts={}){
 let newTicketForm = {priority:'Medium', subject:'Employee', assignedTo:'', title:'', description:''};
 function renderNewTicket(u){
   const f = newTicketForm;
-  const subjects = ['Employee','Department','Transaction','Fine','Asset'];
+  const subjects = subjectOptionsFromCache();
+  const allowedIds = new Set(assignablePeopleFor(u).map(e=>e.id));
+  // Gate values that resolve to a known employee by the normal assignment
+  // scope (worker: self only, manager: own dept, GM: everyone); a raw
+  // non-employee destination (e.g. a department name like "Talabat") passes
+  // through ungated since it isn't a personal assignment.
+  const assigneeOptions = uniqueAssignedToForSubject(f.subject).filter(v => !emp(v) || allowedIds.has(v));
   return `
   <h1 class="page-title">New Ticket</h1>
   <p class="page-sub">This writes one row to the log — exactly like every later event on this ticket.</p>
@@ -1294,11 +1285,9 @@ function renderNewTicket(u){
       <label>Assigned to</label>
       <select id="nt-assignee">
         <option value="">Select…</option>
-        ${f.subject==='Department'
-          ? assignableDepartmentsFor(u).map(d=>`<option value="${d.id}" ${f.assignedTo===d.id?'selected':''}>${d.name}</option>`).join('')
-          : assignablePeopleFor(u).map(e=>`<option value="${e.id}" ${f.assignedTo===e.id?'selected':''}>${e.name} — ${e.title}</option>`).join('')}
+        ${assigneeOptions.map(v=>`<option value="${v}" ${f.assignedTo===v?'selected':''}>${nameOf(v)}</option>`).join('')}
       </select>
-      ${isManager(u.id) && u.dept ? `<span class="hint">As a manager, you can assign to people in ${dept(u.dept).name}.</span>` : ''}
+      ${f.subject && !assigneeOptions.length ? `<span class="hint">No prior "${f.subject}" tickets in the log yet to suggest a destination from.</span>` : (isManager(u.id) && u.dept ? `<span class="hint">As a manager, you can assign to people in ${dept(u.dept).name}.</span>` : '')}
     </div>
     <div class="btn-row">
       <button class="btn btn-primary" id="nt-submit">Create ticket</button>
@@ -1312,9 +1301,38 @@ function assignablePeopleFor(u){
   if(isManager(u.id) && u.dept) return deptWorkers(u.dept);
   return [u];
 }
-function assignableDepartmentsFor(u){
-  if(isManager(u.id) && u.dept) return DEPARTMENTS.filter(d=>d.id===u.dept);
-  return DEPARTMENTS;
+
+// ----- Cache-driven Subject → Assigned-to dependent dropdowns -----
+// Subject options are whatever the real log has actually seen, falling back
+// to the historical fixed list only when the cache hasn't loaded/has nothing
+// yet (first paint, before loadTickets() resolves).
+function subjectOptionsFromCache(){
+  const seen = new Map(); // lower-cased key -> first-seen display casing
+  SHEET1.forEach(r=>{
+    const s = String(r.subject||'').trim();
+    if(s && !seen.has(s.toLowerCase())) seen.set(s.toLowerCase(), s);
+  });
+  const list = [...seen.values()];
+  return list.length ? list : ['Employee','Department','Transaction','Fine','Asset'];
+}
+// Unique "Assigned to" destinations that have actually shown up for a given
+// Subject in the real log — the dependent dropdown only ever offers
+// destinations with a track record for that Subject, nothing invented. No
+// subject chosen (or nothing logged for it yet) means an empty list, so the
+// dropdown falls back to just "Select…".
+function uniqueAssignedToForSubject(subject){
+  if(!subject) return [];
+  const s = String(subject).trim().toLowerCase();
+  const seen = new Set();
+  const out = [];
+  SHEET1.forEach(r=>{
+    if(String(r.subject||'').trim().toLowerCase() !== s) return;
+    const val = r.assignedTo;
+    if(!val || seen.has(val)) return;
+    seen.add(val);
+    out.push(val);
+  });
+  return out;
 }
 
 // ----- Flow Finder -----
@@ -1338,32 +1356,38 @@ function renderFlowFinder(u){
     });
   } else if(state.ffMode==='employee'){
     matches = state.ffQuery ? allTicketIds().filter(tid=>{
-      return SHEET1.some(r=>r.ticketId===tid && r.actorId===state.ffQuery);
+      return SHEET1.some(r=>r.ticketId===tid && (r.actorId===state.ffQuery || r.assignedTo===state.ffQuery));
     }) : [];
   } else if(state.ffMode==='department'){
     const targetDept = scoped ? u.dept : state.ffQuery;
     matches = targetDept ? allTicketIds().filter(tid=>{
-      return SHEET1.some(r=>r.ticketId===tid && emp(r.assignedTo) && emp(r.assignedTo).dept===targetDept);
+      return SHEET1.some(r=>r.ticketId===tid && (
+        (emp(r.assignedTo) && emp(r.assignedTo).dept===targetDept) ||
+        (!scoped && r.assignedTo===targetDept)
+      ));
     }) : [];
   }
 
   const resultsHtml = matches.length ? matches.map(t=>ticketRow(t)).join('') :
     `<div class="empty"><b>No matches.</b>Try a different search.</div>`;
 
-  const employeeOptions = scoped ? deptWorkers(u.dept) : EMPLOYEES;
+  // Same source as New Ticket's dependent dropdown: only destinations the
+  // real log has actually seen for that Subject, not the full roster.
+  const employeeOptions = uniqueAssignedToForSubject('Employee').filter(v => !scoped || (emp(v) && emp(v).dept===u.dept));
+  const departmentOptions = uniqueAssignedToForSubject('Department');
 
   const queryControl = state.ffMode==='ticket'
     ? `<input type="text" id="ffQuery" placeholder="Search by ticket ID or name…" value="${state.ffQuery.replace(/"/g,'&quot;')}" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">`
     : state.ffMode==='employee'
     ? `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
-         <option value="">Choose an employee…</option>
-         ${employeeOptions.map(e=>`<option value="${e.id}" ${state.ffQuery===e.id?'selected':''}>${e.name}</option>`).join('')}
+         <option value="">${employeeOptions.length ? 'Choose an employee…' : 'Select…'}</option>
+         ${employeeOptions.map(v=>`<option value="${v}" ${state.ffQuery===v?'selected':''}>${nameOf(v)}</option>`).join('')}
        </select>`
     : scoped
     ? `<div class="hint" style="padding:9px 0;">Scoped to ${dept(u.dept).name} — managers see their own department only.</div>`
     : `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
-         <option value="">Choose a department…</option>
-         ${DEPARTMENTS.map(d=>`<option value="${d.id}" ${state.ffQuery===d.id?'selected':''}>${d.name}</option>`).join('')}
+         <option value="">${departmentOptions.length ? 'Choose a department…' : 'Select…'}</option>
+         ${departmentOptions.map(v=>`<option value="${v}" ${state.ffQuery===v?'selected':''}>${nameOf(v)}</option>`).join('')}
        </select>`;
 
   return `
@@ -1650,7 +1674,7 @@ function bindNewTicketLiveFields(){
   const p = document.getElementById('nt-priority');
   if(p) p.onchange = ()=>{ newTicketForm.priority = p.value; };
   const s = document.getElementById('nt-subject');
-  if(s) s.onchange = ()=>{ syncNewTicketFields(); newTicketForm.subject = s.value; newTicketForm.assignedTo=''; render(); };
+  if(s) s.onchange = ()=>{ newTicketForm.subject = s.value; newTicketForm.assignedTo=''; render(); };
 }
 
 // periodic re-render so overdue flags stay live without user action
