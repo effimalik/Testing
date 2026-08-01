@@ -87,7 +87,6 @@
     padding:7px 10px;font-size:13px;max-width:190px;
   }
   .role-pill{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--teal);border:1px solid var(--teal-dim);background:var(--teal-dim);padding:3px 8px;border-radius:20px;font-family:var(--font-mono);white-space:nowrap;flex-shrink:0;}
-  .dir-error-banner{background:var(--red-dim);color:var(--text);border-bottom:1px solid var(--red);padding:9px 24px;font-size:13px;}
 
   @media (max-width:760px){
     .topbar{padding:12px 14px;}
@@ -359,8 +358,10 @@ function deptIdFor(name){
 // Registers (or updates, if already present) one employee by email.
 // deptName===null means "unknown for now" (no department fabricated).
 // deptKnown:false marks a department that's only a best-effort guess (see
-// discoverEmployeesFromCache) rather than a confirmed one from users.json or
-// an actual login — department-scoped views should not treat it as real.
+// discoverEmployeesFromCache) rather than one confirmed by an actual login —
+// note this flag isn't currently used to exclude anything (see
+// assignedToBelongsToDeptName), since a guess is often the only signal the
+// log has at all, but it's kept as an honest record of how sure we are.
 function registerEmployee({email, name, title, deptName, tier, deptKnown=true}){
   if(!email) return null;
   const d = (tier==='gm' || !deptName) ? null : deptIdFor(deptName);
@@ -383,9 +384,9 @@ function nameFromEmail(email){
   return local.split(/[._\-]+/).filter(Boolean).map(w=>w[0].toUpperCase()+w.slice(1)).join(' ') || email;
 }
 
-// Shared "Designation | Department" parser — the same convention used by
-// ap_session's role field is also used by users.json's role field. No pipe
-// (e.g. "GM", "Manager", "Visitor") means a global role with no department.
+// Shared "Designation | Department" parser for a session's role field. No
+// pipe (e.g. "GM", "Manager", "Visitor") means a global role with no
+// department.
 function parseRoleString(roleStr){
   const parts = String(roleStr||'').split('|').map(s=>(s||'').trim()).filter(Boolean);
   const designation = parts[0] || 'Team Member';
@@ -405,56 +406,9 @@ function discoverEmployeesFromCache(ticLogRows, inferredDeptName){
     });
   });
   seen.forEach(email=>{
-    if(emp(email)) return; // already known (from users.json or a real login) — never downgrade it
+    if(emp(email)) return; // already known (from a real login) — never downgrade it
     registerEmployee({ email, name: nameFromEmail(email), title:'Team member (auto-detected)', deptName: inferredDeptName, tier:'worker', deptKnown:false });
   });
-}
-
-/* ═══════════ REAL USER DIRECTORY — users.json ═══════════
-   The authoritative roster: every real person's email, name and
-   "Designation | Department" role, loaded from users.json sitting in the
-   same folder as this file (same pattern as ap2_ticLog — read the real
-   source, don't hand-maintain a copy in code). This is what actually
-   populates every "assigned to" / "transfer to" dropdown in the app; the
-   ticLog-based auto-discovery above only ever fills gaps for emails this
-   file doesn't (yet) know about.
-   ════════════════════════════════════════════════════════════════════════ */
-const USERS_JSON_PATH = 'https://effimalik.github.io/Testing/shared/users.json';
-
-function applyUsersDirectory(list){
-  (list||[]).forEach(u=>{
-    if(!u || !u.email) return;
-    const {designation, teamName, tier} = parseRoleString(u.role);
-    registerEmployee({ email:u.email, name:u.name, title:designation, deptName:teamName, tier });
-  });
-}
-
-// No hardcoded roster here — users.json is the single source of truth for
-// every "assign to" / "transfer to" dropdown. If it can't be loaded, we
-// surface that honestly (see USERS_DIRECTORY_ERROR) instead of fabricating
-// names, so a broken deploy is obvious rather than silently wrong.
-let USERS_DIRECTORY_ERROR = null;
-
-async function loadUsersDirectory(){
-  try{
-    const res = await fetch(USERS_JSON_PATH, {cache:'no-store'});
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const list = await res.json();
-    applyUsersDirectory(list);
-    USERS_DIRECTORY_ERROR = null;
-  }catch(e){
-    console.error('[OpsDeck] users.json failed to load — no directory available:', e.message);
-    USERS_DIRECTORY_ERROR = e.message;
-  }
-  // Re-apply whoever is actually signed in right now on top, in case
-  // users.json is momentarily stale — the live session always wins for you.
-  if(ME){
-    const session = _readSession() || FALLBACK_SESSION;
-    const {designation, teamName, tier} = parseRoleString(session.role);
-    registerEmployee({email:session.email, name:session.name, title:designation, deptName:teamName, tier});
-    ME = emp(session.email);
-  }
-  render();
 }
 
 let ME = null; // the signed-in employee record, set by bootstrapIdentity()
@@ -488,13 +442,13 @@ function nameOf(assignedTo){
   const e = emp(assignedTo); return e ? e.name : assignedTo;
 }
 // A ticket's "Assigned to" belongs to a department in one of two ways:
-// (1) it's an employee whose record's department equals this one — for an
-//     auto-discovered employee (nobody's logged in as them yet, not in
-//     users.json) that department is only ever a guess, defaulted to
-//     whoever was logged in when they were first seen in the log (see
-//     discoverEmployeesFromCache) — but for an Employee-subject ticket
-//     that's the only signal the log has at all, so it's still used here
-//     rather than hiding the ticket entirely; or
+// (1) it's an employee whose record's department name matches — for an
+//     auto-discovered employee (nobody's logged in as them yet) that
+//     department is only ever a guess, defaulted to whoever was logged in
+//     when they were first seen in the log (see discoverEmployeesFromCache)
+//     — but for an Employee-subject ticket that's the only signal the log
+//     has at all, so it's still used here rather than hiding the ticket
+//     entirely; or
 // (2) it's assigned directly to the department by name, as parsed from a
 //     real session's "Designation | Department" role (e.g. session role
 //     "Manager | Delivero" -> department name "Delivero"). The raw cache
@@ -502,14 +456,21 @@ function nameOf(assignedTo){
 //     spelling (seen in practice: "Delivero" in the session vs "Deliveroo"
 //     in the log) — normalized prefix matching absorbs that drift instead
 //     of silently matching nothing.
+// Takes a plain department *name* (not an id) so it works equally for a
+// manager's own confirmed department and for a raw department string picked
+// from Flow Finder's cache-driven department dropdown.
 function normDeptKey(s){ return String(s||'').trim().toLowerCase().replace(/[^a-z0-9]/g,''); }
-function assignedToBelongsToDept(assignedTo, d){
-  if(!assignedTo || !d) return false;
+function assignedToBelongsToDeptName(assignedTo, deptName){
+  if(!assignedTo || !deptName) return false;
+  const n = normDeptKey(deptName);
+  if(!n) return false;
   const e = emp(assignedTo);
-  if(e) return e.dept===d.id;
-  const a = normDeptKey(assignedTo), n = normDeptKey(d.name);
-  if(!a || !n) return false;
-  return a===n || a.indexOf(n)===0 || n.indexOf(a)===0;
+  if(e){
+    const ed = e.dept ? dept(e.dept) : null;
+    if(ed && normDeptKey(ed.name)===n) return true;
+  }
+  const a = normDeptKey(assignedTo);
+  return !!a && (a===n || a.indexOf(n)===0 || n.indexOf(a)===0);
 }
 // A visitor exists in the directory (so their name/email resolve fine in
 // history) but never receives real work — visitors are excluded from every
@@ -1063,7 +1024,6 @@ function render(){
   const u = currentUser();
   app.innerHTML = `
     ${renderTopbar(u)}
-    ${USERS_DIRECTORY_ERROR ? `<div class="dir-error-banner">Couldn't load users.json (${USERS_DIRECTORY_ERROR}) — "assign to" / "transfer to" lists will be incomplete until this is fixed.</div>` : ''}
     <div class="page">${renderView(u)}</div>
   `;
   wireGlobal();
@@ -1079,7 +1039,7 @@ function deptQueueCount(deptId){
   const d = dept(deptId);
   return allTicketIds().filter(tid=>{
     const o = currentOwner(tid);
-    return o && assignedToBelongsToDept(o.assignedTo, d) && !isTerminal(o.status);
+    return o && d && assignedToBelongsToDeptName(o.assignedTo, d.name) && !isTerminal(o.status);
   }).length;
 }
 function orgOpenCount(){
@@ -1253,10 +1213,10 @@ function renderDeptReadOnly(u, opts={}){
   if(!d) return renderMyPortal(u);
   // Filter 1: department — every ticket currently with anyone in this dept,
   // or assigned straight to the department itself by name (see
-  // assignedToBelongsToDept).
+  // assignedToBelongsToDeptName).
   const inDept = allTicketIds().filter(tid=>{
     const o = currentOwner(tid);
-    return o && assignedToBelongsToDept(o.assignedTo, d);
+    return o && assignedToBelongsToDeptName(o.assignedTo, d.name);
   });
   // Filter 2: status.
   const filter = state.deptStatusFilter;
@@ -1366,8 +1326,9 @@ function uniqueAssignedToForSubject(subject){
 
 // ----- Flow Finder -----
 function ticketTouchesDept(tid, deptId){
+  const d = dept(deptId);
   return SHEET1.some(r=>r.ticketId===tid && (
-    (emp(r.assignedTo) && emp(r.assignedTo).dept===deptId) ||
+    (d && assignedToBelongsToDeptName(r.assignedTo, d.name)) ||
     (emp(r.actorId) && emp(r.actorId).dept===deptId)
   ));
 }
@@ -1398,12 +1359,9 @@ function renderFlowFinder(u){
       return SHEET1.some(r=>r.ticketId===tid && (r.actorId===state.ffQuery || r.assignedTo===state.ffQuery));
     }) : [];
   } else if(state.ffMode==='department'){
-    const targetDept = scoped ? u.dept : state.ffQuery;
-    matches = targetDept ? allTicketIds().filter(tid=>{
-      return SHEET1.some(r=>r.ticketId===tid && (
-        (emp(r.assignedTo) && emp(r.assignedTo).dept===targetDept) ||
-        (!scoped && r.assignedTo===targetDept)
-      ));
+    const targetDeptName = scoped ? (dept(u.dept) ? dept(u.dept).name : '') : state.ffQuery;
+    matches = targetDeptName ? allTicketIds().filter(tid=>{
+      return SHEET1.some(r=>r.ticketId===tid && assignedToBelongsToDeptName(r.assignedTo, targetDeptName));
     }) : [];
   }
 
