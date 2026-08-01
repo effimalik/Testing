@@ -490,17 +490,21 @@ function nameOf(assignedTo){
 // A ticket's "Assigned to" belongs to a department in one of two ways:
 // (1) it's an employee with a *confirmed* department (from users.json or an
 //     actual login — see registerEmployee's deptKnown), or
-// (2) it's assigned directly to the department by name, exactly as parsed
-//     from a real session's "Designation | Department" role (e.g. session
-//     role "Manager | Delivero" -> department name "Delivero"), which is
-//     also how a ticket's own Subject/Assigned-to cache row can name a
-//     department directly (Subject:"Department", Assigned to:"Delivero")
-//     with no employee record involved at all.
+// (2) it's assigned directly to the department by name, as parsed from a
+//     real session's "Designation | Department" role (e.g. session role
+//     "Manager | Delivero" -> department name "Delivero"). The raw cache
+//     string doesn't always agree letter-for-letter with the session's
+//     spelling (seen in practice: "Delivero" in the session vs "Deliveroo"
+//     in the log) — normalized prefix matching absorbs that drift instead
+//     of silently matching nothing.
+function normDeptKey(s){ return String(s||'').trim().toLowerCase().replace(/[^a-z0-9]/g,''); }
 function assignedToBelongsToDept(assignedTo, d){
   if(!assignedTo || !d) return false;
   const e = emp(assignedTo);
   if(e) return e.dept===d.id && e.deptKnown;
-  return String(assignedTo).trim().toLowerCase() === d.name.trim().toLowerCase();
+  const a = normDeptKey(assignedTo), n = normDeptKey(d.name);
+  if(!a || !n) return false;
+  return a===n || a.indexOf(n)===0 || n.indexOf(a)===0;
 }
 // A visitor exists in the directory (so their name/email resolve fine in
 // history) but never receives real work — visitors are excluded from every
