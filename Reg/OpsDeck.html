@@ -1292,7 +1292,7 @@ function renderNewTicket(u){
 
 function assignablePeopleFor(u){
   if(isGM(u.id)) return EMPLOYEES;
-  if(u.dept) return deptWorkers(u.dept); // any employee (worker or manager) with a department sees their department mates
+  if(u.dept) return deptWorkers(u.dept).filter(e=>e.role!=='visitor'); // department mates, excluding visitors (never assignable)
   return [u];
 }
 
@@ -1644,6 +1644,7 @@ ME = bootstrapIdentity();
 state.currentUserId = ME.id;
 applyOverlay(); // show this browser's own local tickets immediately, if any
 render();
+loadUsersDirectory(); // fetch users.json — the real roster/department source — and merge it in
 loadTickets(); // then read the real ap2_ticLog cache (IndexedDB) and merge it in
 </script>
 </body>
