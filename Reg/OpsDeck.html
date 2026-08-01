@@ -320,9 +320,7 @@ function _readSession(){
 // Fallback used only when this file is opened standalone (no ap_session yet)
 // so the portal still renders something sensible while you wire up login.
 const FALLBACK_SESSION = {
-  email: 'guest@local',
-  name: 'Guest',
-  role: 'Visitor'
+
 };
 
 function _classifyTier(designation){
@@ -466,10 +464,6 @@ function bootstrapIdentity(){
   // it creates (or updates) their record with the real name/title/team
   // reported at login. This always wins over anything auto-detected.
   const me = registerEmployee({ email: session.email, name: session.name, title: designation, deptName: teamName, tier });
-  if(!me){
-    console.error('[OpsDeck] bootstrapIdentity: no email on session/fallback — cannot register identity.');
-    return registerEmployee({ email:'guest@local', name:'Guest', title:'Visitor', deptName:null, tier:'visitor' });
-  }
   me.permissions = session.permissions || null;
   me.loginAt = session.loginAt || null;
   me.lastActive = session.lastActive || null;
@@ -1298,7 +1292,7 @@ function renderNewTicket(u){
 
 function assignablePeopleFor(u){
   if(isGM(u.id)) return EMPLOYEES;
-  if(u.dept) return deptWorkers(u.dept).filter(e=>e.role!=='visitor'); // department mates, excluding visitors (never assignable)
+  if(isManager(u.id) && u.dept) return deptWorkers(u.dept);
   return [u];
 }
 
@@ -1518,7 +1512,7 @@ function openRespondModal(kind, tid){
   } else if(kind==='forward' || kind==='reassign'){
     const people = assignablePeopleFor(actor).filter(e=>e.id!==actor.id || kind==='forward');
     extra = `<div class="field"><label>Assign to</label><select id="rm-person">${people.map(e=>`<option value="${e.id}">${e.name} — ${e.title}</option>`).join('')}</select></div>
-             <span class="hint">${!isGM(actor.id) && actor.dept ? `Limited to ${dept(actor.dept).name}.` : ''}</span>`;
+             <span class="hint">${isManager(actor.id) && actor.dept ? `Limited to ${dept(actor.dept).name}.` : ''}</span>`;
   }
   backdrop.innerHTML = `
     <div class="modal">
@@ -1650,7 +1644,6 @@ ME = bootstrapIdentity();
 state.currentUserId = ME.id;
 applyOverlay(); // show this browser's own local tickets immediately, if any
 render();
-loadUsersDirectory(); // fetch users.json — the real roster/department source — and merge it in
 loadTickets(); // then read the real ap2_ticLog cache (IndexedDB) and merge it in
 </script>
 </body>
