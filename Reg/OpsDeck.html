@@ -358,12 +358,15 @@ function deptIdFor(name){
 
 // Registers (or updates, if already present) one employee by email.
 // deptName===null means "unknown for now" (no department fabricated).
-function registerEmployee({email, name, title, deptName, tier}){
+// deptKnown:false marks a department that's only a best-effort guess (see
+// discoverEmployeesFromCache) rather than a confirmed one from users.json or
+// an actual login — department-scoped views should not treat it as real.
+function registerEmployee({email, name, title, deptName, tier, deptKnown=true}){
   if(!email) return null;
   const d = (tier==='gm' || !deptName) ? null : deptIdFor(deptName);
   const rec = {
     id: email, email, name: name || email, title: title || 'Team Member',
-    dept: d ? d.id : null, role: tier || 'worker',
+    dept: d ? d.id : null, role: tier || 'worker', deptKnown: d ? deptKnown : false,
   };
   if(d && (tier==='manager' || tier==='gm') && !d.headId) d.headId = email;
   const existing = EMPLOYEES.find(e=>e.id===email);
@@ -403,7 +406,7 @@ function discoverEmployeesFromCache(ticLogRows, inferredDeptName){
   });
   seen.forEach(email=>{
     if(emp(email)) return; // already known (from users.json or a real login) — never downgrade it
-    registerEmployee({ email, name: nameFromEmail(email), title:'Team member (auto-detected)', deptName: inferredDeptName, tier:'worker' });
+    registerEmployee({ email, name: nameFromEmail(email), title:'Team member (auto-detected)', deptName: inferredDeptName, tier:'worker', deptKnown:false });
   });
 }
 
@@ -1051,7 +1054,7 @@ function myOpenCount(empId){
 function deptQueueCount(deptId){
   return allTicketIds().filter(tid=>{
     const o = currentOwner(tid);
-    return o && emp(o.assignedTo) && emp(o.assignedTo).dept===deptId && !isTerminal(o.status);
+    return o && emp(o.assignedTo) && emp(o.assignedTo).dept===deptId && emp(o.assignedTo).deptKnown && !isTerminal(o.status);
   }).length;
 }
 function orgOpenCount(){
@@ -1224,14 +1227,17 @@ function renderDeptReadOnly(u, opts={}){
   const d = u.dept ? dept(u.dept) : null;
   if(!d) return renderMyPortal(u);
   // Filter 1: department — every ticket currently with anyone in this dept.
+  // Only counts a confirmed department (from users.json or a real login) —
+  // an auto-discovered email's guessed department (see
+  // discoverEmployeesFromCache) is never treated as belonging here.
   const inDept = allTicketIds().filter(tid=>{
     const o = currentOwner(tid);
-    return o && emp(o.assignedTo) && emp(o.assignedTo).dept===d.id;
+    return o && emp(o.assignedTo) && emp(o.assignedTo).dept===d.id && emp(o.assignedTo).deptKnown;
   });
   // Filter 2: status.
   const filter = state.deptStatusFilter;
   const filtered = inDept.filter(tid=> matchesStatusFilter(currentOwner(tid).status, filter));
-  const teamCount = deptWorkers(d.id).length;
+  const teamCount = deptWorkers(d.id).filter(e=>e.deptKnown).length;
   return `
   <div class="grid2">
     ${profileCard(u)}
