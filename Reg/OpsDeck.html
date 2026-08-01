@@ -488,8 +488,13 @@ function nameOf(assignedTo){
   const e = emp(assignedTo); return e ? e.name : assignedTo;
 }
 // A ticket's "Assigned to" belongs to a department in one of two ways:
-// (1) it's an employee with a *confirmed* department (from users.json or an
-//     actual login — see registerEmployee's deptKnown), or
+// (1) it's an employee whose record's department equals this one — for an
+//     auto-discovered employee (nobody's logged in as them yet, not in
+//     users.json) that department is only ever a guess, defaulted to
+//     whoever was logged in when they were first seen in the log (see
+//     discoverEmployeesFromCache) — but for an Employee-subject ticket
+//     that's the only signal the log has at all, so it's still used here
+//     rather than hiding the ticket entirely; or
 // (2) it's assigned directly to the department by name, as parsed from a
 //     real session's "Designation | Department" role (e.g. session role
 //     "Manager | Delivero" -> department name "Delivero"). The raw cache
@@ -501,7 +506,7 @@ function normDeptKey(s){ return String(s||'').trim().toLowerCase().replace(/[^a-
 function assignedToBelongsToDept(assignedTo, d){
   if(!assignedTo || !d) return false;
   const e = emp(assignedTo);
-  if(e) return e.dept===d.id && e.deptKnown;
+  if(e) return e.dept===d.id;
   const a = normDeptKey(assignedTo), n = normDeptKey(d.name);
   if(!a || !n) return false;
   return a===n || a.indexOf(n)===0 || n.indexOf(a)===0;
@@ -1256,7 +1261,7 @@ function renderDeptReadOnly(u, opts={}){
   // Filter 2: status.
   const filter = state.deptStatusFilter;
   const filtered = inDept.filter(tid=> matchesStatusFilter(currentOwner(tid).status, filter));
-  const teamCount = deptWorkers(d.id).filter(e=>e.deptKnown).length;
+  const teamCount = deptWorkers(d.id).length;
   return `
   <div class="grid2">
     ${profileCard(u)}
