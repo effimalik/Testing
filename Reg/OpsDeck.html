@@ -487,6 +487,21 @@ function nameOf(assignedTo){
   if(isDeptId(assignedTo)) return dept(assignedTo) ? dept(assignedTo).name+' (Dept)' : assignedTo;
   const e = emp(assignedTo); return e ? e.name : assignedTo;
 }
+// A ticket's "Assigned to" belongs to a department in one of two ways:
+// (1) it's an employee with a *confirmed* department (from users.json or an
+//     actual login — see registerEmployee's deptKnown), or
+// (2) it's assigned directly to the department by name, exactly as parsed
+//     from a real session's "Designation | Department" role (e.g. session
+//     role "Manager | Delivero" -> department name "Delivero"), which is
+//     also how a ticket's own Subject/Assigned-to cache row can name a
+//     department directly (Subject:"Department", Assigned to:"Delivero")
+//     with no employee record involved at all.
+function assignedToBelongsToDept(assignedTo, d){
+  if(!assignedTo || !d) return false;
+  const e = emp(assignedTo);
+  if(e) return e.dept===d.id && e.deptKnown;
+  return String(assignedTo).trim().toLowerCase() === d.name.trim().toLowerCase();
+}
 // A visitor exists in the directory (so their name/email resolve fine in
 // history) but never receives real work — visitors are excluded from every
 // "assign to" / "transfer to" list.
@@ -1052,9 +1067,10 @@ function myOpenCount(empId){
   }).length;
 }
 function deptQueueCount(deptId){
+  const d = dept(deptId);
   return allTicketIds().filter(tid=>{
     const o = currentOwner(tid);
-    return o && emp(o.assignedTo) && emp(o.assignedTo).dept===deptId && emp(o.assignedTo).deptKnown && !isTerminal(o.status);
+    return o && assignedToBelongsToDept(o.assignedTo, d) && !isTerminal(o.status);
   }).length;
 }
 function orgOpenCount(){
@@ -1226,13 +1242,12 @@ function renderDeptPortal(u){
 function renderDeptReadOnly(u, opts={}){
   const d = u.dept ? dept(u.dept) : null;
   if(!d) return renderMyPortal(u);
-  // Filter 1: department — every ticket currently with anyone in this dept.
-  // Only counts a confirmed department (from users.json or a real login) —
-  // an auto-discovered email's guessed department (see
-  // discoverEmployeesFromCache) is never treated as belonging here.
+  // Filter 1: department — every ticket currently with anyone in this dept,
+  // or assigned straight to the department itself by name (see
+  // assignedToBelongsToDept).
   const inDept = allTicketIds().filter(tid=>{
     const o = currentOwner(tid);
-    return o && emp(o.assignedTo) && emp(o.assignedTo).dept===d.id && emp(o.assignedTo).deptKnown;
+    return o && assignedToBelongsToDept(o.assignedTo, d);
   });
   // Filter 2: status.
   const filter = state.deptStatusFilter;
