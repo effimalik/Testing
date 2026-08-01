@@ -320,7 +320,9 @@ function _readSession(){
 // Fallback used only when this file is opened standalone (no ap_session yet)
 // so the portal still renders something sensible while you wire up login.
 const FALLBACK_SESSION = {
-
+  email: 'guest@local',
+  name: 'Guest',
+  role: 'Visitor'
 };
 
 function _classifyTier(designation){
@@ -464,6 +466,10 @@ function bootstrapIdentity(){
   // it creates (or updates) their record with the real name/title/team
   // reported at login. This always wins over anything auto-detected.
   const me = registerEmployee({ email: session.email, name: session.name, title: designation, deptName: teamName, tier });
+  if(!me){
+    console.error('[OpsDeck] bootstrapIdentity: no email on session/fallback — cannot register identity.');
+    return registerEmployee({ email:'guest@local', name:'Guest', title:'Visitor', deptName:null, tier:'visitor' });
+  }
   me.permissions = session.permissions || null;
   me.loginAt = session.loginAt || null;
   me.lastActive = session.lastActive || null;
