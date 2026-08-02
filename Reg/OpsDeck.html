@@ -397,9 +397,42 @@ function parseRoleString(roleStr){
 // Scans ap2_ticLog's raw rows for every distinct email and makes sure each
 // one has an employee record — this is the "dynamic module" part: the
 // people directory grows automatically from the cache, nothing hardcoded.
-function discoverEmployeesFromCache(ticLogRows, inferredDeptName){
+//
+// The department guess (inferredDeptName) is only ever safe to apply to
+// people who actually show up on the SAME tickets as the current viewer —
+// that's the "on your team" signal the comment above the caller talks
+// about. Applying it to every unknown email in the *entire* log (as this
+// used to do) meant that logging in as, say, a Delivero manager silently
+// tagged every not-yet-logged-in employee from every other department as
+// Delivero too, which then made the Department portal's filter
+// (assignedToBelongsToDeptName) match nearly every ticket regardless of
+// who it was really assigned to. Anyone outside that co-occurrence set is
+// registered with deptName:null (unknown) instead of guessed, so they
+// simply won't match any department filter until they log in for real.
+function discoverEmployeesFromCache(ticLogRows, inferredDeptName, meEmail){
   const seen = new Set();
-  (ticLogRows||[]).forEach(r=>{
+  const coOccurs = new Set(); // emails that share a ticket with meEmail
+  const rows = ticLogRows||[];
+
+  if(meEmail){
+    const myTickets = new Set();
+    rows.forEach(r=>{
+      const by = String(_pick(r,['Assigned By','assignedBy'])||'').trim();
+      const to = String(_pick(r,['Assigned to','Assigned To','assignedTo'])||'').trim();
+      const tid = String(_pick(r,['Ticket_ID','ticketId','Ticket Id'])||'').trim();
+      if(tid && (by===meEmail || to===meEmail)) myTickets.add(tid);
+    });
+    rows.forEach(r=>{
+      const tid = String(_pick(r,['Ticket_ID','ticketId','Ticket Id'])||'').trim();
+      if(!tid || !myTickets.has(tid)) return;
+      [_pick(r,['Assigned By','assignedBy']), _pick(r,['Assigned to','Assigned To','assignedTo'])].forEach(email=>{
+        email = String(email||'').trim();
+        if(email) coOccurs.add(email);
+      });
+    });
+  }
+
+  rows.forEach(r=>{
     [_pick(r,['Assigned By','assignedBy']), _pick(r,['Assigned to','Assigned To','assignedTo'])].forEach(email=>{
       email = String(email||'').trim();
       if(email) seen.add(email);
@@ -407,7 +440,8 @@ function discoverEmployeesFromCache(ticLogRows, inferredDeptName){
   });
   seen.forEach(email=>{
     if(emp(email)) return; // already known (from a real login) — never downgrade it
-    registerEmployee({ email, name: nameFromEmail(email), title:'Team member (auto-detected)', deptName: inferredDeptName, tier:'worker', deptKnown:false });
+    const guessDept = coOccurs.has(email) ? inferredDeptName : null;
+    registerEmployee({ email, name: nameFromEmail(email), title:'Team member (auto-detected)', deptName: guessDept, tier:'worker', deptKnown:false });
   });
 }
 
@@ -793,7 +827,7 @@ function rebuildFromRealCache(ticLogRaw, ticketStatusRaw){
 
   // The people directory grows from the cache itself — no fixed roster.
   const me = emp(state.currentUserId);
-  discoverEmployeesFromCache(ticLogRaw, me ? (dept(me.dept) ? dept(me.dept).name : null) : null);
+  discoverEmployeesFromCache(ticLogRaw, me ? (dept(me.dept) ? dept(me.dept).name : null) : null, me ? me.email : null);
 
   const prevByTicket = {};
   rows.forEach((r,i)=>{
