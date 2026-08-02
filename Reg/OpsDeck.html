@@ -499,9 +499,20 @@ function assignedToBelongsToDeptName(assignedTo, deptName){
   const n = normDeptKey(deptName);
   if(!n) return false;
   const e = emp(assignedTo);
-  if(e){
+  // Only trust the employee's department when it's CONFIRMED (deptKnown:true
+  // — i.e. that person has actually logged in and told us their real
+  // "Designation | Department"). A guessed department (deptKnown:false, set
+  // by discoverEmployeesFromCache for someone who hasn't logged in yet) is
+  // not reliable enough to gate department visibility on — trusting it here
+  // is exactly what let a "Talabat"-assigned ticket leak into the Delivero
+  // portal, because the not-yet-logged-in "Talabat" account had been
+  // defaulted to whichever manager happened to view the cache first. If the
+  // department isn't confirmed, fall through to the raw-name comparison
+  // below instead, which checks what the ticket was actually assigned to.
+  if(e && e.deptKnown){
     const ed = e.dept ? dept(e.dept) : null;
     if(ed && normDeptKey(ed.name)===n) return true;
+    return false; // confirmed employee, confirmed NOT this department — don't fall through
   }
   const a = normDeptKey(assignedTo);
   return !!a && (a===n || a.indexOf(n)===0 || n.indexOf(a)===0);
