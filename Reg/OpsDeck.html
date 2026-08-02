@@ -1256,12 +1256,17 @@ function renderDeptPortal(u){
 function renderDeptReadOnly(u, opts={}){
   const d = u.dept ? dept(u.dept) : null;
   if(!d) return renderMyPortal(u);
-  // Filter 1: department — every ticket currently with anyone in this dept,
-  // or assigned straight to the department itself by name (see
-  // assignedToBelongsToDeptName).
+  // Filter 1: department — only tickets whose Subject is literally
+  // "Department" (i.e. raised *about* the department itself, e.g. routed
+  // to Delivero as a team), assigned straight to the department by name
+  // (see assignedToBelongsToDeptName). Employee-subject tickets (an
+  // individual's payslip/leave query etc.) belong to that person's own
+  // My Portal, not the Department queue, even if they happen to work in
+  // this department — so they're deliberately excluded here.
   const inDept = allTicketIds().filter(tid=>{
     const o = currentOwner(tid);
-    return o && assignedToBelongsToDeptName(o.assignedTo, d.name);
+    return o && String(o.subject||'').trim().toLowerCase()==='department'
+      && assignedToBelongsToDeptName(o.assignedTo, d.name);
   });
   // Filter 2: status.
   const filter = state.deptStatusFilter;
@@ -1272,9 +1277,9 @@ function renderDeptReadOnly(u, opts={}){
     ${profileCard(u)}
     <div>
       <h1 class="page-title">${d.name} — Department</h1>
-      <p class="page-sub">${opts.manager ? `Every ticket currently with anyone in ${d.name} (${teamCount} member${teamCount===1?'':'s'}). Open one to reassign it if needed.` : `Read-only view of everything currently in ${d.name}. Your own items are in My Portal.`}</p>
+      <p class="page-sub">${opts.manager ? `Every Department-subject ticket routed to ${d.name} (${teamCount} member${teamCount===1?'':'s'} on the team). Open one to reassign it if needed.` : `Read-only view of Department-subject tickets routed to ${d.name}. Your own items are in My Portal.`}</p>
       ${statusFilterBar(filter, 'deptstatus')}
-      ${filtered.length ? `<div class="ticket-list">${filtered.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty"><b>Nothing here.</b>${filter==='all' ? `Tickets in ${d.name} will show up here.` : `No tickets with that status right now.`}</div>`}
+      ${filtered.length ? `<div class="ticket-list">${filtered.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty"><b>Nothing here.</b>${filter==='all' ? `Department tickets for ${d.name} will show up here.` : `No department tickets with that status right now.`}</div>`}
     </div>
   </div>`;
 }
