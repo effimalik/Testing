@@ -1200,12 +1200,17 @@ function buildCenterPanel(dt,recs,mode){
      "Latest" is NOT determined by rec.ts: every row read in the same sheet
      fetch shares one batch timestamp, so ts can't tell rows apart. The sheet
      append order (preserved in the unsorted `recs` array) is what actually
-     reflects upload recency — the last entry there is the most recent one. */
+     reflects upload recency — the last entry there is the most recent one.
+     IMPORTANT: distance must be measured in the same *rounded day* units as
+     the "Expired Xd ago" / "Expires in Xd" label (daysUntil() uses
+     Math.ceil), not raw millisecond difference. A doc 27.2 days in the
+     future rounds up to display "28d" while one 27.8 days in the past
+     rounds to display "27d" — raw ms distance would rank the 28d card
+     ahead of the 27d ones, contradicting the numbers on screen. */
   const latestRec=recs.length?recs[recs.length-1]:null;
-  const _now=Date.now();
   const sorted=[...recs].sort((a,b)=>{
-    const da=a.expiry?Math.abs(new Date(a.expiry).getTime()-_now):Infinity;
-    const db=b.expiry?Math.abs(new Date(b.expiry).getTime()-_now):Infinity;
+    const da=a.expiry?Math.abs(daysUntil(a.expiry)):Infinity;
+    const db=b.expiry?Math.abs(daysUntil(b.expiry)):Infinity;
     return da-db;
   });
 
@@ -1509,11 +1514,12 @@ function previewDocByIdx(mode,docType,idx){
   const recs=getEntityDocs(entityId,docType,mode);
   /* Must mirror the sort used to render the hist-list in buildCenterPanel
      (proximity to today — most urgent first, no-expiry last) — idx is a
-     position in that sorted array, not the raw fetch order. */
-  const _now=Date.now();
+     position in that sorted array, not the raw fetch order. Uses the same
+     rounded day-distance as the displayed label (see comment in
+     buildCenterPanel) rather than raw ms difference. */
   const sorted=[...recs].sort((a,b)=>{
-    const da=a.expiry?Math.abs(new Date(a.expiry).getTime()-_now):Infinity;
-    const db=b.expiry?Math.abs(new Date(b.expiry).getTime()-_now):Infinity;
+    const da=a.expiry?Math.abs(daysUntil(a.expiry)):Infinity;
+    const db=b.expiry?Math.abs(daysUntil(b.expiry)):Infinity;
     return da-db;
   });
   const rec=sorted[parseInt(idx,10)];
