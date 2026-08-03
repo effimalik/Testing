@@ -1191,27 +1191,26 @@ function buildCenterPanel(dt,recs,mode){
   const di=mode+'-exp-date', gs=mode+'-gs-status';
   const isOthers=dt.key.startsWith('others_');
   const expiryReq=dt.expiryRequired;
-  /* Sort by proximity to *today* — most urgent first. This is NOT a plain
-     ascending date sort: a doc expired 27 days ago has an earlier raw
-     timestamp than one expired 14 days ago, but the 14-day one is more
-     recent/urgent and must rank first. Docs expiring soon in the future
-     work the same way (small distance from today = urgent). No-expiry
-     docs always sort last (Infinity distance).
+  /* Sort by days remaining, most valid first — NOT by proximity/urgency.
+     Valid docs (positive days remaining) rank at the top, with more time
+     remaining ranking higher within that group. Expired docs (negative
+     days) rank below all valid docs, with the *longest*-expired ranking
+     lowest/last. This is a plain descending sort on the signed day count
+     (daysUntil, which uses Math.ceil — same value shown in the "Expired Xd
+     ago" / "Expires in Xd" label) — do NOT take Math.abs(), since that
+     would fold expired and valid docs together by raw distance instead of
+     keeping all valid docs above all expired ones.
+     No-expiry docs always sort last (-Infinity so they rank below even the
+     most-expired doc).
      "Latest" is NOT determined by rec.ts: every row read in the same sheet
      fetch shares one batch timestamp, so ts can't tell rows apart. The sheet
      append order (preserved in the unsorted `recs` array) is what actually
-     reflects upload recency — the last entry there is the most recent one.
-     IMPORTANT: distance must be measured in the same *rounded day* units as
-     the "Expired Xd ago" / "Expires in Xd" label (daysUntil() uses
-     Math.ceil), not raw millisecond difference. A doc 27.2 days in the
-     future rounds up to display "28d" while one 27.8 days in the past
-     rounds to display "27d" — raw ms distance would rank the 28d card
-     ahead of the 27d ones, contradicting the numbers on screen. */
+     reflects upload recency — the last entry there is the most recent one. */
   const latestRec=recs.length?recs[recs.length-1]:null;
   const sorted=[...recs].sort((a,b)=>{
-    const da=a.expiry?Math.abs(daysUntil(a.expiry)):Infinity;
-    const db=b.expiry?Math.abs(daysUntil(b.expiry)):Infinity;
-    return da-db;
+    const da=a.expiry?daysUntil(a.expiry):-Infinity;
+    const db=b.expiry?daysUntil(b.expiry):-Infinity;
+    return db-da;
   });
 
   /* history rows */
@@ -1512,15 +1511,15 @@ function previewDocByIdx(mode,docType,idx){
   const dt=types.find(d=>d.key===docType);
   const entityId=mode==='emp'?selEmpId:selBikeId;
   const recs=getEntityDocs(entityId,docType,mode);
-  /* Must mirror the sort used to render the hist-list in buildCenterPanel
-     (proximity to today — most urgent first, no-expiry last) — idx is a
-     position in that sorted array, not the raw fetch order. Uses the same
-     rounded day-distance as the displayed label (see comment in
-     buildCenterPanel) rather than raw ms difference. */
+  /* Must mirror the sort used to render the hist-list in buildCenterPanel —
+     valid docs (most days remaining) on top, longest-expired at the
+     bottom, no-expiry last — idx is a position in that sorted array, not
+     the raw fetch order. Plain descending sort on signed daysUntil(); do
+     NOT take Math.abs() (see comment in buildCenterPanel for why). */
   const sorted=[...recs].sort((a,b)=>{
-    const da=a.expiry?Math.abs(daysUntil(a.expiry)):Infinity;
-    const db=b.expiry?Math.abs(daysUntil(b.expiry)):Infinity;
-    return da-db;
+    const da=a.expiry?daysUntil(a.expiry):-Infinity;
+    const db=b.expiry?daysUntil(b.expiry):-Infinity;
+    return db-da;
   });
   const rec=sorted[parseInt(idx,10)];
   if(!rec){toast('Record not found','error');return;}
