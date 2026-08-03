@@ -1130,20 +1130,30 @@ function buildSidebar(mode){
     const validCount=statuses.filter(s=>s==='teal').length;
     const expiredCount=statuses.filter(s=>s==='red').length;
     const amberCount=statuses.filter(s=>s==='amber').length;
+    // "Valid" for the red/green decision means "not expired" — teal, amber
+    // (expiring soon but not yet expired), and no-expiry docs all count.
+    // Only an expired (red) status disqualifies a doc.
+    const notExpiredCount=recs.length-expiredCount;
     let cls='doc-side-btn'+(isOthers?' others-btn':'');
     if(dt.key===activeType) cls+=' selected';
     let badge='';
     if(recs.length){
       // A category only goes red when EVERY doc in it is expired — a single
-      // valid doc keeps the whole category out of the red/amber state.
+      // non-expired doc (even one merely expiring soon) keeps the whole
+      // category green.
       let bClass='';
-      if(validCount>0) cls+=' has-docs';
-      else if(expiredCount>0) { cls+=' expired-docs'; bClass='red'; }
-      else if(amberCount>0)  { cls+=' expiring-docs'; bClass='amber'; }
-      else cls+=' has-docs';
+      if(notExpiredCount>0){
+        cls+=' has-docs';
+        // Flag the badge itself amber if the only non-expired docs are
+        // expiring soon (no fully-valid teal doc present) — a visual nudge
+        // without dropping the category out of the green state.
+        if(expiredCount===0&&validCount===0&&amberCount>0) bClass='amber';
+      } else {
+        cls+=' expired-docs'; bClass='red';
+      }
       const breakdown=`${validCount} valid · ${expiredCount} expired`+(amberCount?` · ${amberCount} expiring`:'');
       badge=`<div class="doc-count-badge ${bClass}" title="${breakdown}">${recs.length}</div>`;
-      if(expiredCount>0&&validCount>0){
+      if(expiredCount>0&&notExpiredCount>0){
         badge+=`<div class="doc-count-badge-sub" title="${breakdown}">${expiredCount}</div>`;
       }
     }
