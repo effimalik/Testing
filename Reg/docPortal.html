@@ -1152,7 +1152,13 @@ function buildSidebar(mode){
         cls+=' expired-docs'; bClass='red';
       }
       const breakdown=`${validCount} valid · ${expiredCount} expired`+(amberCount?` · ${amberCount} expiring`:'');
-      badge=`<div class="doc-count-badge ${bClass}" title="${breakdown}">${recs.length}</div>`;
+      // Main badge shows the VALID (non-expired) count, not the total record
+      // count — e.g. 5 total docs with 4 expired and 1 valid must show "1"
+      // here, not "5". Only when every doc in the category is expired
+      // (notExpiredCount===0, category is red) does it fall back to showing
+      // the expired count, since there is no valid count to display.
+      const mainCount=notExpiredCount>0?notExpiredCount:expiredCount;
+      badge=`<div class="doc-count-badge ${bClass}" title="${breakdown}">${mainCount}</div>`;
       if(expiredCount>0&&notExpiredCount>0){
         badge+=`<div class="doc-count-badge-sub" title="${breakdown}">${expiredCount}</div>`;
       }
