@@ -1182,14 +1182,16 @@ function buildCenterPanel(dt,recs,mode){
   const isOthers=dt.key.startsWith('others_');
   const expiryReq=dt.expiryRequired;
   /* Sort by expiry date — soonest/most urgent first; no-expiry docs last.
-     Upload time is only used as a tie-breaker. */
+     "Latest" is NOT determined by rec.ts: every row read in the same sheet
+     fetch shares one batch timestamp, so ts can't tell rows apart. The sheet
+     append order (preserved in the unsorted `recs` array) is what actually
+     reflects upload recency — the last entry there is the most recent one. */
+  const latestRec=recs.length?recs[recs.length-1]:null;
   const sorted=[...recs].sort((a,b)=>{
     const ea=a.expiry?new Date(a.expiry).getTime():Infinity;
     const eb=b.expiry?new Date(b.expiry).getTime():Infinity;
-    if(ea!==eb) return ea-eb;
-    return (b.ts||0)-(a.ts||0);
+    return ea-eb;
   });
-  const latestTs=recs.length?Math.max(...recs.map(r=>r.ts||0)):0;
 
   /* history rows */
   let histHtml='';
@@ -1201,7 +1203,7 @@ function buildCenterPanel(dt,recs,mode){
   } else {
     histHtml='<div class="hist-list">'+sorted.map((rec,idx)=>{
       const exp=rec.expiry?expiryStatus(rec.expiry):{status:'gray',label:'No expiry'};
-      const isLatest=(rec.ts||0)===latestTs;
+      const isLatest=rec===latestRec;
       const hasLink=rec.docLink&&rec.docLink.startsWith('http');
       const catBadge=rec.category?`<span style="font-size:8.5px;color:var(--purple);background:var(--purple-dim);padding:1px 5px;border-radius:10px;border:1px solid rgba(163,113,247,.25);white-space:nowrap;">${rec.category}</span>`:'';
       return `<div class="hist-rec" data-preview-idx="${idx}" data-preview-mode="${mode}" data-preview-doctype="${dt.key}">
@@ -1488,8 +1490,17 @@ function previewDocByIdx(mode,docType,idx){
   const types=mode==='emp'?EMP_DOC_TYPES:BIKE_DOC_TYPES;
   const dt=types.find(d=>d.key===docType);
   const entityId=mode==='emp'?selEmpId:selBikeId;
-  const recs=getEntityDocs(entityId,docType,mode).sort((a,b)=>b.ts-a.ts);
-  const rec=recs[parseInt(idx,10)];
+  const recs=getEntityDocs(entityId,docType,mode);
+  /* Must mirror the sort used to render the hist-list in buildCenterPanel
+     (expiry ascending, no-expiry last) — idx is a position in that sorted
+     array, not the raw fetch order, so re-sorting by ts here would open
+     the wrong record. */
+  const sorted=[...recs].sort((a,b)=>{
+    const ea=a.expiry?new Date(a.expiry).getTime():Infinity;
+    const eb=b.expiry?new Date(b.expiry).getTime():Infinity;
+    return ea-eb;
+  });
+  const rec=sorted[parseInt(idx,10)];
   if(!rec){toast('Record not found','error');return;}
   previewDoc(rec,dt?dt.label:docTypeLabel(docType),mode);
 }
