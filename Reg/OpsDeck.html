@@ -687,8 +687,8 @@ function applyOverlay(){
   if(data.seq) seq = Math.max(seq, data.seq);
 }
 
-function s1(logId,ticketId,action,priority,type,assignedTo,actorId,notes,dueAt,target,subject,local){
-  SHEET1.push({logId,ticketId,action,priority,type,assignedTo,actorId,notes:notes||'',dueAt:dueAt||null,target:target||null,subject:subject||null,local:!!local});
+function s1(logId,ticketId,action,priority,type,assignedTo,actorId,notes,dueAt,target,subject,local,subjectEmployee){
+  SHEET1.push({logId,ticketId,action,priority,type,assignedTo,actorId,notes:notes||'',dueAt:dueAt||null,target:target||null,subject:subject||null,subjectEmployee:subjectEmployee||null,local:!!local});
 }
 function s2(ticketId,status,lastStatus,id){
   SHEET2.push({ticketId,status,lastStatus,id});
@@ -742,6 +742,7 @@ function currentOwner(ticketId){
     lastStatus: chain ? chain.lastStatus : latest.lastStatus,
     sinceMs: latest.id, priority: row.priority, type: row.type,
     dueAt: row.dueAt, target: row.target, subject: row.subject,
+    subjectEmployee: row.subjectEmployee,
   };
 }
 function allTicketIds(){ return [...new Set(SHEET1.map(r=>r.ticketId))]; }
@@ -818,7 +819,19 @@ function _pick(obj, keys){
   for(const k of keys){ if(obj[k]!==undefined && obj[k]!==null && obj[k]!=='') return obj[k]; }
   return '';
 }
-const TICLOG_COLUMNS = ['Log_ID','Ticket_ID','Assigned By','Action','Priority','Category','Subject','Assigned to','Notes'];
+// NOTE ON "Subject" vs "Subject Employee (E2)":
+// The real ap2_ticLog sheet's "Subject" column is a ROUTING CATEGORY —
+// its only observed values are "Employee" / "Department" — used purely to
+// pick which dependent-dropdown list to show in the New Ticket form. It is
+// NOT a link to an actual employee record, and per the Ops Ticket Flow
+// requirement (§1, §9, §11) every ticket must carry a *fixed* Subject
+// Employee (E2): the specific person the ticket is *about*, independent of
+// who raised it (Requester) and who is currently handling it (Assigned
+// to). That field did not exist anywhere in this schema, so it's added
+// here as its own column, read defensively under several likely header
+// spellings so it degrades gracefully if the real sheet hasn't been
+// updated yet — see rebuildFromRealCache()/subjectEmployeeGapWarning().
+const TICLOG_COLUMNS = ['Log_ID','Ticket_ID','Assigned By','Action','Priority','Category','Subject','Subject Employee','Assigned to','Notes'];
 function parseTicLogRow(r){
   if(!r) return null;
   if(Array.isArray(r)){
@@ -835,6 +848,10 @@ function parseTicLogRow(r){
     priority: String(_pick(r,['Priority','priority'])||'Medium').trim(),
     type: String(_pick(r,['Category','category','Type'])||'Ticket').trim(),
     subject: String(_pick(r,['Subject','subject'])||'').trim(),
+    // Subject Employee (E2) — the employee the ticket is FIXED to, distinct
+    // from "subject" above (which is just the Employee/Department routing
+    // tag) and from assignedToEmail below (who is currently handling it).
+    subjectEmployeeEmail: String(_pick(r,['Subject Employee','SubjectEmployee','Subject_Employee','E2','On Behalf Of','OnBehalfOf'])||'').trim(),
     assignedToEmail: String(_pick(r,['Assigned to','Assigned To','assignedTo'])||'').trim(),
     notes: String(_pick(r,['Notes','notes','Note'])||'').trim(),
   };
@@ -862,9 +879,15 @@ function logIdSortKey(raw, fallbackIndex){
   return m ? parseInt(m[1],10) : fallbackIndex;
 }
 
+// Set true once we've seen at least one real cache row with a non-empty
+// Subject Employee value — lets the UI tell "the sheet has this column and
+// this particular row just wasn't filled in" apart from "the sheet doesn't
+// have this column at all yet", without guessing.
+let SUBJECT_EMPLOYEE_COLUMN_SEEN = false;
 function rebuildFromRealCache(ticLogRaw, ticketStatusRaw){
   SHEET1 = []; SHEET2 = []; TICKET_TITLES = {}; seq = 0;
   const rows = (ticLogRaw||[]).map(parseTicLogRow).filter(Boolean);
+  SUBJECT_EMPLOYEE_COLUMN_SEEN = rows.some(r=>r.subjectEmployeeEmail);
   rows.sort((a,b)=> logIdSortKey(a.logIdRaw,0) - logIdSortKey(b.logIdRaw,0));
 
   // The people directory grows from the cache itself — no fixed roster.
@@ -880,7 +903,7 @@ function rebuildFromRealCache(ticLogRaw, ticketStatusRaw){
     if(parsed.carryForward) cur = {...prev};
     else cur = {status:parsed.status, lastStatus:parsed.lastStatus||null, dueAt:parsed.dueAt||null, target:parsed.target||null};
     prevByTicket[r.ticketId] = cur;
-    s1(t, r.ticketId, r.action, r.priority, r.type, r.assignedToEmail || r.actorEmail, r.actorEmail, r.notes, cur.dueAt, cur.target, r.subject, false);
+    s1(t, r.ticketId, r.action, r.priority, r.type, r.assignedToEmail || r.actorEmail, r.actorEmail, r.notes, cur.dueAt, cur.target, r.subject, false, r.subjectEmployeeEmail);
     s2(r.ticketId, cur.status, cur.lastStatus, t);
     // No explicit title column in the real schema — derive a readable one
     // from the first meaningful note/subject seen for this ticket.
@@ -1038,12 +1061,18 @@ function tickReminderEngine(){
 }
 
 // ---------- Mutations (append-only) ----------
-function createTicket({creatorId, title, description, priority, subject, assignedTo}){
+// subjectEmployee is the fixed E2 — the person the ticket concerns. It is
+// captured once, at creation, and every subsequent flow event (transfer,
+// snooze, done, etc.) simply carries the CURRENT owner's value forward
+// unchanged, exactly like priority/type already do — nothing downstream
+// is ever allowed to overwrite it. That immutability is the practical
+// implementation of the requirement's Core Principle (§11).
+function createTicket({creatorId, title, description, priority, subject, subjectEmployee, assignedTo}){
   const logId = genId();
   const ticketId = 'T' + logId; // always a string — logId (numeric) would silently
                                  // fail strict-equality lookups once it round-trips
                                  // through an HTML data-* attribute as a string
-  s1(logId, ticketId, 'Ticket raised', priority, 'Ticket', assignedTo, creatorId, description, null, null, subject, true);
+  s1(logId, ticketId, 'Ticket raised', priority, 'Ticket', assignedTo, creatorId, description, null, null, subject, true, subjectEmployee);
   s2(ticketId, 'Open', null, logId);
   TICKET_TITLES[ticketId] = title;
   saveOverlay();
@@ -1053,42 +1082,42 @@ function forwardTicket({ticketId, actorId, toAssignee, note}){
   const owner = currentOwner(ticketId);
   const l = genId();
   const label = isDeptId(toAssignee) ? nameOf(toAssignee) : nameOf(toAssignee);
-  s1(l, ticketId, `Forwarded to ${label}`, owner.priority, owner.type, toAssignee, actorId, note || 'Forwarded.', null, label, owner.subject, true);
+  s1(l, ticketId, `Forwarded to ${label}`, owner.priority, owner.type, toAssignee, actorId, note || 'Forwarded.', null, label, owner.subject, true, owner.subjectEmployee);
   s2(ticketId, 'Forwarded', isDeptId(toAssignee)?'Department':'Person', l);
   saveOverlay();
 }
 function claimPersonally({ticketId, actorId, note}){
   const owner = currentOwner(ticketId);
   const l = genId();
-  s1(l, ticketId, 'Taken on personally', owner.priority, owner.type, actorId, actorId, note || 'Handling this directly.', null, null, owner.subject, true);
+  s1(l, ticketId, 'Taken on personally', owner.priority, owner.type, actorId, actorId, note || 'Handling this directly.', null, null, owner.subject, true, owner.subjectEmployee);
   s2(ticketId, 'Forwarded', 'Person', l);
   saveOverlay();
 }
 function fireReminder(ticketId){
   const owner = currentOwner(ticketId);
   const l = genId();
-  s1(l, ticketId, 'Reminder set', owner.priority, owner.type, owner.assignedTo, owner.assignedTo, 'Automated: no response after grace period.', null, owner.target, owner.subject, true);
+  s1(l, ticketId, 'Reminder set', owner.priority, owner.type, owner.assignedTo, owner.assignedTo, 'Automated: no response after grace period.', null, owner.target, owner.subject, true, owner.subjectEmployee);
   s2(ticketId, 'Pending', 'Reminder', l);
   saveOverlay();
 }
 function respondSnooze({ticketId, actorId, comment, snoozeUntilMs}){
   const owner = currentOwner(ticketId);
   const l = genId();
-  s1(l, ticketId, 'Snoozed', owner.priority, owner.type, owner.assignedTo, actorId, comment, snoozeUntilMs, owner.target, owner.subject, true);
+  s1(l, ticketId, 'Snoozed', owner.priority, owner.type, owner.assignedTo, actorId, comment, snoozeUntilMs, owner.target, owner.subject, true, owner.subjectEmployee);
   s2(ticketId, 'Pending', 'Reminder', l);
   saveOverlay();
 }
 function respondPostpone({ticketId, actorId, comment, days}){
   const owner = currentOwner(ticketId);
   const l = genId();
-  s1(l, ticketId, `Postponed ${days} day(s)`, owner.priority, owner.type, owner.assignedTo, actorId, comment, null, owner.target, owner.subject, true);
+  s1(l, ticketId, `Postponed ${days} day(s)`, owner.priority, owner.type, owner.assignedTo, actorId, comment, null, owner.target, owner.subject, true, owner.subjectEmployee);
   s2(ticketId, 'Postponed', 'Reminder', l);
   saveOverlay();
 }
 function respondDone({ticketId, actorId, comment}){
   const owner = currentOwner(ticketId);
   const l = genId();
-  s1(l, ticketId, 'Status changed to Done', owner.priority, owner.type, owner.assignedTo, actorId, comment, null, null, owner.subject, true);
+  s1(l, ticketId, 'Status changed to Done', owner.priority, owner.type, owner.assignedTo, actorId, comment, null, null, owner.subject, true, owner.subjectEmployee);
   s2(ticketId, 'Done', null, l);
   saveOverlay();
 }
@@ -1183,7 +1212,7 @@ function ticketRow(tid, opts={}){
     <div class="pri-flag pri-${owner.priority}"></div>
     <div class="t-main">
       <div class="t-title">${title} <span class="tid">#${tid}</span> ${owner.subject?`<span class="type-chip">${owner.subject}</span>`:''}</div>
-      <div class="t-sub">${subLabel} · raised by ${nameOf(created.actorId)}</div>
+      <div class="t-sub">For ${owner.subjectEmployee ? nameOf(owner.subjectEmployee) : '—'} · ${subLabel} · raised by ${nameOf(created.actorId)}</div>
     </div>
     ${od.overdue ? `<div class="overdue-flag">⚠ ${od.escalations>1?`x${od.escalations} `:''}overdue ${fmtDur(od.elapsed)}</div>` : ''}
     <div class="status-chip ${statusClass(owner.status)}">${owner.status}</div>
@@ -1314,7 +1343,7 @@ function renderDeptReadOnly(u, opts={}){
 }
 
 // ----- New ticket (rendered inside the slide-in drawer, see openNewTicketDrawer) -----
-let newTicketForm = {priority:'Medium', subject:'Employee', assignedTo:'', title:'', description:''};
+let newTicketForm = {priority:'Medium', subject:'Employee', subjectEmployee:'', assignedTo:'', title:'', description:''};
 function newTicketFormHtml(u){
   const f = newTicketForm;
   const subjects = subjectOptionsFromCache();
@@ -1324,7 +1353,20 @@ function newTicketFormHtml(u){
   // non-employee destination (e.g. a department name like "Talabat") passes
   // through ungated since it isn't a personal assignment.
   const assigneeOptions = uniqueAssignedToForSubject(f.subject).filter(v => !emp(v) || allowedIds.has(v));
+  // Subject Employee (E2): who the ticket is ABOUT. Any employee in the
+  // org can be an E2 (not scoped to the creator's department — Finance can
+  // raise a ticket about a Delivero rider), and it is completely
+  // independent from "Assigned to" below (who is currently HANDLING it).
+  const e2Options = assignableEmployees().slice().sort((a,b)=>a.name.localeCompare(b.name));
   return `
+    <div class="field">
+      <label>Subject Employee — who is this ticket about? (E2)</label>
+      <select id="nt-subjectEmployee">
+        <option value="">Select the employee this ticket concerns…</option>
+        ${e2Options.map(e=>`<option value="${e.id}" ${f.subjectEmployee===e.id?'selected':''}>${e.name}${e.dept && dept(e.dept)?` — ${dept(e.dept).name}`:''}</option>`).join('')}
+      </select>
+      <span class="hint">Fixed for the life of the ticket — stays the same through every transfer.</span>
+    </div>
     <div class="field">
       <label>Ticket name</label>
       <input type="text" id="nt-title" placeholder="e.g. Payslip discrepancy" value="${f.title.replace(/"/g,'&quot;')}">
@@ -1341,14 +1383,15 @@ function newTicketFormHtml(u){
         </select>
       </div>
       <div class="field">
-        <label>Subject</label>
+        <label>Request type</label>
         <select id="nt-subject">
           ${subjects.map(s=>`<option ${f.subject===s?'selected':''}>${s}</option>`).join('')}
         </select>
+        <span class="hint">Routing category only — not who the ticket is about.</span>
       </div>
     </div>
     <div class="field">
-      <label>Assigned to</label>
+      <label>Assigned to (initial handler / department)</label>
       <select id="nt-assignee">
         <option value="">Select…</option>
         ${assigneeOptions.map(v=>`<option value="${v}" ${f.assignedTo===v?'selected':''}>${nameOf(v)}</option>`).join('')}
@@ -1356,7 +1399,7 @@ function newTicketFormHtml(u){
       ${f.subject && !assigneeOptions.length ? `<span class="hint">No prior "${f.subject}" tickets in the log yet to suggest a destination from.</span>` : (isManager(u.id) && u.dept ? `<span class="hint">As a manager, you can assign to people in ${dept(u.dept).name}.</span>` : '')}
     </div>
     <div class="btn-row">
-      <button class="btn btn-primary" id="nt-submit">Create ticket</button>
+      <button class="btn btn-primary" id="nt-submit" ${!f.subjectEmployee ? 'disabled title="Select the Subject Employee (E2) first"' : ''}>Create ticket</button>
       <button class="btn btn-ghost" id="nt-reset">Clear</button>
     </div>`;
 }
@@ -1384,6 +1427,17 @@ function subjectOptionsFromCache(){
 // destinations with a track record for that Subject, nothing invented. No
 // subject chosen (or nothing logged for it yet) means an empty list, so the
 // dropdown falls back to just "Select…".
+// Distinct Subject Employees (E2) actually seen in the log — for Flow
+// Finder's "Subject Employee" search dropdown (requirement §10).
+function uniqueSubjectEmployees(){
+  const seen = new Set(); const out = [];
+  SHEET1.forEach(r=>{
+    const v = r.subjectEmployee;
+    if(!v || seen.has(v)) return;
+    seen.add(v); out.push(v);
+  });
+  return out;
+}
 function uniqueAssignedToForSubject(subject){
   if(!subject) return [];
   const s = String(subject).trim().toLowerCase();
@@ -1409,7 +1463,11 @@ function ticketTouchesDept(tid, deptId){
 }
 function renderFlowFinder(u){
   const scoped = isManager(u.id) && u.dept;
-  const modeOpts = [['ticket','Ticket'],['employee','Employee'],['department','Department']];
+  // 'subjectEmployee' = search by E2, the fixed person the ticket is
+  // ABOUT (requirement §10). 'handler' = search by anyone who has
+  // touched the ticket as requester/assignee at any point — the old
+  // 'employee' mode, kept but relabeled so the two are never confused.
+  const modeOpts = [['ticket','Ticket'],['subjectEmployee','Subject Employee'],['handler','Handler'],['department','Department']];
   let matches = [];
 
   if(state.ffMode==='ticket'){
@@ -1426,10 +1484,15 @@ function renderFlowFinder(u){
       return SHEET1.some(r=>r.ticketId===tid && (
         nameOf(r.assignedTo).toLowerCase().includes(q) ||
         nameOf(r.actorId).toLowerCase().includes(q) ||
+        (r.subjectEmployee && nameOf(r.subjectEmployee).toLowerCase().includes(q)) ||
         (emp(r.assignedTo) && emp(r.assignedTo).dept && dept(emp(r.assignedTo).dept) && dept(emp(r.assignedTo).dept).name.toLowerCase().includes(q))
       ));
     });
-  } else if(state.ffMode==='employee'){
+  } else if(state.ffMode==='subjectEmployee'){
+    matches = state.ffQuery ? allTicketIds().filter(tid=>{
+      return SHEET1.some(r=>r.ticketId===tid && r.subjectEmployee===state.ffQuery);
+    }) : [];
+  } else if(state.ffMode==='handler'){
     matches = state.ffQuery ? allTicketIds().filter(tid=>{
       return SHEET1.some(r=>r.ticketId===tid && (r.actorId===state.ffQuery || r.assignedTo===state.ffQuery));
     }) : [];
@@ -1445,15 +1508,21 @@ function renderFlowFinder(u){
 
   // Same source as New Ticket's dependent dropdown: only destinations the
   // real log has actually seen for that Subject, not the full roster.
-  const employeeOptions = uniqueAssignedToForSubject('Employee').filter(v => !scoped || (emp(v) && emp(v).dept===u.dept));
+  const subjectEmployeeOptions = uniqueSubjectEmployees().filter(v => !scoped || (emp(v) && emp(v).dept===u.dept));
+  const handlerOptions = uniqueAssignedToForSubject('Employee').filter(v => !scoped || (emp(v) && emp(v).dept===u.dept));
   const departmentOptions = uniqueAssignedToForSubject('Department');
 
   const queryControl = state.ffMode==='ticket'
     ? `<input type="text" id="ffQuery" placeholder="Search by ticket #, name, employee, or department…" value="${state.ffQuery.replace(/"/g,'&quot;')}" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">`
-    : state.ffMode==='employee'
+    : state.ffMode==='subjectEmployee'
     ? `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
-         <option value="">${employeeOptions.length ? 'Choose an employee…' : 'Select…'}</option>
-         ${employeeOptions.map(v=>`<option value="${v}" ${state.ffQuery===v?'selected':''}>${nameOf(v)}</option>`).join('')}
+         <option value="">${subjectEmployeeOptions.length ? 'Choose the Subject Employee (E2)…' : 'No Subject Employee data in the log yet'}</option>
+         ${subjectEmployeeOptions.map(v=>`<option value="${v}" ${state.ffQuery===v?'selected':''}>${nameOf(v)}</option>`).join('')}
+       </select>`
+    : state.ffMode==='handler'
+    ? `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
+         <option value="">${handlerOptions.length ? 'Choose a handler…' : 'Select…'}</option>
+         ${handlerOptions.map(v=>`<option value="${v}" ${state.ffQuery===v?'selected':''}>${nameOf(v)}</option>`).join('')}
        </select>`
     : scoped
     ? `<div class="hint" style="padding:9px 0;">Scoped to ${dept(u.dept).name} — managers see their own department only.</div>`
@@ -1465,6 +1534,11 @@ function renderFlowFinder(u){
   return `
   <h1 class="page-title">Flow Finder</h1>
   <p class="page-sub">${scoped ? `Search tickets that have passed through ${dept(u.dept).name}.` : 'Search across every ticket ever logged.'} Open one for the full timeline.</p>
+  ${!SUBJECT_EMPLOYEE_COLUMN_SEEN ? `<div class="empty" style="text-align:left;padding:12px 14px;margin-bottom:14px;border-color:var(--amber-dim);">
+    <b style="color:var(--amber);font-size:13px;">Subject Employee (E2) not found in the source log.</b>
+    Tickets created in this session carry it, but nothing in the connected ap2_ticLog sheet has a "Subject Employee" column yet — every ticket
+    imported from the real cache will show "not recorded" until that column is added upstream. See the New Ticket form for how it's now captured.
+  </div>` : ''}
   <div class="subtabs">
     ${modeOpts.map(([k,l])=>`<button data-ffmode="${k}" class="${state.ffMode===k?'active':''}">${l}</button>`).join('')}
   </div>
@@ -1506,11 +1580,17 @@ function renderTimelineView(tid, u){
       </div>
     </div>`;
   });
+  const owner = currentOwner(tid);
+  const created = rows[0];
   return `
   <button class="btn btn-ghost btn-sm" id="ffBack">← Back to results</button>
   <div class="card" style="margin-top:12px;">
     <div class="kicker">Ticket #${tid}</div>
     <h2 style="font-family:var(--font-display);margin:0 0 4px;">${ticketTitle(tid)}</h2>
+    <p class="page-sub" style="margin-bottom:2px;">
+      <b style="color:var(--text-dim);">Subject Employee (E2):</b> ${owner.subjectEmployee ? nameOf(owner.subjectEmployee) : '<span style="color:var(--red);">not recorded</span>'}
+      &nbsp;·&nbsp; Requester: ${created ? nameOf(created.actorId) : '—'}
+    </p>
     <p class="page-sub" style="margin-bottom:0;">Every logged event for this ticket, oldest to newest — timestamps to the millisecond.</p>
     <div class="tl-wrap"><div class="timeline">${items}</div></div>
   </div>
@@ -1768,6 +1848,8 @@ function refreshNewTicketDrawer(u){
   wireNewTicketDrawerFields(u);
 }
 function wireNewTicketDrawerFields(u){
+  const e2 = document.getElementById('nt-subjectEmployee');
+  if(e2) e2.onchange = ()=>{ newTicketForm.subjectEmployee = e2.value; refreshNewTicketDrawer(u); };
   const t = document.getElementById('nt-title'); if(t) t.oninput = ()=>{ newTicketForm.title = t.value; };
   const d = document.getElementById('nt-desc'); if(d) d.oninput = ()=>{ newTicketForm.description = d.value; };
   const p = document.getElementById('nt-priority'); if(p) p.onchange = ()=>{ newTicketForm.priority = p.value; };
@@ -1777,17 +1859,18 @@ function wireNewTicketDrawerFields(u){
   const submit = document.getElementById('nt-submit');
   if(submit) submit.onclick = ()=>{
     const f = newTicketForm;
+    if(!f.subjectEmployee){ toast('Select the Subject Employee (E2) — who this ticket is about.'); return; }
     if(!f.title.trim()){ toast('Give this a name first.'); return; }
     if(!f.assignedTo){ toast('Choose who this is assigned to.'); return; }
-    const tid = createTicket({creatorId: state.currentUserId, title:f.title, description:f.description||'(no description provided)', priority:f.priority, subject:f.subject, assignedTo:f.assignedTo});
-    toast(`Ticket created and routed to ${nameOf(f.assignedTo)}.`);
-    newTicketForm = {priority:'Medium', subject:'Employee', assignedTo:'', title:'', description:''};
+    const tid = createTicket({creatorId: state.currentUserId, title:f.title, description:f.description||'(no description provided)', priority:f.priority, subject:f.subject, subjectEmployee:f.subjectEmployee, assignedTo:f.assignedTo});
+    toast(`Ticket created for ${nameOf(f.subjectEmployee)} and routed to ${nameOf(f.assignedTo)}.`);
+    newTicketForm = {priority:'Medium', subject:'Employee', subjectEmployee:'', assignedTo:'', title:'', description:''};
     closeNewTicketDrawer();
     state.view='flow'; state.ffSelectedTicket=tid;
     render();
   };
   const reset = document.getElementById('nt-reset');
-  if(reset) reset.onclick = ()=>{ newTicketForm = {priority:'Medium', subject:'Employee', assignedTo:'', title:'', description:''}; refreshNewTicketDrawer(u); };
+  if(reset) reset.onclick = ()=>{ newTicketForm = {priority:'Medium', subject:'Employee', subjectEmployee:'', assignedTo:'', title:'', description:''}; refreshNewTicketDrawer(u); };
 }
 
 // periodic re-render so overdue flags stay live without user action
