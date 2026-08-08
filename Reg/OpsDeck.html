@@ -233,6 +233,40 @@
 
   /* ---------- Modal ---------- */
   .modal-backdrop{position:fixed;inset:0;background:rgba(6,10,14,.7);backdrop-filter:blur(2px);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .fab-new{
+    width:32px;height:32px;border-radius:50%;border:none;flex:none;
+    background:var(--teal);color:#08171A;font-family:var(--font-body);
+    font-size:19px;font-weight:700;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 2px 8px rgba(79,209,197,.25);transition:.15s;margin-right:2px;
+  }
+  .fab-new:hover{background:#63DBD0;transform:translateY(-1px);box-shadow:0 4px 12px rgba(79,209,197,.35);}
+  .drawer-backdrop{
+    position:fixed;inset:0;background:rgba(6,10,14,0);z-index:110;
+    transition:background .22s ease;pointer-events:auto;
+  }
+  .drawer-backdrop.open{background:rgba(6,10,14,.55);backdrop-filter:blur(1px);}
+  .ticket-drawer{
+    position:fixed;top:0;right:0;bottom:0;width:min(440px,92vw);
+    background:var(--panel);border-left:1px solid var(--border);
+    box-shadow:-12px 0 32px rgba(0,0,0,.45);
+    transform:translateX(100%);transition:transform .22s ease;
+    display:flex;flex-direction:column;overflow-y:auto;
+  }
+  .drawer-backdrop.open .ticket-drawer{transform:translateX(0);}
+  .drawer-head{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+    padding:20px 20px 16px;border-bottom:1px solid var(--border-soft);
+    position:sticky;top:0;background:var(--panel);z-index:1;
+  }
+  .drawer-head h2{font-family:var(--font-display);font-size:18px;margin:0;}
+  .drawer-close{
+    width:28px;height:28px;border-radius:7px;border:1px solid var(--border);
+    background:var(--panel-raised);color:var(--text-dim);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;font-size:13px;flex:none;transition:.12s;
+  }
+  .drawer-close:hover{color:var(--text);background:var(--panel-hover);}
+  .drawer-body{padding:18px 20px 24px;}
   .modal{background:var(--panel);border:1px solid var(--border);border-radius:14px;max-width:480px;width:100%;padding:22px;}
   .modal h3{font-family:var(--font-display);margin:0 0 4px;font-size:17px;}
   .modal .modal-sub{color:var(--text-muted);font-size:12.5px;margin:0 0 16px;}
@@ -1106,11 +1140,11 @@ function renderTopbar(u){
         <button data-view="my" class="${state.view==='my'?'active':''}">My Portal${myCount?`<span class="badge-count">${myCount}</span>`:''}</button>
         ${manager && u.dept ? `<button data-view="dept" class="${state.view==='dept'?'active':''}">Department${dCount?`<span class="badge-count">${dCount}</span>`:''}</button>`:''}
         ${!gm && !manager ? `<button data-view="dept" class="${state.view==='dept'?'active':''}">Department tasks</button>`:''}
-        ${!isWorker(u.id) ? `<button data-view="new" class="${state.view==='new'?'active':''}">New Ticket</button>`:''}
         ${!isWorker(u.id) ? `<button data-view="flow" class="${state.view==='flow'?'active':''}">Flow Finder</button>`:''}
         ${gm ? `<button data-view="org" class="${state.view==='org'?'active':''}">Org Overview${orgCount?`<span class="badge-count">${orgCount}</span>`:''}</button>`:''}
       </nav>
       <div class="topbar-spacer"></div>
+      ${!isWorker(u.id) ? `<button class="fab-new" id="newTicketBtn" title="New Ticket" aria-label="New Ticket">+</button>` : ''}
       <div class="userbox">
         <span class="role-pill">${roleLabel}</span>
         <span class="userbox-name" title="${u.email || ''}">${u.name}</span>
@@ -1129,13 +1163,11 @@ function renderTopbar(u){
 
 function renderView(u){
   const manager = isManager(u.id), gm = isGM(u.id), worker = isWorker(u.id);
-  if(worker && state.view==='new') state.view='my';
   if(worker && state.view==='flow' && !state.ffSelectedTicket) state.view='my';
   if(!gm && state.view==='org') state.view='my';
   switch(state.view){
     case 'my': return renderMyPortal(u);
     case 'dept': return manager ? renderDeptPortal(u) : renderDeptReadOnly(u);
-    case 'new': return renderNewTicket(u);
     case 'flow': return renderFlowFinder(u);
     case 'org': return renderOrgOverview(u);
     default: return '';
@@ -1284,9 +1316,9 @@ function renderDeptReadOnly(u, opts={}){
   </div>`;
 }
 
-// ----- New ticket -----
+// ----- New ticket (rendered inside the slide-in drawer, see openNewTicketDrawer) -----
 let newTicketForm = {priority:'Medium', subject:'Employee', assignedTo:'', title:'', description:''};
-function renderNewTicket(u){
+function newTicketFormHtml(u){
   const f = newTicketForm;
   const subjects = subjectOptionsFromCache();
   const allowedIds = new Set(assignablePeopleFor(u).map(e=>e.id));
@@ -1296,9 +1328,6 @@ function renderNewTicket(u){
   // through ungated since it isn't a personal assignment.
   const assigneeOptions = uniqueAssignedToForSubject(f.subject).filter(v => !emp(v) || allowedIds.has(v));
   return `
-  <h1 class="page-title">New Ticket</h1>
-  <p class="page-sub">This writes one row to the log — exactly like every later event on this ticket.</p>
-  <div class="card" style="max-width:640px;">
     <div class="field">
       <label>Ticket name</label>
       <input type="text" id="nt-title" placeholder="e.g. Payslip discrepancy" value="${f.title.replace(/"/g,'&quot;')}">
@@ -1332,8 +1361,7 @@ function renderNewTicket(u){
     <div class="btn-row">
       <button class="btn btn-primary" id="nt-submit">Create ticket</button>
       <button class="btn btn-ghost" id="nt-reset">Clear</button>
-    </div>
-  </div>`;
+    </div>`;
 }
 
 function assignablePeopleFor(u){
@@ -1691,37 +1719,70 @@ function wireGlobal(){
     b.onclick=()=> openRespondModal(b.dataset.respond, b.dataset.tid);
   });
 
-  const ntSubmit = document.getElementById('nt-submit');
-  if(ntSubmit) ntSubmit.onclick=()=>{
-    syncNewTicketFields();
+  const newTicketBtn = document.getElementById('newTicketBtn');
+  if(newTicketBtn) newTicketBtn.onclick = openNewTicketDrawer;
+}
+
+// ---------- New Ticket drawer (slides in from the right; opened by the + button) ----------
+function newTicketDrawerEscHandler(e){ if(e.key==='Escape') closeNewTicketDrawer(); }
+function openNewTicketDrawer(){
+  if(document.getElementById('ticketDrawerBackdrop')) return; // already open
+  const u = currentUser();
+  const backdrop = document.createElement('div');
+  backdrop.className = 'drawer-backdrop';
+  backdrop.id = 'ticketDrawerBackdrop';
+  backdrop.innerHTML = `
+    <aside class="ticket-drawer" id="ticketDrawer">
+      <div class="drawer-head">
+        <div>
+          <h2>New Ticket</h2>
+          <p class="page-sub" style="margin:2px 0 0;">Writes one row to the log — same as every later event.</p>
+        </div>
+        <button class="drawer-close" id="drawerClose" aria-label="Close">✕</button>
+      </div>
+      <div class="drawer-body" id="drawerBody">${newTicketFormHtml(u)}</div>
+    </aside>`;
+  document.body.appendChild(backdrop);
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=> backdrop.classList.add('open')); });
+  backdrop.addEventListener('mousedown', (e)=>{ if(e.target===backdrop) closeNewTicketDrawer(); });
+  document.addEventListener('keydown', newTicketDrawerEscHandler);
+  wireNewTicketDrawerFields(u);
+  document.getElementById('drawerClose').onclick = closeNewTicketDrawer;
+}
+function closeNewTicketDrawer(){
+  const backdrop = document.getElementById('ticketDrawerBackdrop');
+  if(!backdrop) return;
+  backdrop.classList.remove('open');
+  document.removeEventListener('keydown', newTicketDrawerEscHandler);
+  setTimeout(()=>{ backdrop.remove(); }, 220);
+}
+function refreshNewTicketDrawer(u){
+  const body = document.getElementById('drawerBody');
+  if(!body) return;
+  body.innerHTML = newTicketFormHtml(u);
+  wireNewTicketDrawerFields(u);
+}
+function wireNewTicketDrawerFields(u){
+  const t = document.getElementById('nt-title'); if(t) t.oninput = ()=>{ newTicketForm.title = t.value; };
+  const d = document.getElementById('nt-desc'); if(d) d.oninput = ()=>{ newTicketForm.description = d.value; };
+  const p = document.getElementById('nt-priority'); if(p) p.onchange = ()=>{ newTicketForm.priority = p.value; };
+  const s = document.getElementById('nt-subject');
+  if(s) s.onchange = ()=>{ newTicketForm.subject = s.value; newTicketForm.assignedTo=''; refreshNewTicketDrawer(u); };
+  const a = document.getElementById('nt-assignee'); if(a) a.onchange = ()=>{ newTicketForm.assignedTo = a.value; };
+  const submit = document.getElementById('nt-submit');
+  if(submit) submit.onclick = ()=>{
     const f = newTicketForm;
     if(!f.title.trim()){ toast('Give this a name first.'); return; }
     if(!f.assignedTo){ toast('Choose who this is assigned to.'); return; }
     const tid = createTicket({creatorId: state.currentUserId, title:f.title, description:f.description||'(no description provided)', priority:f.priority, subject:f.subject, assignedTo:f.assignedTo});
     toast(`Ticket created and routed to ${nameOf(f.assignedTo)}.`);
     newTicketForm = {priority:'Medium', subject:'Employee', assignedTo:'', title:'', description:''};
+    closeNewTicketDrawer();
     state.view='flow'; state.ffSelectedTicket=tid;
     render();
   };
-  const ntReset = document.getElementById('nt-reset');
-  if(ntReset) ntReset.onclick=()=>{ newTicketForm = {priority:'Medium', subject:'Employee', assignedTo:'', title:'', description:''}; render(); };
-  bindNewTicketLiveFields();
-}
-
-function syncNewTicketFields(){
-  const t = document.getElementById('nt-title'); if(t) newTicketForm.title = t.value;
-  const d = document.getElementById('nt-desc'); if(d) newTicketForm.description = d.value;
-  const p = document.getElementById('nt-priority'); if(p) newTicketForm.priority = p.value;
-  const s = document.getElementById('nt-subject'); if(s) newTicketForm.subject = s.value;
-  const a = document.getElementById('nt-assignee'); if(a) newTicketForm.assignedTo = a.value;
-}
-function bindNewTicketLiveFields(){
-  const a = document.getElementById('nt-assignee');
-  if(a) a.onchange = ()=>{ newTicketForm.assignedTo = a.value; };
-  const p = document.getElementById('nt-priority');
-  if(p) p.onchange = ()=>{ newTicketForm.priority = p.value; };
-  const s = document.getElementById('nt-subject');
-  if(s) s.onchange = ()=>{ newTicketForm.subject = s.value; newTicketForm.assignedTo=''; render(); };
+  const reset = document.getElementById('nt-reset');
+  if(reset) reset.onclick = ()=>{ newTicketForm = {priority:'Medium', subject:'Employee', assignedTo:'', title:'', description:''}; refreshNewTicketDrawer(u); };
 }
 
 // periodic re-render so overdue flags stay live without user action
