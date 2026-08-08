@@ -241,19 +241,16 @@
     box-shadow:0 2px 8px rgba(79,209,197,.25);transition:.15s;margin-right:2px;
   }
   .fab-new:hover{background:#63DBD0;transform:translateY(-1px);box-shadow:0 4px 12px rgba(79,209,197,.35);}
-  .drawer-backdrop{
-    position:fixed;inset:0;background:rgba(6,10,14,0);z-index:110;
-    transition:background .22s ease;pointer-events:auto;
-  }
-  .drawer-backdrop.open{background:rgba(6,10,14,.55);backdrop-filter:blur(1px);}
+  #app{transition:margin-right .22s ease;}
+  body.drawer-open #app{margin-right:min(420px,92vw);}
   .ticket-drawer{
-    position:fixed;top:0;right:0;bottom:0;width:min(440px,92vw);
+    position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);
     background:var(--panel);border-left:1px solid var(--border);
     box-shadow:-12px 0 32px rgba(0,0,0,.45);
     transform:translateX(100%);transition:transform .22s ease;
-    display:flex;flex-direction:column;overflow-y:auto;
+    display:flex;flex-direction:column;overflow-y:auto;z-index:110;
   }
-  .drawer-backdrop.open .ticket-drawer{transform:translateX(0);}
+  .ticket-drawer.open{transform:translateX(0);}
   .drawer-head{
     display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
     padding:20px 20px 16px;border-bottom:1px solid var(--border-soft);
@@ -1723,38 +1720,46 @@ function wireGlobal(){
   if(newTicketBtn) newTicketBtn.onclick = openNewTicketDrawer;
 }
 
-// ---------- New Ticket drawer (slides in from the right; opened by the + button) ----------
+// ---------- New Ticket drawer (docks on the right, pushes #app to make room; opened by the + button) ----------
 function newTicketDrawerEscHandler(e){ if(e.key==='Escape') closeNewTicketDrawer(); }
+function newTicketDrawerOutsideClick(e){
+  const drawer = document.getElementById('ticketDrawer');
+  const fab = document.getElementById('newTicketBtn');
+  if(!drawer) return;
+  if(drawer.contains(e.target) || (fab && fab.contains(e.target))) return;
+  closeNewTicketDrawer();
+}
 function openNewTicketDrawer(){
-  if(document.getElementById('ticketDrawerBackdrop')) return; // already open
+  if(document.getElementById('ticketDrawer')) return; // already open
   const u = currentUser();
-  const backdrop = document.createElement('div');
-  backdrop.className = 'drawer-backdrop';
-  backdrop.id = 'ticketDrawerBackdrop';
-  backdrop.innerHTML = `
-    <aside class="ticket-drawer" id="ticketDrawer">
-      <div class="drawer-head">
-        <div>
-          <h2>New Ticket</h2>
-          <p class="page-sub" style="margin:2px 0 0;">Writes one row to the log — same as every later event.</p>
-        </div>
-        <button class="drawer-close" id="drawerClose" aria-label="Close">✕</button>
+  const drawer = document.createElement('aside');
+  drawer.className = 'ticket-drawer';
+  drawer.id = 'ticketDrawer';
+  drawer.innerHTML = `
+    <div class="drawer-head">
+      <div>
+        <h2>New Ticket</h2>
+        <p class="page-sub" style="margin:2px 0 0;">Writes one row to the log — same as every later event.</p>
       </div>
-      <div class="drawer-body" id="drawerBody">${newTicketFormHtml(u)}</div>
-    </aside>`;
-  document.body.appendChild(backdrop);
-  requestAnimationFrame(()=>{ requestAnimationFrame(()=> backdrop.classList.add('open')); });
-  backdrop.addEventListener('mousedown', (e)=>{ if(e.target===backdrop) closeNewTicketDrawer(); });
+      <button class="drawer-close" id="drawerClose" aria-label="Close">✕</button>
+    </div>
+    <div class="drawer-body" id="drawerBody">${newTicketFormHtml(u)}</div>`;
+  document.body.appendChild(drawer);
+  document.body.classList.add('drawer-open');
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=> drawer.classList.add('open')); });
   document.addEventListener('keydown', newTicketDrawerEscHandler);
+  document.addEventListener('mousedown', newTicketDrawerOutsideClick);
   wireNewTicketDrawerFields(u);
   document.getElementById('drawerClose').onclick = closeNewTicketDrawer;
 }
 function closeNewTicketDrawer(){
-  const backdrop = document.getElementById('ticketDrawerBackdrop');
-  if(!backdrop) return;
-  backdrop.classList.remove('open');
+  const drawer = document.getElementById('ticketDrawer');
+  if(!drawer) return;
+  drawer.classList.remove('open');
+  document.body.classList.remove('drawer-open');
   document.removeEventListener('keydown', newTicketDrawerEscHandler);
-  setTimeout(()=>{ backdrop.remove(); }, 220);
+  document.removeEventListener('mousedown', newTicketDrawerOutsideClick);
+  setTimeout(()=>{ drawer.remove(); }, 220);
 }
 function refreshNewTicketDrawer(u){
   const body = document.getElementById('drawerBody');
