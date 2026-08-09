@@ -931,6 +931,7 @@ function wireIdBar(){
 const app = document.getElementById('app');
 function render(){
   tickReminderEngine();
+  if(!state.currentUserId && STAFF.length) state.currentUserId = STAFF[0].id;
   const u = currentUser();
   if(!u){
     app.innerHTML = `<div class="page"><div class="empty"><b>Waiting on data.</b>No staff codes discovered from ap2_ticLog yet.</div></div>`;
