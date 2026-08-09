@@ -1,0 +1,1718 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpsDeck — Ticket &amp; Task Portal</title>
+<script src="https://effimalik.github.io/Testing/shared/auth.js?v=5"></script>
+<script src="https://effimalik.github.io/Testing/shared/code.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/devPre.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/cacheWatcher.js?v=1"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1720;
+    --bg-grid: #131D27;
+    --panel:#172029;
+    --panel-raised:#1D2833;
+    --panel-hover:#212E3A;
+    --border:#28333F;
+    --border-soft:#1E2830;
+    --text:#EAEEF2;
+    --text-dim:#B3BEC9;
+    --text-muted:#7C8998;
+    --teal:#4FD1C5;
+    --teal-dim:#2C4A48;
+    --amber:#F2A93B;
+    --amber-dim:#4A3A1E;
+    --red:#E8574B;
+    --red-dim:#4A2420;
+    --blue:#5B8DEF;
+    --blue-dim:#22314F;
+    --font-display:'Space Grotesk', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+    --font-body:'Inter', sans-serif;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px) 0 0/100% 28px,
+      var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    min-height:100vh;
+  }
+  ::selection{background:var(--teal-dim);color:var(--text);}
+  a{color:inherit;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:40;
+    display:flex;flex-direction:column;gap:10px;
+    padding:14px 24px;
+    background:rgba(15,23,32,0.94);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+  }
+  .topbar-row1{display:flex;align-items:center;gap:16px;}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:19px;letter-spacing:0.2px;flex-shrink:0;}
+  .brand .dot{width:9px;height:9px;border-radius:2px;background:var(--amber);box-shadow:0 0 10px var(--amber);animation:pulse 2.2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+  .topbar-spacer{flex:1;}
+  nav.tabs{
+    display:flex;gap:2px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;padding-bottom:1px;
+  }
+  nav.tabs::-webkit-scrollbar{display:none;}
+  nav.tabs button{
+    background:none;border:none;color:var(--text-muted);font-size:13.5px;font-weight:500;
+    padding:8px 14px;border-radius:7px;transition:all .15s;position:relative;white-space:nowrap;flex-shrink:0;
+  }
+  nav.tabs button:hover{color:var(--text);background:var(--panel-raised);}
+  nav.tabs button.active{color:var(--bg);background:var(--teal);}
+  .badge-count{
+    display:inline-block;min-width:16px;padding:0 4px;margin-left:6px;border-radius:20px;
+    background:var(--red);color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;
+  }
+  nav.tabs button.active .badge-count{background:rgba(15,23,32,.55);color:#fff;}
+  .userbox{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .userbox select{
+    background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:7px;
+    padding:7px 10px;font-size:13px;max-width:190px;
+  }
+  .role-pill{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--teal);border:1px solid var(--teal-dim);background:var(--teal-dim);padding:3px 8px;border-radius:20px;font-family:var(--font-mono);white-space:nowrap;flex-shrink:0;}
+
+  @media (max-width:760px){
+    .topbar{padding:12px 14px;}
+    .topbar-row1{flex-wrap:wrap;row-gap:10px;}
+    .userbox{width:100%;justify-content:space-between;order:3;}
+    .userbox select{max-width:none;flex:1;}
+    nav.tabs{width:100%;order:2;}
+    .topbar-spacer{display:none;}
+  }
+
+  /* ---------- Layout ---------- */
+  .page{max-width:1180px;margin:0 auto;padding:28px 24px 80px;}
+  .grid2{display:grid;grid-template-columns:280px 1fr;gap:22px;align-items:start;}
+  @media (max-width:820px){.grid2{grid-template-columns:1fr;}}
+
+  .card{
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:20px;
+  }
+  .profile-card .avatar{
+    width:52px;height:52px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:700;font-size:19px;background:var(--panel-raised);
+    color:var(--teal);border:1px solid var(--border);margin-bottom:14px;
+  }
+  .profile-card h2{font-family:var(--font-display);font-size:19px;margin:0 0 4px;}
+  .profile-card .role-line{color:var(--text-muted);font-size:13px;margin:0 0 14px;}
+  .profile-card .meta-row{display:flex;justify-content:space-between;font-size:12.5px;padding:8px 0;border-top:1px solid var(--border-soft);color:var(--text-dim);}
+  .profile-card .meta-row span:first-child{color:var(--text-muted);}
+  .stat-strip{display:flex;gap:10px;margin-top:14px;}
+  .stat-chip{flex:1;background:var(--panel-raised);border:1px solid var(--border-soft);border-radius:8px;padding:9px 8px;text-align:center;}
+  .stat-chip .n{font-family:var(--font-mono);font-size:18px;font-weight:600;}
+  .stat-chip .l{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;}
+  .access-chip{font-size:10px;font-family:var(--font-mono);border:1px solid var(--border-soft);color:var(--text-dim);background:var(--panel-raised);padding:3px 7px;border-radius:5px;display:inline-flex;align-items:center;gap:5px;}
+  .access-chip .flags{color:var(--teal);font-weight:700;letter-spacing:1px;}
+  .access-chip.no-access{color:var(--text-muted);}
+  .access-chip.no-access .flags{display:none;}
+
+  h1.page-title{font-family:var(--font-display);font-size:24px;margin:0 0 4px;}
+  .page-sub{color:var(--text-muted);font-size:13.5px;margin:0 0 20px;}
+  .section-label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin:26px 0 10px;display:flex;align-items:center;gap:8px;}
+  .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  /* ---------- Ticket rows ---------- */
+  .ticket-list{display:flex;flex-direction:column;gap:8px;}
+  .ticket-row{
+    background:var(--panel);border:1px solid var(--border);border-radius:9px;
+    padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:.12s;
+  }
+  .ticket-row:hover{background:var(--panel-hover);border-color:#37444F;}
+  .pri-flag{width:4px;align-self:stretch;border-radius:3px;flex-shrink:0;}
+  .pri-High{background:var(--red);}
+  .pri-Medium{background:var(--amber);}
+  .pri-Low{background:var(--teal);}
+  .t-main{flex:1;min-width:0;}
+  .t-title{font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;}
+  .t-title .tid{font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted);font-weight:400;}
+  .t-sub{font-size:12px;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .type-chip{font-size:10px;text-transform:uppercase;letter-spacing:.4px;font-family:var(--font-mono);padding:2px 6px;border-radius:4px;border:1px solid var(--border);color:var(--text-dim);}
+  .status-chip{font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;white-space:nowrap;}
+  .st-Open{background:var(--blue-dim);color:var(--blue);}
+  .st-Forwarded{background:var(--blue-dim);color:var(--blue);}
+  .st-InProgress{background:var(--blue-dim);color:var(--blue);}
+  .st-Pending{background:var(--amber-dim);color:var(--amber);}
+  .st-Postponed{background:var(--amber-dim);color:var(--amber);}
+  .st-Resolved{background:var(--teal-dim);color:var(--teal);}
+  .st-Done{background:var(--teal-dim);color:var(--teal);}
+  /* Real ap2_ticLog status vocabulary: NEW / IN PROGRESS / ON HOLD / RESOLVED
+     (statusClass() strips spaces, so "IN PROGRESS" -> st-INPROGRESS etc.) */
+  .st-NEW{background:var(--blue-dim);color:var(--blue);}
+  .st-INPROGRESS{background:var(--blue-dim);color:var(--blue);}
+  .st-ONHOLD{background:var(--amber-dim);color:var(--amber);}
+  .st-RESOLVED{background:var(--teal-dim);color:var(--teal);}
+  .id-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;margin-bottom:16px;background:var(--panel-raised);border:1px solid var(--border);border-radius:9px;font-size:12.5px;}
+  .id-bar label{color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px;margin-right:4px;}
+  .id-bar select{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12.5px;}
+  .id-bar .id-note{color:var(--text-muted);font-size:11.5px;flex-basis:100%;}
+  .overdue-flag{
+    font-family:var(--font-mono);font-size:10.5px;color:#fff;background:var(--red);
+    padding:3px 8px;border-radius:5px;display:flex;align-items:center;gap:5px;animation:ring 1.6s ease-in-out infinite;
+  }
+  @keyframes ring{0%,100%{transform:rotate(0);}20%{transform:rotate(-8deg);}40%{transform:rotate(8deg);}60%{transform:rotate(-4deg);}80%{transform:rotate(4deg);}}
+  .empty{
+    text-align:center;padding:50px 20px;color:var(--text-muted);border:1px dashed var(--border);border-radius:var(--radius);font-size:13.5px;
+  }
+  .empty b{display:block;color:var(--text-dim);font-family:var(--font-display);font-size:16px;margin-bottom:6px;font-weight:600;}
+
+  /* ---------- Buttons ---------- */
+  .btn{border:1px solid var(--border);background:var(--panel-raised);color:var(--text);padding:8px 14px;border-radius:7px;font-size:13px;font-weight:500;transition:.12s;}
+  .btn:hover{background:var(--panel-hover);border-color:#3A4753;}
+  .btn-primary{background:var(--teal);color:#062522;border-color:var(--teal);font-weight:600;}
+  .btn-primary:hover{background:#69dbd0;}
+  .btn-amber{background:var(--amber);color:#2a1c04;border-color:var(--amber);font-weight:600;}
+  .btn-amber:hover{background:#f7bb5c;}
+  .btn-ghost{background:none;border-color:transparent;color:var(--text-muted);}
+  .btn-ghost:hover{color:var(--text);background:var(--panel-raised);}
+  .btn-sm{padding:6px 11px;font-size:12px;}
+  .btn-block{width:100%;}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+
+  /* ---------- Tabs (dept portal) ---------- */
+  .subtabs{display:flex;gap:4px;margin-bottom:16px;background:var(--panel-raised);padding:4px;border-radius:9px;width:fit-content;}
+
+  /* ---------- Filter pills (status filter — same pattern as the fleet pages) ---------- */
+  .filter-pills{display:flex;gap:6px;flex-wrap:wrap;}
+  .filter-btn{
+    display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:20px;
+    border:1.5px solid var(--border);background:var(--panel-raised);color:var(--text-dim);
+    font-family:var(--font-body);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;white-space:nowrap;
+  }
+  .filter-btn:hover{background:var(--panel-hover);color:var(--text);}
+  .filter-btn.active{background:var(--teal-dim);color:var(--teal);border-color:var(--teal-dim);box-shadow:0 0 0 2px var(--teal-dim);}
+  .subtabs button{background:none;border:none;color:var(--text-muted);font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:6px;}
+  .subtabs button.active{background:var(--panel);color:var(--text);}
+
+  /* ---------- Forms ---------- */
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+  .field.full{grid-column:1/-1;}
+  .field label{font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;}
+  .field input[type=text],.field textarea,.field select,.field input[type=date]{
+    background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:10px 11px;font-size:13.5px;
+  }
+  .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--teal);}
+  .field textarea{resize:vertical;min-height:70px;}
+  .seg{display:flex;gap:6px;}
+  .seg button{flex:1;background:var(--panel-raised);border:1px solid var(--border);color:var(--text-dim);padding:9px;border-radius:7px;font-size:13px;font-weight:600;}
+  .seg button.sel{border-color:var(--teal);color:var(--teal);background:var(--teal-dim);}
+  .hint{font-size:11.5px;color:var(--text-muted);margin-top:-4px;}
+  .warn-hint{font-size:11.5px;color:var(--amber);}
+
+  /* ---------- Flow finder ---------- */
+  .ff-searchbar{display:flex;gap:8px;margin-bottom:16px;}
+  .ff-searchbar select, .ff-searchbar input{flex:0 0 auto;}
+  .ff-results{display:flex;flex-direction:column;gap:8px;}
+
+  .timeline{position:relative;padding-left:26px;margin-top:6px;}
+  .timeline::before{content:'';position:absolute;left:9px;top:4px;bottom:4px;width:2px;background:linear-gradient(var(--border),var(--border) 70%,transparent);}
+  .tl-item{position:relative;padding:0 0 26px 20px;}
+  .tl-item:last-child{padding-bottom:0;}
+  .tl-dot{position:absolute;left:-26px;top:2px;width:20px;height:20px;border-radius:50%;background:var(--panel-raised);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;}
+  .tl-item.k-created .tl-dot{border-color:var(--blue);color:var(--blue);}
+  .tl-item.k-forward .tl-dot{border-color:var(--blue);color:var(--blue);}
+  .tl-item.k-reminder .tl-dot{border-color:var(--amber);color:var(--amber);}
+  .tl-item.k-result .tl-dot{border-color:var(--teal);color:var(--teal);}
+  .tl-item.k-resolved .tl-dot{border-color:var(--teal);background:var(--teal);color:#062522;}
+  .tl-gap{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);position:absolute;left:-90px;top:2px;width:60px;text-align:right;}
+  .tl-card{background:var(--panel-raised);border:1px solid var(--border-soft);border-radius:8px;padding:11px 13px;}
+  .tl-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px;flex-wrap:wrap;}
+  .tl-action{font-weight:700;font-size:13.5px;}
+  .tl-ts{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);}
+  .tl-who{font-size:12px;color:var(--text-dim);margin-bottom:6px;}
+  .tl-notes{font-size:13px;color:var(--text-dim);line-height:1.5;}
+  .tl-wrap{padding-left:70px;}
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(6,10,14,.7);backdrop-filter:blur(2px);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .fab-new{
+    width:32px;height:32px;border-radius:50%;border:none;flex:none;
+    background:var(--teal);color:#08171A;font-family:var(--font-body);
+    font-size:19px;font-weight:700;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 2px 8px rgba(79,209,197,.25);transition:.15s;margin-right:2px;
+  }
+  .fab-new:hover{background:#63DBD0;transform:translateY(-1px);box-shadow:0 4px 12px rgba(79,209,197,.35);}
+  #app{transition:margin-right .22s ease;}
+  body.drawer-open #app{margin-right:min(420px,92vw);}
+  .ticket-drawer{
+    position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);
+    background:var(--panel);border-left:1px solid var(--border);
+    box-shadow:-12px 0 32px rgba(0,0,0,.45);
+    transform:translateX(100%);transition:transform .22s ease;
+    display:flex;flex-direction:column;overflow-y:auto;z-index:110;
+  }
+  .ticket-drawer.open{transform:translateX(0);}
+  .drawer-head{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+    padding:20px 20px 16px;border-bottom:1px solid var(--border-soft);
+    position:sticky;top:0;background:var(--panel);z-index:1;
+  }
+  .drawer-head h2{font-family:var(--font-display);font-size:18px;margin:0;}
+  .drawer-close{
+    width:28px;height:28px;border-radius:7px;border:1px solid var(--border);
+    background:var(--panel-raised);color:var(--text-dim);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;font-size:13px;flex:none;transition:.12s;
+  }
+  .drawer-close:hover{color:var(--text);background:var(--panel-hover);}
+  .drawer-body{padding:18px 20px 24px;}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:14px;max-width:480px;width:100%;padding:22px;}
+  .modal h3{font-family:var(--font-display);margin:0 0 4px;font-size:17px;}
+  .modal .modal-sub{color:var(--text-muted);font-size:12.5px;margin:0 0 16px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
+
+  /* ---------- Demo fast-forward control ---------- */
+  .demo-clock{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+  .demo-clock .dc-label{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-right:2px;white-space:nowrap;}
+  .demo-clock .dc-offset{font-family:var(--font-mono);font-size:10.5px;color:var(--amber);white-space:nowrap;}
+  .demo-clock button{
+    background:var(--panel-raised);border:1px solid var(--border);color:var(--text-dim);
+    padding:5px 8px;border-radius:5px;font-family:var(--font-mono);font-size:11px;flex-shrink:0;
+  }
+  .demo-clock button:hover{color:var(--amber);border-color:var(--amber-dim);}
+  @media (max-width:760px){
+    .demo-clock{width:100%;order:4;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+    .demo-clock::-webkit-scrollbar{display:none;}
+  }
+
+  /* ---------- Page-wide responsive rules ---------- */
+  @media (max-width:640px){
+    .page{padding:20px 14px 60px;}
+    .page-title{font-size:20px;}
+    .form-grid{grid-template-columns:1fr;}
+    .ticket-row{flex-wrap:wrap;}
+    .t-main{min-width:160px;}
+    .tl-wrap{padding-left:0;}
+    .tl-gap{display:none;}
+    .stat-strip{flex-wrap:wrap;}
+    .ff-searchbar{flex-direction:column;}
+    .modal{padding:18px;}
+    nav.tabs button{font-size:12.5px;padding:7px 10px;}
+  }
+
+  .toast-wrap{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;}
+  .toast{background:var(--panel-raised);border:1px solid var(--teal-dim);border-left:3px solid var(--teal);color:var(--text);padding:11px 16px;border-radius:8px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:slidein .25s ease;}
+  @keyframes slidein{from{transform:translateX(20px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+  .kicker{font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* =========================================================================
+   OPSDECK — Ticket & Task Portal
+   ---------------------------------------------------------------------
+   REBUILT AROUND THE REAL ap2_ticLog CACHE SHAPE.
+
+   The connected cache's .data object is { Ticket: [...], ticLog: [...] } —
+   but those two arrays are the OPPOSITE of what their names suggest:
+
+     payload.Ticket  — the real append-only FLOW/EVENT log. One row per
+       event: Event_ID, Ticket_ID, Action, Status, From, Performed_By, To,
+       Detail. This is what every timeline, status, and "who did what"
+       view is built from.
+
+     payload.ticLog  — the per-ticket MASTER/CREATION record. One row per
+       ticket (not per event): Event_ID (points at the CREATED event),
+       Ticket_ID, Created_By, Subject_Type, Subject_ID, Assigned_To,
+       Assignment_Type, Priority, Status, Notes. This is where the FIXED
+       facts about a ticket live — most importantly Subject_ID, which is
+       the Subject Employee (E2) the earlier version of this file was
+       missing entirely. It's really here now, so Flow Finder, the ticket
+       list, and the New Ticket form all key off it directly.
+
+   IDENTITY IN THE REAL DATA
+   Every actor (Created_By, Performed_By, From, To, Assigned_To) is a
+   short staff code like "M001".."M008" — management/operations people
+   (E1/E3/E4... in the requirement doc). Every Subject Employee (E2) is a
+   short code like "E101".."E105". Departments show up as plain names
+   ("Finance","HR","SIM","Bike","Fleet","Payroll") wherever a code isn't
+   one of the two patterns above. None of these come with real names —
+   there's no separate roster in this cache — so this file builds its
+   people/department directory straight out of whatever codes actually
+   appear in the log (discoverDirectory below), the same "grows from the
+   data, nothing hardcoded" approach the previous version used for emails.
+   Because there's no login mapping from a real session to one of these
+   M-codes, an "Acting as" bar (top of every view) lets you pick which
+   discovered staff code you're operating as, and its role/department —
+   this is what makes every scenario (worker/manager/GM, dept queues,
+   oversight, Flow Finder scoping) actually reachable and testable.
+
+   EVENT_ID AS DATE/TIME
+   Per instruction, Event_ID doubles as both the sort key AND the literal
+   timestamp for a flow event — it's treated as epoch milliseconds
+   (new Date(Number(Event_ID))) everywhere a time is shown or a gap is
+   computed, exactly like the cache's own top-level {ts:...} field is.
+
+   TICKET LIFECYCLE (requirement §1–§11, now action-complete)
+   CREATED → (queued to a Department OR delegated straight to a Person,
+   chosen at creation time) → ACCEPTED (claims it) → COMMENT / ON_HOLD /
+   RESUMED / REMINDER / REMINDER_ALERT (auto) / REMINDER_ATTENDED /
+   TRANSFERRED (to another Department or delegated to another Person,
+   which always re-queues to NEW pending Accept, matching the real
+   TK-5002 sample exactly) → RESOLVED. Every action is one more append-
+   only event row — nothing is ever edited or removed, only added.
+   ========================================================================= */
+
+// ---------- Time helpers ----------
+let demoOffsetMs = 0;
+function nowMs(){ return Date.now() + demoOffsetMs; }
+function pad(n,l=2){ return String(n).padStart(l,'0'); }
+function fmtTs(ms){
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+function fmtDur(ms){
+  ms = Math.abs(ms);
+  if(ms<1000) return ms+'ms';
+  const s=Math.floor(ms/1000);
+  if(s<60) return s+'s';
+  const m=Math.floor(s/60);
+  if(m<60) return m+'m '+(s%60)+'s';
+  const h=Math.floor(m/60);
+  if(h<48) return h+'h '+(m%60)+'m';
+  const dd=Math.floor(h/24);
+  return dd+'d '+(h%24)+'h';
+}
+function statusClass(s){ return 'st-'+String(s||'').replace(/\s+/g,''); }
+const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtReminderDetail(ms){
+  const d = new Date(ms);
+  return `Reminder: ${pad(d.getDate())}-${MONTH_ABBR[d.getMonth()]}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function parseReminderDetail(detail){
+  const m = String(detail||'').match(/Reminder:\s*(\d{1,2})-([A-Za-z]{3})-(\d{4})\s+(\d{1,2}):(\d{2})/);
+  if(!m) return null;
+  const monthIdx = MONTH_ABBR.findIndex(x=>x.toLowerCase()===m[2].toLowerCase());
+  if(monthIdx<0) return null;
+  return new Date(+m[3], monthIdx, +m[1], +m[4], +m[5], 0, 0).getTime();
+}
+
+/* ═══════════ Identity codes ═══════════
+   Staff (management/ops, E1/E3/E4... in the requirement doc) = "M###".
+   Subject Employee (E2) = "E###". Anything else that shows up in a
+   From/To/Assigned_To slot is treated as a department name. */
+function isStaffCode(v){ return /^M\d+$/i.test(String(v||'').trim()); }
+function isSubjectCode(v){ return /^E\d+$/i.test(String(v||'').trim()); }
+function isPersonCode(v){ return isStaffCode(v) || isSubjectCode(v); }
+function isDeptToken(v){ v=String(v||'').trim(); return !!v && !isPersonCode(v); }
+
+let STAFF = [];        // [{id, dept, role}]
+let SUBJECTS = [];     // [{id}]
+let DEPARTMENTS = [];  // [{id, name}]
+function staff(id){ return STAFF.find(s=>s.id===id); }
+function subjectEmp(id){ return SUBJECTS.find(s=>s.id===id); }
+function dept(id){ return DEPARTMENTS.find(d=>d.id===id); }
+function deptByName(name){ return DEPARTMENTS.find(d=>d.name.toLowerCase()===String(name||'').toLowerCase()); }
+function deptIdFor(name){
+  const key = String(name||'').trim();
+  if(!key) return null;
+  let d = deptByName(key);
+  if(!d){ d = {id:'D_'+key.replace(/[^a-z0-9]/gi,'').toUpperCase(), name:key}; DEPARTMENTS.push(d); }
+  return d.id;
+}
+
+// Role/department are never given for an "M" code in this cache — there's
+// no roster, only the flow log — so they're kept in an editable overlay
+// (STAFF_META), seeded with a sensible default (manager, unassigned) so
+// every view is reachable immediately, and adjustable from the "Acting
+// as" bar to deliberately exercise the worker/manager/GM-scoped views.
+const STAFF_META_KEY = 'opsdeck_staff_meta_v1';
+let STAFF_META = {};
+function loadStaffMeta(){
+  try{ STAFF_META = JSON.parse(localStorage.getItem(STAFF_META_KEY) || '{}'); }catch(e){ STAFF_META = {}; }
+}
+function saveStaffMeta(){
+  try{ localStorage.setItem(STAFF_META_KEY, JSON.stringify(STAFF_META)); }catch(e){}
+}
+function metaFor(id){
+  if(!STAFF_META[id]) STAFF_META[id] = {role:'manager', dept:null};
+  return STAFF_META[id];
+}
+
+function registerStaff(id){
+  if(!id || staff(id)) return;
+  const m = metaFor(id);
+  STAFF.push({id, role:m.role, dept:m.dept});
+}
+function registerSubject(id){
+  if(!id || subjectEmp(id)) return;
+  SUBJECTS.push({id});
+}
+function registerDeptToken(name){
+  if(!name) return;
+  deptIdFor(name);
+}
+
+function discoverDirectory(events, masters){
+  STAFF = []; SUBJECTS = []; DEPARTMENTS = [];
+  const touch = v=>{
+    v = String(v||'').trim();
+    if(!v) return;
+    if(isStaffCode(v)) registerStaff(v);
+    else if(isSubjectCode(v)) registerSubject(v);
+    else registerDeptToken(v);
+  };
+  (events||[]).forEach(e=>{ touch(e.from); touch(e.performedBy); touch(e.to); });
+  Object.values(masters||{}).forEach(m=>{ touch(m.createdBy); touch(m.assignedToInitial); touch(m.subjectId); });
+  // sync live role/dept from the (possibly just-edited) STAFF_META overlay
+  STAFF.forEach(s=>{ const m=metaFor(s.id); s.role=m.role; s.dept=m.dept; });
+}
+
+function isManager(id){ const s=staff(id); return !!s && s.role==='manager'; }
+function isGM(id){ const s=staff(id); return !!s && s.role==='gm'; }
+function isWorker(id){ const s=staff(id); return !!s && s.role==='worker'; }
+function deptWorkers(deptId){ return STAFF.filter(s=>s.dept===deptId); }
+function assignablePeopleFor(actorId){
+  if(isGM(actorId)) return STAFF;
+  const a = staff(actorId);
+  if(isManager(actorId) && a && a.dept) return deptWorkers(a.dept);
+  return a ? [a] : [];
+}
+
+// nameOf() resolves any id/token this app ever stores in From/To/Assigned
+// slots: a staff code, a subject-employee code, or a department name/id —
+// falling back to the raw value so nothing ever renders blank.
+function nameOf(v){
+  if(!v) return '—';
+  if(dept(v)) return dept(v).name + ' (Dept)';
+  const dn = deptByName(v); if(dn) return dn.name + ' (Dept)';
+  if(isSubjectCode(v)) return v;
+  if(isStaffCode(v)) return v;
+  return v;
+}
+function deptNameOfTarget(v){
+  if(dept(v)) return dept(v).name;
+  const dn = deptByName(v); if(dn) return dn.name;
+  return v;
+}
+
+/* ═══════════ CACHE — via shared cacheWatcher.js, with a safe fallback ═══════════ */
+const _AP2_CACHE_KEY = 'ap2_ticLog';
+
+if(typeof window.AP2CacheWatcher === 'undefined'){
+  console.warn('[OpsDeck] cacheWatcher.js did not load — using local fallback');
+  window.AP2CacheWatcher = (function(){
+    const _IDB_NAME = 'ap2_fleet_cache', _IDB_STORE = 'datasets';
+    let _conn = null;
+    function _open(){
+      if(_conn) return Promise.resolve(_conn);
+      return new Promise((res, rej)=>{
+        let done = false;
+        const req = indexedDB.open(_IDB_NAME);
+        const t = setTimeout(()=>{ if(!done){ done=true; rej(new Error('idb-open-timeout')); } }, 2000);
+        req.onsuccess = e=>{ if(!done){ done=true; clearTimeout(t); _conn=e.target.result; res(_conn); } };
+        req.onerror   = e=>{ if(!done){ done=true; clearTimeout(t); rej(e.target.error); } };
+      });
+    }
+    return {
+      init(){},
+      subscribe(){ return ()=>{}; },
+      notifyNow(){},
+      getStatus(){ return {healthy:false, mode:'local-fallback', lastError:'cacheWatcher.js not loaded'}; },
+      async readKey(key){
+        try{
+          const db = await _open();
+          if(!db.objectStoreNames.contains(_IDB_STORE)) return null;
+          const rec = await new Promise((res, rej)=>{
+            const r = db.transaction(_IDB_STORE, 'readonly').objectStore(_IDB_STORE).get(key);
+            r.onsuccess = ()=>res(r.result || null);
+            r.onerror   = ()=>rej(r.error);
+          });
+          if(!rec || !rec.data) return null;
+          if(Array.isArray(rec.data)) return rec.data.length ? rec.data : null;
+          if(typeof rec.data==='object') return rec.data;
+          return null;
+        }catch(e){
+          if(e && e.name==='NotFoundError') return null;
+          console.warn('[OpsDeck] fallback read failed:', e.message);
+          return null;
+        }
+      }
+    };
+  })();
+}
+async function _readCache(){ return AP2CacheWatcher.readKey(_AP2_CACHE_KEY); }
+
+// Local-only overlay: tickets/events created *in this browser* aren't
+// written back into the real cache (this page doesn't know the backend's
+// write API) — they're kept in localStorage and replayed on top of
+// whatever the real cache contains every time it (re)loads.
+const LOCAL_OVERLAY_KEY = 'opsdeck_local_overlay_v2';
+let LOCAL_EVENTS = [];   // same shape as a parsed event row, local:true
+let LOCAL_MASTERS = {};  // ticketId -> master row, local:true
+function saveOverlay(){
+  try{ localStorage.setItem(LOCAL_OVERLAY_KEY, JSON.stringify({events:LOCAL_EVENTS, masters:LOCAL_MASTERS})); }catch(e){}
+}
+function loadOverlay(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(LOCAL_OVERLAY_KEY)||'{}');
+    LOCAL_EVENTS = Array.isArray(raw.events) ? raw.events : [];
+    LOCAL_MASTERS = raw.masters && typeof raw.masters==='object' ? raw.masters : {};
+  }catch(e){ LOCAL_EVENTS=[]; LOCAL_MASTERS={}; }
+}
+function applyOverlay(){
+  LOCAL_EVENTS.forEach(e=>EVENTS.push(e));
+  Object.keys(LOCAL_MASTERS).forEach(tid=>{ TICKET_MASTER[tid] = LOCAL_MASTERS[tid]; });
+  EVENTS.sort((a,b)=>a.eventId-b.eventId);
+}
+
+/* ═══════════ Parsing ═══════════ */
+function _pick(obj, keys){
+  for(const k of keys){ if(obj[k]!==undefined && obj[k]!==null && obj[k]!=='') return obj[k]; }
+  return '';
+}
+// payload.Ticket rows — the real flow/event log (misleadingly named).
+function parseEventRow(r){
+  if(!r) return null;
+  const ticketId = String(_pick(r,['Ticket_ID','ticketId'])||'').trim();
+  const action = String(_pick(r,['Action','action'])||'').trim();
+  const eventIdRaw = _pick(r,['Event_ID','eventId']);
+  const eventId = Number(eventIdRaw);
+  if(!ticketId || !action || !eventIdRaw || Number.isNaN(eventId)) return null;
+  return {
+    eventId, ticketId, action,
+    status: String(_pick(r,['Status','status'])||'').trim(),
+    from: String(_pick(r,['From','from'])||'').trim(),
+    performedBy: String(_pick(r,['Performed_By','performedBy'])||'').trim(),
+    to: String(_pick(r,['To','to'])||'').trim(),
+    detail: String(_pick(r,['Detail','detail'])||'').trim(),
+    local: false,
+  };
+}
+// payload.ticLog rows — the per-ticket master/creation record (misleadingly named).
+function parseMasterRow(r){
+  if(!r) return null;
+  const ticketId = String(_pick(r,['Ticket_ID','ticketId'])||'').trim();
+  if(!ticketId) return null;
+  return {
+    ticketId,
+    creationEventId: Number(_pick(r,['Event_ID','eventId'])) || null,
+    createdBy: String(_pick(r,['Created_By','createdBy'])||'').trim(),
+    subjectType: String(_pick(r,['Subject_Type','subjectType'])||'Employee').trim(),
+    subjectId: String(_pick(r,['Subject_ID','subjectId'])||'').trim(), // <-- Subject Employee (E2)
+    assignedToInitial: String(_pick(r,['Assigned_To','assignedTo'])||'').trim(),
+    assignmentType: String(_pick(r,['Assignment_Type','assignmentType'])||'').trim(),
+    priority: String(_pick(r,['Priority','priority'])||'Medium').trim(),
+    notes: String(_pick(r,['Notes','notes'])||'').trim(),
+    local: false,
+  };
+}
+
+let EVENTS = [];
+let TICKET_MASTER = {};
+let SUBJECT_EMPLOYEE_COLUMN_SEEN = false;
+
+function rebuildFromRealCache(eventRowsRaw, masterRowsRaw){
+  EVENTS = (eventRowsRaw||[]).map(parseEventRow).filter(Boolean);
+  EVENTS.sort((a,b)=>a.eventId-b.eventId);
+  TICKET_MASTER = {};
+  (masterRowsRaw||[]).map(parseMasterRow).filter(Boolean).forEach(m=>{ TICKET_MASTER[m.ticketId]=m; });
+  SUBJECT_EMPLOYEE_COLUMN_SEEN = Object.values(TICKET_MASTER).some(m=>m.subjectId);
+  discoverDirectory(EVENTS, TICKET_MASTER);
+  applyOverlay(); // replay this browser's own local tickets/events on top
+  discoverDirectory(EVENTS, TICKET_MASTER); // re-scan including anything the overlay introduced
+}
+
+function ingestFromCachePayload(payload){
+  if(!payload) return false;
+  // payload.Ticket = flow/event log; payload.ticLog = per-ticket master.
+  const eventRows = Array.isArray(payload.Ticket) ? payload.Ticket
+    : (Array.isArray(payload) ? payload : null);
+  if(!eventRows || !eventRows.length) return false;
+  const masterRows = Array.isArray(payload.ticLog) ? payload.ticLog : [];
+  rebuildFromRealCache(eventRows, masterRows);
+  return true;
+}
+
+async function loadTickets(){
+  const alreadyHaveData = EVENTS.some(r=>!r.local);
+  try{
+    const payload = await _readCache();
+    const applied = ingestFromCachePayload(payload);
+    if(applied){
+      render();
+    } else if(!alreadyHaveData){
+      discoverDirectory(EVENTS, TICKET_MASTER);
+      render();
+    }
+  }catch(err){
+    console.error('[OpsDeck] loadTickets error:', err);
+  }
+}
+let _emptyReadStreak = 0;
+async function _applyFromCache(){
+  try{
+    const payload = await _readCache();
+    const applied = ingestFromCachePayload(payload);
+    if(applied){ _emptyReadStreak = 0; render(); }
+    else if(EVENTS.some(r=>!r.local)){
+      _emptyReadStreak++;
+      if(_emptyReadStreak>=2){ EVENTS = EVENTS.filter(r=>r.local); TICKET_MASTER={}; discoverDirectory(EVENTS, TICKET_MASTER); applyOverlay(); render(); _emptyReadStreak=0; }
+    }
+  }catch(e){
+    console.warn('[OpsDeck] background refresh error:', e.message);
+  }
+}
+try{
+  AP2CacheWatcher.init();
+  AP2CacheWatcher.subscribe(()=>{ _applyFromCache(); });
+}catch(e){
+  console.warn('[OpsDeck] cacheWatcher wiring failed, continuing without live updates:', e.message);
+}
+window.addEventListener('message', (e)=>{
+  if(!e.data) return;
+  if(e.origin !== window.location.origin && e.origin !== 'null' && !e.origin.startsWith('https://effimalik.github.io')) return;
+  if(e.data.type==='ap-theme' && e.data.theme){ document.documentElement.setAttribute('data-theme', e.data.theme); }
+  if(e.data.type==='ap-cache-preload' && e.data.datasets){
+    const payload = e.data.datasets[_AP2_CACHE_KEY];
+    if(ingestFromCachePayload(payload)) render();
+  }
+  if(e.data.type==='ap-cache-ready' && e.data.key===_AP2_CACHE_KEY){
+    if(ingestFromCachePayload(e.data.data)) render();
+  }
+  if(e.data.type==='ap-cache-updated'){
+    try{ window.parent.postMessage({type:'ap-cache-request', key:_AP2_CACHE_KEY}, '*'); }catch(err){}
+  }
+});
+try{ window.parent.postMessage({type:'ap-cache-request', key:_AP2_CACHE_KEY}, '*'); }catch(e){}
+
+/* ═══════════ Ticket accessors ═══════════ */
+function allTicketIds(){ return [...new Set(EVENTS.map(r=>r.ticketId))]; }
+function ticketEvents(tid){ return EVENTS.filter(r=>r.ticketId===tid).sort((a,b)=>a.eventId-b.eventId); }
+function ticketTimeline(tid){ return ticketEvents(tid); }
+function master(tid){ return TICKET_MASTER[tid] || null; }
+function isTerminal(status){ return status==='RESOLVED'; }
+function ticketTitle(tid){ const m=master(tid); return (m && m.notes) || 'Untitled ticket'; }
+function ticketDescription(tid){
+  const evs = ticketEvents(tid);
+  const created = evs.find(e=>e.action==='CREATED');
+  return (created && created.detail) || (master(tid) && master(tid).notes) || '';
+}
+// currentOwner(): the CURRENT, changing state of a ticket — status and who
+// it's with come straight off the latest event row (no derivation/regex
+// needed, the real log already carries Status per row). Fixed facts
+// (Subject Employee/E2, Requester, original Priority) come from the
+// ticket's master row and never change, exactly per the Fixed/Changing
+// split in the requirement (§9).
+function currentOwner(tid){
+  const evs = ticketEvents(tid);
+  if(!evs.length) return null;
+  const latest = evs[evs.length-1];
+  const m = master(tid) || {};
+  return {
+    status: latest.status || 'NEW',
+    assignedTo: latest.to,
+    performedBy: latest.performedBy,
+    action: latest.action,
+    eventId: latest.eventId,
+    priority: m.priority || 'Medium',
+    subjectId: m.subjectId || '',       // Subject Employee (E2) — fixed
+    subjectType: m.subjectType || 'Employee',
+    createdBy: m.createdBy || (evs[0] && evs[0].performedBy) || '',
+  };
+}
+
+/* ═══════════ Reminder engine (computed live from the event log) ═══════════
+   A REMINDER event's Detail carries its own due date/time ("Reminder:
+   10-Aug-2026 15:00"); Event_ID is deliberately NOT used for this — it's
+   the flow-ordering timestamp, not necessarily wall-clock accurate far
+   into a demo, whereas the Detail's due date is the actual commitment
+   made on the ticket. A REMINDER is "live" (can go overdue) until either
+   a REMINDER_ATTENDED, a newer REMINDER, or a terminal/hold status
+   supersedes it. */
+function latestLiveReminder(tid){
+  const evs = ticketEvents(tid);
+  let live = null;
+  for(const e of evs){
+    if(e.action==='REMINDER') live = e;
+    else if(e.action==='REMINDER_ATTENDED') live = null;
+  }
+  return live;
+}
+function overdueInfo(tid){
+  const owner = currentOwner(tid);
+  if(!owner) return {overdue:false};
+  if(isTerminal(owner.status) || owner.status==='ON HOLD') return {overdue:false};
+  const r = latestLiveReminder(tid);
+  if(!r) return {overdue:false};
+  const dueAt = parseReminderDetail(r.detail);
+  if(!dueAt) return {overdue:false};
+  const now = nowMs();
+  if(now < dueAt) return {overdue:false, dueAt};
+  return {overdue:true, elapsed: now-dueAt, dueAt};
+}
+function tickReminderEngine(){
+  if(demoOffsetMs<=0) return; // only once the demo clock has been fast-forwarded
+  allTicketIds().forEach(tid=>{
+    const od = overdueInfo(tid);
+    if(!od.overdue) return;
+    const evs = ticketEvents(tid);
+    const last = evs[evs.length-1];
+    if(last.action==='REMINDER_ALERT') return; // already alerted for this reminder
+    fireReminderAlert(tid);
+  });
+}
+
+/* ═══════════ Mutations (append-only) ═══════════ */
+let seq = 0;
+function genEventId(){ return nowMs() + (seq++ % 900); }
+function nextTicketId(){
+  let max = 5000;
+  allTicketIds().forEach(tid=>{
+    const m = String(tid).match(/(\d+)\s*$/);
+    if(m) max = Math.max(max, parseInt(m[1],10));
+  });
+  return 'TK-' + (max+1);
+}
+function appendEvent({ticketId, action, status, from, performedBy, to, detail}){
+  const row = {eventId:genEventId(), ticketId, action, status, from:from||'', performedBy:performedBy||'', to:to||'', detail:detail||'', local:true};
+  EVENTS.push(row);
+  LOCAL_EVENTS.push(row);
+  saveOverlay();
+  return row;
+}
+
+// Ticket creation: captures the fixed E2 (subjectEmployeeId) and lets the
+// creator DELEGATE it straight to a department queue OR directly to a
+// specific person in one step (requirement §5 vs §6, chosen at creation).
+function createTicket({creatorId, title, description, priority, subjectType, subjectEmployeeId, targetType, target}){
+  const ticketId = nextTicketId();
+  const ev = appendEvent({
+    ticketId, action:'CREATED', status:'NEW',
+    from:'', performedBy:creatorId, to:target,
+    detail: description || title,
+  });
+  const m = {
+    ticketId, creationEventId: ev.eventId, createdBy:creatorId,
+    subjectType: subjectType||'Employee', subjectId: subjectEmployeeId,
+    assignedToInitial: target, assignmentType: targetType==='department' ? 'DEPARTMENT' : 'PERSON',
+    priority: priority||'Medium', notes: title, local:true,
+  };
+  TICKET_MASTER[ticketId] = m;
+  LOCAL_MASTERS[ticketId] = m;
+  discoverDirectory(EVENTS, TICKET_MASTER);
+  saveOverlay();
+  return ticketId;
+}
+function acceptTicket({ticketId, actorId}){
+  const owner = currentOwner(ticketId);
+  appendEvent({ticketId, action:'ACCEPTED', status:'IN PROGRESS', from:owner.assignedTo, performedBy:actorId, to:actorId, detail:'Ticket accepted.'});
+}
+// Transfer covers BOTH requirement flows: to a Department (re-queues,
+// anyone in that department can accept) and Delegate directly to a Person
+// (also re-queues to NEW — matching the real TK-5002 sample exactly,
+// where even a direct hand-off to M005 still needed its own ACCEPTED
+// event before work began).
+function transferTicket({ticketId, actorId, targetType, target, reason}){
+  const label = targetType==='department' ? deptNameOfTarget(target) : nameOf(target);
+  appendEvent({
+    ticketId, action:'TRANSFERRED', status:'NEW',
+    from:actorId, performedBy:actorId, to:target,
+    detail: reason || (targetType==='department' ? `Transferred to ${label} department.` : `Directly transferred to ${label}.`),
+  });
+}
+function holdTicket({ticketId, actorId, reason}){
+  const owner = currentOwner(ticketId);
+  appendEvent({ticketId, action:'ON_HOLD', status:'ON HOLD', from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:reason||'Put on hold.'});
+}
+function resumeTicket({ticketId, actorId, note}){
+  const owner = currentOwner(ticketId);
+  appendEvent({ticketId, action:'RESUMED', status:'IN PROGRESS', from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:note||'Resumed.'});
+}
+function addComment({ticketId, actorId, comment}){
+  const owner = currentOwner(ticketId);
+  appendEvent({ticketId, action:'COMMENT', status:owner.status, from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:comment});
+}
+function setReminder({ticketId, actorId, dueAtMs}){
+  const owner = currentOwner(ticketId);
+  appendEvent({ticketId, action:'REMINDER', status:owner.status, from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:fmtReminderDetail(dueAtMs)});
+}
+function attendReminder({ticketId, actorId, note}){
+  const owner = currentOwner(ticketId);
+  appendEvent({ticketId, action:'REMINDER_ATTENDED', status:owner.status, from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:note||'Reminder attended.'});
+}
+function fireReminderAlert(ticketId){
+  const owner = currentOwner(ticketId);
+  appendEvent({ticketId, action:'REMINDER_ALERT', status:owner.status, from:owner.assignedTo, performedBy:owner.assignedTo, to:owner.assignedTo, detail:'Automated: reminder overdue, no response yet.'});
+}
+function resolveTicket({ticketId, actorId, comment}){
+  const owner = currentOwner(ticketId);
+  appendEvent({ticketId, action:'RESOLVED', status:'RESOLVED', from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:comment||'Resolved.'});
+}
+
+/* ═══════════ App state ═══════════ */
+const state = {
+  currentUserId: null,
+  view: 'my', // 'my' | 'dept' | 'new' | 'flow' | 'org'
+  ffMode: 'ticket', // 'ticket' | 'subjectEmployee' | 'handler' | 'requester' | 'department' | 'status' | 'daterange'
+  ffQuery: '',
+  ffFrom: '', ffTo: '',
+  ffSelectedTicket: null,
+  myStatusFilter: 'all',
+  deptStatusFilter: 'all',
+};
+function currentUser(){ return staff(state.currentUserId); }
+
+const TICKET_STATUSES = ['NEW','IN PROGRESS','ON HOLD','RESOLVED'];
+const STATUS_FILTERS = ['all','open',...TICKET_STATUSES];
+function statusFilterLabel(f){
+  return {all:'All', open:'Needs attention'}[f] || f;
+}
+function matchesStatusFilter(status, filter){
+  if(filter==='all') return true;
+  if(filter==='open') return !isTerminal(status);
+  return status===filter;
+}
+function statusFilterBar(current, dataAttr){
+  return `<div class="filter-pills" style="margin-bottom:14px;">
+    ${STATUS_FILTERS.map(f=>`<button class="filter-btn ${current===f?'active':''}" data-${dataAttr}="${f}">${statusFilterLabel(f)}</button>`).join('')}
+  </div>`;
+}
+
+/* ═══════════ Acting-as identity bar ═══════════
+   Stands in for a real login → M-code mapping, which this cache doesn't
+   provide. Lets you deliberately switch staff code / role / department to
+   exercise every scoped view (worker/manager/GM, dept queue, oversight,
+   Flow Finder). Defaults to the first discovered staff code as a manager
+   so nothing is hidden until you actively narrow it down. */
+function renderIdBar(){
+  const options = STAFF.slice().sort((a,b)=>a.id.localeCompare(b.id));
+  const u = currentUser();
+  if(!u) return `<div class="id-bar"><span class="id-note">No staff codes found in the log yet.</span></div>`;
+  const deptOptions = DEPARTMENTS.slice().sort((a,b)=>a.name.localeCompare(b.name));
+  return `
+  <div class="id-bar">
+    <label>Acting as</label>
+    <select id="idStaff">${options.map(s=>`<option value="${s.id}" ${s.id===u.id?'selected':''}>${s.id}</option>`).join('')}</select>
+    <label>Role</label>
+    <select id="idRole">
+      ${['worker','manager','gm'].map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${r==='gm'?'General Manager':r[0].toUpperCase()+r.slice(1)}</option>`).join('')}
+    </select>
+    <label>Department</label>
+    <select id="idDept">
+      <option value="">— None —</option>
+      ${deptOptions.map(d=>`<option value="${d.id}" ${u.dept===d.id?'selected':''}>${d.name}</option>`).join('')}
+    </select>
+    <span class="id-note">Real staff codes from the log (M001, M002…) have no name/role data attached in this cache — set them here to test worker / manager / GM scoped views.</span>
+  </div>`;
+}
+function wireIdBar(){
+  const s = document.getElementById('idStaff');
+  if(s) s.onchange = ()=>{ state.currentUserId = s.value; render(); };
+  const r = document.getElementById('idRole');
+  if(r) r.onchange = ()=>{ metaFor(state.currentUserId).role = r.value; saveStaffMeta(); discoverDirectory(EVENTS, TICKET_MASTER); render(); };
+  const d = document.getElementById('idDept');
+  if(d) d.onchange = ()=>{ metaFor(state.currentUserId).dept = d.value||null; saveStaffMeta(); discoverDirectory(EVENTS, TICKET_MASTER); render(); };
+}
+
+/* ═══════════ Rendering ═══════════ */
+const app = document.getElementById('app');
+function render(){
+  tickReminderEngine();
+  const u = currentUser();
+  if(!u){
+    app.innerHTML = `<div class="page"><div class="empty"><b>Waiting on data.</b>No staff codes discovered from ap2_ticLog yet.</div></div>`;
+    return;
+  }
+  app.innerHTML = `
+    ${renderTopbar(u)}
+    <div class="page">${renderIdBar()}${renderView(u)}</div>
+  `;
+  wireGlobal();
+}
+
+function myOpenCount(id){
+  return allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.assignedTo===id && !isTerminal(o.status);
+  }).length;
+}
+function deptQueueCount(deptId){
+  const d = dept(deptId);
+  if(!d) return 0;
+  return allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && deptNameOfTarget(o.assignedTo)===d.name && !isTerminal(o.status);
+  }).length;
+}
+function orgOpenCount(){ return allTicketIds().filter(tid=>!isTerminal(currentOwner(tid).status)).length; }
+
+function renderTopbar(u){
+  const manager = isManager(u.id), gm = isGM(u.id);
+  const roleLabel = gm ? 'general manager' : manager ? 'manager' : 'worker';
+  const myCount = myOpenCount(u.id);
+  const dCount = manager && u.dept ? deptQueueCount(u.dept) : 0;
+  const orgCount = gm ? orgOpenCount() : 0;
+  return `
+  <div class="topbar">
+    <div class="topbar-row1">
+      <div class="brand"><span class="dot"></span>OpsDeck</div>
+      <nav class="tabs">
+        <button data-view="my" class="${state.view==='my'?'active':''}">My Portal${myCount?`<span class="badge-count">${myCount}</span>`:''}</button>
+        ${manager && u.dept ? `<button data-view="dept" class="${state.view==='dept'?'active':''}">Department${dCount?`<span class="badge-count">${dCount}</span>`:''}</button>`:''}
+        ${!gm && !manager ? `<button data-view="dept" class="${state.view==='dept'?'active':''}">Department tasks</button>`:''}
+        <button data-view="flow" class="${state.view==='flow'?'active':''}">Flow Finder</button>
+        ${gm ? `<button data-view="org" class="${state.view==='org'?'active':''}">Org Overview${orgCount?`<span class="badge-count">${orgCount}</span>`:''}</button>`:''}
+      </nav>
+      <div class="topbar-spacer"></div>
+      <button class="fab-new" id="newTicketBtn" title="New Ticket" aria-label="New Ticket">+</button>
+      <div class="userbox">
+        <span class="role-pill">${roleLabel}</span>
+        <span class="userbox-name">${u.id}${u.dept && dept(u.dept) ? ` · ${dept(u.dept).name}` : ''}</span>
+      </div>
+    </div>
+    <div class="demo-clock" title="Fast-forward time to see the reminder engine escalate without waiting real hours">
+      <span class="dc-label">Fast-forward</span>
+      <button data-ff="900000">+15m</button>
+      <button data-ff="3600000">+1h</button>
+      <button data-ff="14400000">+4h</button>
+      <button data-ff="reset">reset</button>
+      ${demoOffsetMs>0 ? `<span class="dc-offset">+${fmtDur(demoOffsetMs)} ahead</span>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderView(u){
+  const manager = isManager(u.id), gm = isGM(u.id);
+  if(!gm && state.view==='org') state.view='my';
+  switch(state.view){
+    case 'my': return renderMyPortal(u);
+    case 'dept': return manager ? renderDeptPortal(u) : renderDeptReadOnly(u);
+    case 'flow': return renderFlowFinder(u);
+    case 'org': return renderOrgOverview(u);
+    default: return '';
+  }
+}
+
+// ----- Ticket row renderer -----
+function actionLabel(action){
+  return {
+    CREATED:'Created', ASSIGNED:'Assigned', ACCEPTED:'Accepted', COMMENT:'Comment',
+    ON_HOLD:'On hold', RESUMED:'Resumed', REMINDER:'Reminder set',
+    REMINDER_ALERT:'Reminder overdue', REMINDER_ATTENDED:'Reminder attended',
+    TRANSFERRED:'Transferred', RESOLVED:'Resolved',
+  }[action] || action;
+}
+function ticketRow(tid, opts={}){
+  const owner = currentOwner(tid);
+  const title = ticketTitle(tid);
+  const od = overdueInfo(tid);
+  const subLabel = opts.subLabel || `With ${nameOf(owner.assignedTo)}`;
+  return `
+  <div class="ticket-row" data-open-ticket="${tid}">
+    <div class="pri-flag pri-${owner.priority}"></div>
+    <div class="t-main">
+      <div class="t-title">${title} <span class="tid">#${tid}</span> ${owner.subjectType?`<span class="type-chip">${owner.subjectType}</span>`:''}</div>
+      <div class="t-sub">For ${owner.subjectId ? nameOf(owner.subjectId) : '—'} · ${subLabel} · raised by ${nameOf(owner.createdBy)}</div>
+    </div>
+    ${od.overdue ? `<div class="overdue-flag">⚠ overdue ${fmtDur(od.elapsed)}</div>` : ''}
+    <div class="status-chip ${statusClass(owner.status)}">${owner.status}</div>
+  </div>`;
+}
+
+// ----- My Portal -----
+function renderMyPortal(u){
+  const mine = allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.assignedTo===u.id;
+  }).sort((a,b)=> currentOwner(b).eventId - currentOwner(a).eventId);
+
+  const filter = state.myStatusFilter;
+  const filtered = mine.filter(tid=> matchesStatusFilter(currentOwner(tid).status, filter));
+
+  const body = filter==='all'
+    ? (()=>{
+        const open = mine.filter(tid=>!isTerminal(currentOwner(tid).status));
+        const done = mine.filter(tid=>isTerminal(currentOwner(tid).status));
+        return `
+        <div class="section-label">Needs attention (${open.length})</div>
+        ${open.length ? `<div class="ticket-list">${open.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty"><b>All clear.</b>Nothing waiting on you right now.</div>`}
+        ${done.length ? `
+        <div class="section-label">Resolved (${done.length})</div>
+        <div class="ticket-list">${done.map(t=>ticketRow(t)).join('')}</div>` : ''}`;
+      })()
+    : (filtered.length
+        ? `<div class="ticket-list">${filtered.map(t=>ticketRow(t)).join('')}</div>`
+        : `<div class="empty"><b>No matches.</b>Nothing with that status right now.</div>`);
+
+  // Tickets sitting in MY department's queue, unclaimed (Status NEW, To =
+  // my department) — the requirement's "New Ticket" queue (§2), reachable
+  // straight from My Portal for a worker who isn't a manager too.
+  const queue = u.dept ? allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.status==='NEW' && deptNameOfTarget(o.assignedTo)===dept(u.dept).name;
+  }) : [];
+
+  return `
+  <div class="grid2">
+    ${profileCard(u)}
+    <div>
+      <h1 class="page-title">My Portal</h1>
+      <p class="page-sub">Tickets currently assigned to you. Tap one to see the full timeline and respond.</p>
+      ${queue.length ? `
+      <div class="section-label">New in ${dept(u.dept).name} — unclaimed (${queue.length})</div>
+      <div class="ticket-list">${queue.map(t=>ticketRow(t,{subLabel:`New — waiting for someone to accept`})).join('')}</div>` : ''}
+      <div class="section-label" style="margin-top:22px;">My tickets</div>
+      ${statusFilterBar(filter, 'mystatus')}
+      ${body}
+    </div>
+  </div>`;
+}
+
+function profileCard(u){
+  const d = u.dept ? dept(u.dept) : null;
+  const openCt = myOpenCount(u.id);
+  const resolvedCt = allTicketIds().filter(tid=>{
+    const o=currentOwner(tid); return o && o.assignedTo===u.id && isTerminal(o.status);
+  }).length;
+  const roleName = isGM(u.id) ? 'General Manager' : isManager(u.id) ? 'Manager' : 'Worker';
+  return `
+  <div class="card profile-card">
+    <div class="avatar">${u.id.slice(0,2)}</div>
+    <h2>${u.id}</h2>
+    <p class="role-line">${roleName}${d?` · ${d.name}`:''}</p>
+    <div class="meta-row"><span>Staff code</span><span>${u.id}</span></div>
+    ${d ? `<div class="meta-row"><span>Department</span><span>${d.name}</span></div>` : ''}
+    <div class="stat-strip">
+      <div class="stat-chip"><div class="n">${openCt}</div><div class="l">Open</div></div>
+      <div class="stat-chip"><div class="n">${resolvedCt}</div><div class="l">Resolved</div></div>
+    </div>
+  </div>`;
+}
+
+// ----- Department Portal -----
+function renderDeptPortal(u){
+  if(!isManager(u.id) || !u.dept) return renderMyPortal(u);
+  return renderDeptReadOnly(u, {manager:true});
+}
+function renderDeptReadOnly(u, opts={}){
+  const d = u.dept ? dept(u.dept) : null;
+  if(!d) return renderMyPortal(u);
+  const inDept = allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && deptNameOfTarget(o.assignedTo)===d.name;
+  }).concat(deptWorkers(u.dept).flatMap(w=>allTicketIds().filter(tid=>{
+    const o = currentOwner(tid); return o && o.assignedTo===w.id;
+  })));
+  const uniqueIds = [...new Set(inDept)];
+  const filter = state.deptStatusFilter;
+  const filtered = uniqueIds.filter(tid=> matchesStatusFilter(currentOwner(tid).status, filter));
+  const teamCount = deptWorkers(u.dept).length;
+  return `
+  <h1 class="page-title">${d.name} — Department</h1>
+  <p class="page-sub">${opts.manager ? `Every ticket routed to ${d.name} (${teamCount} member${teamCount===1?'':'s'} on the team), unclaimed or with a teammate. Open one to accept or reassign.` : `Read-only view of tickets routed to ${d.name}. Your own items are in My Portal.`}</p>
+  ${statusFilterBar(filter, 'deptstatus')}
+  ${filtered.length ? `<div class="ticket-list">${filtered.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty"><b>Nothing here.</b>No tickets match that filter for ${d.name}.</div>`}
+  `;
+}
+
+/* ═══════════ Flow Finder — Ticket ID, Subject Employee, Employee ID,
+   Handler, Requester, Department, Status, Date range (requirement §10) */
+function ticketTouchesDept(tid, deptId){
+  const d = dept(deptId);
+  if(!d) return false;
+  return ticketEvents(tid).some(e=> deptNameOfTarget(e.to)===d.name || deptNameOfTarget(e.from)===d.name)
+    || deptWorkers(deptId).some(w=> ticketEvents(tid).some(e=>e.performedBy===w.id || e.to===w.id));
+}
+function uniqueSubjectEmployees(){
+  const seen = new Set();
+  Object.values(TICKET_MASTER).forEach(m=>{ if(m.subjectId) seen.add(m.subjectId); });
+  return [...seen].sort();
+}
+function uniqueHandlers(){
+  const seen = new Set();
+  EVENTS.forEach(e=>{ if(isStaffCode(e.performedBy)) seen.add(e.performedBy); if(isStaffCode(e.to)) seen.add(e.to); });
+  return [...seen].sort();
+}
+function uniqueRequesters(){
+  const seen = new Set();
+  Object.values(TICKET_MASTER).forEach(m=>{ if(m.createdBy) seen.add(m.createdBy); });
+  return [...seen].sort();
+}
+
+function renderFlowFinder(u){
+  const scoped = isManager(u.id) && u.dept;
+  const modeOpts = [
+    ['ticket','Ticket'], ['subjectEmployee','Subject Employee'], ['handler','Handler'],
+    ['requester','Requester'], ['department','Department'], ['status','Status'], ['daterange','Date range'],
+  ];
+  let matches = [];
+
+  if(state.ffMode==='ticket'){
+    matches = allTicketIds().filter(tid=>{
+      if(scoped && !ticketTouchesDept(tid, u.dept)) return false;
+      if(!state.ffQuery) return true;
+      const q = state.ffQuery.toLowerCase();
+      if(String(tid).toLowerCase().includes(q)) return true;
+      if(ticketTitle(tid).toLowerCase().includes(q)) return true;
+      const m = master(tid);
+      if(m && m.subjectId && m.subjectId.toLowerCase().includes(q)) return true;
+      return ticketEvents(tid).some(e=>
+        nameOf(e.to).toLowerCase().includes(q) || nameOf(e.performedBy).toLowerCase().includes(q)
+      );
+    });
+  } else if(state.ffMode==='subjectEmployee'){
+    matches = state.ffQuery ? allTicketIds().filter(tid=>{
+      const m = master(tid); return m && m.subjectId===state.ffQuery;
+    }) : [];
+  } else if(state.ffMode==='handler'){
+    matches = state.ffQuery ? allTicketIds().filter(tid=>{
+      return ticketEvents(tid).some(e=> e.performedBy===state.ffQuery || e.to===state.ffQuery);
+    }) : [];
+  } else if(state.ffMode==='requester'){
+    matches = state.ffQuery ? allTicketIds().filter(tid=>{
+      const m = master(tid); return m && m.createdBy===state.ffQuery;
+    }) : [];
+  } else if(state.ffMode==='department'){
+    const targetDeptId = scoped ? u.dept : state.ffQuery;
+    matches = targetDeptId ? allTicketIds().filter(tid=> ticketTouchesDept(tid, targetDeptId)) : [];
+  } else if(state.ffMode==='status'){
+    matches = state.ffQuery ? allTicketIds().filter(tid=>{
+      if(scoped && !ticketTouchesDept(tid, u.dept)) return false;
+      return currentOwner(tid).status===state.ffQuery;
+    }) : [];
+  } else if(state.ffMode==='daterange'){
+    const fromMs = state.ffFrom ? new Date(state.ffFrom+'T00:00:00').getTime() : null;
+    const toMs = state.ffTo ? new Date(state.ffTo+'T23:59:59').getTime() : null;
+    matches = (fromMs || toMs) ? allTicketIds().filter(tid=>{
+      if(scoped && !ticketTouchesDept(tid, u.dept)) return false;
+      const created = ticketEvents(tid)[0];
+      if(!created) return false;
+      if(fromMs && created.eventId < fromMs) return false;
+      if(toMs && created.eventId > toMs) return false;
+      return true;
+    }) : [];
+  }
+
+  const resultsHtml = matches.length ? matches.map(t=>ticketRow(t)).join('') :
+    `<div class="empty"><b>No matches.</b>Try a different search.</div>`;
+
+  const subjectEmployeeOptions = uniqueSubjectEmployees();
+  const handlerOptions = uniqueHandlers().filter(v => !scoped || (staff(v) && staff(v).dept===u.dept));
+  const requesterOptions = uniqueRequesters();
+  const departmentOptions = DEPARTMENTS;
+
+  let queryControl;
+  if(state.ffMode==='ticket'){
+    queryControl = `<input type="text" id="ffQuery" placeholder="Search by ticket #, title, or Subject Employee (E-code)…" value="${state.ffQuery.replace(/"/g,'&quot;')}" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">`;
+  } else if(state.ffMode==='subjectEmployee'){
+    queryControl = `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
+      <option value="">${subjectEmployeeOptions.length ? 'Choose the Subject Employee (E2)…' : 'No Subject Employee data yet'}</option>
+      ${subjectEmployeeOptions.map(v=>`<option value="${v}" ${state.ffQuery===v?'selected':''}>${v}</option>`).join('')}
+    </select>`;
+  } else if(state.ffMode==='handler'){
+    queryControl = `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
+      <option value="">${handlerOptions.length ? 'Choose a handler (staff code)…' : 'Select…'}</option>
+      ${handlerOptions.map(v=>`<option value="${v}" ${state.ffQuery===v?'selected':''}>${v}</option>`).join('')}
+    </select>`;
+  } else if(state.ffMode==='requester'){
+    queryControl = `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
+      <option value="">${requesterOptions.length ? 'Choose a requester…' : 'Select…'}</option>
+      ${requesterOptions.map(v=>`<option value="${v}" ${state.ffQuery===v?'selected':''}>${v}</option>`).join('')}
+    </select>`;
+  } else if(state.ffMode==='department'){
+    queryControl = scoped
+      ? `<div class="hint" style="padding:9px 0;">Scoped to ${dept(u.dept).name} — managers see their own department only.</div>`
+      : `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
+          <option value="">${departmentOptions.length ? 'Choose a department…' : 'Select…'}</option>
+          ${departmentOptions.map(d=>`<option value="${d.id}" ${state.ffQuery===d.id?'selected':''}>${d.name}</option>`).join('')}
+        </select>`;
+  } else if(state.ffMode==='status'){
+    queryControl = `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
+      <option value="">Choose a status…</option>
+      ${TICKET_STATUSES.map(v=>`<option value="${v}" ${state.ffQuery===v?'selected':''}>${v}</option>`).join('')}
+    </select>`;
+  } else if(state.ffMode==='daterange'){
+    queryControl = `<input type="date" id="ffFrom" value="${state.ffFrom}" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;">
+      <span style="color:var(--text-muted);">to</span>
+      <input type="date" id="ffTo" value="${state.ffTo}" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;">
+      <span class="hint" style="flex-basis:100%;">Filters by each ticket's CREATED event — Event_ID doubles as its timestamp.</span>`;
+  }
+
+  return `
+  <h1 class="page-title">Flow Finder</h1>
+  <p class="page-sub">${scoped ? `Search tickets that have passed through ${dept(u.dept).name}.` : 'Search across every ticket ever logged.'} Open one for the full timeline.</p>
+  ${!SUBJECT_EMPLOYEE_COLUMN_SEEN ? `<div class="empty" style="text-align:left;padding:12px 14px;margin-bottom:14px;border-color:var(--amber-dim);">
+    <b style="color:var(--amber);font-size:13px;">No Subject Employee (E2) values found yet.</b>
+    The connected ticLog master rows have a Subject_ID column, but nothing in it is filled in yet — searches by Subject Employee won't return anything until a ticket carries one.
+  </div>` : ''}
+  <div class="subtabs">
+    ${modeOpts.map(([k,l])=>`<button data-ffmode="${k}" class="${state.ffMode===k?'active':''}">${l}</button>`).join('')}
+  </div>
+  <div class="ff-searchbar">${queryControl}</div>
+  ${state.ffSelectedTicket ? renderTimelineView(state.ffSelectedTicket, u) : `<div class="ff-results">${resultsHtml}</div>`}
+  `;
+}
+
+function kindOfAction(action){
+  if(action==='CREATED') return 'created';
+  if(action==='TRANSFERRED' || action==='ASSIGNED') return 'forward';
+  if(action==='ACCEPTED') return 'accept';
+  if(action==='ON_HOLD') return 'hold';
+  if(action==='RESUMED') return 'resume';
+  if(action==='COMMENT') return 'comment';
+  if(action==='REMINDER' || action==='REMINDER_ALERT') return 'reminder';
+  if(action==='REMINDER_ATTENDED') return 'result';
+  if(action==='RESOLVED') return 'resolved';
+  return 'forward';
+}
+function kindIcon(k){
+  return {created:'◆', forward:'→', accept:'✓', hold:'⏸', resume:'▶', comment:'💬', reminder:'⏰', result:'↩', resolved:'✓'}[k] || '•';
+}
+
+function renderTimelineView(tid, u){
+  const rows = ticketTimeline(tid);
+  const m = master(tid);
+  const owner = currentOwner(tid);
+  let items = '';
+  rows.forEach((r,i)=>{
+    const k = kindOfAction(r.action);
+    const gap = i>0 ? fmtDur(r.eventId - rows[i-1].eventId) : null;
+    const whoLine = `${nameOf(r.performedBy)}${r.to && r.to!==r.performedBy ? ` → ${nameOf(r.to)}` : ''}`;
+    items += `
+    <div class="tl-item k-${k}">
+      ${gap ? `<div class="tl-gap">+${gap}</div>` : ''}
+      <div class="tl-dot">${kindIcon(k)}</div>
+      <div class="tl-card">
+        <div class="tl-head">
+          <span class="tl-action">${actionLabel(r.action)}</span>
+          <span class="tl-ts">${fmtTs(r.eventId)}</span>
+        </div>
+        <div class="tl-who">${whoLine} · <span class="status-chip ${statusClass(r.status)}" style="padding:1px 7px;font-size:10px;">${r.status}</span></div>
+        ${r.detail ? `<div class="tl-notes">${r.detail}</div>` : ''}
+      </div>
+    </div>`;
+  });
+  return `
+  <button class="btn btn-ghost btn-sm" id="ffBack">← Back to results</button>
+  <div class="card" style="margin-top:12px;">
+    <div class="kicker">Ticket #${tid}</div>
+    <h2 style="font-family:var(--font-display);margin:0 0 4px;">${ticketTitle(tid)}</h2>
+    <p class="page-sub" style="margin-bottom:2px;">
+      <b style="color:var(--text-dim);">Subject Employee (E2):</b> ${owner.subjectId ? nameOf(owner.subjectId) : '<span style="color:var(--red);">not recorded</span>'}
+      &nbsp;·&nbsp; Requester: ${owner.createdBy ? nameOf(owner.createdBy) : '—'}
+      &nbsp;·&nbsp; Priority: ${owner.priority}
+    </p>
+    <p class="page-sub" style="margin-bottom:0;">Every logged event for this ticket, oldest to newest. Event_ID doubles as the timestamp (down to the second).</p>
+    <div class="tl-wrap"><div class="timeline">${items}</div></div>
+  </div>
+  ${renderRespondPanel(tid, u)}
+  `;
+}
+
+/* ═══════════ Respond panel — permission gate covers every real action:
+   Accept (from a dept queue or a direct hand-off), Comment, Hold/Resume,
+   Set/Attend Reminder, Transfer (to dept or delegate to a person),
+   Resolve. */
+function respondPermission(tid, u){
+  const owner = currentOwner(tid);
+  if(!owner) return {mode:'none'};
+  if(isTerminal(owner.status)) return {mode:'none'};
+  if(isGM(u.id)) return {mode:'none'}; // GM: read-only oversight
+  if(owner.status==='NEW'){
+    const target = owner.assignedTo;
+    if(isDeptToken(target)){
+      const td = deptByName(target);
+      if(isManager(u.id) && u.dept && td && td.id===u.dept) return {mode:'accept-dept'};
+      if(!isManager(u.id) && u.dept && td && td.id===u.dept) return {mode:'accept-dept'};
+      return {mode:'none'};
+    }
+    if(target===u.id) return {mode:'accept-direct'};
+    return {mode:'none'};
+  }
+  if(owner.assignedTo===u.id){
+    return {mode:'full', ticketStatus:owner.status};
+  }
+  const ownerStaff = staff(owner.assignedTo);
+  if(isManager(u.id) && u.dept && ownerStaff && ownerStaff.dept===u.dept){
+    return {mode:'oversee'};
+  }
+  return {mode:'none'};
+}
+
+function renderRespondPanel(tid, u){
+  const perm = respondPermission(tid, u);
+  const owner = currentOwner(tid);
+  if(perm.mode==='none') return '';
+  if(perm.mode==='accept-dept' || perm.mode==='accept-direct'){
+    return `
+    <div class="card" style="margin-top:14px;">
+      <div class="section-label" style="margin-top:0;">New ticket — accept it?</div>
+      <p class="hint" style="margin-bottom:10px;">${perm.mode==='accept-dept' ? `Unclaimed in ${nameOf(owner.assignedTo)}. Any member of that department can accept it.` : `Directly transferred to you. Accept it to start working, or hand it off again.`}</p>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-sm" data-respond="accept" data-tid="${tid}">Accept</button>
+        <button class="btn btn-sm" data-respond="transferPerson" data-tid="${tid}">Delegate to someone else</button>
+      </div>
+    </div>`;
+  }
+  if(perm.mode==='oversee'){
+    return `
+    <div class="card" style="margin-top:14px;">
+      <div class="section-label" style="margin-top:0;">Manager oversight</div>
+      <p class="hint" style="margin-bottom:10px;">Currently with ${nameOf(owner.assignedTo)}. You can transfer it within ${u.dept ? dept(u.dept).name : 'your team'}.</p>
+      <div class="btn-row">
+        <button class="btn btn-sm" data-respond="transferPerson" data-tid="${tid}">Reassign</button>
+      </div>
+    </div>`;
+  }
+  // full: owner === current actor
+  const canTransferDept = true;
+  return `
+  <div class="card" style="margin-top:14px;">
+    <div class="section-label" style="margin-top:0;">Respond to this ticket</div>
+    <div class="btn-row">
+      ${owner.status==='ON HOLD'
+        ? `<button class="btn btn-primary btn-sm" data-respond="resume" data-tid="${tid}">Resume</button>`
+        : `<button class="btn btn-sm" data-respond="hold" data-tid="${tid}">Put on hold</button>`}
+      <button class="btn btn-sm" data-respond="comment" data-tid="${tid}">Add comment</button>
+      <button class="btn btn-amber btn-sm" data-respond="reminder" data-tid="${tid}">Set reminder</button>
+      ${overdueInfo(tid).overdue ? `<button class="btn btn-sm" data-respond="attend" data-tid="${tid}">Attend reminder</button>` : ''}
+      <button class="btn btn-sm" data-respond="transferPerson" data-tid="${tid}">Delegate to person</button>
+      ${canTransferDept ? `<button class="btn btn-sm" data-respond="transferDept" data-tid="${tid}">Transfer to department</button>` : ''}
+      <button class="btn btn-primary btn-sm" data-respond="resolve" data-tid="${tid}">Resolve</button>
+    </div>
+  </div>`;
+}
+
+// ----- Org Overview (GM) -----
+function renderOrgOverview(u){
+  const groups = DEPARTMENTS.map(d=>{
+    const tids = allTicketIds().filter(tid=> deptNameOfTarget(currentOwner(tid).assignedTo)===d.name);
+    return {dept:d, tids};
+  });
+  return `
+  <h1 class="page-title">Org Overview</h1>
+  <p class="page-sub">Read-only view across every department's tickets, wherever they currently sit. Use Flow Finder to inspect any of them in detail.</p>
+  ${groups.map(g=>`
+    <div class="section-label">${g.dept.name} (${g.tids.length})</div>
+    ${g.tids.length ? `<div class="ticket-list">${g.tids.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty">Nothing currently in ${g.dept.name}.</div>`}
+  `).join('')}
+  `;
+}
+
+// ---------- Toast ----------
+function toast(msg){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className='toast';
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(()=>el.remove(), 3200);
+}
+
+/* ═══════════ Respond modal — one modal, branches per action ═══════════ */
+function openRespondModal(kind, tid){
+  const actor = currentUser();
+  const backdrop = document.createElement('div');
+  backdrop.className='modal-backdrop';
+  const titles = {
+    accept:'Accept ticket', hold:'Put on hold', resume:'Resume', comment:'Add comment',
+    reminder:'Set reminder', attend:'Attend reminder', transferPerson:'Delegate to a person',
+    transferDept:'Transfer to a department', resolve:'Resolve ticket',
+  };
+  let extra = '';
+  let needsComment = true;
+  if(kind==='reminder'){
+    const in1h = new Date(nowMs()+3600000);
+    const defVal = `${in1h.getFullYear()}-${pad(in1h.getMonth()+1)}-${pad(in1h.getDate())}T${pad(in1h.getHours())}:${pad(in1h.getMinutes())}`;
+    extra = `<div class="field"><label>Remind at</label><input type="datetime-local" id="rm-when" value="${defVal}"></div>`;
+    needsComment = false;
+  } else if(kind==='transferPerson'){
+    const people = assignablePeopleFor(actor.id).filter(e=>e.id!==actor.id).concat(isManager(actor.id)||isGM(actor.id) ? STAFF.filter(e=>e.id!==actor.id) : []);
+    const uniquePeople = [...new Map(people.map(p=>[p.id,p])).values()];
+    extra = `<div class="field"><label>Delegate to</label><select id="rm-person">${uniquePeople.map(e=>`<option value="${e.id}">${e.id}${e.dept&&dept(e.dept)?` — ${dept(e.dept).name}`:''}</option>`).join('')}</select></div>`;
+  } else if(kind==='transferDept'){
+    extra = `<div class="field"><label>Transfer to department</label><select id="rm-dept">${DEPARTMENTS.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}</select></div>`;
+  } else if(kind==='accept'){
+    needsComment = false;
+  }
+  backdrop.innerHTML = `
+    <div class="modal">
+      <h3>${titles[kind]}</h3>
+      <p class="modal-sub">#${tid} · ${ticketTitle(tid)}</p>
+      ${extra}
+      <div class="field"><label>Comment${needsComment?' (required)':' (optional)'}</label><textarea id="rm-comment" placeholder="What's the update?"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="rm-cancel">Cancel</button>
+        <button class="btn btn-primary" id="rm-confirm">Confirm</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector('#rm-cancel').onclick=()=>backdrop.remove();
+  backdrop.querySelector('#rm-confirm').onclick=()=>{
+    const comment = backdrop.querySelector('#rm-comment').value.trim();
+    if(needsComment && !comment){ toast('A comment is required before you can respond.'); return; }
+    const actorId = state.currentUserId;
+    if(kind==='accept'){
+      acceptTicket({ticketId:tid, actorId});
+      toast('Ticket accepted.');
+    } else if(kind==='hold'){
+      holdTicket({ticketId:tid, actorId, reason:comment});
+      toast('Put on hold.');
+    } else if(kind==='resume'){
+      resumeTicket({ticketId:tid, actorId, note:comment});
+      toast('Resumed.');
+    } else if(kind==='comment'){
+      addComment({ticketId:tid, actorId, comment});
+      toast('Comment added.');
+    } else if(kind==='reminder'){
+      const when = backdrop.querySelector('#rm-when').value;
+      if(!when){ toast('Pick a date/time first.'); return; }
+      setReminder({ticketId:tid, actorId, dueAtMs:new Date(when).getTime()});
+      toast('Reminder set.');
+    } else if(kind==='attend'){
+      attendReminder({ticketId:tid, actorId, note:comment});
+      toast('Reminder attended.');
+    } else if(kind==='transferPerson'){
+      const person = backdrop.querySelector('#rm-person').value;
+      transferTicket({ticketId:tid, actorId, targetType:'person', target:person, reason:comment});
+      toast(`Delegated to ${nameOf(person)} — waiting for them to accept.`);
+    } else if(kind==='transferDept'){
+      const deptId = backdrop.querySelector('#rm-dept').value;
+      transferTicket({ticketId:tid, actorId, targetType:'department', target:dept(deptId).name, reason:comment});
+      toast(`Transferred to ${dept(deptId).name} — waiting for someone to accept.`);
+    } else if(kind==='resolve'){
+      resolveTicket({ticketId:tid, actorId, comment});
+      toast('Resolved.');
+    }
+    backdrop.remove();
+    render();
+  };
+}
+
+/* ═══════════ Wiring ═══════════ */
+function wireGlobal(){
+  wireIdBar();
+  document.querySelectorAll('[data-ff]').forEach(b=>{
+    b.onclick = ()=>{
+      if(b.dataset.ff==='reset') demoOffsetMs = 0;
+      else demoOffsetMs += parseInt(b.dataset.ff,10);
+      render();
+    };
+  });
+  document.querySelectorAll('[data-view]').forEach(b=>{
+    b.onclick=()=>{ state.view=b.dataset.view; state.ffSelectedTicket=null; render(); };
+  });
+  document.querySelectorAll('[data-mystatus]').forEach(b=>{
+    b.onclick=()=>{ state.myStatusFilter=b.dataset.mystatus; render(); };
+  });
+  document.querySelectorAll('[data-deptstatus]').forEach(b=>{
+    b.onclick=()=>{ state.deptStatusFilter=b.dataset.deptstatus; render(); };
+  });
+  document.querySelectorAll('[data-ffmode]').forEach(b=>{
+    b.onclick=()=>{ state.ffMode=b.dataset.ffmode; state.ffQuery=''; state.ffFrom=''; state.ffTo=''; state.ffSelectedTicket=null; render(); };
+  });
+  const ffq = document.getElementById('ffQuery');
+  if(ffq){
+    const ev = state.ffMode==='ticket' ? 'input' : 'change';
+    ffq.addEventListener(ev, ()=>{ state.ffQuery = ffq.value; render(); });
+  }
+  const ffFrom = document.getElementById('ffFrom');
+  if(ffFrom) ffFrom.addEventListener('change', ()=>{ state.ffFrom = ffFrom.value; render(); });
+  const ffTo = document.getElementById('ffTo');
+  if(ffTo) ffTo.addEventListener('change', ()=>{ state.ffTo = ffTo.value; render(); });
+  document.querySelectorAll('[data-open-ticket]').forEach(row=>{
+    row.onclick=()=>{
+      const tid = row.dataset.openTicket;
+      state.view='flow';
+      state.ffSelectedTicket = tid;
+      render();
+    };
+  });
+  const ffBack = document.getElementById('ffBack');
+  if(ffBack) ffBack.onclick=()=>{ state.ffSelectedTicket=null; render(); };
+  document.querySelectorAll('[data-respond]').forEach(b=>{
+    b.onclick=()=> openRespondModal(b.dataset.respond, b.dataset.tid);
+  });
+  const newTicketBtn = document.getElementById('newTicketBtn');
+  if(newTicketBtn) newTicketBtn.onclick = openNewTicketDrawer;
+}
+
+/* ═══════════ New Ticket drawer ═══════════
+   Captures the fixed E2 (Subject Employee) up front, and lets creation
+   itself be a delegation: route straight to a Department queue OR
+   directly to a named Person — both supported, matching TK-5001 (dept)
+   and TK-5002 (direct-to-person) in the real sample data. */
+let newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:''};
+function newTicketFormHtml(u){
+  const f = newTicketForm;
+  const e2Options = SUBJECTS.slice().sort((a,b)=>a.id.localeCompare(b.id));
+  const deptOptions = DEPARTMENTS;
+  const personOptions = (isGM(u.id) ? STAFF : isManager(u.id) && u.dept ? deptWorkers(u.dept) : [u]).slice().sort((a,b)=>a.id.localeCompare(b.id));
+  return `
+    <div class="field">
+      <label>Subject Employee — who is this ticket about? (E2)</label>
+      <select id="nt-subjectEmployee">
+        <option value="">Select the employee this ticket concerns…</option>
+        ${e2Options.map(e=>`<option value="${e.id}" ${f.subjectEmployee===e.id?'selected':''}>${e.id}</option>`).join('')}
+        <option value="__new__" ${f.subjectEmployee==='__new__'?'selected':''}>+ New employee code…</option>
+      </select>
+      ${f.subjectEmployee==='__new__' ? `<input type="text" id="nt-subjectEmployeeNew" placeholder="e.g. E106" value="${(f.subjectEmployeeNew||'').replace(/"/g,'&quot;')}">` : ''}
+      <span class="hint">Fixed for the life of the ticket — stays the same through every transfer.</span>
+    </div>
+    <div class="field">
+      <label>Ticket name</label>
+      <input type="text" id="nt-title" placeholder="e.g. SIM package renewal" value="${f.title.replace(/"/g,'&quot;')}">
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="nt-desc" placeholder="What's going on, and what do you need?">${f.description}</textarea>
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Priority</label>
+        <select id="nt-priority">
+          ${['Critical','High','Medium','Low'].map(p=>`<option ${f.priority===p?'selected':''}>${p}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Route to</label>
+        <select id="nt-targetType">
+          <option value="department" ${f.targetType==='department'?'selected':''}>A department queue</option>
+          <option value="person" ${f.targetType==='person'?'selected':''}>Directly delegate to a person</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>${f.targetType==='department' ? 'Department' : 'Delegate to'}</label>
+      <select id="nt-target">
+        <option value="">Select…</option>
+        ${f.targetType==='department'
+          ? deptOptions.map(d=>`<option value="${d.name}" ${f.target===d.name?'selected':''}>${d.name}</option>`).join('')
+          : personOptions.map(p=>`<option value="${p.id}" ${f.target===p.id?'selected':''}>${p.id}</option>`).join('')}
+        ${f.targetType==='department' ? `<option value="__new__" ${f.target==='__new__'?'selected':''}>+ New department name…</option>` : ''}
+      </select>
+      ${f.targetType==='department' && f.target==='__new__' ? `<input type="text" id="nt-targetNew" placeholder="e.g. Legal" value="${(f.targetNew||'').replace(/"/g,'&quot;')}">` : ''}
+      <span class="hint">${f.targetType==='department' ? "Sits as NEW in that department's queue until someone accepts it." : "Still goes to NEW — they'll need to Accept it, exactly like a department hand-off."}</span>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="nt-submit">Create ticket</button>
+      <button class="btn btn-ghost" id="nt-reset">Clear</button>
+    </div>`;
+}
+function openNewTicketDrawer(){
+  if(document.getElementById('ticketDrawer')) return;
+  const u = currentUser();
+  const drawer = document.createElement('aside');
+  drawer.className = 'ticket-drawer';
+  drawer.id = 'ticketDrawer';
+  drawer.innerHTML = `
+    <div class="drawer-head">
+      <div>
+        <h2>New Ticket</h2>
+        <p class="page-sub" style="margin:2px 0 0;">Writes a CREATED event + master record — same shape as everything from the real cache.</p>
+      </div>
+      <button class="drawer-close" id="drawerClose" aria-label="Close">✕</button>
+    </div>
+    <div class="drawer-body" id="drawerBody">${newTicketFormHtml(u)}</div>`;
+  document.body.appendChild(drawer);
+  document.body.classList.add('drawer-open');
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=> drawer.classList.add('open')); });
+  document.addEventListener('keydown', newTicketDrawerEscHandler);
+  document.addEventListener('mousedown', newTicketDrawerOutsideClick);
+  wireNewTicketDrawerFields(u);
+  document.getElementById('drawerClose').onclick = closeNewTicketDrawer;
+}
+function newTicketDrawerEscHandler(e){ if(e.key==='Escape') closeNewTicketDrawer(); }
+function newTicketDrawerOutsideClick(e){
+  const drawer = document.getElementById('ticketDrawer');
+  const fab = document.getElementById('newTicketBtn');
+  if(!drawer) return;
+  if(drawer.contains(e.target) || (fab && fab.contains(e.target))) return;
+  closeNewTicketDrawer();
+}
+function closeNewTicketDrawer(){
+  const drawer = document.getElementById('ticketDrawer');
+  if(!drawer) return;
+  drawer.classList.remove('open');
+  document.body.classList.remove('drawer-open');
+  document.removeEventListener('keydown', newTicketDrawerEscHandler);
+  document.removeEventListener('mousedown', newTicketDrawerOutsideClick);
+  setTimeout(()=>{ drawer.remove(); }, 220);
+}
+function refreshNewTicketDrawer(u){
+  const body = document.getElementById('drawerBody');
+  if(!body) return;
+  body.innerHTML = newTicketFormHtml(u);
+  wireNewTicketDrawerFields(u);
+}
+function wireNewTicketDrawerFields(u){
+  const e2 = document.getElementById('nt-subjectEmployee');
+  if(e2) e2.onchange = ()=>{ newTicketForm.subjectEmployee = e2.value; refreshNewTicketDrawer(u); };
+  const e2n = document.getElementById('nt-subjectEmployeeNew');
+  if(e2n) e2n.oninput = ()=>{ newTicketForm.subjectEmployeeNew = e2n.value; };
+  const t = document.getElementById('nt-title'); if(t) t.oninput = ()=>{ newTicketForm.title = t.value; };
+  const d = document.getElementById('nt-desc'); if(d) d.oninput = ()=>{ newTicketForm.description = d.value; };
+  const p = document.getElementById('nt-priority'); if(p) p.onchange = ()=>{ newTicketForm.priority = p.value; };
+  const tt = document.getElementById('nt-targetType');
+  if(tt) tt.onchange = ()=>{ newTicketForm.targetType = tt.value; newTicketForm.target=''; refreshNewTicketDrawer(u); };
+  const tgt = document.getElementById('nt-target');
+  if(tgt) tgt.onchange = ()=>{ newTicketForm.target = tgt.value; refreshNewTicketDrawer(u); };
+  const tgtn = document.getElementById('nt-targetNew');
+  if(tgtn) tgtn.oninput = ()=>{ newTicketForm.targetNew = tgtn.value; };
+  const submit = document.getElementById('nt-submit');
+  if(submit) submit.onclick = ()=>{
+    const f = newTicketForm;
+    let subjectEmployee = f.subjectEmployee;
+    if(subjectEmployee==='__new__'){ subjectEmployee = (f.subjectEmployeeNew||'').trim(); }
+    if(!subjectEmployee){ toast('Select (or enter) the Subject Employee (E2) — who this ticket is about.'); return; }
+    if(!f.title.trim()){ toast('Give this a name first.'); return; }
+    let target = f.target;
+    if(f.targetType==='department' && target==='__new__'){ target = (f.targetNew||'').trim(); }
+    if(!target){ toast(f.targetType==='department' ? 'Choose or name a department.' : 'Choose who to delegate this to.'); return; }
+    const tid = createTicket({
+      creatorId: state.currentUserId, title:f.title, description:f.description||'(no description provided)',
+      priority:f.priority, subjectType:'Employee', subjectEmployeeId:subjectEmployee,
+      targetType:f.targetType, target,
+    });
+    toast(`Ticket ${tid} created for ${subjectEmployee}, routed to ${nameOf(target)}.`);
+    newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:''};
+    closeNewTicketDrawer();
+    state.view='flow'; state.ffSelectedTicket=tid;
+    render();
+  };
+  const reset = document.getElementById('nt-reset');
+  if(reset) reset.onclick = ()=>{ newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:''}; refreshNewTicketDrawer(u); };
+}
+
+// periodic re-render so overdue flags stay live without user action
+setInterval(()=>{
+  if(state.view==='my' || state.view==='dept' || (state.view==='flow' && !state.ffSelectedTicket) || state.view==='org'){
+    render();
+  }
+}, 15000);
+
+// ---------- Boot ----------
+loadStaffMeta();
+loadOverlay();
+applyOverlay();          // show this browser's own local tickets immediately, if any
+discoverDirectory(EVENTS, TICKET_MASTER);
+state.currentUserId = STAFF.length ? STAFF[0].id : null;
+render();
+loadTickets();            // then read the real ap2_ticLog cache (IndexedDB) and merge it in
+
+</script>
+</body>
+</html>
