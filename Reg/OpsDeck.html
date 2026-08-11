@@ -1297,32 +1297,72 @@ function render(){
   wireGlobal();
 }
 // Cache reads (Users, ap2_employee) finish asynchronously and can land after
-// the New Ticket drawer is already open — without this, its department/
-// person/employee pickers stay stuck showing whatever was loaded at the
-// moment it was opened. Called only from the async cache-load completions
-// below, not from render() itself (which also fires on the periodic
-// re-render tick and would otherwise wipe an in-progress draft).
+// the New Ticket drawer is already open. Follows docPortal's
+// _refreshOpenDropdowns()/filterDrop() method: a live cache update never
+// rebuilds the whole form. It patches only the piece(s) that are backed by
+// that cache, in place — same input/list DOM nodes, same focus, same
+// mid-interaction state — instead of replacing drawerBody.innerHTML wholesale.
+// That whole-body rebuild was the bug: a cache update landing mid-click blew
+// away the open Subject Employee list before the click could register, which
+// looked like the dropdown "opening and closing" with nothing selected.
 function refreshOpenDrawer(){
   const drawer = document.getElementById('ticketDrawer');
   const u = currentUser();
   if(!drawer || !u) return;
-  // Cache payloads (initial loads, AP2CacheWatcher live updates, and the
-  // ap-cache-* postMessage events) can land at any moment, including while
-  // the user has the Subject Employee combo open or mid-click on a row.
-  // Rebuilding the whole drawer body right then tears the open
-  // dropdown-list DOM out from under the click, so it looks like the
-  // dropdown "opens and closes" with nothing selected. Defer the refresh
-  // until that interaction is done (selection made, or field blurred/
-  // closed) instead of yanking it away mid-use.
+
+  // ap2_employee cache: mirrors docPortal's emp/bike dropdowns — if the
+  // Subject Employee list is currently open, just re-filter it against the
+  // latest EMPLOYEES with whatever's already typed (same pattern as
+  // docPortal's `filterDrop(mode, document.getElementById(mode+'-search').value)`).
+  // The input keeps its value and focus; nothing about the user's
+  // in-progress click or keystroke is disturbed.
   const empInput = document.getElementById('ntSubjectInput');
   const empList = document.getElementById('ntSubjectList');
-  const empDropBusy = (empInput && document.activeElement === empInput) ||
-                       (empList && empList.classList.contains('open'));
-  if(empDropBusy){
-    setTimeout(refreshOpenDrawer, 300);
-    return;
+  if(empList && empList.classList.contains('open')){
+    filterEmpDrop(empInput ? empInput.value : '');
   }
-  refreshNewTicketDrawer(u);
+  // Cache-status ping: patched in place too, same as docPortal's
+  // _updateCacheStatus() touching just the #cache-status dot/tooltip.
+  const ping = drawer.querySelector('.cache-ping');
+  if(ping){
+    ping.classList.toggle('ok', EMPLOYEE_CACHE_OK);
+    ping.classList.toggle('warn', !EMPLOYEE_CACHE_OK);
+    ping.title = EMPLOYEE_CACHE_OK
+      ? 'Employee roster loaded from ap2_employee cache'
+      : 'ap2_employee cache unavailable — no employee roster loaded';
+  }
+
+  // Ticket-cache-derived department/person options: refresh just the
+  // "Route to" field's own container, the same targeted, single-field
+  // approach — not the whole drawer — and skip it while its own panel is
+  // open or the user is actively in the employee field, so a background
+  // refresh never yanks focus away from what they're doing.
+  const targetWrap = document.getElementById('ntTargetWrap');
+  const targetMselOpen = MSEL_UI['ntTargetMsel'] && MSEL_UI['ntTargetMsel'].open;
+  if(targetWrap && !targetMselOpen && document.activeElement !== empInput){
+    const f = newTicketForm;
+    const deptOptions = activeDeptOptions();
+    const personOptions = activePersonOptions();
+    targetWrap.innerHTML = renderMultiSelect('ntTargetMsel',
+      f.targetType==='department'
+        ? deptOptions.map(d=>({value:d.name, label:d.name}))
+        : personOptions.map(p=>({value:p.email, label:p.name, sub:p.email})),
+      f.target ? [f.target] : [],
+      {
+        single:true,
+        placeholder: f.targetType==='department' ? (deptOptions.length?'Select a department…':'No departments yet') : (personOptions.length?'Select a person…':'No people available'),
+        searchPlaceholder: f.targetType==='department' ? 'Search departments…' : 'Search by name or email…',
+        allowAdd: f.targetType==='department',
+        addPlaceholder: '+ New department name…'
+      }
+    );
+    wireMultiSelect('ntTargetMsel',
+      ()=> newTicketForm.target ? [newTicketForm.target] : [],
+      (v)=>{ newTicketForm.target = (v && v[0]) || ''; },
+      ()=> refreshNewTicketDrawer(u),
+      {single:true}
+    );
+  }
 }
 
 function myOpenCount(id){
