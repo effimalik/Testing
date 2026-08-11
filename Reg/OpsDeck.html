@@ -217,6 +217,63 @@
   .hint{font-size:11.5px;color:var(--text-muted);margin-top:-4px;}
   .warn-hint{font-size:11.5px;color:var(--amber);}
 
+  /* ---------- Professional multi-select ---------- */
+  .msel{position:relative;}
+  .msel-control{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:8px;cursor:pointer;
+    background:var(--panel-raised);border:1px solid var(--border);border-radius:7px;
+    padding:8px 11px;min-height:40px;transition:border-color .12s;
+  }
+  .msel-control:hover{border-color:#3A4753;}
+  .msel.open .msel-control{border-color:var(--teal);}
+  .msel-chips{display:flex;flex-wrap:wrap;gap:6px;flex:1;}
+  .msel-chip{
+    display:inline-flex;align-items:center;gap:6px;background:var(--teal-dim);color:var(--teal);
+    border:1px solid var(--teal-dim);border-radius:20px;padding:3px 6px 3px 10px;font-size:12px;font-weight:600;
+    max-width:100%;
+  }
+  .msel-chip span.msel-chip-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;}
+  .msel-chip-x{
+    all:unset;display:inline-flex;align-items:center;justify-content:center;
+    width:15px;height:15px;border-radius:50%;font-size:9px;line-height:1;cursor:pointer;color:var(--teal);
+    background:rgba(79,209,197,.16);flex-shrink:0;
+  }
+  .msel-chip-x:hover{background:rgba(79,209,197,.32);}
+  .msel-placeholder{color:var(--text-muted);font-size:13.5px;padding:2px 0;}
+  .msel-caret{color:var(--text-muted);font-size:10px;flex-shrink:0;padding-top:3px;user-select:none;}
+  .msel-panel{
+    position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:60;
+    background:var(--panel-raised);border:1px solid var(--border);border-radius:9px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);padding:8px;
+  }
+  .msel-search{
+    width:100%;background:var(--panel);border:1px solid var(--border);color:var(--text);
+    border-radius:6px;padding:8px 10px;font-size:13px;margin-bottom:6px;
+  }
+  .msel-search:focus{outline:none;border-color:var(--teal);}
+  .msel-options{max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:1px;}
+  .msel-option{
+    display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:6px;font-size:13px;
+    cursor:pointer;color:var(--text-dim);
+  }
+  .msel-option:hover{background:var(--panel-hover);color:var(--text);}
+  .msel-option input[type=checkbox],.msel-option input[type=radio]{accent-color:var(--teal);width:14px;height:14px;flex-shrink:0;cursor:pointer;}
+  .msel-option .msel-opt-sub{color:var(--text-muted);font-size:11px;margin-left:auto;padding-left:8px;flex-shrink:0;}
+  .msel-empty{padding:12px 9px;color:var(--text-muted);font-size:12.5px;text-align:center;}
+  .msel-footer{display:flex;justify-content:space-between;align-items:center;padding:6px 3px 2px;border-top:1px solid var(--border-soft);margin-top:4px;}
+  .msel-footer button{all:unset;color:var(--teal);font-size:11.5px;font-weight:600;cursor:pointer;}
+  .msel-footer button:hover{text-decoration:underline;}
+  .msel-count{color:var(--text-muted);font-size:11px;}
+  .msel-addrow{display:flex;gap:6px;padding:6px 3px 2px;border-top:1px solid var(--border-soft);margin-top:4px;}
+  .msel-addrow input{
+    flex:1;background:var(--panel);border:1px solid var(--border);color:var(--text);
+    border-radius:6px;padding:7px 9px;font-size:12.5px;
+  }
+  .msel-addrow input:focus{outline:none;border-color:var(--teal);}
+  .msel-addrow button{
+    background:var(--teal);color:#062522;border:none;border-radius:6px;padding:0 12px;font-size:12px;font-weight:700;cursor:pointer;
+  }
+
   /* ---------- Flow finder ---------- */
   .ff-searchbar{display:flex;gap:8px;margin-bottom:16px;}
   .ff-searchbar select, .ff-searchbar input{flex:0 0 auto;}
@@ -413,10 +470,196 @@ function parseReminderDetail(detail){
    Staff (management/ops, E1/E3/E4... in the requirement doc) = "M###".
    Subject Employee (E2) = "E###". Anything else that shows up in a
    From/To/Assigned_To slot is treated as a department name. */
-function isStaffCode(v){ return /^M\d+$/i.test(String(v||'').trim()); }
-function isSubjectCode(v){ return /^E\d+$/i.test(String(v||'').trim()); }
+function isEmailToken(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim()); }
+function isStaffCode(v){ v=String(v||'').trim(); return /^M\d+$/i.test(v) || isEmailToken(v); }
+function isSubjectCode(v){ return /^(emp|E)\d+$/i.test(String(v||'').trim()); }
 function isPersonCode(v){ return isStaffCode(v) || isSubjectCode(v); }
 function isDeptToken(v){ v=String(v||'').trim(); return !!v && !isPersonCode(v); }
+
+/* ═══════════ Users directory (payload.Users — real names/roles/status) ═══════════
+   Role strings come as either a bare tier ("GM","Manager","Visitor") or
+   "Title | Department" ("Officer | Deliveroo"). Split them once here so
+   every dropdown can show a real name and, where relevant, a department. */
+let USERS = {};       // email(lowercase) -> {email, name, role, roleTitle, deptName, roleTier, status}
+let USERS_LIST = [];
+function roleTierOf(title){
+  const t = String(title||'').trim().toLowerCase();
+  if(t==='gm' || t==='general manager') return 'gm';
+  if(t==='manager') return 'manager';
+  return 'worker';
+}
+function parseUserRow(r){
+  if(!r) return null;
+  const email = String(_pick(r,['email','Email'])||'').trim();
+  if(!email) return null;
+  const name = String(_pick(r,['name','Name'])||'').trim() || email;
+  const rawRole = String(_pick(r,['role','Role'])||'').trim();
+  const parts = rawRole.split('|').map(s=>s.trim()).filter(Boolean);
+  const roleTitle = parts[0] || rawRole;
+  const deptName = parts[1] || '';
+  return {
+    email, name, role: rawRole, roleTitle, deptName,
+    roleTier: roleTierOf(roleTitle),
+    status: String(_pick(r,['status','Status'])||'').trim().toLowerCase() || 'active',
+  };
+}
+function parseUsers(payload){
+  USERS = {}; USERS_LIST = [];
+  const rows = Array.isArray(payload && payload.Users) ? payload.Users : [];
+  rows.map(parseUserRow).filter(Boolean).forEach(u=>{ USERS[u.email.toLowerCase()] = u; USERS_LIST.push(u); });
+}
+function userFor(v){ return USERS[String(v||'').trim().toLowerCase()] || null; }
+// Display label for any person token: real name if known, else the raw code/email.
+function nameLabel(v){
+  const u = userFor(v);
+  return u ? u.name : String(v||'');
+}
+// "Name — email" for pickers where seeing the address matters too.
+function nameEmailLabel(v){
+  const u = userFor(v);
+  return u ? `${u.name} — ${u.email}` : String(v||'');
+}
+
+/* ═══════════ Professional multi-select widget ═══════════
+   Reusable checkbox-dropdown with chips + search, used wherever a picker
+   needs to switch between "Department" and "Person" option sets and allow
+   more than one value to be chosen at once (Flow Finder's Handler /
+   Requester / Department filters, and the New Ticket "Route to" field). */
+const MSEL_UI = {}; // id -> {open:bool, q:string}
+function mselState(id){ if(!MSEL_UI[id]) MSEL_UI[id] = {open:false, q:''}; return MSEL_UI[id]; }
+function mselCloseAllExcept(id){
+  Object.keys(MSEL_UI).forEach(k=>{ if(k!==id) MSEL_UI[k].open = false; });
+}
+function escAttr(s){ return String(s==null?'':s).replace(/"/g,'&quot;'); }
+function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* options: [{value, label, sub?}]. selected: array of currently chosen values.
+   opts.placeholder / opts.allowAdd (shows a "+ add custom value" row, used
+   for "+ New department name…"). */
+function renderMultiSelect(id, options, selected, opts){
+  opts = opts || {};
+  const st = mselState(id);
+  const selSet = new Set((selected||[]).map(String));
+  const selectedOptions = options.filter(o=>selSet.has(String(o.value)));
+  const q = st.q.trim().toLowerCase();
+  const filtered = q ? options.filter(o=> o.label.toLowerCase().includes(q) || (o.sub||'').toLowerCase().includes(q)) : options;
+  return `
+  <div class="msel${st.open?' open':''}" id="${id}">
+    <div class="msel-control" data-msel-toggle="${id}">
+      ${selectedOptions.length
+        ? `<div class="msel-chips">${selectedOptions.map(o=>`<span class="msel-chip"><span class="msel-chip-label">${escHtml(o.label)}</span><button type="button" class="msel-chip-x" data-msel-remove="${id}" data-value="${escAttr(o.value)}" aria-label="Remove">✕</button></span>`).join('')}</div>`
+        : `<span class="msel-placeholder">${escHtml(opts.placeholder||'Select…')}</span>`}
+      <span class="msel-caret">${st.open?'▲':'▼'}</span>
+    </div>
+    ${st.open ? `
+    <div class="msel-panel" data-msel-panel="${id}">
+      <input type="text" class="msel-search" id="${id}-search" placeholder="${escAttr(opts.searchPlaceholder||'Search…')}" value="${escAttr(st.q)}">
+      <div class="msel-options">
+        ${filtered.length ? filtered.map(o=>`
+          <label class="msel-option">
+            <input type="${opts.single?'radio':'checkbox'}" ${opts.single?`name="${escAttr(id)}-radio"`:''} data-msel-check="${id}" value="${escAttr(o.value)}" ${selSet.has(String(o.value))?'checked':''}>
+            <span>${escHtml(o.label)}</span>
+            ${o.sub?`<span class="msel-opt-sub">${escHtml(o.sub)}</span>`:''}
+          </label>`).join('') : `<div class="msel-empty">No matches</div>`}
+      </div>
+      <div class="msel-footer">
+        <span class="msel-count">${opts.single ? (selectedOptions.length?'1 selected':'none selected') : `${selectedOptions.length} selected`}</span>
+        ${selectedOptions.length && !opts.single ? `<button type="button" data-msel-clear="${id}">Clear all</button>` : ''}
+      </div>
+      ${opts.allowAdd ? `
+      <div class="msel-addrow">
+        <input type="text" id="${id}-addinput" placeholder="${escAttr(opts.addPlaceholder||'+ Add custom value…')}" value="${escAttr(st.addVal||'')}">
+        <button type="button" data-msel-addbtn="${id}">Add</button>
+      </div>` : ''}
+    </div>` : ''}
+  </div>`;
+}
+
+/* Wires up a rendered multi-select. getSelected/setSelected read & write the
+   backing array; onRefresh re-renders just enough of the DOM to reflect the
+   new state (usually the caller's own refresh/render function). */
+function wireMultiSelect(id, getSelected, setSelected, onRefresh, wopts){
+  wopts = wopts || {};
+  const root = document.getElementById(id);
+  if(!root) return;
+  const toggle = root.querySelector(`[data-msel-toggle="${id}"]`);
+  if(toggle) toggle.onclick = (e)=>{
+    e.stopPropagation();
+    const st = mselState(id);
+    const wasOpen = st.open;
+    mselCloseAllExcept(id);
+    st.open = !wasOpen;
+    if(!st.open) st.q = '';
+    onRefresh();
+    if(st.open){
+      document.addEventListener('mousedown', mselOutsideHandler, true);
+      setTimeout(()=>{ const inp = document.getElementById(id+'-search'); if(inp){ inp.focus(); } }, 0);
+    }
+  };
+  root.querySelectorAll(`[data-msel-remove="${id}"]`).forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      const v = btn.dataset.value;
+      setSelected(getSelected().filter(x=>String(x)!==String(v)));
+      onRefresh();
+    };
+  });
+  const panel = root.querySelector(`[data-msel-panel="${id}"]`);
+  if(panel) panel.onmousedown = (e)=> e.stopPropagation();
+  root.querySelectorAll(`[data-msel-check="${id}"]`).forEach(cb=>{
+    cb.onchange = ()=>{
+      if(wopts.single){
+        setSelected(cb.checked ? [cb.value] : []);
+        mselState(id).open = false;
+        mselState(id).q = '';
+        onRefresh();
+        return;
+      }
+      let sel = getSelected().map(String);
+      if(cb.checked){ if(!sel.includes(cb.value)) sel.push(cb.value); }
+      else { sel = sel.filter(x=>x!==cb.value); }
+      setSelected(sel);
+      onRefresh();
+    };
+  });
+  const search = document.getElementById(id+'-search');
+  if(search){
+    search.oninput = ()=>{ mselState(id).q = search.value; onRefresh(); };
+  }
+  const clearBtn = root.querySelector(`[data-msel-clear="${id}"]`);
+  if(clearBtn) clearBtn.onclick = (e)=>{ e.stopPropagation(); setSelected([]); onRefresh(); };
+  const addBtn = root.querySelector(`[data-msel-addbtn="${id}"]`);
+  const addInput = document.getElementById(id+'-addinput');
+  if(addInput) addInput.oninput = ()=>{ mselState(id).addVal = addInput.value; };
+  if(addBtn) addBtn.onclick = (e)=>{
+    e.stopPropagation();
+    const val = (addInput ? addInput.value : '').trim();
+    if(!val) return;
+    if(wopts.single){
+      setSelected([val]);
+      mselState(id).open = false;
+      mselState(id).q = '';
+      mselState(id).addVal = '';
+      onRefresh();
+      return;
+    }
+    const sel = getSelected().map(String);
+    if(!sel.includes(val)) sel.push(val);
+    setSelected(sel);
+    mselState(id).addVal = '';
+    onRefresh();
+  };
+}
+function mselOutsideHandler(e){
+  const openId = Object.keys(MSEL_UI).find(k=>MSEL_UI[k].open);
+  if(!openId) { document.removeEventListener('mousedown', mselOutsideHandler, true); return; }
+  const root = document.getElementById(openId);
+  if(root && root.contains(e.target)) return;
+  MSEL_UI[openId].open = false;
+  MSEL_UI[openId].q = '';
+  document.removeEventListener('mousedown', mselOutsideHandler, true);
+  if(typeof window.__mselRefresh === 'function') window.__mselRefresh();
+}
 
 let STAFF = [];        // [{id, dept, role}]
 let SUBJECTS = [];     // [{id}]
@@ -447,7 +690,12 @@ function saveStaffMeta(){
   try{ localStorage.setItem(STAFF_META_KEY, JSON.stringify(STAFF_META)); }catch(e){}
 }
 function metaFor(id){
-  if(!STAFF_META[id]) STAFF_META[id] = {role:'manager', dept:null};
+  if(!STAFF_META[id]){
+    const u = userFor(id);
+    STAFF_META[id] = u
+      ? {role: u.roleTier, dept: u.deptName ? deptIdFor(u.deptName) : null}
+      : {role:'manager', dept:null}; // legacy/unknown codes with no Users row — old default
+  }
   return STAFF_META[id];
 }
 
@@ -476,6 +724,14 @@ function discoverDirectory(events, masters){
   };
   (events||[]).forEach(e=>{ touch(e.from); touch(e.performedBy); touch(e.to); });
   Object.values(masters||{}).forEach(m=>{ touch(m.createdBy); touch(m.assignedToInitial); touch(m.subjectId); });
+  // Seed every known active user + their department too, so "Acting as",
+  // department filters, and "Delegate to" pickers are populated from the
+  // real roster (Users cache) even for people who haven't touched a ticket yet.
+  USERS_LIST.forEach(u=>{
+    if(u.status && u.status!=='active') return;
+    if(u.deptName) deptIdFor(u.deptName);
+    registerStaff(u.email);
+  });
   // sync live role/dept from the (possibly just-edited) STAFF_META overlay
   STAFF.forEach(s=>{ const m=metaFor(s.id); s.role=m.role; s.dept=m.dept; });
 }
@@ -498,6 +754,8 @@ function nameOf(v){
   if(!v) return '—';
   if(dept(v)) return dept(v).name + ' (Dept)';
   const dn = deptByName(v); if(dn) return dn.name + ' (Dept)';
+  const u = userFor(v);
+  if(u) return u.name;
   if(isSubjectCode(v)) return v;
   if(isStaffCode(v)) return v;
   return v;
@@ -642,6 +900,7 @@ function ingestFromCachePayload(payload){
     : (Array.isArray(payload) ? payload : null);
   if(!eventRows || !eventRows.length) return false;
   const masterRows = Array.isArray(payload.ticLog) ? payload.ticLog : [];
+  parseUsers(payload);
   rebuildFromRealCache(eventRows, masterRows);
   return true;
 }
@@ -868,6 +1127,7 @@ const state = {
   view: 'my', // 'my' | 'dept' | 'new' | 'flow' | 'org'
   ffMode: 'ticket', // 'ticket' | 'subjectEmployee' | 'handler' | 'requester' | 'department' | 'status' | 'daterange'
   ffQuery: '',
+  ffMulti: [], // handler / requester / department — multi-select values for these three modes
   ffFrom: '', ffTo: '',
   ffSelectedTicket: null,
   myStatusFilter: 'all',
@@ -905,7 +1165,7 @@ function renderIdBar(){
   return `
   <div class="id-bar">
     <label>Acting as</label>
-    <select id="idStaff">${options.map(s=>`<option value="${s.id}" ${s.id===u.id?'selected':''}>${s.id}</option>`).join('')}</select>
+    <select id="idStaff">${options.map(s=>`<option value="${s.id}" ${s.id===u.id?'selected':''}>${nameEmailLabel(s.id)}</option>`).join('')}</select>
     <label>Role</label>
     <select id="idRole">
       ${['worker','manager','gm'].map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${r==='gm'?'General Manager':r[0].toUpperCase()+r.slice(1)}</option>`).join('')}
@@ -1179,16 +1439,16 @@ function renderFlowFinder(u){
       const m = master(tid); return m && m.subjectId===state.ffQuery;
     }) : [];
   } else if(state.ffMode==='handler'){
-    matches = state.ffQuery ? allTicketIds().filter(tid=>{
-      return ticketEvents(tid).some(e=> e.performedBy===state.ffQuery || e.to===state.ffQuery);
+    matches = state.ffMulti.length ? allTicketIds().filter(tid=>{
+      return ticketEvents(tid).some(e=> state.ffMulti.includes(e.performedBy) || state.ffMulti.includes(e.to));
     }) : [];
   } else if(state.ffMode==='requester'){
-    matches = state.ffQuery ? allTicketIds().filter(tid=>{
-      const m = master(tid); return m && m.createdBy===state.ffQuery;
+    matches = state.ffMulti.length ? allTicketIds().filter(tid=>{
+      const m = master(tid); return m && state.ffMulti.includes(m.createdBy);
     }) : [];
   } else if(state.ffMode==='department'){
-    const targetDeptId = scoped ? u.dept : state.ffQuery;
-    matches = targetDeptId ? allTicketIds().filter(tid=> ticketTouchesDept(tid, targetDeptId)) : [];
+    const targetDeptIds = scoped ? [u.dept] : state.ffMulti;
+    matches = targetDeptIds.length ? allTicketIds().filter(tid=> targetDeptIds.some(id=>ticketTouchesDept(tid, id))) : [];
   } else if(state.ffMode==='status'){
     matches = state.ffQuery ? allTicketIds().filter(tid=>{
       if(scoped && !ticketTouchesDept(tid, u.dept)) return false;
@@ -1224,22 +1484,24 @@ function renderFlowFinder(u){
       ${subjectEmployeeOptions.map(v=>`<option value="${v}" ${state.ffQuery===v?'selected':''}>${v}</option>`).join('')}
     </select>`;
   } else if(state.ffMode==='handler'){
-    queryControl = `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
-      <option value="">${handlerOptions.length ? 'Choose a handler (staff code)…' : 'Select…'}</option>
-      ${handlerOptions.map(v=>`<option value="${v}" ${state.ffQuery===v?'selected':''}>${v}</option>`).join('')}
-    </select>`;
+    const opts = handlerOptions.map(v=>{ const uu = userFor(v); return {value:v, label: uu ? uu.name : v, sub: uu ? uu.email : ''}; });
+    queryControl = `<div style="flex:1;">${renderMultiSelect('ffHandlerMsel', opts, state.ffMulti, {
+      placeholder: opts.length ? 'Select one or more handlers…' : 'No handlers yet',
+      searchPlaceholder:'Search by name or email…'
+    })}</div>`;
   } else if(state.ffMode==='requester'){
-    queryControl = `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
-      <option value="">${requesterOptions.length ? 'Choose a requester…' : 'Select…'}</option>
-      ${requesterOptions.map(v=>`<option value="${v}" ${state.ffQuery===v?'selected':''}>${v}</option>`).join('')}
-    </select>`;
+    const opts = requesterOptions.map(v=>{ const uu = userFor(v); return {value:v, label: uu ? uu.name : v, sub: uu ? uu.email : ''}; });
+    queryControl = `<div style="flex:1;">${renderMultiSelect('ffRequesterMsel', opts, state.ffMulti, {
+      placeholder: opts.length ? 'Select one or more requesters…' : 'No requesters yet',
+      searchPlaceholder:'Search by name or email…'
+    })}</div>`;
   } else if(state.ffMode==='department'){
     queryControl = scoped
       ? `<div class="hint" style="padding:9px 0;">Scoped to ${dept(u.dept).name} — managers see their own department only.</div>`
-      : `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
-          <option value="">${departmentOptions.length ? 'Choose a department…' : 'Select…'}</option>
-          ${departmentOptions.map(d=>`<option value="${d.id}" ${state.ffQuery===d.id?'selected':''}>${d.name}</option>`).join('')}
-        </select>`;
+      : `<div style="flex:1;">${renderMultiSelect('ffDeptMsel', departmentOptions.map(d=>({value:d.id, label:d.name})), state.ffMulti, {
+          placeholder: departmentOptions.length ? 'Select one or more departments…' : 'No departments yet',
+          searchPlaceholder:'Search departments…'
+        })}</div>`;
   } else if(state.ffMode==='status'){
     queryControl = `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
       <option value="">Choose a status…</option>
@@ -1443,7 +1705,7 @@ function openRespondModal(kind, tid){
   } else if(kind==='transferPerson'){
     const people = assignablePeopleFor(actor.id).filter(e=>e.id!==actor.id).concat(isManager(actor.id)||isGM(actor.id) ? STAFF.filter(e=>e.id!==actor.id) : []);
     const uniquePeople = [...new Map(people.map(p=>[p.id,p])).values()];
-    extra = `<div class="field"><label>Delegate to</label><select id="rm-person">${uniquePeople.map(e=>`<option value="${e.id}">${e.id}${e.dept&&dept(e.dept)?` — ${dept(e.dept).name}`:''}</option>`).join('')}</select></div>`;
+    extra = `<div class="field"><label>Delegate to</label><select id="rm-person">${uniquePeople.map(e=>`<option value="${e.id}">${nameEmailLabel(e.id)}${e.dept&&dept(e.dept)?` — ${dept(e.dept).name}`:''}</option>`).join('')}</select></div>`;
   } else if(kind==='transferDept'){
     extra = `<div class="field"><label>Transfer to department</label><select id="rm-dept">${DEPARTMENTS.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}</select></div>`;
   } else if(kind==='accept'){
@@ -1523,7 +1785,13 @@ function wireGlobal(){
     b.onclick=()=>{ state.deptStatusFilter=b.dataset.deptstatus; render(); };
   });
   document.querySelectorAll('[data-ffmode]').forEach(b=>{
-    b.onclick=()=>{ state.ffMode=b.dataset.ffmode; state.ffQuery=''; state.ffFrom=''; state.ffTo=''; state.ffSelectedTicket=null; render(); };
+    b.onclick=()=>{ state.ffMode=b.dataset.ffmode; state.ffQuery=''; state.ffMulti=[]; state.ffFrom=''; state.ffTo=''; state.ffSelectedTicket=null; render(); };
+  });
+  window.__mselRefresh = render;
+  ['ffHandlerMsel','ffRequesterMsel','ffDeptMsel'].forEach(id=>{
+    if(document.getElementById(id)){
+      wireMultiSelect(id, ()=>state.ffMulti, (v)=>{ state.ffMulti = v; }, render);
+    }
   });
   const ffq = document.getElementById('ffQuery');
   if(ffq){
@@ -1598,14 +1866,19 @@ function newTicketFormHtml(u){
     </div>
     <div class="field">
       <label>${f.targetType==='department' ? 'Department' : 'Delegate to'}</label>
-      <select id="nt-target">
-        <option value="">Select…</option>
-        ${f.targetType==='department'
-          ? deptOptions.map(d=>`<option value="${d.name}" ${f.target===d.name?'selected':''}>${d.name}</option>`).join('')
-          : personOptions.map(p=>`<option value="${p.id}" ${f.target===p.id?'selected':''}>${p.id}</option>`).join('')}
-        ${f.targetType==='department' ? `<option value="__new__" ${f.target==='__new__'?'selected':''}>+ New department name…</option>` : ''}
-      </select>
-      ${f.targetType==='department' && f.target==='__new__' ? `<input type="text" id="nt-targetNew" placeholder="e.g. Legal" value="${(f.targetNew||'').replace(/"/g,'&quot;')}">` : ''}
+      <div id="ntTargetWrap">${renderMultiSelect('ntTargetMsel',
+        f.targetType==='department'
+          ? deptOptions.map(d=>({value:d.name, label:d.name}))
+          : personOptions.map(p=>{ const uu=userFor(p.id); return {value:p.id, label:nameLabel(p.id), sub: uu ? uu.email : (p.dept&&dept(p.dept)?dept(p.dept).name:'')}; }),
+        f.target ? [f.target] : [],
+        {
+          single:true,
+          placeholder: f.targetType==='department' ? (deptOptions.length?'Select a department…':'No departments yet') : (personOptions.length?'Select a person…':'No people available'),
+          searchPlaceholder: f.targetType==='department' ? 'Search departments…' : 'Search by name or email…',
+          allowAdd: f.targetType==='department',
+          addPlaceholder: '+ New department name…'
+        }
+      )}</div>
       <span class="hint">${f.targetType==='department' ? "Sits as NEW in that department's queue until someone accepts it." : "Still goes to NEW — they'll need to Accept it, exactly like a department hand-off."}</span>
     </div>
     <div class="btn-row">
@@ -1669,10 +1942,14 @@ function wireNewTicketDrawerFields(u){
   const p = document.getElementById('nt-priority'); if(p) p.onchange = ()=>{ newTicketForm.priority = p.value; };
   const tt = document.getElementById('nt-targetType');
   if(tt) tt.onchange = ()=>{ newTicketForm.targetType = tt.value; newTicketForm.target=''; refreshNewTicketDrawer(u); };
-  const tgt = document.getElementById('nt-target');
-  if(tgt) tgt.onchange = ()=>{ newTicketForm.target = tgt.value; refreshNewTicketDrawer(u); };
-  const tgtn = document.getElementById('nt-targetNew');
-  if(tgtn) tgtn.oninput = ()=>{ newTicketForm.targetNew = tgtn.value; };
+  if(document.getElementById('ntTargetMsel')){
+    wireMultiSelect('ntTargetMsel',
+      ()=> newTicketForm.target ? [newTicketForm.target] : [],
+      (v)=>{ newTicketForm.target = (v && v[0]) || ''; },
+      ()=> refreshNewTicketDrawer(u),
+      {single:true}
+    );
+  }
   const submit = document.getElementById('nt-submit');
   if(submit) submit.onclick = ()=>{
     const f = newTicketForm;
