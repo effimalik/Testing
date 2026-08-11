@@ -583,7 +583,7 @@ async function loadEmployees(){
   }catch(e){
     EMPLOYEE_CACHE_OK = false;
   }
-  render();
+  safeRender();
   refreshOpenDrawer();
 }
 
@@ -1009,11 +1009,11 @@ async function loadTickets(){
     const payload = await _readCache();
     const applied = ingestFromCachePayload(payload);
     if(applied){
-      render();
+      safeRender();
       refreshOpenDrawer();
     } else if(!alreadyHaveData){
       discoverDirectory(EVENTS, TICKET_MASTER);
-      render();
+      safeRender();
     }
   }catch(err){
     console.error('[OpsDeck] loadTickets error:', err);
@@ -1024,10 +1024,10 @@ async function _applyFromCache(){
   try{
     const payload = await _readCache();
     const applied = ingestFromCachePayload(payload);
-    if(applied){ _emptyReadStreak = 0; render(); refreshOpenDrawer(); }
+    if(applied){ _emptyReadStreak = 0; safeRender(); refreshOpenDrawer(); }
     else if(EVENTS.some(r=>!r.local)){
       _emptyReadStreak++;
-      if(_emptyReadStreak>=2){ EVENTS = EVENTS.filter(r=>r.local); TICKET_MASTER={}; discoverDirectory(EVENTS, TICKET_MASTER); applyOverlay(); render(); _emptyReadStreak=0; }
+      if(_emptyReadStreak>=2){ EVENTS = EVENTS.filter(r=>r.local); TICKET_MASTER={}; discoverDirectory(EVENTS, TICKET_MASTER); applyOverlay(); safeRender(); _emptyReadStreak=0; }
     }
   }catch(e){
     console.warn('[OpsDeck] background refresh error:', e.message);
@@ -1045,10 +1045,10 @@ window.addEventListener('message', (e)=>{
   if(e.data.type==='ap-theme' && e.data.theme){ document.documentElement.setAttribute('data-theme', e.data.theme); }
   if(e.data.type==='ap-cache-preload' && e.data.datasets){
     const payload = e.data.datasets[_AP2_CACHE_KEY];
-    if(ingestFromCachePayload(payload)){ render(); refreshOpenDrawer(); }
+    if(ingestFromCachePayload(payload)){ safeRender(); refreshOpenDrawer(); }
   }
   if(e.data.type==='ap-cache-ready' && e.data.key===_AP2_CACHE_KEY){
-    if(ingestFromCachePayload(e.data.data)){ render(); refreshOpenDrawer(); }
+    if(ingestFromCachePayload(e.data.data)){ safeRender(); refreshOpenDrawer(); }
   }
   if(e.data.type==='ap-cache-updated'){
     try{ window.parent.postMessage({type:'ap-cache-request', key:_AP2_CACHE_KEY}, '*'); }catch(err){}
@@ -1281,7 +1281,26 @@ function bootstrapIdentity(){
 }
 
 /* ═══════════ Rendering ═══════════ */
+// The Flow Finder Handler/Requester/Department checkbox panels live inside
+// the normal render tree (unlike the New Ticket drawer, which is appended
+// straight to <body> and so survives a re-render untouched). That means an
+// *unsolicited* re-render — the 15s auto-refresh below, or a background
+// cache update landing mid-interaction — replaces the whole app.innerHTML
+// while the panel is open, which can land exactly on a mousedown/click and
+// make a checkbox appear to silently do nothing. A render triggered by the
+// widget's own onchange (the user just checked a box) still needs to run
+// to show the new chip — this guard is only for renders nobody asked for.
+function flowMselOpenNow(){
+  return state.view==='flow' && ['ffHandlerMsel','ffRequesterMsel','ffDeptMsel'].some(id => MSEL_UI[id] && MSEL_UI[id].open);
+}
 const app = document.getElementById('app');
+// For *unsolicited* re-renders (background cache polling, the periodic
+// timer below) — never for renders the widget itself asked for after a
+// user action, which must still run so the UI reflects what they just did.
+function safeRender(){
+  if(flowMselOpenNow()) return;
+  render();
+}
 function render(){
   tickReminderEngine();
   if(!state.currentUserId) state.currentUserId = ME || (STAFF.length ? STAFF[0].id : null);
@@ -1332,36 +1351,15 @@ function refreshOpenDrawer(){
       : 'ap2_employee cache unavailable — no employee roster loaded';
   }
 
-  // Ticket-cache-derived department/person options: refresh just the
-  // "Route to" field's own container, the same targeted, single-field
-  // approach — not the whole drawer — and skip it while its own panel is
-  // open or the user is actively in the employee field, so a background
-  // refresh never yanks focus away from what they're doing.
-  const targetWrap = document.getElementById('ntTargetWrap');
-  const targetMselOpen = MSEL_UI['ntTargetMsel'] && MSEL_UI['ntTargetMsel'].open;
-  if(targetWrap && !targetMselOpen && document.activeElement !== empInput){
-    const f = newTicketForm;
-    const deptOptions = activeDeptOptions();
-    const personOptions = activePersonOptions();
-    targetWrap.innerHTML = renderMultiSelect('ntTargetMsel',
-      f.targetType==='department'
-        ? deptOptions.map(d=>({value:d.name, label:d.name}))
-        : personOptions.map(p=>({value:p.email, label:p.name, sub:p.email})),
-      f.target ? [f.target] : [],
-      {
-        single:true,
-        placeholder: f.targetType==='department' ? (deptOptions.length?'Select a department…':'No departments yet') : (personOptions.length?'Select a person…':'No people available'),
-        searchPlaceholder: f.targetType==='department' ? 'Search departments…' : 'Search by name or email…',
-        allowAdd: f.targetType==='department',
-        addPlaceholder: '+ New department name…'
-      }
-    );
-    wireMultiSelect('ntTargetMsel',
-      ()=> newTicketForm.target ? [newTicketForm.target] : [],
-      (v)=>{ newTicketForm.target = (v && v[0]) || ''; },
-      ()=> refreshNewTicketDrawer(u),
-      {single:true}
-    );
+  // Ticket-cache-derived department/person options: same non-destructive
+  // refilter as the Subject Employee field above — if the "Route to" list
+  // is currently open, re-run the filter against the latest
+  // activeDeptOptions()/activePersonOptions() with whatever's already
+  // typed. The input keeps its value and focus either way.
+  const targetInput = document.getElementById('ntTargetInput');
+  const targetList = document.getElementById('ntTargetList');
+  if(targetList && targetList.classList.contains('open')){
+    filterTargetDrop(targetInput ? targetInput.value : '');
   }
 }
 
@@ -2056,17 +2054,92 @@ function selectEmpDrop(id){
   closeEmpDrop();
 }
 
+/* ═══════════ Target (Department / Person) search dropdown — same
+   single-search-box method as the Subject Employee field above, used for
+   the New Ticket "Route to" picker. Replaces the old checkbox-panel-style
+   multi-select (which needed an extra click to open, then typing into a
+   second, nested search box — the pattern flagged as unprofessional).
+   Options come from activeDeptOptions()/activePersonOptions() depending on
+   newTicketForm.targetType. ═══════════ */
+function targetDropOptions(){
+  return newTicketForm.targetType==='department'
+    ? activeDeptOptions().map(d=>({value:d.name, label:d.name, sub:''}))
+    : activePersonOptions().map(p=>({value:p.email, label:p.name, sub:p.email}));
+}
+function targetDropSelectedLabel(){
+  const val = newTicketForm.target;
+  if(!val) return '';
+  if(newTicketForm.targetType==='department') return val;
+  const u = userFor(val);
+  return u ? u.name : val;
+}
+function targetSearchDropShell(){
+  const f = newTicketForm;
+  const opts = targetDropOptions();
+  const placeholder = opts.length
+    ? (f.targetType==='department' ? 'Search departments…' : 'Search by name or email…')
+    : (f.targetType==='department' ? 'No departments yet — type to add one' : 'No people available');
+  return `
+  <div class="emp-drop" id="ntTargetDrop">
+    <input type="text" class="emp-drop-input" id="ntTargetInput" autocomplete="off"
+      placeholder="${escAttr(placeholder)}"
+      value="${escAttr(targetDropSelectedLabel())}">
+    <div class="dropdown-list" id="ntTargetList"></div>
+  </div>`;
+}
+function filterTargetDrop(q){
+  const list = document.getElementById('ntTargetList');
+  if(!list) return;
+  const f = newTicketForm;
+  const opts = targetDropOptions();
+  const lq = q.toLowerCase().trim();
+  const hits = (lq ? opts.filter(o=> o.label.toLowerCase().includes(lq) || (o.sub||'').toLowerCase().includes(lq)) : opts).slice(0,15);
+  const escRe = s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const hl = v=>{
+    const safe = escHtml(v);
+    return lq ? safe.replace(new RegExp(`(${escRe(lq)})`,'gi'),'<em>$1</em>') : safe;
+  };
+  let html;
+  if(!opts.length && f.targetType!=='department'){
+    html = `<div class="di no-match">No people available</div>`;
+  }else if(!hits.length){
+    html = `<div class="di no-match">No matches</div>`;
+  }else{
+    html = hits.map(o=>`<div class="di" data-target-drop-value="${escAttr(o.value)}">
+        <div class="dn">${hl(o.label)}</div>
+        ${o.sub?`<div class="ds">${hl(o.sub)}</div>`:''}
+      </div>`).join('');
+  }
+  if(f.targetType==='department' && lq && !hits.some(o=>o.label.toLowerCase()===lq)){
+    html += `<div class="di emp-drop-add" data-target-drop-add="1"><span>+ Use "${escHtml(q.trim())}" as new department name</span></div>`;
+  }
+  list.innerHTML = html;
+  list.classList.add('open');
+  const wrap = document.getElementById('ntTargetDrop'); if(wrap) wrap.classList.add('open');
+}
+function openTargetDrop(){
+  const input = document.getElementById('ntTargetInput');
+  filterTargetDrop(input ? input.value : '');
+}
+function closeTargetDrop(){
+  const list = document.getElementById('ntTargetList'); if(list) list.classList.remove('open');
+  const wrap = document.getElementById('ntTargetDrop'); if(wrap) wrap.classList.remove('open');
+}
+function selectTargetDrop(value){
+  newTicketForm.target = String(value);
+  const input = document.getElementById('ntTargetInput');
+  if(input) input.value = targetDropSelectedLabel();
+  closeTargetDrop();
+}
+
 function newTicketFormHtml(u){
   const f = newTicketForm;
-  const deptOptions = activeDeptOptions();
-  const personOptions = activePersonOptions();
   return `
     <div class="field">
-      <label>Subject Employee — who is this ticket about? (E2)
+      <label>Subject Employee (E2)
         <span class="cache-ping ${EMPLOYEE_CACHE_OK?'ok':'warn'}" title="${EMPLOYEE_CACHE_OK?'Employee roster loaded from ap2_employee cache':'ap2_employee cache unavailable — no employee roster loaded'}"></span>
       </label>
       ${empSearchDropShell()}
-      <span class="hint">Fixed for the life of the ticket — stays the same through every transfer.</span>
     </div>
     <div class="field">
 
@@ -2094,19 +2167,7 @@ function newTicketFormHtml(u){
     </div>
     <div class="field">
       <label>${f.targetType==='department' ? 'Department' : 'Delegate to'}</label>
-      <div id="ntTargetWrap">${renderMultiSelect('ntTargetMsel',
-        f.targetType==='department'
-          ? deptOptions.map(d=>({value:d.name, label:d.name}))
-          : personOptions.map(p=>({value:p.email, label:p.name, sub:p.email})),
-        f.target ? [f.target] : [],
-        {
-          single:true,
-          placeholder: f.targetType==='department' ? (deptOptions.length?'Select a department…':'No departments yet') : (personOptions.length?'Select a person…':'No people available'),
-          searchPlaceholder: f.targetType==='department' ? 'Search departments…' : 'Search by name or email…',
-          allowAdd: f.targetType==='department',
-          addPlaceholder: '+ New department name…'
-        }
-      )}</div>
+      <div id="ntTargetWrap">${targetSearchDropShell()}</div>
       <span class="hint">${f.targetType==='department' ? "Sits as NEW in that department's queue until someone accepts it." : "Still goes to NEW — they'll need to Accept it, exactly like a department hand-off."}</span>
     </div>
     <div class="btn-row">
@@ -2182,13 +2243,21 @@ function wireNewTicketDrawerFields(u){
   document.querySelectorAll('[data-target-type]').forEach(b=>{
     b.onclick = ()=>{ newTicketForm.targetType = b.dataset.targetType; newTicketForm.target=''; refreshNewTicketDrawer(u); };
   });
-  if(document.getElementById('ntTargetMsel')){
-    wireMultiSelect('ntTargetMsel',
-      ()=> newTicketForm.target ? [newTicketForm.target] : [],
-      (v)=>{ newTicketForm.target = (v && v[0]) || ''; },
-      ()=> refreshNewTicketDrawer(u),
-      {single:true}
-    );
+  const targetInput = document.getElementById('ntTargetInput');
+  if(targetInput){
+    targetInput.oninput = ()=> filterTargetDrop(targetInput.value);
+    targetInput.onfocus = ()=> openTargetDrop();
+    targetInput.onblur = ()=> setTimeout(closeTargetDrop, 160);
+  }
+  const targetList = document.getElementById('ntTargetList');
+  if(targetList){
+    targetList.addEventListener('mousedown', e=>{
+      e.preventDefault();
+      const row = e.target.closest('[data-target-drop-value]');
+      if(row){ selectTargetDrop(row.dataset.targetDropValue); return; }
+      const addRow = e.target.closest('[data-target-drop-add]');
+      if(addRow){ const targetInput2 = document.getElementById('ntTargetInput'); selectTargetDrop((targetInput2?targetInput2.value:'').trim()); }
+    });
   }
   const submit = document.getElementById('nt-submit');
   if(submit) submit.onclick = ()=>{
@@ -2217,7 +2286,7 @@ function wireNewTicketDrawerFields(u){
 // periodic re-render so overdue flags stay live without user action
 setInterval(()=>{
   if(state.view==='my' || state.view==='dept' || (state.view==='flow' && !state.ffSelectedTicket) || state.view==='org'){
-    render();
+    safeRender();
   }
 }, 15000);
 
@@ -2237,7 +2306,7 @@ async function _reboundIdentityAfterLoad(){
   if(!state.currentUserId || state.currentUserId===ME) return;
   state.currentUserId = ME;
   discoverDirectory(EVENTS, TICKET_MASTER);
-  render();
+  safeRender();
 }
 setTimeout(_reboundIdentityAfterLoad, 400);
 
