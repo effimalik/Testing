@@ -560,6 +560,7 @@ async function loadEmployees(){
     EMPLOYEE_CACHE_OK = false;
   }
   render();
+  refreshOpenDrawer();
 }
 
 /* ═══════════ Professional multi-select widget ═══════════
@@ -979,6 +980,7 @@ async function loadTickets(){
     const applied = ingestFromCachePayload(payload);
     if(applied){
       render();
+      refreshOpenDrawer();
     } else if(!alreadyHaveData){
       discoverDirectory(EVENTS, TICKET_MASTER);
       render();
@@ -992,7 +994,7 @@ async function _applyFromCache(){
   try{
     const payload = await _readCache();
     const applied = ingestFromCachePayload(payload);
-    if(applied){ _emptyReadStreak = 0; render(); }
+    if(applied){ _emptyReadStreak = 0; render(); refreshOpenDrawer(); }
     else if(EVENTS.some(r=>!r.local)){
       _emptyReadStreak++;
       if(_emptyReadStreak>=2){ EVENTS = EVENTS.filter(r=>r.local); TICKET_MASTER={}; discoverDirectory(EVENTS, TICKET_MASTER); applyOverlay(); render(); _emptyReadStreak=0; }
@@ -1013,10 +1015,10 @@ window.addEventListener('message', (e)=>{
   if(e.data.type==='ap-theme' && e.data.theme){ document.documentElement.setAttribute('data-theme', e.data.theme); }
   if(e.data.type==='ap-cache-preload' && e.data.datasets){
     const payload = e.data.datasets[_AP2_CACHE_KEY];
-    if(ingestFromCachePayload(payload)) render();
+    if(ingestFromCachePayload(payload)){ render(); refreshOpenDrawer(); }
   }
   if(e.data.type==='ap-cache-ready' && e.data.key===_AP2_CACHE_KEY){
-    if(ingestFromCachePayload(e.data.data)) render();
+    if(ingestFromCachePayload(e.data.data)){ render(); refreshOpenDrawer(); }
   }
   if(e.data.type==='ap-cache-updated'){
     try{ window.parent.postMessage({type:'ap-cache-request', key:_AP2_CACHE_KEY}, '*'); }catch(err){}
@@ -1263,6 +1265,17 @@ function render(){
     <div class="page">${renderView(u)}</div>
   `;
   wireGlobal();
+}
+// Cache reads (Users, ap2_employee) finish asynchronously and can land after
+// the New Ticket drawer is already open — without this, its department/
+// person/employee pickers stay stuck showing whatever was loaded at the
+// moment it was opened. Called only from the async cache-load completions
+// below, not from render() itself (which also fires on the periodic
+// re-render tick and would otherwise wipe an in-progress draft).
+function refreshOpenDrawer(){
+  const drawer = document.getElementById('ticketDrawer');
+  const u = currentUser();
+  if(drawer && u) refreshNewTicketDrawer(u);
 }
 
 function myOpenCount(id){
@@ -1924,10 +1937,10 @@ function newTicketFormHtml(u){
       </div>
       <div class="field">
         <label>Route to</label>
-        <select id="nt-targetType">
-          <option value="department" ${f.targetType==='department'?'selected':''}>A department queue</option>
-          <option value="person" ${f.targetType==='person'?'selected':''}>Directly delegate to a person</option>
-        </select>
+        <div class="filter-pills">
+          <button type="button" class="filter-btn ${f.targetType==='department'?'active':''}" data-target-type="department">Department</button>
+          <button type="button" class="filter-btn ${f.targetType==='person'?'active':''}" data-target-type="person">Person</button>
+        </div>
       </div>
     </div>
     <div class="field">
@@ -1962,7 +1975,6 @@ function openNewTicketDrawer(){
     <div class="drawer-head">
       <div>
         <h2>New Ticket</h2>
-        <p class="page-sub" style="margin:2px 0 0;">Writes a CREATED event + master record — same shape as everything from the real cache.</p>
       </div>
       <button class="drawer-close" id="drawerClose" aria-label="Close">✕</button>
     </div>
@@ -2010,8 +2022,9 @@ function wireNewTicketDrawerFields(u){
   const t = document.getElementById('nt-title'); if(t) t.oninput = ()=>{ newTicketForm.title = t.value; };
   const d = document.getElementById('nt-desc'); if(d) d.oninput = ()=>{ newTicketForm.description = d.value; };
   const p = document.getElementById('nt-priority'); if(p) p.onchange = ()=>{ newTicketForm.priority = p.value; };
-  const tt = document.getElementById('nt-targetType');
-  if(tt) tt.onchange = ()=>{ newTicketForm.targetType = tt.value; newTicketForm.target=''; refreshNewTicketDrawer(u); };
+  document.querySelectorAll('[data-target-type]').forEach(b=>{
+    b.onclick = ()=>{ newTicketForm.targetType = b.dataset.targetType; newTicketForm.target=''; refreshNewTicketDrawer(u); };
+  });
   if(document.getElementById('ntTargetMsel')){
     wireMultiSelect('ntTargetMsel',
       ()=> newTicketForm.target ? [newTicketForm.target] : [],
