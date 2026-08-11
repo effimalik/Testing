@@ -1932,46 +1932,71 @@ let newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:
    filterDrop: plain search box + highlighted name/id list, instead of the
    checkbox multi-select. Used only for the New Ticket "Subject Employee"
    field (ap2_employee cache). ═══════════ */
-const EMP_DROP_UI = {open:false, q:''};
+/* ═══════════ Employee search dropdown — same render method as docPortal's
+   filterDrop: plain search box + highlighted name/id list, instead of the
+   checkbox multi-select. Used only for the New Ticket "Subject Employee"
+   field (ap2_employee cache).
+   Like docPortal, the input/list DOM nodes are rendered once and then
+   patched directly (list.innerHTML=...) rather than being torn down and
+   rebuilt on every keystroke/click — a full-page re-render mid-mousedown
+   was racing against the click and closing the dropdown before the
+   selection registered. */
 function empDropSelectedLabel(){
   const id = newTicketForm.subjectEmployee;
   if(!id) return '';
   const e = EMPLOYEES.find(x=>String(x.id)===String(id));
   return e ? employeeLabel(e) : id;
 }
-function renderEmpSearchDrop(){
-  const q = EMP_DROP_UI.q.trim().toLowerCase();
-  const hits = (q ? EMPLOYEES.filter(e=>String(e.id).toLowerCase().includes(q)||e.name.toLowerCase().includes(q)) : EMPLOYEES).slice(0,15);
+function empSearchDropShell(){
+  return `
+  <div class="emp-drop" id="ntSubjectDrop">
+    <input type="text" class="emp-drop-input" id="ntSubjectInput" autocomplete="off"
+      placeholder="${EMPLOYEES.length?'Search by ID or name…':'No employees in cache'}"
+      value="${escAttr(empDropSelectedLabel())}">
+    <div class="dropdown-list" id="ntSubjectList"></div>
+  </div>`;
+}
+function filterEmpDrop(q){
+  const list = document.getElementById('ntSubjectList');
+  if(!list) return;
+  const lq = q.toLowerCase().trim();
+  const hits = (lq ? EMPLOYEES.filter(e=>String(e.id).toLowerCase().includes(lq)||e.name.toLowerCase().includes(lq)) : EMPLOYEES).slice(0,15);
   const escRe = s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   const hl = v=>{
     const safe = escHtml(v);
-    return q ? safe.replace(new RegExp(`(${escRe(q)})`,'gi'),'<em>$1</em>') : safe;
+    return lq ? safe.replace(new RegExp(`(${escRe(lq)})`,'gi'),'<em>$1</em>') : safe;
   };
-  const selectedId = newTicketForm.subjectEmployee;
-  const inputVal = EMP_DROP_UI.open ? EMP_DROP_UI.q : empDropSelectedLabel();
-  let listHtml;
+  let html;
   if(!EMPLOYEES.length){
-    listHtml = `<div class="di no-match">No employees in cache</div>`;
+    html = `<div class="di no-match">No employees in cache</div>`;
   }else if(!hits.length){
-    listHtml = `<div class="di no-match">No employees found</div>`;
+    html = `<div class="di no-match">No employees found</div>`;
   }else{
-    listHtml = hits.map(e=>`<div class="di${String(e.id)===String(selectedId)?' sel':''}" data-emp-drop-id="${escAttr(e.id)}">
+    html = hits.map(e=>`<div class="di" data-emp-drop-id="${escAttr(e.id)}">
         <div class="dn">${hl(e.name)}</div>
         <div class="ds">ID: ${hl(String(e.id))}</div>
       </div>`).join('');
   }
-  const addRow = (q && !hits.some(e=>String(e.id).toLowerCase()===q))
-    ? `<div class="di emp-drop-add" data-emp-drop-add="1"><i class="ti ti-plus"></i><span>Use "${escHtml(EMP_DROP_UI.q.trim())}" as new employee code</span></div>`
-    : '';
-  return `
-  <div class="emp-drop${EMP_DROP_UI.open?' open':''}">
-    <input type="text" class="emp-drop-input" id="ntSubjectInput" autocomplete="off"
-      placeholder="${EMPLOYEES.length?'Search by ID or name…':'No employees in cache'}"
-      value="${escAttr(inputVal)}">
-    <div class="dropdown-list${EMP_DROP_UI.open?' open':''}" id="ntSubjectList">
-      ${listHtml}${addRow}
-    </div>
-  </div>`;
+  if(lq && !hits.some(e=>String(e.id).toLowerCase()===lq)){
+    html += `<div class="di emp-drop-add" data-emp-drop-add="1"><i class="ti ti-plus"></i><span>Use "${escHtml(q.trim())}" as new employee code</span></div>`;
+  }
+  list.innerHTML = html;
+  list.classList.add('open');
+  const wrap = document.getElementById('ntSubjectDrop'); if(wrap) wrap.classList.add('open');
+}
+function openEmpDrop(){
+  const input = document.getElementById('ntSubjectInput');
+  filterEmpDrop(input ? input.value : '');
+}
+function closeEmpDrop(){
+  const list = document.getElementById('ntSubjectList'); if(list) list.classList.remove('open');
+  const wrap = document.getElementById('ntSubjectDrop'); if(wrap) wrap.classList.remove('open');
+}
+function selectEmpDrop(id){
+  newTicketForm.subjectEmployee = String(id);
+  const input = document.getElementById('ntSubjectInput');
+  if(input) input.value = empDropSelectedLabel();
+  closeEmpDrop();
 }
 
 function newTicketFormHtml(u){
@@ -1983,7 +2008,7 @@ function newTicketFormHtml(u){
       <label>Subject Employee — who is this ticket about? (E2)
         <span class="cache-ping ${EMPLOYEE_CACHE_OK?'ok':'warn'}" title="${EMPLOYEE_CACHE_OK?'Employee roster loaded from ap2_employee cache':'ap2_employee cache unavailable — no employee roster loaded'}"></span>
       </label>
-      ${renderEmpSearchDrop()}
+      ${empSearchDropShell()}
       <span class="hint">Fixed for the life of the ticket — stays the same through every transfer.</span>
     </div>
     <div class="field">
@@ -2080,23 +2105,19 @@ function refreshNewTicketDrawer(u){
 function wireNewTicketDrawerFields(u){
   const empInput = document.getElementById('ntSubjectInput');
   if(empInput){
-    empInput.oninput = ()=>{ EMP_DROP_UI.q = empInput.value; EMP_DROP_UI.open = true; refreshNewTicketDrawer(u); };
-    empInput.onfocus = ()=>{ if(!EMP_DROP_UI.open){ EMP_DROP_UI.q=''; EMP_DROP_UI.open=true; refreshNewTicketDrawer(u); } };
-    empInput.onblur = ()=>{ setTimeout(()=>{ if(EMP_DROP_UI.open){ EMP_DROP_UI.open=false; refreshNewTicketDrawer(u); } },150); };
-    if(EMP_DROP_UI.open){
-      empInput.focus();
-      const v = empInput.value; empInput.setSelectionRange(v.length, v.length);
-    }
+    empInput.oninput = ()=> filterEmpDrop(empInput.value);
+    empInput.onfocus = ()=> openEmpDrop();
+    empInput.onblur = ()=> setTimeout(closeEmpDrop, 160);
   }
   const empList = document.getElementById('ntSubjectList');
   if(empList){
-    empList.onmousedown = (e)=>{
+    empList.addEventListener('mousedown', e=>{
       e.preventDefault();
       const row = e.target.closest('[data-emp-drop-id]');
-      if(row){ newTicketForm.subjectEmployee = row.dataset.empDropId; EMP_DROP_UI.open=false; EMP_DROP_UI.q=''; refreshNewTicketDrawer(u); return; }
+      if(row){ selectEmpDrop(row.dataset.empDropId); return; }
       const addRow = e.target.closest('[data-emp-drop-add]');
-      if(addRow){ newTicketForm.subjectEmployee = EMP_DROP_UI.q.trim(); EMP_DROP_UI.open=false; EMP_DROP_UI.q=''; refreshNewTicketDrawer(u); }
-    };
+      if(addRow){ const empInput2 = document.getElementById('ntSubjectInput'); selectEmpDrop((empInput2?empInput2.value:'').trim()); }
+    });
   }
   const t = document.getElementById('nt-title'); if(t) t.oninput = ()=>{ newTicketForm.title = t.value; };
   const d = document.getElementById('nt-desc'); if(d) d.oninput = ()=>{ newTicketForm.description = d.value; };
@@ -2127,13 +2148,13 @@ function wireNewTicketDrawerFields(u){
       targetType:f.targetType, target,
     });
     toast(`Ticket ${tid} created for ${subjectEmployee}, routed to ${nameOf(target)}.`);
-    newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:''}; EMP_DROP_UI.open=false; EMP_DROP_UI.q='';
+    newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:''};
     closeNewTicketDrawer();
     state.view='flow'; state.ffSelectedTicket=tid;
     render();
   };
   const reset = document.getElementById('nt-reset');
-  if(reset) reset.onclick = ()=>{ newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:''}; EMP_DROP_UI.open=false; EMP_DROP_UI.q=''; refreshNewTicketDrawer(u); };
+  if(reset) reset.onclick = ()=>{ newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:''}; refreshNewTicketDrawer(u); };
 }
 
 // periodic re-render so overdue flags stay live without user action
