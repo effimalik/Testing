@@ -1305,7 +1305,24 @@ function render(){
 function refreshOpenDrawer(){
   const drawer = document.getElementById('ticketDrawer');
   const u = currentUser();
-  if(drawer && u) refreshNewTicketDrawer(u);
+  if(!drawer || !u) return;
+  // Cache payloads (initial loads, AP2CacheWatcher live updates, and the
+  // ap-cache-* postMessage events) can land at any moment, including while
+  // the user has the Subject Employee combo open or mid-click on a row.
+  // Rebuilding the whole drawer body right then tears the open
+  // dropdown-list DOM out from under the click, so it looks like the
+  // dropdown "opens and closes" with nothing selected. Defer the refresh
+  // until that interaction is done (selection made, or field blurred/
+  // closed) instead of yanking it away mid-use.
+  const empInput = document.getElementById('ntSubjectInput');
+  const empList = document.getElementById('ntSubjectList');
+  const empDropBusy = (empInput && document.activeElement === empInput) ||
+                       (empList && empList.classList.contains('open'));
+  if(empDropBusy){
+    setTimeout(refreshOpenDrawer, 300);
+    return;
+  }
+  refreshNewTicketDrawer(u);
 }
 
 function myOpenCount(id){
