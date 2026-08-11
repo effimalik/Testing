@@ -63,6 +63,9 @@
   .topbar-row1{display:flex;align-items:center;gap:16px;}
   .brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:19px;letter-spacing:0.2px;flex-shrink:0;}
   .brand .dot{width:9px;height:9px;border-radius:2px;background:var(--amber);box-shadow:0 0 10px var(--amber);animation:pulse 2.2s ease-in-out infinite;}
+  .cache-ping{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:7px;vertical-align:middle;animation:pulse 2.2s ease-in-out infinite;}
+  .cache-ping.ok{background:var(--teal);box-shadow:0 0 8px var(--teal);}
+  .cache-ping.warn{background:var(--amber);box-shadow:0 0 8px var(--amber);}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
   .topbar-spacer{flex:1;}
   nav.tabs{
@@ -516,6 +519,49 @@ function nameEmailLabel(v){
   return u ? `${u.name} — ${u.email}` : String(v||'');
 }
 
+/* ═══════════ Employee directory (ap2_employee cache) ═══════════
+   Real HR roster for the New Ticket "Subject Employee" picker — separate
+   from SUBJECTS (the E101-style codes discovered in the ticket log).
+   ap2_employee rows are plain arrays: [id, name, ...]. A lot of the raw
+   cache is throwaway test rows (single lowercase words like "asif"/"sdc",
+   or an all-lowercase name), so only rows that look like a real, properly
+   cased name are kept; everything else — and duplicate ids — is dropped. */
+let EMPLOYEES = [];           // [{id, name}], deduped, dummy rows removed
+let EMPLOYEE_CACHE_OK = false; // true once ap2_employee has loaded with data
+const REAL_NAME_RE = /^[A-Z][a-zA-Z'.-]*(\s[A-Z][a-zA-Z'.-]*)*$/;
+function parseEmployeeRow(r){
+  if(!Array.isArray(r)) return null;
+  const id = String(r[0]==null?'':r[0]).trim();
+  const name = String(r[1]==null?'':r[1]).trim();
+  if(!id || !name || !REAL_NAME_RE.test(name)) return null; // drop dummy/test rows
+  return {id, name};
+}
+function parseEmployees(rows){
+  const seen = new Set(), out = [];
+  (Array.isArray(rows)?rows:[]).forEach(r=>{
+    const e = parseEmployeeRow(r);
+    if(!e || seen.has(e.id)) return;
+    seen.add(e.id);
+    out.push(e);
+  });
+  return out.sort((a,b)=>a.name.localeCompare(b.name));
+}
+function employeeLabel(e){ return `${e.id} — ${e.name}`; }
+async function loadEmployees(){
+  try{
+    const rows = await AP2CacheWatcher.readKey('ap2_employee');
+    if(Array.isArray(rows) && rows.length){
+      EMPLOYEES = parseEmployees(rows);
+      EMPLOYEE_CACHE_OK = true;
+    } else {
+      EMPLOYEE_CACHE_OK = false;
+    }
+  }catch(e){
+    EMPLOYEE_CACHE_OK = false;
+  }
+  render();
+}
+
 /* ═══════════ Professional multi-select widget ═══════════
    Reusable checkbox-dropdown with chips + search, used wherever a picker
    needs to switch between "Department" and "Person" option sets and allow
@@ -539,6 +585,8 @@ function renderMultiSelect(id, options, selected, opts){
   const selectedOptions = options.filter(o=>selSet.has(String(o.value)));
   const q = st.q.trim().toLowerCase();
   const filtered = q ? options.filter(o=> o.label.toLowerCase().includes(q) || (o.sub||'').toLowerCase().includes(q)) : options;
+  const shown = opts.maxOptions ? filtered.slice(0, opts.maxOptions) : filtered;
+  const truncated = opts.maxOptions && filtered.length > shown.length;
   return `
   <div class="msel${st.open?' open':''}" id="${id}">
     <div class="msel-control" data-msel-toggle="${id}">
@@ -551,12 +599,13 @@ function renderMultiSelect(id, options, selected, opts){
     <div class="msel-panel" data-msel-panel="${id}">
       <input type="text" class="msel-search" id="${id}-search" placeholder="${escAttr(opts.searchPlaceholder||'Search…')}" value="${escAttr(st.q)}">
       <div class="msel-options">
-        ${filtered.length ? filtered.map(o=>`
+        ${shown.length ? shown.map(o=>`
           <label class="msel-option">
             <input type="${opts.single?'radio':'checkbox'}" ${opts.single?`name="${escAttr(id)}-radio"`:''} data-msel-check="${id}" value="${escAttr(o.value)}" ${selSet.has(String(o.value))?'checked':''}>
             <span>${escHtml(o.label)}</span>
             ${o.sub?`<span class="msel-opt-sub">${escHtml(o.sub)}</span>`:''}
           </label>`).join('') : `<div class="msel-empty">No matches</div>`}
+        ${truncated ? `<div class="msel-empty">Showing top ${shown.length} of ${filtered.length} — keep typing to narrow it down</div>` : ''}
       </div>
       <div class="msel-footer">
         <span class="msel-count">${opts.single ? (selectedOptions.length?'1 selected':'none selected') : `${selectedOptions.length} selected`}</span>
@@ -733,6 +782,25 @@ function discoverDirectory(events, masters){
   // The signed-in user must always be present, even if they've never
   // touched a ticket and aren't (yet) an active row in the Users sheet.
   if(ME) registerStaff(ME);
+}
+
+// Dropdown-only sourcing: department/person pickers must come straight from
+// the Users cache (payload.Users), active rows only — not from every code
+// discoverDirectory() happens to see in the ticket log.
+function activeUsersList(){ return USERS_LIST.filter(u=>u.status==='active'); }
+function activeDeptOptions(){
+  const seen = new Set(), out = [];
+  activeUsersList().forEach(u=>{
+    if(!u.deptName) return;
+    const key = u.deptName.toLowerCase();
+    if(seen.has(key)) return;
+    seen.add(key);
+    out.push({name:u.deptName});
+  });
+  return out.sort((a,b)=>a.name.localeCompare(b.name));
+}
+function activePersonOptions(){
+  return activeUsersList().slice().sort((a,b)=>a.name.localeCompare(b.name));
 }
 
 function isManager(id){ const s=staff(id); return !!s && s.role==='manager'; }
@@ -1819,18 +1887,24 @@ function wireGlobal(){
 let newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:''};
 function newTicketFormHtml(u){
   const f = newTicketForm;
-  const e2Options = SUBJECTS.slice().sort((a,b)=>a.id.localeCompare(b.id));
-  const deptOptions = DEPARTMENTS;
-  const personOptions = (isGM(u.id) ? STAFF : isManager(u.id) && u.dept ? deptWorkers(u.dept) : [u]).slice().sort((a,b)=>a.id.localeCompare(b.id));
+  const e2Options = EMPLOYEES.map(e=>({value:e.id, label:employeeLabel(e)}));
+  const e2Selected = f.subjectEmployee && f.subjectEmployee!=='__new__' ? [f.subjectEmployee] : [];
+  const deptOptions = activeDeptOptions();
+  const personOptions = activePersonOptions();
   return `
     <div class="field">
-      <label>Subject Employee — who is this ticket about? (E2)</label>
-      <select id="nt-subjectEmployee">
-        <option value="">Select the employee this ticket concerns…</option>
-        ${e2Options.map(e=>`<option value="${e.id}" ${f.subjectEmployee===e.id?'selected':''}>${e.id}</option>`).join('')}
-        <option value="__new__" ${f.subjectEmployee==='__new__'?'selected':''}>+ New employee code…</option>
-      </select>
-      ${f.subjectEmployee==='__new__' ? `<input type="text" id="nt-subjectEmployeeNew" placeholder="e.g. E106" value="${(f.subjectEmployeeNew||'').replace(/"/g,'&quot;')}">` : ''}
+      <label>Subject Employee — who is this ticket about? (E2)
+        <span class="cache-ping ${EMPLOYEE_CACHE_OK?'ok':'warn'}" title="${EMPLOYEE_CACHE_OK?'Employee roster loaded from ap2_employee cache':'ap2_employee cache unavailable — no employee roster loaded'}"></span>
+      </label>
+      <div id="ntSubjectWrap">${renderMultiSelect('ntSubjectMsel',
+        e2Options, e2Selected,
+        {
+          single:true, maxOptions:5,
+          placeholder: e2Options.length ? 'Search by ID or name…' : 'No employees in cache',
+          searchPlaceholder: 'Search by ID or name…',
+          allowAdd:true, addPlaceholder:'+ New employee code…'
+        }
+      )}</div>
       <span class="hint">Fixed for the life of the ticket — stays the same through every transfer.</span>
     </div>
     <div class="field">
@@ -1861,7 +1935,7 @@ function newTicketFormHtml(u){
       <div id="ntTargetWrap">${renderMultiSelect('ntTargetMsel',
         f.targetType==='department'
           ? deptOptions.map(d=>({value:d.name, label:d.name}))
-          : personOptions.map(p=>{ const uu=userFor(p.id); return {value:p.id, label:nameLabel(p.id), sub: uu ? uu.email : (p.dept&&dept(p.dept)?dept(p.dept).name:'')}; }),
+          : personOptions.map(p=>({value:p.email, label:p.name, sub:p.email})),
         f.target ? [f.target] : [],
         {
           single:true,
@@ -1925,10 +1999,14 @@ function refreshNewTicketDrawer(u){
   wireNewTicketDrawerFields(u);
 }
 function wireNewTicketDrawerFields(u){
-  const e2 = document.getElementById('nt-subjectEmployee');
-  if(e2) e2.onchange = ()=>{ newTicketForm.subjectEmployee = e2.value; refreshNewTicketDrawer(u); };
-  const e2n = document.getElementById('nt-subjectEmployeeNew');
-  if(e2n) e2n.oninput = ()=>{ newTicketForm.subjectEmployeeNew = e2n.value; };
+  if(document.getElementById('ntSubjectMsel')){
+    wireMultiSelect('ntSubjectMsel',
+      ()=> newTicketForm.subjectEmployee ? [newTicketForm.subjectEmployee] : [],
+      (v)=>{ newTicketForm.subjectEmployee = (v && v[0]) || ''; },
+      ()=> refreshNewTicketDrawer(u),
+      {single:true}
+    );
+  }
   const t = document.getElementById('nt-title'); if(t) t.oninput = ()=>{ newTicketForm.title = t.value; };
   const d = document.getElementById('nt-desc'); if(d) d.oninput = ()=>{ newTicketForm.description = d.value; };
   const p = document.getElementById('nt-priority'); if(p) p.onchange = ()=>{ newTicketForm.priority = p.value; };
@@ -1946,7 +2024,6 @@ function wireNewTicketDrawerFields(u){
   if(submit) submit.onclick = ()=>{
     const f = newTicketForm;
     let subjectEmployee = f.subjectEmployee;
-    if(subjectEmployee==='__new__'){ subjectEmployee = (f.subjectEmployeeNew||'').trim(); }
     if(!subjectEmployee){ toast('Select (or enter) the Subject Employee (E2) — who this ticket is about.'); return; }
     if(!f.title.trim()){ toast('Give this a name first.'); return; }
     let target = f.target;
@@ -1984,6 +2061,7 @@ state.currentUserId = ME;
 render();
 loadTickets();            // then read the real ap2_ticLog cache (IndexedDB) and merge it in — Users
                           // rows arrive with it, so re-resolve identity once real data is in.
+loadEmployees();          // ap2_employee cache, for the New Ticket Subject Employee picker
 async function _reboundIdentityAfterLoad(){
   ME = bootstrapIdentity();
   if(!state.currentUserId || state.currentUserId===ME) return;
