@@ -736,11 +736,17 @@ function saveStaffMeta(){
   try{ localStorage.setItem(STAFF_META_KEY, JSON.stringify(STAFF_META)); }catch(e){}
 }
 function metaFor(id){
+  const u = userFor(id);
+  if(u){
+    // Known Users-cache account — role/department always come live from the
+    // cache. Never freeze this in STAFF_META: there's no "Acting as"
+    // switcher to justify an override anymore, and a stale localStorage
+    // entry from old testing would otherwise permanently mask the real
+    // role/department every time this id shows up.
+    return {role: u.roleTier, dept: u.deptName ? deptIdFor(u.deptName) : null};
+  }
   if(!STAFF_META[id]){
-    const u = userFor(id);
-    STAFF_META[id] = u
-      ? {role: u.roleTier, dept: u.deptName ? deptIdFor(u.deptName) : null}
-      : {role:'manager', dept:null}; // legacy/unknown codes with no Users row — old default
+    STAFF_META[id] = {role:'manager', dept:null}; // legacy/unknown M-code with no Users row — old default
   }
   return STAFF_META[id];
 }
