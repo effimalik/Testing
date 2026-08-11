@@ -216,6 +216,30 @@
   .hint{font-size:11.5px;color:var(--text-muted);margin-top:-4px;}
   .warn-hint{font-size:11.5px;color:var(--amber);}
 
+  /* ---------- Employee search dropdown (docPortal-style render method,
+     used for ap2_employee cache — Subject Employee field only) ---------- */
+  .emp-drop{position:relative;}
+  .emp-drop-input{
+    width:100%;background:var(--panel-raised);border:1px solid var(--border);color:var(--text);
+    border-radius:7px;padding:9px 11px;font-size:13.5px;
+  }
+  .emp-drop-input:focus{outline:none;border-color:var(--teal);}
+  .emp-drop.open .emp-drop-input{border-color:var(--teal);}
+  .dropdown-list{
+    position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:60;
+    background:var(--panel-raised);border:1px solid var(--border);border-radius:9px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);max-height:220px;overflow-y:auto;display:none;
+  }
+  .dropdown-list.open{display:block;}
+  .dropdown-list .di{padding:8px 11px;cursor:pointer;border-radius:6px;margin:2px;}
+  .dropdown-list .di:hover,.dropdown-list .di.sel{background:var(--panel-hover);}
+  .dropdown-list .di .dn{font-size:13px;color:var(--text);font-weight:600;}
+  .dropdown-list .di .ds{font-size:11px;color:var(--text-muted);margin-top:1px;}
+  .dropdown-list .di.no-match{color:var(--text-muted);text-align:center;cursor:default;font-size:12.5px;padding:12px 9px;}
+  .dropdown-list .di.no-match:hover{background:none;}
+  .dropdown-list .di.emp-drop-add{display:flex;align-items:center;gap:7px;color:var(--teal);font-weight:600;font-size:12.5px;border-top:1px solid var(--border-soft);}
+  .dropdown-list .di em{color:var(--teal);font-style:normal;}
+
   /* ---------- Professional multi-select ---------- */
   .msel{position:relative;}
   .msel-control{
@@ -1904,10 +1928,54 @@ function wireGlobal(){
    directly to a named Person — both supported, matching TK-5001 (dept)
    and TK-5002 (direct-to-person) in the real sample data. */
 let newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:''};
+/* ═══════════ Employee search dropdown — same render method as docPortal's
+   filterDrop: plain search box + highlighted name/id list, instead of the
+   checkbox multi-select. Used only for the New Ticket "Subject Employee"
+   field (ap2_employee cache). ═══════════ */
+const EMP_DROP_UI = {open:false, q:''};
+function empDropSelectedLabel(){
+  const id = newTicketForm.subjectEmployee;
+  if(!id) return '';
+  const e = EMPLOYEES.find(x=>String(x.id)===String(id));
+  return e ? employeeLabel(e) : id;
+}
+function renderEmpSearchDrop(){
+  const q = EMP_DROP_UI.q.trim().toLowerCase();
+  const hits = (q ? EMPLOYEES.filter(e=>String(e.id).toLowerCase().includes(q)||e.name.toLowerCase().includes(q)) : EMPLOYEES).slice(0,15);
+  const escRe = s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const hl = v=>{
+    const safe = escHtml(v);
+    return q ? safe.replace(new RegExp(`(${escRe(q)})`,'gi'),'<em>$1</em>') : safe;
+  };
+  const selectedId = newTicketForm.subjectEmployee;
+  const inputVal = EMP_DROP_UI.open ? EMP_DROP_UI.q : empDropSelectedLabel();
+  let listHtml;
+  if(!EMPLOYEES.length){
+    listHtml = `<div class="di no-match">No employees in cache</div>`;
+  }else if(!hits.length){
+    listHtml = `<div class="di no-match">No employees found</div>`;
+  }else{
+    listHtml = hits.map(e=>`<div class="di${String(e.id)===String(selectedId)?' sel':''}" data-emp-drop-id="${escAttr(e.id)}">
+        <div class="dn">${hl(e.name)}</div>
+        <div class="ds">ID: ${hl(String(e.id))}</div>
+      </div>`).join('');
+  }
+  const addRow = (q && !hits.some(e=>String(e.id).toLowerCase()===q))
+    ? `<div class="di emp-drop-add" data-emp-drop-add="1"><i class="ti ti-plus"></i><span>Use "${escHtml(EMP_DROP_UI.q.trim())}" as new employee code</span></div>`
+    : '';
+  return `
+  <div class="emp-drop${EMP_DROP_UI.open?' open':''}">
+    <input type="text" class="emp-drop-input" id="ntSubjectInput" autocomplete="off"
+      placeholder="${EMPLOYEES.length?'Search by ID or name…':'No employees in cache'}"
+      value="${escAttr(inputVal)}">
+    <div class="dropdown-list${EMP_DROP_UI.open?' open':''}" id="ntSubjectList">
+      ${listHtml}${addRow}
+    </div>
+  </div>`;
+}
+
 function newTicketFormHtml(u){
   const f = newTicketForm;
-  const e2Options = EMPLOYEES.map(e=>({value:e.id, label:employeeLabel(e)}));
-  const e2Selected = f.subjectEmployee && f.subjectEmployee!=='__new__' ? [f.subjectEmployee] : [];
   const deptOptions = activeDeptOptions();
   const personOptions = activePersonOptions();
   return `
@@ -1915,18 +1983,11 @@ function newTicketFormHtml(u){
       <label>Subject Employee — who is this ticket about? (E2)
         <span class="cache-ping ${EMPLOYEE_CACHE_OK?'ok':'warn'}" title="${EMPLOYEE_CACHE_OK?'Employee roster loaded from ap2_employee cache':'ap2_employee cache unavailable — no employee roster loaded'}"></span>
       </label>
-      <div id="ntSubjectWrap">${renderMultiSelect('ntSubjectMsel',
-        e2Options, e2Selected,
-        {
-          single:true, maxOptions:5,
-          placeholder: e2Options.length ? 'Search by ID or name…' : 'No employees in cache',
-          searchPlaceholder: 'Search by ID or name…',
-          allowAdd:true, addPlaceholder:'+ New employee code…'
-        }
-      )}</div>
+      ${renderEmpSearchDrop()}
       <span class="hint">Fixed for the life of the ticket — stays the same through every transfer.</span>
     </div>
     <div class="field">
+
       <label>Ticket name</label>
       <input type="text" id="nt-title" placeholder="e.g. SIM package renewal" value="${f.title.replace(/"/g,'&quot;')}">
     </div>
@@ -2017,13 +2078,25 @@ function refreshNewTicketDrawer(u){
   wireNewTicketDrawerFields(u);
 }
 function wireNewTicketDrawerFields(u){
-  if(document.getElementById('ntSubjectMsel')){
-    wireMultiSelect('ntSubjectMsel',
-      ()=> newTicketForm.subjectEmployee ? [newTicketForm.subjectEmployee] : [],
-      (v)=>{ newTicketForm.subjectEmployee = (v && v[0]) || ''; },
-      ()=> refreshNewTicketDrawer(u),
-      {single:true}
-    );
+  const empInput = document.getElementById('ntSubjectInput');
+  if(empInput){
+    empInput.oninput = ()=>{ EMP_DROP_UI.q = empInput.value; EMP_DROP_UI.open = true; refreshNewTicketDrawer(u); };
+    empInput.onfocus = ()=>{ if(!EMP_DROP_UI.open){ EMP_DROP_UI.q=''; EMP_DROP_UI.open=true; refreshNewTicketDrawer(u); } };
+    empInput.onblur = ()=>{ setTimeout(()=>{ if(EMP_DROP_UI.open){ EMP_DROP_UI.open=false; refreshNewTicketDrawer(u); } },150); };
+    if(EMP_DROP_UI.open){
+      empInput.focus();
+      const v = empInput.value; empInput.setSelectionRange(v.length, v.length);
+    }
+  }
+  const empList = document.getElementById('ntSubjectList');
+  if(empList){
+    empList.onmousedown = (e)=>{
+      e.preventDefault();
+      const row = e.target.closest('[data-emp-drop-id]');
+      if(row){ newTicketForm.subjectEmployee = row.dataset.empDropId; EMP_DROP_UI.open=false; EMP_DROP_UI.q=''; refreshNewTicketDrawer(u); return; }
+      const addRow = e.target.closest('[data-emp-drop-add]');
+      if(addRow){ newTicketForm.subjectEmployee = EMP_DROP_UI.q.trim(); EMP_DROP_UI.open=false; EMP_DROP_UI.q=''; refreshNewTicketDrawer(u); }
+    };
   }
   const t = document.getElementById('nt-title'); if(t) t.oninput = ()=>{ newTicketForm.title = t.value; };
   const d = document.getElementById('nt-desc'); if(d) d.oninput = ()=>{ newTicketForm.description = d.value; };
@@ -2054,13 +2127,13 @@ function wireNewTicketDrawerFields(u){
       targetType:f.targetType, target,
     });
     toast(`Ticket ${tid} created for ${subjectEmployee}, routed to ${nameOf(target)}.`);
-    newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:''};
+    newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:''}; EMP_DROP_UI.open=false; EMP_DROP_UI.q='';
     closeNewTicketDrawer();
     state.view='flow'; state.ffSelectedTicket=tid;
     render();
   };
   const reset = document.getElementById('nt-reset');
-  if(reset) reset.onclick = ()=>{ newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:''}; refreshNewTicketDrawer(u); };
+  if(reset) reset.onclick = ()=>{ newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:''}; EMP_DROP_UI.open=false; EMP_DROP_UI.q=''; refreshNewTicketDrawer(u); };
 }
 
 // periodic re-render so overdue flags stay live without user action
