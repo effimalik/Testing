@@ -506,9 +506,18 @@ function isDeptToken(v){ v=String(v||'').trim(); return !!v && !isPersonCode(v);
 let USERS = {};       // email(lowercase) -> {email, name, role, roleTitle, deptName, roleTier, status}
 let USERS_LIST = [];
 let USERS_READY = false; // flips true once a real (non-empty) Users cache payload has landed
+// Any of these titles (bare, or the part before "|") get org-wide,
+// unfiltered oversight — same tier as GM — regardless of whether a
+// department was ever attached to the role string.
+const EXEC_TITLE_PATTERNS = [
+  /^gm$/, /^general\s*manager$/, /^ceo$/, /^chief\s+executive(\s+officer)?$/,
+  /^cfo$/, /^chief\s+financial(\s+officer)?$/, /^coo$/, /^chief\s+operating(\s+officer)?$/,
+  /^cto$/, /^chief\s+technology(\s+officer)?$/, /^chief\b/, /^president$/,
+  /^vice\s*president$/, /^vp$/, /^director$/, /^head(\s+of\b.*)?$/,
+];
 function roleTierOf(title){
   const t = String(title||'').trim().toLowerCase();
-  if(t==='gm' || t==='general manager') return 'gm';
+  if(EXEC_TITLE_PATTERNS.some(re=>re.test(t))) return 'gm';
   if(t==='manager') return 'manager';
   return 'worker';
 }
@@ -778,7 +787,16 @@ function metaFor(id){
     // switcher to justify an override anymore, and a stale localStorage
     // entry from old testing would otherwise permanently mask the real
     // role/department every time this id shows up.
-    return {role: u.roleTier, dept: u.deptName ? deptIdFor(u.deptName) : null};
+    //
+    // A "manager"-tier role with NO department attached (role string was
+    // just "Manager", no "| Dept") can't be scoped to a single queue —
+    // there's nothing to scope it to. Rather than leaving them stuck with
+    // no Department tab and no Org tab, treat them as org-wide oversight
+    // (same tier as GM/CEO/CFO/Head/etc.): unfiltered visibility across
+    // every department's tickets and every pending item.
+    const deptId = u.deptName ? deptIdFor(u.deptName) : null;
+    const role = (u.roleTier==='manager' && !deptId) ? 'gm' : u.roleTier;
+    return {role, dept: deptId};
   }
   if(!STAFF_META[id]){
     STAFF_META[id] = {role:'manager', dept:null}; // legacy/unknown M-code with no Users row — old default
@@ -1415,7 +1433,8 @@ function orgOpenCount(){ return allTicketIds().filter(tid=>!isTerminal(currentOw
 
 function renderTopbar(u){
   const manager = isManager(u.id), gm = isGM(u.id);
-  const roleLabel = gm ? 'general manager' : manager ? 'manager' : 'worker';
+  const realTitle = (userFor(u.id) && userFor(u.id).roleTitle) || '';
+  const roleLabel = realTitle ? realTitle.toLowerCase() : (gm ? 'general manager' : manager ? 'manager' : 'worker');
   const myCount = myOpenCount(u.id);
   const dCount = manager && u.dept ? deptQueueCount(u.dept) : 0;
   const orgCount = gm ? orgOpenCount() : 0;
@@ -1478,7 +1497,7 @@ function ticketRow(tid, opts={}){
   <div class="ticket-row" data-open-ticket="${tid}">
     <div class="pri-flag pri-${owner.priority}"></div>
     <div class="t-main">
-      <div class="t-title">${title} <span class="tid">#${tid}</span> ${owner.subjectType?`<span class="type-chip">${owner.subjectType}</span>`:''}</div>
+      <div class="t-title">${escHtml(title)} <span class="tid">#${tid}</span> ${owner.subjectType?`<span class="type-chip">${escHtml(owner.subjectType)}</span>`:''}</div>
       <div class="t-sub">For ${owner.subjectId ? nameOf(owner.subjectId) : '—'} · ${subLabel} · raised by ${nameOf(owner.createdBy)}</div>
     </div>
     ${od.overdue ? `<div class="overdue-flag">⚠ overdue ${fmtDur(od.elapsed)}</div>` : ''}
@@ -1541,7 +1560,7 @@ function profileCard(u){
   const resolvedCt = allTicketIds().filter(tid=>{
     const o=currentOwner(tid); return o && o.assignedTo===u.id && isTerminal(o.status);
   }).length;
-  const roleName = isGM(u.id) ? 'General Manager' : isManager(u.id) ? 'Manager' : 'Worker';
+  const roleName = (userFor(u.id) && userFor(u.id).roleTitle) || (isGM(u.id) ? 'General Manager' : isManager(u.id) ? 'Manager' : 'Worker');
   return `
   <div class="card profile-card">
     <div class="avatar">${nameOf(u.id).slice(0,2).toUpperCase()}</div>
@@ -1757,7 +1776,7 @@ function renderTimelineView(tid, u){
           <span class="tl-ts">${fmtTs(r.eventId)}</span>
         </div>
         <div class="tl-who">${whoLine} · <span class="status-chip ${statusClass(r.status)}" style="padding:1px 7px;font-size:10px;">${r.status}</span></div>
-        ${r.detail ? `<div class="tl-notes">${r.detail}</div>` : ''}
+        ${r.detail ? `<div class="tl-notes">${escHtml(r.detail)}</div>` : ''}
       </div>
     </div>`;
   });
@@ -1765,7 +1784,7 @@ function renderTimelineView(tid, u){
   <button class="btn btn-ghost btn-sm" id="ffBack">← Back to results</button>
   <div class="card" style="margin-top:12px;">
     <div class="kicker">Ticket #${tid}</div>
-    <h2 style="font-family:var(--font-display);margin:0 0 4px;">${ticketTitle(tid)}</h2>
+    <h2 style="font-family:var(--font-display);margin:0 0 4px;">${escHtml(ticketTitle(tid))}</h2>
     <p class="page-sub" style="margin-bottom:2px;">
       <b style="color:var(--text-dim);">Subject Employee (E2):</b> ${owner.subjectId ? nameOf(owner.subjectId) : '<span style="color:var(--red);">not recorded</span>'}
       &nbsp;·&nbsp; Requester: ${owner.createdBy ? nameOf(owner.createdBy) : '—'}
@@ -1853,14 +1872,26 @@ function renderRespondPanel(tid, u){
 }
 
 // ----- Org Overview (GM) -----
+// Every ticket, org-wide, whose latest reminder has gone overdue and
+// hasn't been attended yet — no department scoping, no status filter.
+// This is what "Pending" means for GM/CEO/CFO/Head-tier oversight: things
+// that were promised a follow-up and haven't gotten one.
+function orgPendingTickets(){
+  return allTicketIds().filter(tid => overdueInfo(tid).overdue);
+}
 function renderOrgOverview(u){
+  const pending = orgPendingTickets();
   const groups = DEPARTMENTS.map(d=>{
     const tids = allTicketIds().filter(tid=> deptNameOfTarget(currentOwner(tid).assignedTo)===d.name);
     return {dept:d, tids};
   });
   return `
   <h1 class="page-title">Org Overview</h1>
-  <p class="page-sub">Read-only view across every department's tickets, wherever they currently sit. Use Flow Finder to inspect any of them in detail.</p>
+  <p class="page-sub">Read-only view across every department's tickets, wherever they currently sit — nothing here is filtered by department or status. Use Flow Finder to inspect any of them in detail.</p>
+  <div class="section-label" style="color:var(--red);">Pending — reminders triggered, not yet attended (${pending.length})</div>
+  ${pending.length
+    ? `<div class="ticket-list">${pending.map(t=>ticketRow(t, {subLabel:`With ${nameOf(currentOwner(t).assignedTo)} · ${deptNameOfTarget(currentOwner(t).assignedTo)}`})).join('')}</div>`
+    : `<div class="empty">Nothing overdue across the whole org right now.</div>`}
   ${groups.map(g=>`
     <div class="section-label">${g.dept.name} (${g.tids.length})</div>
     ${g.tids.length ? `<div class="ticket-list">${g.tids.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty">Nothing currently in ${g.dept.name}.</div>`}
@@ -1907,7 +1938,7 @@ function openRespondModal(kind, tid){
   backdrop.innerHTML = `
     <div class="modal">
       <h3>${titles[kind]}</h3>
-      <p class="modal-sub">#${tid} · ${ticketTitle(tid)}</p>
+      <p class="modal-sub">#${tid} · ${escHtml(ticketTitle(tid))}</p>
       ${extra}
       <div class="field"><label>Comment${needsComment?' (required)':' (optional)'}</label><textarea id="rm-comment" placeholder="What's the update?"></textarea></div>
       <div class="modal-actions">
