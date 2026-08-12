@@ -1133,6 +1133,72 @@ function currentOwner(tid){
   };
 }
 
+/* ═══════════ Activity-trail accessors — "I did X" / "my department did X"
+   These read the whole event log for a given action, not just the
+   ticket's current state, so a ticket you accepted or transferred still
+   shows up here even after it's since moved on to someone else. ═══════════ */
+function ticketsWhereIActed(actorId, action){
+  return allTicketIds().filter(tid=>
+    ticketEvents(tid).some(e=> e.action===action && e.performedBy===actorId)
+  );
+}
+function ticketsWhereDeptActed(deptId, action){
+  return allTicketIds().filter(tid=>
+    ticketEvents(tid).some(e=>{
+      if(e.action!==action) return false;
+      const s = staff(e.performedBy);
+      return s && s.dept===deptId;
+    })
+  );
+}
+function deptRaised(deptId){
+  return allTicketIds().filter(tid=>{
+    const m = master(tid);
+    if(!m || !m.createdBy) return false;
+    const s = staff(m.createdBy);
+    return s && s.dept===deptId;
+  });
+}
+// Everything still open and relevant to a person — BOTH before acceptance
+// (sitting unclaimed in their department's queue, addressed to the dept
+// rather than to them by name) AND after acceptance (currently assigned
+// to them directly). A ticket that was transferred to my department or to
+// me and hasn't been accepted yet is still "open for me" — it doesn't
+// wait for an ACCEPTED event to count.
+function openForMe(u){
+  const direct = allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.assignedTo===u.id && !isTerminal(o.status);
+  });
+  const queued = u.dept ? allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.status==='NEW' && deptNameOfTarget(o.assignedTo)===dept(u.dept).name;
+  }) : [];
+  return [...new Set([...direct, ...queued])];
+}
+// Same idea, department-wide: unclaimed-in-queue OR currently with any
+// teammate, whichever side of "accepted" it's on, excluding resolved.
+function openForDept(deptId){
+  const d = dept(deptId);
+  if(!d) return [];
+  const queued = allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && !isTerminal(o.status) && deptNameOfTarget(o.assignedTo)===d.name;
+  });
+  const withTeam = deptWorkers(deptId).flatMap(w=> allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.assignedTo===w.id && !isTerminal(o.status);
+  }));
+  return [...new Set([...queued, ...withTeam])];
+}
+// Row label that makes it obvious whether a ticket is still sitting
+// unclaimed (before ACCEPTED) or actively with someone (after).
+function openRowSubLabel(tid){
+  const o = currentOwner(tid);
+  if(o.status==='NEW') return `Unclaimed — waiting in ${deptNameOfTarget(o.assignedTo)}`;
+  return `With ${nameOf(o.assignedTo)}`;
+}
+
 /* ═══════════ Reminder engine (computed live from the event log) ═══════════
    A REMINDER event's Detail carries its own due date/time ("Reminder:
    10-Aug-2026 15:00"); Event_ID is deliberately NOT used for this — it's
@@ -1435,8 +1501,8 @@ function renderTopbar(u){
   const manager = isManager(u.id), gm = isGM(u.id);
   const realTitle = (userFor(u.id) && userFor(u.id).roleTitle) || '';
   const roleLabel = realTitle ? realTitle.toLowerCase() : (gm ? 'general manager' : manager ? 'manager' : 'worker');
-  const myCount = myOpenCount(u.id);
-  const dCount = manager && u.dept ? deptQueueCount(u.dept) : 0;
+  const myCount = openForMe(u).length;
+  const dCount = manager && u.dept ? openForDept(u.dept).length : 0;
   const orgCount = gm ? orgOpenCount() : 0;
   return `
   <div class="topbar">
@@ -1516,11 +1582,28 @@ function raisedByMe(u){
     return m && m.createdBy===u.id;
   }).sort((a,b)=> currentOwner(b).eventId - currentOwner(a).eventId);
 }
+function activityRow(tid){
+  // For "I accepted" / "I transferred" lists: state is about what happened
+  // on the ticket, so show where it stands now rather than the default
+  // "With X" (which would just repeat the current owner regardless of
+  // whether it's still with the person viewing this list).
+  const o = currentOwner(tid);
+  return ticketRow(tid, {subLabel: isTerminal(o.status) ? `Resolved` : openRowSubLabel(tid)});
+}
 function renderMyPortal(u){
-  const mine = allTicketIds().filter(tid=>{
+  // "Mine" = anything currently with me by name, PLUS anything sitting
+  // unclaimed in my department's queue (before acceptance) — both count
+  // as open/relevant to me, not just the after-acceptance half.
+  const mineDirect = allTicketIds().filter(tid=>{
     const o = currentOwner(tid);
     return o && o.assignedTo===u.id;
-  }).sort((a,b)=> currentOwner(b).eventId - currentOwner(a).eventId);
+  });
+  const queue = u.dept ? allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.status==='NEW' && deptNameOfTarget(o.assignedTo)===dept(u.dept).name;
+  }) : [];
+  const mine = [...new Set([...mineDirect, ...queue])]
+    .sort((a,b)=> currentOwner(b).eventId - currentOwner(a).eventId);
 
   const filter = state.myStatusFilter;
   const filtered = mine.filter(tid=> matchesStatusFilter(currentOwner(tid).status, filter));
@@ -1531,50 +1614,47 @@ function renderMyPortal(u){
         const done = mine.filter(tid=>isTerminal(currentOwner(tid).status));
         return `
         <div class="section-label">Needs attention (${open.length})</div>
-        ${open.length ? `<div class="ticket-list">${open.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty"><b>All clear.</b>Nothing waiting on you right now.</div>`}
+        ${open.length ? `<div class="ticket-list">${open.map(t=>ticketRow(t,{subLabel:openRowSubLabel(t)})).join('')}</div>` : `<div class="empty"><b>All clear.</b>Nothing waiting on you right now.</div>`}
         ${done.length ? `
         <div class="section-label">Resolved (${done.length})</div>
         <div class="ticket-list">${done.map(t=>ticketRow(t)).join('')}</div>` : ''}`;
       })()
     : (filtered.length
-        ? `<div class="ticket-list">${filtered.map(t=>ticketRow(t)).join('')}</div>`
+        ? `<div class="ticket-list">${filtered.map(t=>ticketRow(t,{subLabel:openRowSubLabel(t)})).join('')}</div>`
         : `<div class="empty"><b>No matches.</b>Nothing with that status right now.</div>`);
 
-  // Tickets sitting in MY department's queue, unclaimed (Status NEW, To =
-  // my department) — the requirement's "New Ticket" queue (§2), reachable
-  // straight from My Portal for a worker who isn't a manager too.
-  const queue = u.dept ? allTicketIds().filter(tid=>{
-    const o = currentOwner(tid);
-    return o && o.status==='NEW' && deptNameOfTarget(o.assignedTo)===dept(u.dept).name;
-  }) : [];
-
-  // Tickets I raised that have since moved to someone else — shown with
-  // "Now with X" instead of the usual "With X" so it's clear at a glance
-  // this isn't currently sitting in your queue.
-  const raised = raisedByMe(u).filter(tid => currentOwner(tid).assignedTo!==u.id);
+  // Activity trail — what I've personally done on a ticket, independent
+  // of who holds it now. A ticket I accepted or transferred stays listed
+  // here even after it's moved on again.
+  const iRaised = raisedByMe(u);
+  const iAccepted = ticketsWhereIActed(u.id, 'ACCEPTED');
+  const iTransferred = ticketsWhereIActed(u.id, 'TRANSFERRED');
 
   return `
   <div class="grid2">
     ${profileCard(u)}
     <div>
       <h1 class="page-title">My Portal</h1>
-      <p class="page-sub">Tickets currently assigned to you. Tap one to see the full timeline and respond.</p>
-      ${queue.length ? `
-      <div class="section-label">New in ${dept(u.dept).name} — unclaimed (${queue.length})</div>
-      <div class="ticket-list">${queue.map(t=>ticketRow(t,{subLabel:`New — waiting for someone to accept`})).join('')}</div>` : ''}
-      <div class="section-label" style="margin-top:22px;">My tickets</div>
+      <p class="page-sub">Tickets relevant to you — unclaimed in your department's queue, or already accepted and with you. Tap one to see the full timeline and respond.</p>
+      <div class="section-label">My tickets</div>
       ${statusFilterBar(filter, 'mystatus')}
       ${body}
-      ${raised.length ? `
-      <div class="section-label" style="margin-top:22px;">Raised by me — with someone else now (${raised.length})</div>
-      <div class="ticket-list">${raised.map(t=>ticketRow(t,{subLabel:`Now with ${nameOf(currentOwner(t).assignedTo)}`})).join('')}</div>` : ''}
+
+      <div class="section-label" style="margin-top:22px;">I raised (${iRaised.length})</div>
+      ${iRaised.length ? `<div class="ticket-list">${iRaised.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">You haven't raised any tickets yet.</div>`}
+
+      <div class="section-label" style="margin-top:22px;">I accepted (${iAccepted.length})</div>
+      ${iAccepted.length ? `<div class="ticket-list">${iAccepted.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">You haven't accepted any tickets yet.</div>`}
+
+      <div class="section-label" style="margin-top:22px;">I transferred (${iTransferred.length})</div>
+      ${iTransferred.length ? `<div class="ticket-list">${iTransferred.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">You haven't transferred any tickets yet.</div>`}
     </div>
   </div>`;
 }
 
 function profileCard(u){
   const d = u.dept ? dept(u.dept) : null;
-  const openCt = myOpenCount(u.id);
+  const openCt = openForMe(u).length;
   const resolvedCt = allTicketIds().filter(tid=>{
     const o=currentOwner(tid); return o && o.assignedTo===u.id && isTerminal(o.status);
   }).length;
@@ -1613,11 +1693,28 @@ function renderDeptReadOnly(u, opts={}){
   const filter = state.deptStatusFilter;
   const filtered = uniqueIds.filter(tid=> matchesStatusFilter(currentOwner(tid).status, filter));
   const teamCount = deptWorkers(u.dept).length;
+
+  // Department-wide activity trail — mirrors "I raised/accepted/
+  // transferred" in My Portal, but for anyone on the team, independent of
+  // who currently holds the ticket.
+  const deptRaisedIds = deptRaised(u.dept);
+  const deptAcceptedIds = ticketsWhereDeptActed(u.dept, 'ACCEPTED');
+  const deptTransferredIds = ticketsWhereDeptActed(u.dept, 'TRANSFERRED');
+
   return `
   <h1 class="page-title">${d.name} — Department</h1>
-  <p class="page-sub">${opts.manager ? `Every ticket routed to ${d.name} (${teamCount} member${teamCount===1?'':'s'} on the team), unclaimed or with a teammate. Open one to accept or reassign.` : `Read-only view of tickets routed to ${d.name}. Your own items are in My Portal.`}</p>
+  <p class="page-sub">${opts.manager ? `Every ticket routed to ${d.name} (${teamCount} member${teamCount===1?'':'s'} on the team), unclaimed or with a teammate — before and after acceptance. Open one to accept or reassign.` : `Read-only view of tickets routed to ${d.name}, unclaimed or with a teammate — before and after acceptance. Your own items are in My Portal.`}</p>
   ${statusFilterBar(filter, 'deptstatus')}
-  ${filtered.length ? `<div class="ticket-list">${filtered.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty"><b>Nothing here.</b>No tickets match that filter for ${d.name}.</div>`}
+  ${filtered.length ? `<div class="ticket-list">${filtered.map(t=>ticketRow(t,{subLabel:openRowSubLabel(t)})).join('')}</div>` : `<div class="empty"><b>Nothing here.</b>No tickets match that filter for ${d.name}.</div>`}
+
+  <div class="section-label" style="margin-top:22px;">My department raised (${deptRaisedIds.length})</div>
+  ${deptRaisedIds.length ? `<div class="ticket-list">${deptRaisedIds.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">Nobody in ${d.name} has raised a ticket yet.</div>`}
+
+  <div class="section-label" style="margin-top:22px;">My department accepted (${deptAcceptedIds.length})</div>
+  ${deptAcceptedIds.length ? `<div class="ticket-list">${deptAcceptedIds.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">Nobody in ${d.name} has accepted a ticket yet.</div>`}
+
+  <div class="section-label" style="margin-top:22px;">My department transferred (${deptTransferredIds.length})</div>
+  ${deptTransferredIds.length ? `<div class="ticket-list">${deptTransferredIds.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">Nobody in ${d.name} has transferred a ticket yet.</div>`}
   `;
 }
 
