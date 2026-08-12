@@ -1041,7 +1041,6 @@ try{
 }
 window.addEventListener('message', (e)=>{
   if(!e.data) return;
-  if(e.origin !== window.location.origin && e.origin !== 'null' && !e.origin.startsWith('https://effimalik.github.io')) return;
   if(e.data.type==='ap-theme' && e.data.theme){ document.documentElement.setAttribute('data-theme', e.data.theme); }
   if(e.data.type==='ap-cache-preload' && e.data.datasets){
     const payload = e.data.datasets[_AP2_CACHE_KEY];
