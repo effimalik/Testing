@@ -1159,6 +1159,45 @@ function deptRaised(deptId){
     return s && s.dept===deptId;
   });
 }
+// A TRANSFERRED event's `to` is either a department name (isDeptToken) or
+// a person code/email — this is how "Transferred" (to a department queue)
+// is split from "Delegated" (directly to a person).
+function isTransferToDept(e){ return isDeptToken(e.to); }
+function actedTransferred(actorId, kind){ // kind: 'dept' | 'person'
+  return allTicketIds().filter(tid=>
+    ticketEvents(tid).some(e=> e.action==='TRANSFERRED' && e.performedBy===actorId &&
+      (kind==='dept' ? isTransferToDept(e) : !isTransferToDept(e)))
+  );
+}
+function deptActedTransferred(deptId, kind){
+  return allTicketIds().filter(tid=>
+    ticketEvents(tid).some(e=>{
+      if(e.action!=='TRANSFERRED') return false;
+      const s = staff(e.performedBy);
+      if(!s || s.dept!==deptId) return false;
+      return kind==='dept' ? isTransferToDept(e) : !isTransferToDept(e);
+    })
+  );
+}
+// "Accepted" also absorbs anything I/my department Transferred or
+// Delegated that has SINCE been accepted by the recipient — once accepted
+// it's no longer sitting open under Transferred/Delegated, it moves here.
+function myAccepted(u){
+  const selfAccepted = ticketsWhereIActed(u.id,'ACCEPTED');
+  const nowAccepted = [...actedTransferred(u.id,'dept'), ...actedTransferred(u.id,'person')]
+    .filter(tid=> currentOwner(tid).status!=='NEW');
+  return [...new Set([...selfAccepted, ...nowAccepted])];
+}
+function myTransferred(u){ return actedTransferred(u.id,'dept').filter(tid=> currentOwner(tid).status==='NEW'); }
+function myDelegated(u){ return actedTransferred(u.id,'person').filter(tid=> currentOwner(tid).status==='NEW'); }
+function deptAccepted(deptId){
+  const selfAccepted = ticketsWhereDeptActed(deptId,'ACCEPTED');
+  const nowAccepted = [...deptActedTransferred(deptId,'dept'), ...deptActedTransferred(deptId,'person')]
+    .filter(tid=> currentOwner(tid).status!=='NEW');
+  return [...new Set([...selfAccepted, ...nowAccepted])];
+}
+function deptTransferred(deptId){ return deptActedTransferred(deptId,'dept').filter(tid=> currentOwner(tid).status==='NEW'); }
+function deptDelegated(deptId){ return deptActedTransferred(deptId,'person').filter(tid=> currentOwner(tid).status==='NEW'); }
 // Everything still open and relevant to a person — BOTH before acceptance
 // (sitting unclaimed in their department's queue, addressed to the dept
 // rather than to them by name) AND after acceptance (currently assigned
@@ -1354,6 +1393,17 @@ function matchesStatusFilter(status, filter){
 function statusFilterBar(current, dataAttr){
   return `<div class="filter-pills" style="margin-bottom:14px;">
     ${STATUS_FILTERS.map(f=>`<button class="filter-btn ${current===f?'active':''}" data-${dataAttr}="${f}">${statusFilterLabel(f)}</button>`).join('')}
+  </div>`;
+}
+
+// My Portal / Department Task both use this exact 6-pill set.
+const CATEGORY_FILTERS = ['all','attention','raised','accepted','transferred','delegated'];
+function categoryFilterLabel(f){
+  return {all:'All', attention:'Attention', raised:'Raised', accepted:'Accepted', transferred:'Transferred', delegated:'Delegated'}[f] || f;
+}
+function categoryFilterBar(current, dataAttr){
+  return `<div class="filter-pills" style="margin-bottom:14px;">
+    ${CATEGORY_FILTERS.map(f=>`<button class="filter-btn ${current===f?'active':''}" data-${dataAttr}="${f}">${categoryFilterLabel(f)}</button>`).join('')}
   </div>`;
 }
 
@@ -1591,63 +1641,38 @@ function activityRow(tid){
   return ticketRow(tid, {subLabel: isTerminal(o.status) ? `Resolved` : openRowSubLabel(tid)});
 }
 function renderMyPortal(u){
-  // "Mine" = anything currently with me by name, PLUS anything sitting
-  // unclaimed in my department's queue (before acceptance) — both count
-  // as open/relevant to me, not just the after-acceptance half.
-  const mineDirect = allTicketIds().filter(tid=>{
-    const o = currentOwner(tid);
-    return o && o.assignedTo===u.id;
-  });
-  const queue = u.dept ? allTicketIds().filter(tid=>{
-    const o = currentOwner(tid);
-    return o && o.status==='NEW' && deptNameOfTarget(o.assignedTo)===dept(u.dept).name;
-  }) : [];
-  const mine = [...new Set([...mineDirect, ...queue])]
-    .sort((a,b)=> currentOwner(b).eventId - currentOwner(a).eventId);
-
   const filter = state.myStatusFilter;
-  const filtered = mine.filter(tid=> matchesStatusFilter(currentOwner(tid).status, filter));
+  const byEventDesc = (a,b)=> currentOwner(b).eventId - currentOwner(a).eventId;
+  // "Attention" = anything currently with me by name, PLUS anything sitting
+  // unclaimed in my department's queue (before acceptance) — both count as
+  // open/relevant to me right now.
+  const sections = {
+    attention: openForMe(u).slice().sort(byEventDesc),
+    raised: raisedByMe(u).slice().sort(byEventDesc),
+    accepted: myAccepted(u).sort(byEventDesc),
+    transferred: myTransferred(u).sort(byEventDesc),
+    delegated: myDelegated(u).sort(byEventDesc),
+  };
 
   const body = filter==='all'
-    ? (()=>{
-        const open = mine.filter(tid=>!isTerminal(currentOwner(tid).status));
-        const done = mine.filter(tid=>isTerminal(currentOwner(tid).status));
+    ? CATEGORY_FILTERS.filter(f=>f!=='all').map(f=>{
+        const ids = sections[f];
         return `
-        <div class="section-label">Needs attention (${open.length})</div>
-        ${open.length ? `<div class="ticket-list">${open.map(t=>ticketRow(t,{subLabel:openRowSubLabel(t)})).join('')}</div>` : `<div class="empty"><b>All clear.</b>Nothing waiting on you right now.</div>`}
-        ${done.length ? `
-        <div class="section-label">Resolved (${done.length})</div>
-        <div class="ticket-list">${done.map(t=>ticketRow(t)).join('')}</div>` : ''}`;
-      })()
-    : (filtered.length
-        ? `<div class="ticket-list">${filtered.map(t=>ticketRow(t,{subLabel:openRowSubLabel(t)})).join('')}</div>`
-        : `<div class="empty"><b>No matches.</b>Nothing with that status right now.</div>`);
-
-  // Activity trail — what I've personally done on a ticket, independent
-  // of who holds it now. A ticket I accepted or transferred stays listed
-  // here even after it's moved on again.
-  const iRaised = raisedByMe(u);
-  const iAccepted = ticketsWhereIActed(u.id, 'ACCEPTED');
-  const iTransferred = ticketsWhereIActed(u.id, 'TRANSFERRED');
+        <div class="section-label" style="margin-top:22px;">${categoryFilterLabel(f)} (${ids.length})</div>
+        ${ids.length ? `<div class="ticket-list">${ids.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">Nothing here yet.</div>`}`;
+      }).join('')
+    : (sections[filter] && sections[filter].length
+        ? `<div class="ticket-list">${sections[filter].map(t=>activityRow(t)).join('')}</div>`
+        : `<div class="empty"><b>Nothing here.</b>No tickets in ${categoryFilterLabel(filter)} right now.</div>`);
 
   return `
   <div class="grid2">
     ${profileCard(u)}
     <div>
       <h1 class="page-title">My Portal</h1>
-      <p class="page-sub">Tickets relevant to you — unclaimed in your department's queue, or already accepted and with you. Tap one to see the full timeline and respond.</p>
-      <div class="section-label">My tickets</div>
-      ${statusFilterBar(filter, 'mystatus')}
+      <p class="page-sub">Tickets relevant to you, grouped by where they stand. Tap one to see the full timeline and respond.</p>
+      ${categoryFilterBar(filter, 'mystatus')}
       ${body}
-
-      <div class="section-label" style="margin-top:22px;">I raised (${iRaised.length})</div>
-      ${iRaised.length ? `<div class="ticket-list">${iRaised.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">You haven't raised any tickets yet.</div>`}
-
-      <div class="section-label" style="margin-top:22px;">I accepted (${iAccepted.length})</div>
-      ${iAccepted.length ? `<div class="ticket-list">${iAccepted.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">You haven't accepted any tickets yet.</div>`}
-
-      <div class="section-label" style="margin-top:22px;">I transferred (${iTransferred.length})</div>
-      ${iTransferred.length ? `<div class="ticket-list">${iTransferred.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">You haven't transferred any tickets yet.</div>`}
     </div>
   </div>`;
 }
@@ -1683,48 +1708,44 @@ function renderDeptPortal(u){
 function renderDeptReadOnly(u, opts={}){
   const d = u.dept ? dept(u.dept) : null;
   if(!d) return renderMyPortal(u);
-  const inDept = allTicketIds().filter(tid=>{
-    const o = currentOwner(tid);
-    return o && deptNameOfTarget(o.assignedTo)===d.name;
-  }).concat(deptWorkers(u.dept).flatMap(w=>allTicketIds().filter(tid=>{
-    const o = currentOwner(tid); return o && o.assignedTo===w.id;
-  })));
-  const uniqueIds = [...new Set(inDept)];
   const filter = state.deptStatusFilter;
-  const filtered = uniqueIds.filter(tid=> matchesStatusFilter(currentOwner(tid).status, filter));
+  const byEventDesc = (a,b)=> currentOwner(b).eventId - currentOwner(a).eventId;
   const teamCount = deptWorkers(u.dept).length;
 
-  // Department-wide activity trail — mirrors "I raised/accepted/
-  // transferred" in My Portal, but for anyone on the team, independent of
-  // who currently holds the ticket.
-  const deptRaisedIds = deptRaised(u.dept);
-  const deptAcceptedIds = ticketsWhereDeptActed(u.dept, 'ACCEPTED');
-  const deptTransferredIds = ticketsWhereDeptActed(u.dept, 'TRANSFERRED');
+  const sections = {
+    attention: openForDept(u.dept).slice().sort(byEventDesc),
+    raised: deptRaised(u.dept).slice().sort(byEventDesc),
+    accepted: deptAccepted(u.dept).sort(byEventDesc),
+    transferred: deptTransferred(u.dept).sort(byEventDesc),
+    delegated: deptDelegated(u.dept).sort(byEventDesc),
+  };
+
+  const body = filter==='all'
+    ? CATEGORY_FILTERS.filter(f=>f!=='all').map(f=>{
+        const ids = sections[f];
+        return `
+        <div class="section-label" style="margin-top:22px;">${categoryFilterLabel(f)} (${ids.length})</div>
+        ${ids.length ? `<div class="ticket-list">${ids.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">Nothing here yet for ${d.name}.</div>`}`;
+      }).join('')
+    : (sections[filter] && sections[filter].length
+        ? `<div class="ticket-list">${sections[filter].map(t=>activityRow(t)).join('')}</div>`
+        : `<div class="empty"><b>Nothing here.</b>No tickets in ${categoryFilterLabel(filter)} for ${d.name}.</div>`);
 
   return `
   <h1 class="page-title">${d.name} — Department</h1>
-  <p class="page-sub">${opts.manager ? `Every ticket routed to ${d.name} (${teamCount} member${teamCount===1?'':'s'} on the team), unclaimed or with a teammate — before and after acceptance. Open one to accept or reassign.` : `Read-only view of tickets routed to ${d.name}, unclaimed or with a teammate — before and after acceptance. Your own items are in My Portal.`}</p>
-  ${statusFilterBar(filter, 'deptstatus')}
-  ${filtered.length ? `<div class="ticket-list">${filtered.map(t=>ticketRow(t,{subLabel:openRowSubLabel(t)})).join('')}</div>` : `<div class="empty"><b>Nothing here.</b>No tickets match that filter for ${d.name}.</div>`}
-
-  <div class="section-label" style="margin-top:22px;">My department raised (${deptRaisedIds.length})</div>
-  ${deptRaisedIds.length ? `<div class="ticket-list">${deptRaisedIds.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">Nobody in ${d.name} has raised a ticket yet.</div>`}
-
-  <div class="section-label" style="margin-top:22px;">My department accepted (${deptAcceptedIds.length})</div>
-  ${deptAcceptedIds.length ? `<div class="ticket-list">${deptAcceptedIds.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">Nobody in ${d.name} has accepted a ticket yet.</div>`}
-
-  <div class="section-label" style="margin-top:22px;">My department transferred (${deptTransferredIds.length})</div>
-  ${deptTransferredIds.length ? `<div class="ticket-list">${deptTransferredIds.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">Nobody in ${d.name} has transferred a ticket yet.</div>`}
+  <p class="page-sub">${opts.manager ? `Every ticket routed to ${d.name} (${teamCount} member${teamCount===1?'':'s'} on the team), grouped by where it stands. Open one to accept or reassign.` : `Read-only view of tickets routed to ${d.name}, grouped by where they stand. Your own items are in My Portal.`}</p>
+  ${categoryFilterBar(filter, 'deptstatus')}
+  ${body}
   `;
 }
 
 /* ═══════════ Flow Finder — Ticket ID, Subject Employee, Employee ID,
    Handler, Requester, Department, Status, Date range (requirement §10) */
-function ticketTouchesDept(tid, deptId){
-  const d = dept(deptId);
+function ticketTouchesDept(tid, deptIdOrName){
+  const d = dept(deptIdOrName) || deptByName(deptIdOrName);
   if(!d) return false;
   return ticketEvents(tid).some(e=> deptNameOfTarget(e.to)===d.name || deptNameOfTarget(e.from)===d.name)
-    || deptWorkers(deptId).some(w=> ticketEvents(tid).some(e=>e.performedBy===w.id || e.to===w.id));
+    || (d.id!=null && deptWorkers(d.id).some(w=> ticketEvents(tid).some(e=>e.performedBy===w.id || e.to===w.id)));
 }
 function uniqueSubjectEmployees(){
   const seen = new Set();
@@ -1799,10 +1820,13 @@ function renderFlowFinder(u){
   const resultsHtml = matches.length ? matches.map(t=>ticketRow(t)).join('') :
     `<div class="empty"><b>No matches.</b>Try a different search.</div>`;
 
+  // Same source as the "+" New Ticket window's dropdowns (activeDeptOptions
+  // / activePersonOptions, the active Users cache) — not just whoever
+  // happens to already appear in the ticket log.
   const subjectEmployeeOptions = uniqueSubjectEmployees();
-  const handlerOptions = uniqueHandlers().filter(v => !scoped || (staff(v) && staff(v).dept===u.dept));
-  const requesterOptions = uniqueRequesters();
-  const departmentOptions = DEPARTMENTS;
+  const handlerOptions = activePersonOptions().filter(p => !scoped || (dept(u.dept) && p.deptName && p.deptName.toLowerCase()===dept(u.dept).name.toLowerCase()));
+  const requesterOptions = activePersonOptions();
+  const departmentOptions = activeDeptOptions();
 
   let queryControl;
   if(state.ffMode==='ticket'){
@@ -1813,13 +1837,13 @@ function renderFlowFinder(u){
       ${subjectEmployeeOptions.map(v=>`<option value="${v}" ${state.ffQuery===v?'selected':''}>${v}</option>`).join('')}
     </select>`;
   } else if(state.ffMode==='handler'){
-    const opts = handlerOptions.map(v=>{ const uu = userFor(v); return {value:v, label: uu ? uu.name : v, sub: uu ? uu.email : ''}; });
+    const opts = handlerOptions.map(p=>({value:p.email, label:p.name, sub:p.email}));
     queryControl = `<div style="flex:1;">${renderMultiSelect('ffHandlerMsel', opts, state.ffMulti, {
       placeholder: opts.length ? 'Select one or more handlers…' : 'No handlers yet',
       searchPlaceholder:'Search by name or email…'
     })}</div>`;
   } else if(state.ffMode==='requester'){
-    const opts = requesterOptions.map(v=>{ const uu = userFor(v); return {value:v, label: uu ? uu.name : v, sub: uu ? uu.email : ''}; });
+    const opts = requesterOptions.map(p=>({value:p.email, label:p.name, sub:p.email}));
     queryControl = `<div style="flex:1;">${renderMultiSelect('ffRequesterMsel', opts, state.ffMulti, {
       placeholder: opts.length ? 'Select one or more requesters…' : 'No requesters yet',
       searchPlaceholder:'Search by name or email…'
@@ -1827,7 +1851,7 @@ function renderFlowFinder(u){
   } else if(state.ffMode==='department'){
     queryControl = scoped
       ? `<div class="hint" style="padding:9px 0;">Scoped to ${dept(u.dept).name} — managers see their own department only.</div>`
-      : `<div style="flex:1;">${renderMultiSelect('ffDeptMsel', departmentOptions.map(d=>({value:d.id, label:d.name})), state.ffMulti, {
+      : `<div style="flex:1;">${renderMultiSelect('ffDeptMsel', departmentOptions.map(d=>({value:d.name, label:d.name})), state.ffMulti, {
           placeholder: departmentOptions.length ? 'Select one or more departments…' : 'No departments yet',
           searchPlaceholder:'Search departments…'
         })}</div>`;
