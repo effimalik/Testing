@@ -1243,30 +1243,22 @@ function deptDelegated(deptId){ return deptActedTransferred(deptId,'person').fil
 // me and hasn't been accepted yet is still "open for me" — it doesn't
 // wait for an ACCEPTED event to count.
 function openForMe(u){
-  const direct = allTicketIds().filter(tid=>{
+  return allTicketIds().filter(tid=>{
     const o = currentOwner(tid);
     return o && o.assignedTo===u.id && !isTerminal(o.status);
   });
-  const queued = u.dept ? allTicketIds().filter(tid=>{
-    const o = currentOwner(tid);
-    return o && o.status==='NEW' && deptNameOfTarget(o.assignedTo)===dept(u.dept).name;
-  }) : [];
-  return [...new Set([...direct, ...queued])];
 }
-// Same idea, department-wide: unclaimed-in-queue OR currently with any
-// teammate, whichever side of "accepted" it's on, excluding resolved.
+// Department Attention = only what's still sitting unclaimed in the queue
+// (no specific person assigned yet). The moment someone accepts one, it's
+// assigned to them by name and moves to THEIR My Portal instead — a
+// ticket needing attention lives in exactly one place, never both.
 function openForDept(deptId){
   const d = dept(deptId);
   if(!d) return [];
-  const queued = allTicketIds().filter(tid=>{
+  return allTicketIds().filter(tid=>{
     const o = currentOwner(tid);
-    return o && !isTerminal(o.status) && deptNameOfTarget(o.assignedTo)===d.name;
+    return o && o.status==='NEW' && deptNameOfTarget(o.assignedTo)===d.name;
   });
-  const withTeam = deptWorkers(deptId).flatMap(w=> allTicketIds().filter(tid=>{
-    const o = currentOwner(tid);
-    return o && o.assignedTo===w.id && !isTerminal(o.status);
-  }));
-  return [...new Set([...queued, ...withTeam])];
 }
 // Row label that makes it obvious whether a ticket is still sitting
 // unclaimed (before ACCEPTED) or actively with someone (after).
