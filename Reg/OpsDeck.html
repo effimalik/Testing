@@ -308,17 +308,32 @@
   .ff-caption .ff-cap-icon{color:var(--teal);display:inline-flex;flex-shrink:0;}
   .ff-caption .ff-cap-dates{color:var(--text-muted);}
 
+  /* Header row: "Flow Finder" heading sits beside the caption+toolbar
+     stack, vertically centered. On narrow screens it drops above them
+     instead of squeezing the controls. */
+  .ff-header-row{display:flex;align-items:center;gap:24px;margin-bottom:20px;flex-wrap:nowrap;}
+  .ff-header-row .page-title{margin:0;flex-shrink:0;white-space:nowrap;}
+  .ff-filters-col{flex:1;min-width:0;}
+  .ff-filters-col .ff-caption{margin-bottom:8px;}
+
   /* One row: a single seamless combo box (category segment + search input,
      glued together, no gap, shared border) + a date-filter popover trigger.
-     Never wraps to a separate row — panels open as absolutely-positioned
-     overlays that slide in over everything else instead of pushing the
-     row's layout around. */
-  .ff-toolbar{display:flex;align-items:flex-start;gap:8px;margin-bottom:16px;flex-wrap:nowrap;}
+     The row has a fixed height and fixed-width segments; instead of
+     shrinking or wrapping to a new line when space is tight, the row
+     itself scrolls left/right (drag or swipe) so every control keeps its
+     full readable width. Panels still open as absolutely-positioned
+     overlays that slide in over everything else. */
+  .ff-toolbar{
+    height:41px;margin-bottom:16px;
+    overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+  }
+  .ff-toolbar::-webkit-scrollbar{display:none;}
+  .ff-toolbar-scroll{display:flex;align-items:stretch;gap:8px;flex-wrap:nowrap;height:100%;min-width:min-content;}
   .ff-results{display:flex;flex-direction:column;gap:8px;}
 
   /* ---- The unified combo box: category trigger + divider + search input all inside one border ---- */
   .ff-searchbox{
-    flex:1;min-width:0;position:relative;display:flex;align-items:stretch;
+    flex:1 0 420px;width:420px;position:relative;display:flex;align-items:stretch;
     background:var(--panel-raised);border:1px solid var(--border);border-radius:7px;
     transition:border-color .15s,box-shadow .15s;
   }
@@ -389,10 +404,10 @@
   .ff-query-wrap .hint{padding:9px 12px;}
 
   /* Date filter — a small popover, works underneath any category */
-  .ff-datefilter{position:relative;flex:0 0 auto;}
+  .ff-datefilter{position:relative;flex:0 0 auto;align-self:stretch;}
   .ff-date-btn{
     display:flex;align-items:center;gap:7px;background:var(--panel-raised);border:1px solid var(--border);
-    color:var(--text-dim);border-radius:7px;padding:0 12px;height:39px;font-size:13px;font-weight:500;
+    color:var(--text-dim);border-radius:7px;padding:0 14px;height:100%;font-size:13px;font-weight:500;
     white-space:nowrap;transition:border-color .15s,background .15s,color .15s;
   }
   .ff-date-btn:hover{border-color:#3A4753;color:var(--text);}
@@ -499,14 +514,12 @@
     .tl-wrap{padding-left:0;}
     .tl-gap{display:none;}
     .stat-strip{flex-wrap:wrap;}
-    /* Toolbar stays one row on mobile — the category select and date
-       filter just shrink instead of dropping to a new line; the query
-       control takes whatever room is left. */
-    .ff-catsel{flex:0 0 118px;width:118px;}
-    .ff-cat-panel{width:220px;}
-    .ff-date-btn .ff-date-label{display:none;}
-    .ff-date-btn{padding:0 10px;}
-    .ff-date-panel{right:0;left:auto;width:206px;}
+    /* Heading drops above the filters on narrow screens instead of
+       squeezing them; the toolbar itself keeps every control at full,
+       readable width and scrolls horizontally rather than shrinking or
+       wrapping. */
+    .ff-header-row{flex-direction:column;align-items:flex-start;gap:10px;}
+    .ff-date-panel{right:auto;left:0;width:206px;}
     .modal{padding:18px;}
     nav.tabs button{font-size:12.5px;padding:7px 10px;}
   }
@@ -2187,23 +2200,28 @@ function renderFlowFinder(u){
   }
 
   return `
-  <h1 class="page-title">Flow Finder</h1>
-  <p class="page-sub">${scoped ? `Search tickets that have passed through ${dept(u.dept).name}.` : 'Search across every ticket ever logged.'} Open one for the full timeline.</p>
   ${!SUBJECT_EMPLOYEE_COLUMN_SEEN ? `<div class="empty" style="text-align:left;padding:12px 14px;margin-bottom:14px;border-color:var(--amber-dim);">
     <b style="color:var(--amber);font-size:13px;">No Subject Employee (E2) values found yet.</b>
     The connected ticLog master rows have a Subject_ID column, but nothing in it is filled in yet — searches by Subject Employee won't return anything until a ticket carries one.
   </div>` : ''}
-  <div class="ff-caption">
-    <span class="ff-cap-icon">${FF_CAT_ICONS[state.ffMode]||''}</span>
-    Searching by <strong>${escHtml(ffCategoryLabel(state.ffMode))}</strong>${(state.ffFrom||state.ffTo) ? ` <span class="ff-cap-dates">· ${escHtml(state.ffFrom||'any date')} → ${escHtml(state.ffTo||'any date')}</span>` : ''}
-  </div>
-  <div class="ff-toolbar">
-    <div class="ff-searchbox">
-      ${renderFfCategorySelect()}
-      <span class="ff-box-divider"></span>
-      <div class="ff-query-wrap">${queryControl}</div>
+  <div class="ff-header-row">
+    <h1 class="page-title">Flow Finder</h1>
+    <div class="ff-filters-col">
+      <div class="ff-caption">
+        <span class="ff-cap-icon">${FF_CAT_ICONS[state.ffMode]||''}</span>
+        Searching by <strong>${escHtml(ffCategoryLabel(state.ffMode))}</strong>${(state.ffFrom||state.ffTo) ? ` <span class="ff-cap-dates">· ${escHtml(state.ffFrom||'any date')} → ${escHtml(state.ffTo||'any date')}</span>` : ''}
+      </div>
+      <div class="ff-toolbar">
+        <div class="ff-toolbar-scroll">
+          <div class="ff-searchbox">
+            ${renderFfCategorySelect()}
+            <span class="ff-box-divider"></span>
+            <div class="ff-query-wrap">${queryControl}</div>
+          </div>
+          ${renderFfDateFilter()}
+        </div>
+      </div>
     </div>
-    ${renderFfDateFilter()}
   </div>
   ${state.ffSelectedTicket ? renderTimelineView(state.ffSelectedTicket, u) : `<div class="ff-results">${resultsHtml}</div>`}
   `;
