@@ -1010,12 +1010,46 @@ let EVENTS = [];
 let TICKET_MASTER = {};
 let SUBJECT_EMPLOYEE_COLUMN_SEEN = false;
 
+// A ticket can land in ticLog (master/creation record) before its Ticket
+// (flow/event log) row is written — or that write can be missed entirely.
+// Per requirement: check ticLog FIRST to know a ticket exists and how it
+// was routed; the rest of its flow (accept/transfer/etc.) is then read
+// from the real event log as normal. So for any master row with zero
+// matching event rows, synthesize its CREATED event straight off the
+// master record — status NEW, routed to whatever Assigned_To/Assignment_Type
+// said — so it still shows up as open/unclaimed for that Department or
+// Person instead of silently not existing anywhere.
+function synthesizeMissingCreatedEvents(){
+  const seen = new Set(EVENTS.map(e=>e.ticketId));
+  const synthesized = [];
+  Object.values(TICKET_MASTER).forEach(m=>{
+    if(seen.has(m.ticketId)) return; // already has real event rows — trust those fully
+    if(!m.assignedToInitial) return; // nothing to route it to yet
+    synthesized.push({
+      eventId: m.creationEventId || genEventId(),
+      ticketId: m.ticketId,
+      action: 'CREATED',
+      status: 'NEW',
+      from: '',
+      performedBy: m.createdBy,
+      to: m.assignedToInitial,
+      detail: m.notes || '(no description provided)',
+      local: false,
+      synthesized: true,
+    });
+  });
+  if(synthesized.length){
+    EVENTS = EVENTS.concat(synthesized).sort((a,b)=>a.eventId-b.eventId);
+  }
+}
+
 function rebuildFromRealCache(eventRowsRaw, masterRowsRaw){
   EVENTS = (eventRowsRaw||[]).map(parseEventRow).filter(Boolean);
   EVENTS.sort((a,b)=>a.eventId-b.eventId);
   TICKET_MASTER = {};
   (masterRowsRaw||[]).map(parseMasterRow).filter(Boolean).forEach(m=>{ TICKET_MASTER[m.ticketId]=m; });
   SUBJECT_EMPLOYEE_COLUMN_SEEN = Object.values(TICKET_MASTER).some(m=>m.subjectId);
+  synthesizeMissingCreatedEvents();
   discoverDirectory(EVENTS, TICKET_MASTER);
   applyOverlay(); // replay this browser's own local tickets/events on top
   discoverDirectory(EVENTS, TICKET_MASTER); // re-scan including anything the overlay introduced
