@@ -308,24 +308,36 @@
   .ff-caption .ff-cap-icon{color:var(--teal);display:inline-flex;flex-shrink:0;}
   .ff-caption .ff-cap-dates{color:var(--text-muted);}
 
-  /* One row: category dropdown (fixed width) + query control (flexes) +
-     date-filter popover trigger. Never wraps to a separate row — panels
-     open as absolutely-positioned overlays that slide in over everything
-     else instead of pushing the row's layout around. */
+  /* One row: a single seamless combo box (category segment + search input,
+     glued together, no gap, shared border) + a date-filter popover trigger.
+     Never wraps to a separate row — panels open as absolutely-positioned
+     overlays that slide in over everything else instead of pushing the
+     row's layout around. */
   .ff-toolbar{display:flex;align-items:flex-start;gap:8px;margin-bottom:16px;flex-wrap:nowrap;}
-  .ff-query-wrap{flex:1;min-width:0;}
-  .ff-query-wrap input,.ff-query-wrap select{width:100%;}
   .ff-results{display:flex;flex-direction:column;gap:8px;}
 
-  /* Category select — searchable dropdown replacing the old subtab row */
-  .ff-catsel{position:relative;flex:0 0 196px;width:196px;}
-  .ff-cat-trigger{
-    display:flex;align-items:center;gap:8px;width:100%;
-    background:var(--panel-raised);border:1px solid var(--border);color:var(--text);
-    border-radius:7px;padding:9px 10px;font-size:13.5px;font-weight:600;cursor:pointer;transition:border-color .15s,background .15s;
+  /* ---- The unified combo box: category trigger + divider + search input all inside one border ---- */
+  .ff-searchbox{
+    flex:1;min-width:0;position:relative;display:flex;align-items:stretch;
+    background:var(--panel-raised);border:1px solid var(--border);border-radius:7px;
+    transition:border-color .15s,box-shadow .15s;
   }
-  .ff-cat-trigger:hover{border-color:#3A4753;background:var(--panel-hover);}
-  .ff-catsel.open .ff-cat-trigger{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim);}
+  .ff-searchbox:hover{border-color:#3A4753;}
+  .ff-searchbox:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim);}
+  .ff-searchbox:has(.ff-catsel.open){border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim);}
+  .ff-searchbox:has(.msel.open){border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim);}
+  .ff-searchbox:has(.emp-drop.open){border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim);}
+  .ff-box-divider{width:1px;align-self:stretch;background:var(--border);margin:7px 0;flex-shrink:0;}
+
+  /* Category segment — left side of the combo box, opens the searchable list */
+  .ff-catsel{position:relative;flex:0 0 172px;width:172px;}
+  .ff-cat-trigger{
+    display:flex;align-items:center;gap:8px;width:100%;height:100%;
+    background:none;border:none;color:var(--text);
+    padding:9px 8px 9px 12px;font-size:13.5px;font-weight:600;cursor:pointer;
+    border-radius:7px 0 0 7px;transition:background .12s;
+  }
+  .ff-cat-trigger:hover{background:var(--panel-hover);}
   .ff-cat-trigger .ff-cat-icon{color:var(--teal);flex-shrink:0;display:inline-flex;}
   .ff-cat-trigger .ff-cat-label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;}
   .ff-cat-trigger .ff-cat-caret{color:var(--text-muted);font-size:10px;flex-shrink:0;transition:transform .18s ease;}
@@ -352,6 +364,22 @@
   .ff-cat-option .ff-cat-check{margin-left:auto;color:var(--teal);font-size:12px;opacity:0;flex-shrink:0;}
   .ff-cat-option.sel .ff-cat-check{opacity:1;}
   .ff-cat-empty{padding:12px 9px;color:var(--text-muted);font-size:12.5px;text-align:center;}
+
+  /* Search segment — right side of the combo box; every control type inside
+     it (plain input, select, the employee search-drop, the msel picker)
+     has its own border/background stripped so it blends into one box. */
+  .ff-query-wrap{flex:1;min-width:0;display:flex;align-items:stretch;}
+  .ff-query-wrap input[type=text],.ff-query-wrap select{
+    width:100%;border:none;background:transparent;border-radius:0;
+    padding:9px 12px;font-size:13.5px;color:var(--text);
+  }
+  .ff-query-wrap input[type=text]:focus,.ff-query-wrap select:focus{outline:none;}
+  .ff-query-wrap .emp-drop{flex:1;min-width:0;}
+  .ff-query-wrap .emp-drop-input{border:none;background:transparent;border-radius:0;width:100%;padding:9px 12px;}
+  .ff-query-wrap .emp-drop-input:focus{outline:none;border-color:transparent;}
+  .ff-query-wrap .msel{flex:1;min-width:0;}
+  .ff-query-wrap .msel-control{border:none;background:transparent;border-radius:0;min-height:auto;padding:9px 12px;}
+  .ff-query-wrap .hint{padding:9px 12px;}
 
   /* Date filter — a small popover, works underneath any category */
   .ff-datefilter{position:relative;flex:0 0 auto;}
@@ -2120,7 +2148,7 @@ function renderFlowFinder(u){
 
   let queryControl;
   if(state.ffMode==='ticket'){
-    queryControl = `<input type="text" id="ffQuery" placeholder="Search by ticket #, title, or Subject Employee (E-code)…" value="${state.ffQuery.replace(/"/g,'&quot;')}" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">`;
+    queryControl = `<input type="text" id="ffQuery" placeholder="Search by ticket #, title, or Subject Employee (E-code)…" value="${state.ffQuery.replace(/"/g,'&quot;')}">`;
   } else if(state.ffMode==='subjectEmployee'){
     // Sourced from the ap2_employee cache (same roster + same search-box
     // pattern as the New Ticket "+" drawer's Subject Employee field),
@@ -2138,14 +2166,14 @@ function renderFlowFinder(u){
     })}</div>`;
   } else if(state.ffMode==='department'){
     queryControl = u.dept
-      ? `<div class="hint" style="padding:9px 0;">Showing every ticket for ${dept(u.dept).name} — your department.</div>`
+      ? `<div class="hint">Showing every ticket for ${dept(u.dept).name} — your department.</div>`
       : `<div style="flex:1;">${renderMultiSelect('ffDeptMsel', departmentOptions.map(d=>({value:d.name, label:d.name})), state.ffMulti, {
           single:true,
           placeholder: departmentOptions.length ? 'Select a department…' : 'No departments yet',
           searchPlaceholder:'Search departments…'
         })}</div>`;
   } else if(state.ffMode==='status'){
-    queryControl = `<select id="ffQuery" style="background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13.5px;flex:1;">
+    queryControl = `<select id="ffQuery">
       <option value="">All statuses</option>
       ${TICKET_STATUSES.map(v=>`<option value="${v}" ${state.ffQuery===v?'selected':''}>${v}</option>`).join('')}
     </select>`;
@@ -2163,8 +2191,11 @@ function renderFlowFinder(u){
     Searching by <strong>${escHtml(ffCategoryLabel(state.ffMode))}</strong>${(state.ffFrom||state.ffTo) ? ` <span class="ff-cap-dates">· ${escHtml(state.ffFrom||'any date')} → ${escHtml(state.ffTo||'any date')}</span>` : ''}
   </div>
   <div class="ff-toolbar">
-    ${renderFfCategorySelect()}
-    <div class="ff-query-wrap">${queryControl}</div>
+    <div class="ff-searchbox">
+      ${renderFfCategorySelect()}
+      <span class="ff-box-divider"></span>
+      <div class="ff-query-wrap">${queryControl}</div>
+    </div>
     ${renderFfDateFilter()}
   </div>
   ${state.ffSelectedTicket ? renderTimelineView(state.ffSelectedTicket, u) : `<div class="ff-results">${resultsHtml}</div>`}
