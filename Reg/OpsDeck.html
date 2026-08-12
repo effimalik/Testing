@@ -998,10 +998,11 @@ function parseMasterRow(r){
     createdBy: String(_pick(r,['Created_By','createdBy'])||'').trim(),
     subjectType: String(_pick(r,['Subject_Type','subjectType'])||'Employee').trim(),
     subjectId: String(_pick(r,['Subject_ID','subjectId'])||'').trim(), // <-- Subject Employee (E2)
-    assignedToInitial: String(_pick(r,['Assigned_To','assignedTo'])||'').trim(),
-    assignmentType: String(_pick(r,['Assignment_Type','assignmentType'])||'').trim(),
+    assignedToInitial: String(_pick(r,['Assigned_To','assignedTo','AssignedTo','Assigned To'])||'').trim(),
+    assignmentType: String(_pick(r,['Assignment_Type','assignmentType','AssignmentType','Assignment Type'])||'').trim(),
     priority: String(_pick(r,['Priority','priority'])||'Medium').trim(),
-    notes: String(_pick(r,['Notes','notes'])||'').trim(),
+    status: String(_pick(r,['Status','status'])||'').trim(),
+    notes: String(_pick(r,['Notes','notes','Note'])||'').trim(),
     local: false,
   };
 }
@@ -1024,12 +1025,15 @@ function synthesizeMissingCreatedEvents(){
   const synthesized = [];
   Object.values(TICKET_MASTER).forEach(m=>{
     if(seen.has(m.ticketId)) return; // already has real event rows — trust those fully
-    if(!m.assignedToInitial) return; // nothing to route it to yet
+    if(!m.assignedToInitial){
+      console.warn('[OpsDeck] ticLog row for', m.ticketId, 'has no Assigned_To value — cannot route it into a queue yet.', m);
+      return;
+    }
     synthesized.push({
       eventId: m.creationEventId || genEventId(),
       ticketId: m.ticketId,
       action: 'CREATED',
-      status: 'NEW',
+      status: m.status || 'NEW',
       from: '',
       performedBy: m.createdBy,
       to: m.assignedToInitial,
