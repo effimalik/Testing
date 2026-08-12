@@ -571,20 +571,29 @@ function parseEmployees(rows){
   return out.sort((a,b)=>a.name.localeCompare(b.name));
 }
 function employeeLabel(e){ return `${e.id} — ${e.name}`; }
-async function loadEmployees(){
-  try{
-    const rows = await AP2CacheWatcher.readKey('ap2_employee');
-    if(Array.isArray(rows) && rows.length){
-      EMPLOYEES = parseEmployees(rows);
-      EMPLOYEE_CACHE_OK = true;
-    } else {
-      EMPLOYEE_CACHE_OK = false;
-    }
-  }catch(e){
+// Applies a fresh ap2_employee row-set (from IndexedDB OR a live push from
+// the parent shell) and updates the UI in place — this is the single path
+// both loadEmployees() and the cache-push listeners below funnel through,
+// so the Subject Employee dropdown never goes stale.
+function applyEmployeeRows(rows){
+  if(Array.isArray(rows) && rows.length){
+    EMPLOYEES = parseEmployees(rows);
+    EMPLOYEE_CACHE_OK = true;
+  } else {
     EMPLOYEE_CACHE_OK = false;
   }
   safeRender();
   refreshOpenDrawer();
+}
+async function loadEmployees(){
+  try{
+    const rows = await _readCache(_AP2_CACHE_KEY_EMP);
+    applyEmployeeRows(rows);
+  }catch(e){
+    EMPLOYEE_CACHE_OK = false;
+    safeRender();
+    refreshOpenDrawer();
+  }
 }
 
 /* ═══════════ Professional multi-select widget ═══════════
@@ -866,6 +875,7 @@ function deptNameOfTarget(v){
 
 /* ═══════════ CACHE — via shared cacheWatcher.js, with a safe fallback ═══════════ */
 const _AP2_CACHE_KEY = 'ap2_ticLog';
+const _AP2_CACHE_KEY_EMP = 'ap2_employee';
 
 if(typeof window.AP2CacheWatcher === 'undefined'){
   console.warn('[OpsDeck] cacheWatcher.js did not load — using local fallback');
@@ -909,7 +919,7 @@ if(typeof window.AP2CacheWatcher === 'undefined'){
     };
   })();
 }
-async function _readCache(){ return AP2CacheWatcher.readKey(_AP2_CACHE_KEY); }
+async function _readCache(key=_AP2_CACHE_KEY){ return AP2CacheWatcher.readKey(key); }
 
 // Local-only overlay: tickets/events created *in this browser* aren't
 // written back into the real cache (this page doesn't know the backend's
@@ -1035,25 +1045,37 @@ async function _applyFromCache(){
 }
 try{
   AP2CacheWatcher.init();
-  AP2CacheWatcher.subscribe(()=>{ _applyFromCache(); });
+  AP2CacheWatcher.subscribe(()=>{ _applyFromCache(); loadEmployees(); });
 }catch(e){
   console.warn('[OpsDeck] cacheWatcher wiring failed, continuing without live updates:', e.message);
 }
 window.addEventListener('message', (e)=>{
   if(!e.data) return;
   if(e.data.type==='ap-theme' && e.data.theme){ document.documentElement.setAttribute('data-theme', e.data.theme); }
+  // Parent proactively pushes every dataset it holds the moment it's ready —
+  // ticket log AND the employee roster both need to render the instant
+  // their slice lands, same as docPortal's emp/bike/log keys.
   if(e.data.type==='ap-cache-preload' && e.data.datasets){
     const payload = e.data.datasets[_AP2_CACHE_KEY];
     if(ingestFromCachePayload(payload)){ safeRender(); refreshOpenDrawer(); }
+    const empRows = e.data.datasets[_AP2_CACHE_KEY_EMP];
+    if(Array.isArray(empRows) && empRows.length) applyEmployeeRows(empRows);
   }
   if(e.data.type==='ap-cache-ready' && e.data.key===_AP2_CACHE_KEY){
     if(ingestFromCachePayload(e.data.data)){ safeRender(); refreshOpenDrawer(); }
   }
+  if(e.data.type==='ap-cache-ready' && e.data.key===_AP2_CACHE_KEY_EMP){
+    applyEmployeeRows(e.data.data);
+  }
   if(e.data.type==='ap-cache-updated'){
-    try{ window.parent.postMessage({type:'ap-cache-request', key:_AP2_CACHE_KEY}, '*'); }catch(err){}
+    [_AP2_CACHE_KEY, _AP2_CACHE_KEY_EMP].forEach(key=>{
+      try{ window.parent.postMessage({type:'ap-cache-request', key}, '*'); }catch(err){}
+    });
   }
 });
-try{ window.parent.postMessage({type:'ap-cache-request', key:_AP2_CACHE_KEY}, '*'); }catch(e){}
+[_AP2_CACHE_KEY, _AP2_CACHE_KEY_EMP].forEach(key=>{
+  try{ window.parent.postMessage({type:'ap-cache-request', key}, '*'); }catch(e){}
+});
 
 /* ═══════════ Ticket accessors ═══════════ */
 function allTicketIds(){ return [...new Set(EVENTS.map(r=>r.ticketId))]; }
