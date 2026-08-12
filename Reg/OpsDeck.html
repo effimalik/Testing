@@ -1506,6 +1506,16 @@ function ticketRow(tid, opts={}){
 }
 
 // ----- My Portal -----
+function raisedByMe(u){
+  // Tickets this person created (ticLog's Created_By), regardless of who
+  // currently owns them — separate from "assigned to me now" below, so a
+  // ticket doesn't just vanish from view the moment it's accepted/
+  // transferred elsewhere.
+  return allTicketIds().filter(tid=>{
+    const m = master(tid);
+    return m && m.createdBy===u.id;
+  }).sort((a,b)=> currentOwner(b).eventId - currentOwner(a).eventId);
+}
 function renderMyPortal(u){
   const mine = allTicketIds().filter(tid=>{
     const o = currentOwner(tid);
@@ -1538,6 +1548,11 @@ function renderMyPortal(u){
     return o && o.status==='NEW' && deptNameOfTarget(o.assignedTo)===dept(u.dept).name;
   }) : [];
 
+  // Tickets I raised that have since moved to someone else — shown with
+  // "Now with X" instead of the usual "With X" so it's clear at a glance
+  // this isn't currently sitting in your queue.
+  const raised = raisedByMe(u).filter(tid => currentOwner(tid).assignedTo!==u.id);
+
   return `
   <div class="grid2">
     ${profileCard(u)}
@@ -1550,6 +1565,9 @@ function renderMyPortal(u){
       <div class="section-label" style="margin-top:22px;">My tickets</div>
       ${statusFilterBar(filter, 'mystatus')}
       ${body}
+      ${raised.length ? `
+      <div class="section-label" style="margin-top:22px;">Raised by me — with someone else now (${raised.length})</div>
+      <div class="ticket-list">${raised.map(t=>ticketRow(t,{subLabel:`Now with ${nameOf(currentOwner(t).assignedTo)}`})).join('')}</div>` : ''}
     </div>
   </div>`;
 }
@@ -1560,6 +1578,7 @@ function profileCard(u){
   const resolvedCt = allTicketIds().filter(tid=>{
     const o=currentOwner(tid); return o && o.assignedTo===u.id && isTerminal(o.status);
   }).length;
+  const requestedCt = raisedByMe(u).length;
   const roleName = (userFor(u.id) && userFor(u.id).roleTitle) || (isGM(u.id) ? 'General Manager' : isManager(u.id) ? 'Manager' : 'Worker');
   return `
   <div class="card profile-card">
@@ -1571,6 +1590,7 @@ function profileCard(u){
     <div class="stat-strip">
       <div class="stat-chip"><div class="n">${openCt}</div><div class="l">Open</div></div>
       <div class="stat-chip"><div class="n">${resolvedCt}</div><div class="l">Resolved</div></div>
+      <div class="stat-chip"><div class="n">${requestedCt}</div><div class="l">Requested</div></div>
     </div>
   </div>`;
 }
