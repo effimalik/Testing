@@ -2446,7 +2446,7 @@ function renderRespondPanel(tid, u){
       <p class="hint" style="margin-bottom:10px;">${perm.mode==='accept-dept' ? `Unclaimed in ${nameOf(owner.assignedTo)}. Any member of that department can accept it.` : `Directly transferred to you. Accept it to start working, or hand it off again.`}</p>
       <div class="btn-row">
         <button class="btn btn-primary btn-sm" data-respond="accept" data-tid="${tid}">Accept</button>
-        <button class="btn btn-sm" data-respond="transferPerson" data-tid="${tid}">Delegate to someone else</button>
+        <button class="btn btn-sm" data-respond="delegate" data-tid="${tid}">Delegate to someone else</button>
       </div>
     </div>`;
   }
@@ -2456,12 +2456,11 @@ function renderRespondPanel(tid, u){
       <div class="section-label" style="margin-top:0;">Manager oversight</div>
       <p class="hint" style="margin-bottom:10px;">Currently with ${nameOf(owner.assignedTo)}. You can transfer it within ${u.dept ? dept(u.dept).name : 'your team'}.</p>
       <div class="btn-row">
-        <button class="btn btn-sm" data-respond="transferPerson" data-tid="${tid}">Reassign</button>
+        <button class="btn btn-sm" data-respond="delegate" data-tid="${tid}">Reassign</button>
       </div>
     </div>`;
   }
   // full: owner === current actor
-  const canTransferDept = true;
   return `
   <div class="card" style="margin-top:14px;">
     <div class="section-label" style="margin-top:0;">Respond to this ticket</div>
@@ -2472,9 +2471,8 @@ function renderRespondPanel(tid, u){
       <button class="btn btn-sm" data-respond="comment" data-tid="${tid}">Add comment</button>
       <button class="btn btn-amber btn-sm" data-respond="reminder" data-tid="${tid}">Set reminder</button>
       ${overdueInfo(tid).overdue ? `<button class="btn btn-sm" data-respond="attend" data-tid="${tid}">Attend reminder</button>` : ''}
-      <button class="btn btn-sm" data-respond="transferPerson" data-tid="${tid}">Delegate to person</button>
-      ${canTransferDept ? `<button class="btn btn-sm" data-respond="transferDept" data-tid="${tid}">Transfer to department</button>` : ''}
-      <button class="btn btn-primary btn-sm" data-respond="resolve" data-tid="${tid}">Resolve</button>
+      <button class="btn btn-sm" data-respond="delegate" data-tid="${tid}">Delegate</button>
+      <button class="btn btn-primary btn-sm" data-respond="resolve" data-tid="${tid}">Done</button>
     </div>
   </div>`;
 }
@@ -2524,25 +2522,36 @@ function openRespondModal(kind, tid){
   backdrop.className='modal-backdrop';
   const titles = {
     accept:'Accept ticket', hold:'Put on hold', resume:'Resume', comment:'Add comment',
-    reminder:'Set reminder', attend:'Attend reminder', transferPerson:'Delegate to a person',
-    transferDept:'Transfer to a department', resolve:'Resolve ticket',
+    reminder:'Set reminder', attend:'Attend reminder', delegate:'Delegate ticket',
+    resolve:'Done',
   };
   let extra = '';
   let needsComment = true;
+  // Delegate target-type toggle — same Department/Person pattern as the
+  // New Ticket drawer's "Route to" pills.
+  let delegateTargetType = 'department';
+  function delegateTargetFieldHtml(type){
+    if(type==='department'){
+      const deptOpts = activeDeptOptions();
+      return `<select id="rm-target">${deptOpts.map(d=>`<option value="${escAttr(deptIdFor(d.name))}">${escHtml(d.name)}</option>`).join('')}</select>`;
+    }
+    const people = activePersonOptions().filter(p=>p.email!==actor.id);
+    return `<select id="rm-target">${people.map(p=>`<option value="${escAttr(p.email)}">${escHtml(p.name)} — ${escHtml(p.email)}${p.deptName?` — ${escHtml(p.deptName)}`:''}</option>`).join('')}</select>`;
+  }
   if(kind==='reminder'){
     const in1h = new Date(nowMs()+3600000);
     const defVal = `${in1h.getFullYear()}-${pad(in1h.getMonth()+1)}-${pad(in1h.getDate())}T${pad(in1h.getHours())}:${pad(in1h.getMinutes())}`;
     extra = `<div class="field"><label>Remind at</label><input type="datetime-local" id="rm-when" value="${defVal}"></div>`;
     needsComment = false;
-  } else if(kind==='transferPerson'){
-    // Same source as the New Ticket drawer's "Person" picker (activePersonOptions) —
-    // any active person, not just the actor's own department/team.
-    const people = activePersonOptions().filter(p=>p.email!==actor.id);
-    extra = `<div class="field"><label>Delegate to</label><select id="rm-person">${people.map(p=>`<option value="${escAttr(p.email)}">${escHtml(p.name)} — ${escHtml(p.email)}${p.deptName?` — ${escHtml(p.deptName)}`:''}</option>`).join('')}</select></div>`;
-  } else if(kind==='transferDept'){
-    // Same source as the New Ticket drawer's "Department" picker (activeDeptOptions).
-    const deptOpts = activeDeptOptions();
-    extra = `<div class="field"><label>Transfer to department</label><select id="rm-dept">${deptOpts.map(d=>`<option value="${escAttr(deptIdFor(d.name))}">${escHtml(d.name)}</option>`).join('')}</select></div>`;
+  } else if(kind==='delegate'){
+    extra = `<div class="field">
+      <label>Route to</label>
+      <div class="filter-pills" id="rmTargetPills" style="margin-bottom:10px;">
+        <button type="button" class="filter-btn active" data-rm-target-type="department">Department</button>
+        <button type="button" class="filter-btn" data-rm-target-type="person">Person</button>
+      </div>
+      <div id="rmTargetWrap">${delegateTargetFieldHtml(delegateTargetType)}</div>
+    </div>`;
   } else if(kind==='accept'){
     needsComment = false;
   }
@@ -2558,6 +2567,15 @@ function openRespondModal(kind, tid){
       </div>
     </div>`;
   document.body.appendChild(backdrop);
+  if(kind==='delegate'){
+    backdrop.querySelectorAll('[data-rm-target-type]').forEach(b=>{
+      b.onclick = ()=>{
+        delegateTargetType = b.dataset.rmTargetType;
+        backdrop.querySelectorAll('[data-rm-target-type]').forEach(x=> x.classList.toggle('active', x===b));
+        document.getElementById('rmTargetWrap').innerHTML = delegateTargetFieldHtml(delegateTargetType);
+      };
+    });
+  }
   backdrop.querySelector('#rm-cancel').onclick=()=>backdrop.remove();
   backdrop.querySelector('#rm-confirm').onclick=()=>{
     const comment = backdrop.querySelector('#rm-comment').value.trim();
@@ -2583,17 +2601,18 @@ function openRespondModal(kind, tid){
     } else if(kind==='attend'){
       attendReminder({ticketId:tid, actorId, note:comment});
       toast('Reminder attended.');
-    } else if(kind==='transferPerson'){
-      const person = backdrop.querySelector('#rm-person').value;
-      transferTicket({ticketId:tid, actorId, targetType:'person', target:person, reason:comment});
-      toast(`Delegated to ${nameOf(person)} — waiting for them to accept.`);
-    } else if(kind==='transferDept'){
-      const deptId = backdrop.querySelector('#rm-dept').value;
-      transferTicket({ticketId:tid, actorId, targetType:'department', target:dept(deptId).name, reason:comment});
-      toast(`Transferred to ${dept(deptId).name} — waiting for someone to accept.`);
+    } else if(kind==='delegate'){
+      const targetVal = backdrop.querySelector('#rm-target').value;
+      if(delegateTargetType==='department'){
+        transferTicket({ticketId:tid, actorId, targetType:'department', target:dept(targetVal).name, reason:comment});
+        toast(`Transferred to ${dept(targetVal).name} — waiting for someone to accept.`);
+      } else {
+        transferTicket({ticketId:tid, actorId, targetType:'person', target:targetVal, reason:comment});
+        toast(`Delegated to ${nameOf(targetVal)} — waiting for them to accept.`);
+      }
     } else if(kind==='resolve'){
       resolveTicket({ticketId:tid, actorId, comment});
-      toast('Resolved.');
+      toast('Done.');
     }
     backdrop.remove();
     render();
