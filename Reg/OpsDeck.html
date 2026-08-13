@@ -1,0 +1,2994 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpsDeck — Ticket &amp; Task Portal</title>
+<script src="https://effimalik.github.io/Testing/shared/auth.js?v=5"></script>
+<script src="https://effimalik.github.io/Testing/shared/code.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/devPre.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/cacheWatcher.js?v=1"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1720;
+    --bg-grid: #131D27;
+    --panel:#172029;
+    --panel-raised:#1D2833;
+    --panel-hover:#212E3A;
+    --border:#28333F;
+    --border-soft:#1E2830;
+    --text:#EAEEF2;
+    --text-dim:#B3BEC9;
+    --text-muted:#7C8998;
+    --teal:#4FD1C5;
+    --teal-dim:#2C4A48;
+    --amber:#F2A93B;
+    --amber-dim:#4A3A1E;
+    --red:#E8574B;
+    --red-dim:#4A2420;
+    --blue:#5B8DEF;
+    --blue-dim:#22314F;
+    --font-display:'Space Grotesk', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+    --font-body:'Inter', sans-serif;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px) 0 0/100% 28px,
+      var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    min-height:100vh;
+  }
+  ::selection{background:var(--teal-dim);color:var(--text);}
+  a{color:inherit;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:40;
+    display:flex;flex-direction:column;gap:10px;
+    padding:14px 24px;
+    background:rgba(15,23,32,0.94);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+  }
+  .topbar-row1{display:flex;align-items:center;gap:16px;}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:19px;letter-spacing:0.2px;flex-shrink:0;}
+  .brand .dot{width:9px;height:9px;border-radius:2px;background:var(--amber);box-shadow:0 0 10px var(--amber);animation:pulse 2.2s ease-in-out infinite;}
+  .cache-ping{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:7px;vertical-align:middle;animation:pulse 2.2s ease-in-out infinite;}
+  .cache-ping.ok{background:var(--teal);box-shadow:0 0 8px var(--teal);}
+  .cache-ping.warn{background:var(--amber);box-shadow:0 0 8px var(--amber);}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+  .topbar-spacer{flex:1;}
+  nav.tabs{
+    display:flex;gap:2px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;padding-bottom:1px;
+  }
+  nav.tabs::-webkit-scrollbar{display:none;}
+  nav.tabs button{
+    background:none;border:none;color:var(--text-muted);font-size:13.5px;font-weight:500;
+    padding:8px 14px;border-radius:7px;transition:all .15s;position:relative;white-space:nowrap;flex-shrink:0;
+  }
+  nav.tabs button:hover{color:var(--text);background:var(--panel-raised);}
+  nav.tabs button.active{color:var(--bg);background:var(--teal);}
+  .badge-count{
+    display:inline-block;min-width:16px;padding:0 4px;margin-left:6px;border-radius:20px;
+    background:var(--red);color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;
+  }
+  nav.tabs button.active .badge-count{background:rgba(15,23,32,.55);color:#fff;}
+  .userbox{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .userbox select{
+    background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:7px;
+    padding:7px 10px;font-size:13px;max-width:190px;
+  }
+  .role-pill{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--teal);border:1px solid var(--teal-dim);background:var(--teal-dim);padding:3px 8px;border-radius:20px;font-family:var(--font-mono);white-space:nowrap;flex-shrink:0;}
+
+  @media (max-width:760px){
+    .topbar{padding:12px 14px;}
+    .topbar-row1{flex-wrap:wrap;row-gap:10px;}
+    .userbox{width:100%;justify-content:space-between;order:3;}
+    .userbox select{max-width:none;flex:1;}
+    nav.tabs{width:100%;order:2;}
+    .topbar-spacer{display:none;}
+  }
+
+  /* ---------- Layout ---------- */
+  .page{max-width:1180px;margin:0 auto;padding:28px 24px 80px;}
+  .grid2{display:grid;grid-template-columns:280px 1fr;gap:22px;align-items:start;}
+  @media (max-width:820px){.grid2{grid-template-columns:1fr;}}
+
+  .card{
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:20px;
+  }
+  .profile-card .avatar{
+    width:52px;height:52px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:700;font-size:19px;background:var(--panel-raised);
+    color:var(--teal);border:1px solid var(--border);margin-bottom:14px;
+  }
+  .profile-card h2{font-family:var(--font-display);font-size:19px;margin:0 0 4px;}
+  .profile-card .role-line{color:var(--text-muted);font-size:13px;margin:0 0 14px;}
+  .profile-card .meta-row{display:flex;justify-content:space-between;font-size:12.5px;padding:8px 0;border-top:1px solid var(--border-soft);color:var(--text-dim);}
+  .profile-card .meta-row span:first-child{color:var(--text-muted);}
+  .stat-strip{display:flex;gap:10px;margin-top:14px;}
+  .stat-chip{flex:1;background:var(--panel-raised);border:1px solid var(--border-soft);border-radius:8px;padding:9px 8px;text-align:center;}
+  .stat-chip .n{font-family:var(--font-mono);font-size:18px;font-weight:600;}
+  .stat-chip .l{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;}
+  .access-chip{font-size:10px;font-family:var(--font-mono);border:1px solid var(--border-soft);color:var(--text-dim);background:var(--panel-raised);padding:3px 7px;border-radius:5px;display:inline-flex;align-items:center;gap:5px;}
+  .access-chip .flags{color:var(--teal);font-weight:700;letter-spacing:1px;}
+  .access-chip.no-access{color:var(--text-muted);}
+  .access-chip.no-access .flags{display:none;}
+
+  h1.page-title{font-family:var(--font-display);font-size:24px;margin:0 0 4px;}
+  .page-sub{color:var(--text-muted);font-size:13.5px;margin:0 0 20px;}
+  .section-label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin:26px 0 10px;display:flex;align-items:center;gap:8px;}
+  .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  /* ---------- Ticket rows ---------- */
+  .ticket-list{display:flex;flex-direction:column;gap:8px;}
+  .ticket-row{
+    background:var(--panel);border:1px solid var(--border);border-radius:9px;
+    padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:.12s;
+  }
+  .ticket-row:hover{background:var(--panel-hover);border-color:#37444F;}
+  .ff-tid-badge{
+    font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--teal);
+    background:var(--teal-dim);border-radius:6px;padding:5px 9px;flex-shrink:0;
+    white-space:nowrap;letter-spacing:.3px;order:-1;
+  }
+  .pri-flag{width:4px;align-self:stretch;border-radius:3px;flex-shrink:0;}
+  .pri-High{background:var(--red);}
+  .pri-Medium{background:var(--amber);}
+  .pri-Low{background:var(--teal);}
+  .t-main{flex:1;min-width:0;}
+  .t-title{font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;}
+  .t-title .tid{font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted);font-weight:400;}
+  .t-sub{font-size:12px;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .type-chip{font-size:10px;text-transform:uppercase;letter-spacing:.4px;font-family:var(--font-mono);padding:2px 6px;border-radius:4px;border:1px solid var(--border);color:var(--text-dim);}
+  .status-chip{font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;white-space:nowrap;}
+  .st-Open{background:var(--blue-dim);color:var(--blue);}
+  .st-Forwarded{background:var(--blue-dim);color:var(--blue);}
+  .st-InProgress{background:var(--blue-dim);color:var(--blue);}
+  .st-Pending{background:var(--amber-dim);color:var(--amber);}
+  .st-Postponed{background:var(--amber-dim);color:var(--amber);}
+  .st-Resolved{background:var(--teal-dim);color:var(--teal);}
+  .st-Done{background:var(--teal-dim);color:var(--teal);}
+  /* Real ap2_ticLog status vocabulary: NEW / IN PROGRESS / ON HOLD / RESOLVED
+     (statusClass() strips spaces, so "IN PROGRESS" -> st-INPROGRESS etc.) */
+  .st-NEW{background:var(--blue-dim);color:var(--blue);}
+  .st-INPROGRESS{background:var(--blue-dim);color:var(--blue);}
+  .st-ONHOLD{background:var(--amber-dim);color:var(--amber);}
+  .st-RESOLVED{background:var(--teal-dim);color:var(--teal);}
+  .overdue-flag{
+    font-family:var(--font-mono);font-size:10.5px;color:#fff;background:var(--red);
+    padding:3px 8px;border-radius:5px;display:flex;align-items:center;gap:5px;animation:ring 1.6s ease-in-out infinite;
+  }
+  @keyframes ring{0%,100%{transform:rotate(0);}20%{transform:rotate(-8deg);}40%{transform:rotate(8deg);}60%{transform:rotate(-4deg);}80%{transform:rotate(4deg);}}
+  .empty{
+    text-align:center;padding:50px 20px;color:var(--text-muted);border:1px dashed var(--border);border-radius:var(--radius);font-size:13.5px;
+  }
+  .empty b{display:block;color:var(--text-dim);font-family:var(--font-display);font-size:16px;margin-bottom:6px;font-weight:600;}
+
+  /* ---------- Buttons ---------- */
+  .btn{border:1px solid var(--border);background:var(--panel-raised);color:var(--text);padding:8px 14px;border-radius:7px;font-size:13px;font-weight:500;transition:.12s;}
+  .btn:hover{background:var(--panel-hover);border-color:#3A4753;}
+  .btn-primary{background:var(--teal);color:#062522;border-color:var(--teal);font-weight:600;}
+  .btn-primary:hover{background:#69dbd0;}
+  .btn-amber{background:var(--amber);color:#2a1c04;border-color:var(--amber);font-weight:600;}
+  .btn-amber:hover{background:#f7bb5c;}
+  .btn-ghost{background:none;border-color:transparent;color:var(--text-muted);}
+  .btn-ghost:hover{color:var(--text);background:var(--panel-raised);}
+  .btn-sm{padding:6px 11px;font-size:12px;}
+  .btn-block{width:100%;}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+
+  /* ---------- Tabs (dept portal) ---------- */
+  .subtabs{display:flex;gap:4px;margin-bottom:16px;background:var(--panel-raised);padding:4px;border-radius:9px;width:fit-content;}
+
+  /* ---------- Filter pills (status filter — same pattern as the fleet pages) ---------- */
+  .filter-pills{display:flex;gap:6px;flex-wrap:wrap;}
+  .filter-btn{
+    display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:20px;
+    border:1.5px solid var(--border);background:var(--panel-raised);color:var(--text-dim);
+    font-family:var(--font-body);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;white-space:nowrap;
+  }
+  .filter-btn:hover{background:var(--panel-hover);color:var(--text);}
+  .filter-btn.active{background:var(--teal-dim);color:var(--teal);border-color:var(--teal-dim);box-shadow:0 0 0 2px var(--teal-dim);}
+  .subtabs button{background:none;border:none;color:var(--text-muted);font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:6px;}
+  .subtabs button.active{background:var(--panel);color:var(--text);}
+
+  /* ---------- Forms ---------- */
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+  .field.full{grid-column:1/-1;}
+  .field label{font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;}
+  .field input[type=text],.field textarea,.field select,.field input[type=date]{
+    background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:10px 11px;font-size:13.5px;
+  }
+  .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--teal);}
+  .field textarea{resize:vertical;min-height:70px;}
+  .seg{display:flex;gap:6px;}
+  .seg button{flex:1;background:var(--panel-raised);border:1px solid var(--border);color:var(--text-dim);padding:9px;border-radius:7px;font-size:13px;font-weight:600;}
+  .seg button.sel{border-color:var(--teal);color:var(--teal);background:var(--teal-dim);}
+  .hint{font-size:11.5px;color:var(--text-muted);margin-top:-4px;}
+  .warn-hint{font-size:11.5px;color:var(--amber);}
+
+  /* ---------- Employee search dropdown (docPortal-style render method,
+     used for ap2_employee cache — Subject Employee field only) ---------- */
+  .emp-drop{position:relative;}
+  .emp-drop-input{
+    width:100%;background:var(--panel-raised);border:1px solid var(--border);color:var(--text);
+    border-radius:7px;padding:9px 11px;font-size:13.5px;
+  }
+  .emp-drop-input:focus{outline:none;border-color:var(--teal);}
+  .emp-drop.open .emp-drop-input{border-color:var(--teal);}
+  .dropdown-list{
+    position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:60;
+    background:var(--panel-raised);border:1px solid var(--border);border-radius:9px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);max-height:220px;overflow-y:auto;display:none;
+  }
+  .dropdown-list.open{display:block;}
+  .dropdown-list .di{padding:8px 11px;cursor:pointer;border-radius:6px;margin:2px;}
+  .dropdown-list .di:hover,.dropdown-list .di.sel{background:var(--panel-hover);}
+  .dropdown-list .di .dn{font-size:13px;color:var(--text);font-weight:600;}
+  .dropdown-list .di .ds{font-size:11px;color:var(--text-muted);margin-top:1px;}
+  .dropdown-list .di.no-match{color:var(--text-muted);text-align:center;cursor:default;font-size:12.5px;padding:12px 9px;}
+  .dropdown-list .di.no-match:hover{background:none;}
+  .dropdown-list .di.emp-drop-add{display:flex;align-items:center;gap:7px;color:var(--teal);font-weight:600;font-size:12.5px;border-top:1px solid var(--border-soft);}
+  .dropdown-list .di em{color:var(--teal);font-style:normal;}
+
+  /* ---------- Professional multi-select ---------- */
+  .msel{position:relative;}
+  .msel-control{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:8px;cursor:pointer;
+    background:var(--panel-raised);border:1px solid var(--border);border-radius:7px;
+    padding:8px 11px;min-height:40px;transition:border-color .12s;
+  }
+  .msel-control:hover{border-color:#3A4753;}
+  .msel.open .msel-control{border-color:var(--teal);}
+  .msel-chips{display:flex;flex-wrap:wrap;gap:6px;flex:1;}
+  .msel-chip{
+    display:inline-flex;align-items:center;gap:6px;background:var(--teal-dim);color:var(--teal);
+    border:1px solid var(--teal-dim);border-radius:20px;padding:3px 6px 3px 10px;font-size:12px;font-weight:600;
+    max-width:100%;
+  }
+  .msel-chip span.msel-chip-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;}
+  .msel-chip-x{
+    all:unset;display:inline-flex;align-items:center;justify-content:center;
+    width:15px;height:15px;border-radius:50%;font-size:9px;line-height:1;cursor:pointer;color:var(--teal);
+    background:rgba(79,209,197,.16);flex-shrink:0;
+  }
+  .msel-chip-x:hover{background:rgba(79,209,197,.32);}
+  .msel-placeholder{color:var(--text-muted);font-size:13.5px;padding:2px 0;}
+  .msel-caret{color:var(--text-muted);font-size:10px;flex-shrink:0;padding-top:3px;user-select:none;}
+  .msel-panel{
+    position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:60;
+    background:var(--panel-raised);border:1px solid var(--border);border-radius:9px;
+    box-shadow:0 10px 30px rgba(0,0,0,.45);padding:8px;
+  }
+  .msel-search{
+    width:100%;background:var(--panel);border:1px solid var(--border);color:var(--text);
+    border-radius:6px;padding:8px 10px;font-size:13px;margin-bottom:6px;
+  }
+  .msel-search:focus{outline:none;border-color:var(--teal);}
+  .msel-options{max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:1px;}
+  .msel-option{
+    display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:6px;font-size:13px;
+    cursor:pointer;color:var(--text-dim);
+  }
+  .msel-option:hover{background:var(--panel-hover);color:var(--text);}
+  .msel-option input[type=checkbox],.msel-option input[type=radio]{accent-color:var(--teal);width:14px;height:14px;flex-shrink:0;cursor:pointer;}
+  .msel-option .msel-opt-sub{color:var(--text-muted);font-size:11px;margin-left:auto;padding-left:8px;flex-shrink:0;}
+  .msel-empty{padding:12px 9px;color:var(--text-muted);font-size:12.5px;text-align:center;}
+  .msel-footer{display:flex;justify-content:space-between;align-items:center;padding:6px 3px 2px;border-top:1px solid var(--border-soft);margin-top:4px;}
+  .msel-footer button{all:unset;color:var(--teal);font-size:11.5px;font-weight:600;cursor:pointer;}
+  .msel-footer button:hover{text-decoration:underline;}
+  .msel-count{color:var(--text-muted);font-size:11px;}
+  .msel-addrow{display:flex;gap:6px;padding:6px 3px 2px;border-top:1px solid var(--border-soft);margin-top:4px;}
+  .msel-addrow input{
+    flex:1;background:var(--panel);border:1px solid var(--border);color:var(--text);
+    border-radius:6px;padding:7px 9px;font-size:12.5px;
+  }
+  .msel-addrow input:focus{outline:none;border-color:var(--teal);}
+  .msel-addrow button{
+    background:var(--teal);color:#062522;border:none;border-radius:6px;padding:0 12px;font-size:12px;font-weight:700;cursor:pointer;
+  }
+
+  /* ---------- Flow finder ---------- */
+  .ff-caption{font-size:11.5px;color:var(--text-muted);margin:0 0 8px;display:flex;align-items:center;gap:6px;}
+  .ff-caption strong{color:var(--teal);font-weight:600;}
+  .ff-caption .ff-cap-icon{color:var(--teal);display:inline-flex;flex-shrink:0;}
+  .ff-caption .ff-cap-dates{color:var(--text-muted);}
+
+  /* Header row: "Flow Finder" heading sits beside the caption+toolbar
+     stack, vertically centered. On narrow screens it drops above them
+     instead of squeezing the controls. */
+  .ff-header-row{display:flex;align-items:center;gap:24px;margin-bottom:20px;flex-wrap:nowrap;}
+  .ff-header-row .page-title{margin:0;flex-shrink:0;white-space:nowrap;}
+  .ff-filters-col{flex:1;min-width:0;}
+  .ff-filters-col .ff-caption{margin-bottom:8px;}
+
+  /* One row: a single seamless combo box (category segment + search input,
+     glued together, no gap, shared border) + a date-filter popover trigger.
+     The row has a fixed height and fixed-width segments; instead of
+     shrinking or wrapping to a new line when space is tight, the row
+     itself scrolls left/right (drag or swipe) so every control keeps its
+     full readable width. Panels still open as absolutely-positioned
+     overlays that slide in over everything else. */
+  .ff-toolbar{
+    height:41px;margin-bottom:16px;
+    overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+  }
+  .ff-toolbar::-webkit-scrollbar{display:none;}
+  .ff-toolbar-scroll{display:flex;align-items:stretch;gap:8px;flex-wrap:nowrap;height:100%;min-width:min-content;}
+  .ff-results{display:flex;flex-direction:column;gap:8px;}
+
+  /* ---- The unified combo box: category trigger + divider + search input all inside one border ---- */
+  .ff-searchbox{
+    flex:1 0 420px;width:420px;position:relative;display:flex;align-items:stretch;
+    background:var(--panel-raised);border:1px solid var(--border);border-radius:7px;
+    transition:border-color .15s,box-shadow .15s;
+  }
+  .ff-searchbox:hover{border-color:#3A4753;}
+  .ff-searchbox:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim);}
+  .ff-searchbox:has(.ff-catsel.open){border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim);}
+  .ff-searchbox:has(.msel.open){border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim);}
+  .ff-searchbox:has(.emp-drop.open){border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim);}
+  .ff-box-divider{width:1px;align-self:stretch;background:var(--border);margin:7px 0;flex-shrink:0;}
+
+  /* Category segment — left side of the combo box, opens the searchable list */
+  .ff-catsel{position:relative;flex:0 0 172px;width:172px;}
+  .ff-cat-trigger{
+    display:flex;align-items:center;gap:8px;width:100%;height:100%;
+    background:none;border:none;color:var(--text);
+    padding:9px 8px 9px 12px;font-size:13.5px;font-weight:600;cursor:pointer;
+    border-radius:7px 0 0 7px;transition:background .12s;
+  }
+  .ff-cat-trigger:hover{background:var(--panel-hover);}
+  .ff-cat-trigger .ff-cat-icon{color:var(--teal);flex-shrink:0;display:inline-flex;}
+  .ff-cat-trigger .ff-cat-label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;}
+  .ff-cat-trigger .ff-cat-caret{color:var(--text-muted);font-size:10px;flex-shrink:0;transition:transform .18s ease;}
+  .ff-catsel.open .ff-cat-trigger .ff-cat-caret{transform:rotate(180deg);color:var(--teal);}
+  .ff-cat-panel{
+    position:fixed;width:240px;z-index:120;
+    background:var(--panel-raised);border:1px solid var(--border);border-radius:9px;
+    box-shadow:0 14px 34px rgba(0,0,0,.5);padding:8px;
+    animation:ffPop .16s ease;
+  }
+  .ff-cat-search{
+    width:100%;background:var(--panel);border:1px solid var(--border);color:var(--text);
+    border-radius:6px;padding:8px 10px;font-size:13px;margin-bottom:6px;
+  }
+  .ff-cat-search:focus{outline:none;border-color:var(--teal);}
+  .ff-cat-options{max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:1px;}
+  .ff-cat-option{
+    display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:6px;font-size:13px;
+    cursor:pointer;color:var(--text-dim);transition:background .1s;
+  }
+  .ff-cat-option:hover{background:var(--panel-hover);color:var(--text);}
+  .ff-cat-option.sel{color:var(--teal);background:var(--teal-dim);font-weight:600;}
+  .ff-cat-option .ff-cat-opt-icon{color:var(--teal);flex-shrink:0;display:inline-flex;}
+  .ff-cat-option .ff-cat-check{margin-left:auto;color:var(--teal);font-size:12px;opacity:0;flex-shrink:0;}
+  .ff-cat-option.sel .ff-cat-check{opacity:1;}
+  .ff-cat-empty{padding:12px 9px;color:var(--text-muted);font-size:12.5px;text-align:center;}
+
+  /* Search segment — right side of the combo box; every control type inside
+     it (plain input, select, the employee search-drop, the msel picker)
+     has its own border/background stripped so it blends into one box. */
+  .ff-query-wrap{flex:1;min-width:0;display:flex;align-items:stretch;}
+  .ff-query-wrap input[type=text],.ff-query-wrap select{
+    width:100%;border:none;background:transparent;border-radius:0;
+    padding:9px 12px;font-size:13.5px;color:var(--text);
+  }
+  .ff-query-wrap select{
+    appearance:none;-webkit-appearance:none;-moz-appearance:none;
+    padding-right:32px;cursor:pointer;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path d='M1.5 1.8 6 6l4.5-4.2' fill='none' stroke='%237C8998' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 12px center;background-size:11px 7px;
+  }
+  .ff-query-wrap select option{background:var(--panel-raised);color:var(--text);}
+  .ff-query-wrap input[type=text]:focus,.ff-query-wrap select:focus{outline:none;}
+  .ff-query-wrap .emp-drop{flex:1;min-width:0;}
+  .ff-query-wrap .emp-drop-input{border:none;background:transparent;border-radius:0;width:100%;padding:9px 12px;}
+  .ff-query-wrap .emp-drop-input:focus{outline:none;border-color:transparent;}
+  .ff-query-wrap .msel{flex:1;min-width:0;}
+  .ff-query-wrap .msel-control{border:none;background:transparent;border-radius:0;min-height:auto;padding:9px 12px;}
+  .ff-query-wrap .hint{padding:9px 12px;}
+
+  /* Date filter — a small popover, works underneath any category */
+  .ff-datefilter{position:relative;flex:0 0 auto;align-self:stretch;}
+  .ff-date-btn{
+    display:flex;align-items:center;gap:7px;background:var(--panel-raised);border:1px solid var(--border);
+    color:var(--text-dim);border-radius:7px;padding:0 14px;height:100%;font-size:13px;font-weight:500;
+    white-space:nowrap;transition:border-color .15s,background .15s,color .15s;
+  }
+  .ff-date-btn:hover{border-color:#3A4753;color:var(--text);}
+  .ff-date-btn.active{border-color:var(--teal-dim);background:var(--teal-dim);color:var(--teal);}
+  .ff-date-btn .ff-date-icon{display:inline-flex;flex-shrink:0;}
+  .ff-date-btn .ff-date-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 6px var(--teal);flex-shrink:0;}
+  .ff-date-panel{
+    position:fixed;z-index:120;width:238px;
+    background:var(--panel-raised);border:1px solid var(--border);border-radius:9px;
+    box-shadow:0 14px 34px rgba(0,0,0,.5);padding:12px;
+    animation:ffPop .16s ease;
+  }
+  .ff-date-panel label{display:block;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;}
+  .ff-date-panel input[type=date]{
+    width:100%;background:var(--panel);border:1px solid var(--border);color:var(--text);
+    border-radius:6px;padding:8px 9px;font-size:13px;margin-bottom:10px;
+  }
+  .ff-date-panel input[type=date]:focus{outline:none;border-color:var(--teal);}
+  .ff-date-hint{font-size:11px;color:var(--text-muted);line-height:1.4;}
+  .ff-date-actions{display:flex;justify-content:flex-end;margin-top:8px;}
+  .ff-date-clear{all:unset;color:var(--text-muted);font-size:11.5px;cursor:pointer;}
+  .ff-date-clear:hover{color:var(--red);}
+
+  @keyframes ffPop{from{opacity:0;transform:translateY(-4px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}}
+
+  .timeline{position:relative;padding-left:26px;margin-top:6px;}
+  .timeline::before{content:'';position:absolute;left:9px;top:4px;bottom:4px;width:2px;background:linear-gradient(var(--border),var(--border) 70%,transparent);}
+  .tl-item{position:relative;padding:0 0 26px 20px;}
+  .tl-item:last-child{padding-bottom:0;}
+  .tl-dot{position:absolute;left:-26px;top:2px;width:20px;height:20px;border-radius:50%;background:var(--panel-raised);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;}
+  .tl-item.k-created .tl-dot{border-color:var(--blue);color:var(--blue);}
+  .tl-item.k-forward .tl-dot{border-color:var(--blue);color:var(--blue);}
+  .tl-item.k-reminder .tl-dot{border-color:var(--amber);color:var(--amber);}
+  .tl-item.k-result .tl-dot{border-color:var(--teal);color:var(--teal);}
+  .tl-item.k-resolved .tl-dot{border-color:var(--teal);background:var(--teal);color:#062522;}
+  .tl-gap{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);position:absolute;left:-90px;top:2px;width:60px;text-align:right;}
+  .tl-card{background:var(--panel-raised);border:1px solid var(--border-soft);border-radius:8px;padding:11px 13px;}
+  .tl-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px;flex-wrap:wrap;}
+  .tl-action{font-weight:700;font-size:13.5px;}
+  .tl-ts{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);}
+  .tl-who{font-size:12px;color:var(--text-dim);margin-bottom:6px;}
+  .tl-notes{font-size:13px;color:var(--text-dim);line-height:1.5;}
+  .tl-wrap{padding-left:70px;}
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(6,10,14,.7);backdrop-filter:blur(2px);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .fab-new{
+    width:32px;height:32px;border-radius:50%;border:none;flex:none;
+    background:var(--teal);color:#08171A;font-family:var(--font-body);
+    font-size:19px;font-weight:700;line-height:1;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 2px 8px rgba(79,209,197,.25);transition:.15s;margin-right:2px;
+  }
+  .fab-new:hover{background:#63DBD0;transform:translateY(-1px);box-shadow:0 4px 12px rgba(79,209,197,.35);}
+  #app{transition:margin-right .22s ease;}
+  body.drawer-open #app{margin-right:min(420px,92vw);}
+  .ticket-drawer{
+    position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);
+    background:var(--panel);border-left:1px solid var(--border);
+    box-shadow:-12px 0 32px rgba(0,0,0,.45);
+    transform:translateX(100%);transition:transform .22s ease;
+    display:flex;flex-direction:column;overflow-y:auto;z-index:110;
+  }
+  .ticket-drawer.open{transform:translateX(0);}
+  .drawer-head{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+    padding:20px 20px 16px;border-bottom:1px solid var(--border-soft);
+    position:sticky;top:0;background:var(--panel);z-index:1;
+  }
+  .drawer-head h2{font-family:var(--font-display);font-size:18px;margin:0;}
+  .drawer-close{
+    width:28px;height:28px;border-radius:7px;border:1px solid var(--border);
+    background:var(--panel-raised);color:var(--text-dim);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;font-size:13px;flex:none;transition:.12s;
+  }
+  .drawer-close:hover{color:var(--text);background:var(--panel-hover);}
+  .drawer-body{padding:18px 20px 24px;}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:14px;max-width:480px;width:100%;padding:22px;}
+  .modal h3{font-family:var(--font-display);margin:0 0 4px;font-size:17px;}
+  .modal .modal-sub{color:var(--text-muted);font-size:12.5px;margin:0 0 16px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
+
+  /* ---------- Demo fast-forward control ---------- */
+  .demo-clock{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+  .demo-clock .dc-label{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-right:2px;white-space:nowrap;}
+  .demo-clock .dc-offset{font-family:var(--font-mono);font-size:10.5px;color:var(--amber);white-space:nowrap;}
+  .demo-clock button{
+    background:var(--panel-raised);border:1px solid var(--border);color:var(--text-dim);
+    padding:5px 8px;border-radius:5px;font-family:var(--font-mono);font-size:11px;flex-shrink:0;
+  }
+  .demo-clock button:hover{color:var(--amber);border-color:var(--amber-dim);}
+  @media (max-width:760px){
+    .demo-clock{width:100%;order:4;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+    .demo-clock::-webkit-scrollbar{display:none;}
+  }
+
+  /* ---------- Page-wide responsive rules ---------- */
+  @media (max-width:640px){
+    .page{padding:20px 14px 60px;}
+    .page-title{font-size:20px;}
+    .form-grid{grid-template-columns:1fr;}
+    .ticket-row{flex-wrap:wrap;}
+    .t-main{min-width:160px;}
+    .tl-wrap{padding-left:0;}
+    .tl-gap{display:none;}
+    .stat-strip{flex-wrap:wrap;}
+    /* Heading drops above the filters on narrow screens instead of
+       squeezing them; the toolbar itself keeps every control at full,
+       readable width and scrolls horizontally rather than shrinking or
+       wrapping. */
+    .ff-header-row{flex-direction:column;align-items:flex-start;gap:10px;}
+    .modal{padding:18px;}
+    nav.tabs button{font-size:12.5px;padding:7px 10px;}
+  }
+
+  .toast-wrap{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;}
+  .toast{background:var(--panel-raised);border:1px solid var(--teal-dim);border-left:3px solid var(--teal);color:var(--text);padding:11px 16px;border-radius:8px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:slidein .25s ease;}
+  @keyframes slidein{from{transform:translateX(20px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+  .kicker{font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* =========================================================================
+   OPSDECK — Ticket & Task Portal
+   ---------------------------------------------------------------------
+   REBUILT AROUND THE REAL ap2_ticLog CACHE SHAPE.
+
+   The connected cache's .data object is { Ticket: [...], ticLog: [...] } —
+   but those two arrays are the OPPOSITE of what their names suggest:
+
+     payload.Ticket  — the real append-only FLOW/EVENT log. One row per
+       event: Event_ID, Ticket_ID, Action, Status, From, Performed_By, To,
+       Detail. This is what every timeline, status, and "who did what"
+       view is built from.
+
+     payload.ticLog  — the per-ticket MASTER/CREATION record. One row per
+       ticket (not per event): Event_ID (points at the CREATED event),
+       Ticket_ID, Created_By, Subject_Type, Subject_ID, Assigned_To,
+       Assignment_Type, Priority, Status, Notes. This is where the FIXED
+       facts about a ticket live — most importantly Subject_ID, which is
+       the Subject Employee (E2) the earlier version of this file was
+       missing entirely. It's really here now, so Flow Finder, the ticket
+       list, and the New Ticket form all key off it directly.
+
+   IDENTITY IN THE REAL DATA
+   Every actor (Created_By, Performed_By, From, To, Assigned_To) is a
+   short staff code like "M001".."M008" — management/operations people
+   (E1/E3/E4... in the requirement doc). Every Subject Employee (E2) is a
+   short code like "E101".."E105". Departments show up as plain names
+   ("Finance","HR","SIM","Bike","Fleet","Payroll") wherever a code isn't
+   one of the two patterns above. None of these come with real names —
+   there's no separate roster in this cache — so this file builds its
+   people/department directory straight out of whatever codes actually
+   appear in the log (discoverDirectory below), the same "grows from the
+   data, nothing hardcoded" approach the previous version used for emails.
+   Because there's no login mapping from a real session to one of these
+   M-codes, an "Acting as" bar (top of every view) lets you pick which
+   discovered staff code you're operating as, and its role/department —
+   this is what makes every scenario (worker/manager/GM, dept queues,
+   oversight, Flow Finder scoping) actually reachable and testable.
+
+   EVENT_ID AS DATE/TIME
+   Per instruction, Event_ID doubles as both the sort key AND the literal
+   timestamp for a flow event — it's treated as epoch milliseconds
+   (new Date(Number(Event_ID))) everywhere a time is shown or a gap is
+   computed, exactly like the cache's own top-level {ts:...} field is.
+
+   TICKET LIFECYCLE (requirement §1–§11, now action-complete)
+   CREATED → (queued to a Department OR delegated straight to a Person,
+   chosen at creation time) → ACCEPTED (claims it) → COMMENT / ON_HOLD /
+   RESUMED / REMINDER / REMINDER_ALERT (auto) / REMINDER_ATTENDED /
+   TRANSFERRED (to another Department or delegated to another Person,
+   which always re-queues to NEW pending Accept, matching the real
+   TK-5002 sample exactly) → RESOLVED. Every action is one more append-
+   only event row — nothing is ever edited or removed, only added.
+   ========================================================================= */
+
+// ---------- Time helpers ----------
+let demoOffsetMs = 0;
+function nowMs(){ return Date.now() + demoOffsetMs; }
+function pad(n,l=2){ return String(n).padStart(l,'0'); }
+function fmtTs(ms){
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+function fmtDur(ms){
+  ms = Math.abs(ms);
+  if(ms<1000) return ms+'ms';
+  const s=Math.floor(ms/1000);
+  if(s<60) return s+'s';
+  const m=Math.floor(s/60);
+  if(m<60) return m+'m '+(s%60)+'s';
+  const h=Math.floor(m/60);
+  if(h<48) return h+'h '+(m%60)+'m';
+  const dd=Math.floor(h/24);
+  return dd+'d '+(h%24)+'h';
+}
+function statusClass(s){ return 'st-'+String(s||'').replace(/\s+/g,''); }
+const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtReminderDetail(ms){
+  const d = new Date(ms);
+  return `Reminder: ${pad(d.getDate())}-${MONTH_ABBR[d.getMonth()]}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function parseReminderDetail(detail){
+  const m = String(detail||'').match(/Reminder:\s*(\d{1,2})-([A-Za-z]{3})-(\d{4})\s+(\d{1,2}):(\d{2})/);
+  if(!m) return null;
+  const monthIdx = MONTH_ABBR.findIndex(x=>x.toLowerCase()===m[2].toLowerCase());
+  if(monthIdx<0) return null;
+  return new Date(+m[3], monthIdx, +m[1], +m[4], +m[5], 0, 0).getTime();
+}
+
+/* ═══════════ Identity codes ═══════════
+   Staff (management/ops, E1/E3/E4... in the requirement doc) = "M###".
+   Subject Employee (E2) = "E###". Anything else that shows up in a
+   From/To/Assigned_To slot is treated as a department name. */
+function isEmailToken(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim()); }
+function isStaffCode(v){ v=String(v||'').trim(); return /^M\d+$/i.test(v) || isEmailToken(v); }
+function isSubjectCode(v){ return /^(emp|E)\d+$/i.test(String(v||'').trim()); }
+function isPersonCode(v){ return isStaffCode(v) || isSubjectCode(v); }
+function isDeptToken(v){ v=String(v||'').trim(); return !!v && !isPersonCode(v); }
+
+/* ═══════════ Users directory (payload.Users — real names/roles/status) ═══════════
+   Role strings come as either a bare tier ("GM","Manager","Visitor") or
+   "Title | Department" ("Officer | Deliveroo"). Split them once here so
+   every dropdown can show a real name and, where relevant, a department. */
+let USERS = {};       // email(lowercase) -> {email, name, role, roleTitle, deptName, roleTier, status}
+let USERS_LIST = [];
+let USERS_READY = false; // flips true once a real (non-empty) Users cache payload has landed
+// Any of these titles (bare, or the part before "|") get org-wide,
+// unfiltered oversight — same tier as GM — regardless of whether a
+// department was ever attached to the role string.
+const EXEC_TITLE_PATTERNS = [
+  /^gm$/, /^general\s*manager$/, /^ceo$/, /^chief\s+executive(\s+officer)?$/,
+  /^cfo$/, /^chief\s+financial(\s+officer)?$/, /^coo$/, /^chief\s+operating(\s+officer)?$/,
+  /^cto$/, /^chief\s+technology(\s+officer)?$/, /^chief\b/, /^president$/,
+  /^vice\s*president$/, /^vp$/, /^director$/, /^head(\s+of\b.*)?$/,
+];
+function roleTierOf(title){
+  const t = String(title||'').trim().toLowerCase();
+  if(EXEC_TITLE_PATTERNS.some(re=>re.test(t))) return 'gm';
+  if(t==='manager') return 'manager';
+  return 'worker';
+}
+function parseUserRow(r){
+  if(!r) return null;
+  const email = String(_pick(r,['email','Email'])||'').trim();
+  if(!email) return null;
+  const name = String(_pick(r,['name','Name'])||'').trim() || email;
+  const rawRole = String(_pick(r,['role','Role'])||'').trim();
+  const parts = rawRole.split('|').map(s=>s.trim()).filter(Boolean);
+  const roleTitle = parts[0] || rawRole;
+  const deptName = parts[1] || '';
+  return {
+    email, name, role: rawRole, roleTitle, deptName,
+    roleTier: roleTierOf(roleTitle),
+    status: String(_pick(r,['status','Status'])||'').trim().toLowerCase() || 'active',
+  };
+}
+function parseUsers(payload){
+  USERS = {}; USERS_LIST = [];
+  const rows = Array.isArray(payload && payload.Users) ? payload.Users : [];
+  rows.map(parseUserRow).filter(Boolean).forEach(u=>{ USERS[u.email.toLowerCase()] = u; USERS_LIST.push(u); });
+  if(rows.length) USERS_READY = true; // real cache data has arrived, even if every row got filtered
+}
+function userFor(v){ return USERS[String(v||'').trim().toLowerCase()] || null; }
+// Display label for any person token: real name if known, else the raw code/email.
+function nameLabel(v){
+  const u = userFor(v);
+  return u ? u.name : String(v||'');
+}
+// "Name — email" for pickers where seeing the address matters too.
+function nameEmailLabel(v){
+  const u = userFor(v);
+  return u ? `${u.name} — ${u.email}` : String(v||'');
+}
+
+/* ═══════════ Employee directory (ap2_employee cache) ═══════════
+   Real HR roster for the New Ticket "Subject Employee" picker — separate
+   from SUBJECTS (the E101-style codes discovered in the ticket log).
+   ap2_employee rows are plain arrays: [id, name, ...]. A lot of the raw
+   cache is throwaway test rows (single lowercase words like "asif"/"sdc",
+   or an all-lowercase name), so only rows that look like a real, properly
+   cased name are kept; everything else — and duplicate ids — is dropped. */
+let EMPLOYEES = [];           // [{id, name}], deduped, dummy rows removed
+let EMPLOYEE_CACHE_OK = false; // true once ap2_employee has loaded with data
+const REAL_NAME_RE = /^[A-Z][a-zA-Z'.-]*(\s[A-Z][a-zA-Z'.-]*)*$/;
+function parseEmployeeRow(r){
+  if(!Array.isArray(r)) return null;
+  const id = String(r[0]==null?'':r[0]).trim();
+  const name = String(r[1]==null?'':r[1]).trim();
+  if(!id || !name || !REAL_NAME_RE.test(name)) return null; // drop dummy/test rows
+  return {id, name};
+}
+function parseEmployees(rows){
+  const seen = new Set(), out = [];
+  (Array.isArray(rows)?rows:[]).forEach(r=>{
+    const e = parseEmployeeRow(r);
+    if(!e || seen.has(e.id)) return;
+    seen.add(e.id);
+    out.push(e);
+  });
+  return out.sort((a,b)=>a.name.localeCompare(b.name));
+}
+function employeeLabel(e){ return `${e.id} — ${e.name}`; }
+// Applies a fresh ap2_employee row-set (from IndexedDB OR a live push from
+// the parent shell) and updates the UI in place — this is the single path
+// both loadEmployees() and the cache-push listeners below funnel through,
+// so the Subject Employee dropdown never goes stale.
+function applyEmployeeRows(rows){
+  if(Array.isArray(rows) && rows.length){
+    EMPLOYEES = parseEmployees(rows);
+    EMPLOYEE_CACHE_OK = true;
+  } else {
+    EMPLOYEE_CACHE_OK = false;
+  }
+  safeRender();
+  refreshOpenDrawer();
+}
+async function loadEmployees(){
+  try{
+    const rows = await _readCache(_AP2_CACHE_KEY_EMP);
+    applyEmployeeRows(rows);
+  }catch(e){
+    EMPLOYEE_CACHE_OK = false;
+    safeRender();
+    refreshOpenDrawer();
+  }
+}
+
+/* ═══════════ Professional multi-select widget ═══════════
+   Reusable checkbox/radio dropdown with chips + search, used wherever a
+   picker needs to switch between "Department" and "Person" option sets
+   (Flow Finder's Handler / Department filters — single-select only — and
+   the New Ticket "Route to" field, which still allows multiple). */
+const MSEL_UI = {}; // id -> {open:bool, q:string}
+function mselState(id){ if(!MSEL_UI[id]) MSEL_UI[id] = {open:false, q:''}; return MSEL_UI[id]; }
+function mselCloseAllExcept(id){
+  Object.keys(MSEL_UI).forEach(k=>{ if(k!==id) MSEL_UI[k].open = false; });
+}
+function escAttr(s){ return String(s==null?'':s).replace(/"/g,'&quot;'); }
+function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* options: [{value, label, sub?}]. selected: array of currently chosen values.
+   opts.placeholder / opts.allowAdd (shows a "+ add custom value" row, used
+   for "+ New department name…"). */
+function renderMultiSelect(id, options, selected, opts){
+  opts = opts || {};
+  const st = mselState(id);
+  const selSet = new Set((selected||[]).map(String));
+  const selectedOptions = options.filter(o=>selSet.has(String(o.value)));
+  const q = st.q.trim().toLowerCase();
+  const filtered = q ? options.filter(o=> o.label.toLowerCase().includes(q) || (o.sub||'').toLowerCase().includes(q)) : options;
+  const shown = opts.maxOptions ? filtered.slice(0, opts.maxOptions) : filtered;
+  const truncated = opts.maxOptions && filtered.length > shown.length;
+  return `
+  <div class="msel${st.open?' open':''}" id="${id}">
+    <div class="msel-control" data-msel-toggle="${id}">
+      ${selectedOptions.length
+        ? `<div class="msel-chips">${selectedOptions.map(o=>`<span class="msel-chip"><span class="msel-chip-label">${escHtml(o.label)}</span><button type="button" class="msel-chip-x" data-msel-remove="${id}" data-value="${escAttr(o.value)}" aria-label="Remove">✕</button></span>`).join('')}</div>`
+        : `<span class="msel-placeholder">${escHtml(opts.placeholder||'Select…')}</span>`}
+      <span class="msel-caret">${st.open?'▲':'▼'}</span>
+    </div>
+    ${st.open ? `
+    <div class="msel-panel" data-msel-panel="${id}">
+      <input type="text" class="msel-search" id="${id}-search" placeholder="${escAttr(opts.searchPlaceholder||'Search…')}" value="${escAttr(st.q)}">
+      <div class="msel-options">
+        ${shown.length ? shown.map(o=>`
+          <label class="msel-option">
+            <input type="${opts.single?'radio':'checkbox'}" ${opts.single?`name="${escAttr(id)}-radio"`:''} data-msel-check="${id}" value="${escAttr(o.value)}" ${selSet.has(String(o.value))?'checked':''}>
+            <span>${escHtml(o.label)}</span>
+            ${o.sub?`<span class="msel-opt-sub">${escHtml(o.sub)}</span>`:''}
+          </label>`).join('') : `<div class="msel-empty">No matches</div>`}
+        ${truncated ? `<div class="msel-empty">Showing top ${shown.length} of ${filtered.length} — keep typing to narrow it down</div>` : ''}
+      </div>
+      <div class="msel-footer">
+        <span class="msel-count">${opts.single ? (selectedOptions.length?'1 selected':'none selected') : `${selectedOptions.length} selected`}</span>
+        ${selectedOptions.length && !opts.single ? `<button type="button" data-msel-clear="${id}">Clear all</button>` : ''}
+      </div>
+      ${opts.allowAdd ? `
+      <div class="msel-addrow">
+        <input type="text" id="${id}-addinput" placeholder="${escAttr(opts.addPlaceholder||'+ Add custom value…')}" value="${escAttr(st.addVal||'')}">
+        <button type="button" data-msel-addbtn="${id}">Add</button>
+      </div>` : ''}
+    </div>` : ''}
+  </div>`;
+}
+
+/* Wires up a rendered multi-select. getSelected/setSelected read & write the
+   backing array; onRefresh re-renders just enough of the DOM to reflect the
+   new state (usually the caller's own refresh/render function). */
+function wireMultiSelect(id, getSelected, setSelected, onRefresh, wopts){
+  wopts = wopts || {};
+  const root = document.getElementById(id);
+  if(!root) return;
+  const toggle = root.querySelector(`[data-msel-toggle="${id}"]`);
+  if(toggle) toggle.onclick = (e)=>{
+    e.stopPropagation();
+    const st = mselState(id);
+    const wasOpen = st.open;
+    mselCloseAllExcept(id);
+    st.open = !wasOpen;
+    if(!st.open) st.q = '';
+    onRefresh();
+    if(st.open){
+      document.addEventListener('mousedown', mselOutsideHandler, true);
+      setTimeout(()=>{ const inp = document.getElementById(id+'-search'); if(inp){ inp.focus(); } }, 0);
+    }
+  };
+  root.querySelectorAll(`[data-msel-remove="${id}"]`).forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      const v = btn.dataset.value;
+      setSelected(getSelected().filter(x=>String(x)!==String(v)));
+      onRefresh();
+    };
+  });
+  const panel = root.querySelector(`[data-msel-panel="${id}"]`);
+  if(panel) panel.onmousedown = (e)=> e.stopPropagation();
+  root.querySelectorAll(`[data-msel-check="${id}"]`).forEach(cb=>{
+    cb.onchange = ()=>{
+      if(wopts.single){
+        setSelected(cb.checked ? [cb.value] : []);
+        mselState(id).open = false;
+        mselState(id).q = '';
+        onRefresh();
+        return;
+      }
+      let sel = getSelected().map(String);
+      if(cb.checked){ if(!sel.includes(cb.value)) sel.push(cb.value); }
+      else { sel = sel.filter(x=>x!==cb.value); }
+      setSelected(sel);
+      onRefresh();
+    };
+  });
+  const search = document.getElementById(id+'-search');
+  if(search){
+    search.oninput = ()=>{ mselState(id).q = search.value; onRefresh(); };
+  }
+  const clearBtn = root.querySelector(`[data-msel-clear="${id}"]`);
+  if(clearBtn) clearBtn.onclick = (e)=>{ e.stopPropagation(); setSelected([]); onRefresh(); };
+  const addBtn = root.querySelector(`[data-msel-addbtn="${id}"]`);
+  const addInput = document.getElementById(id+'-addinput');
+  if(addInput) addInput.oninput = ()=>{ mselState(id).addVal = addInput.value; };
+  if(addBtn) addBtn.onclick = (e)=>{
+    e.stopPropagation();
+    const val = (addInput ? addInput.value : '').trim();
+    if(!val) return;
+    if(wopts.single){
+      setSelected([val]);
+      mselState(id).open = false;
+      mselState(id).q = '';
+      mselState(id).addVal = '';
+      onRefresh();
+      return;
+    }
+    const sel = getSelected().map(String);
+    if(!sel.includes(val)) sel.push(val);
+    setSelected(sel);
+    mselState(id).addVal = '';
+    onRefresh();
+  };
+}
+function mselOutsideHandler(e){
+  const openId = Object.keys(MSEL_UI).find(k=>MSEL_UI[k].open);
+  if(!openId) { document.removeEventListener('mousedown', mselOutsideHandler, true); return; }
+  const root = document.getElementById(openId);
+  if(root && root.contains(e.target)) return;
+  MSEL_UI[openId].open = false;
+  MSEL_UI[openId].q = '';
+  document.removeEventListener('mousedown', mselOutsideHandler, true);
+  if(typeof window.__mselRefresh === 'function') window.__mselRefresh();
+}
+
+let STAFF = [];        // [{id, dept, role}]
+let SUBJECTS = [];     // [{id}]
+let DEPARTMENTS = [];  // [{id, name}]
+function staff(id){ return STAFF.find(s=>s.id===id); }
+function subjectEmp(id){ return SUBJECTS.find(s=>s.id===id); }
+function dept(id){ return DEPARTMENTS.find(d=>d.id===id); }
+function deptByName(name){ return DEPARTMENTS.find(d=>d.name.toLowerCase()===String(name||'').toLowerCase()); }
+function deptIdFor(name){
+  const key = String(name||'').trim();
+  if(!key) return null;
+  let d = deptByName(key);
+  if(!d){ d = {id:'D_'+key.replace(/[^a-z0-9]/gi,'').toUpperCase(), name:key}; DEPARTMENTS.push(d); }
+  return d.id;
+}
+
+// Role/department are never given for an "M" code in this cache — there's
+// no roster, only the flow log — so they're kept in an editable overlay
+// (STAFF_META), seeded with a sensible default (manager, unassigned) so
+// every view is reachable immediately, and adjustable from the "Acting
+// as" bar to deliberately exercise the worker/manager/GM-scoped views.
+const STAFF_META_KEY = 'opsdeck_staff_meta_v1';
+let STAFF_META = {};
+function loadStaffMeta(){
+  try{ STAFF_META = JSON.parse(localStorage.getItem(STAFF_META_KEY) || '{}'); }catch(e){ STAFF_META = {}; }
+}
+function saveStaffMeta(){
+  try{ localStorage.setItem(STAFF_META_KEY, JSON.stringify(STAFF_META)); }catch(e){}
+}
+function metaFor(id){
+  const u = userFor(id);
+  if(u){
+    // Known Users-cache account — role/department always come live from the
+    // cache. Never freeze this in STAFF_META: there's no "Acting as"
+    // switcher to justify an override anymore, and a stale localStorage
+    // entry from old testing would otherwise permanently mask the real
+    // role/department every time this id shows up.
+    //
+    // A "manager"-tier role with NO department attached (role string was
+    // just "Manager", no "| Dept") can't be scoped to a single queue —
+    // there's nothing to scope it to. Rather than leaving them stuck with
+    // no Department tab and no Org tab, treat them as org-wide oversight
+    // (same tier as GM/CEO/CFO/Head/etc.): unfiltered visibility across
+    // every department's tickets and every pending item.
+    const deptId = u.deptName ? deptIdFor(u.deptName) : null;
+    const role = (u.roleTier==='manager' && !deptId) ? 'gm' : u.roleTier;
+    return {role, dept: deptId};
+  }
+  if(!STAFF_META[id]){
+    STAFF_META[id] = {role:'manager', dept:null}; // legacy/unknown M-code with no Users row — old default
+  }
+  return STAFF_META[id];
+}
+
+function registerStaff(id){
+  if(!id || staff(id)) return;
+  const m = metaFor(id);
+  STAFF.push({id, role:m.role, dept:m.dept});
+}
+function registerSubject(id){
+  if(!id || subjectEmp(id)) return;
+  SUBJECTS.push({id});
+}
+function registerDeptToken(name){
+  if(!name) return;
+  deptIdFor(name);
+}
+
+function discoverDirectory(events, masters){
+  STAFF = []; SUBJECTS = []; DEPARTMENTS = [];
+  const touch = v=>{
+    v = String(v||'').trim();
+    if(!v) return;
+    if(isStaffCode(v)) registerStaff(v);
+    else if(isSubjectCode(v)) registerSubject(v);
+    else registerDeptToken(v);
+  };
+  (events||[]).forEach(e=>{ touch(e.from); touch(e.performedBy); touch(e.to); });
+  Object.values(masters||{}).forEach(m=>{ touch(m.createdBy); touch(m.assignedToInitial); touch(m.subjectId); });
+  // Seed every known active user + their department too, so "Acting as",
+  // department filters, and "Delegate to" pickers are populated from the
+  // real roster (Users cache) even for people who haven't touched a ticket yet.
+  USERS_LIST.forEach(u=>{
+    if(u.status && u.status!=='active') return;
+    if(u.deptName) deptIdFor(u.deptName);
+    registerStaff(u.email);
+  });
+  // sync live role/dept from the (possibly just-edited) STAFF_META overlay
+  STAFF.forEach(s=>{ const m=metaFor(s.id); s.role=m.role; s.dept=m.dept; });
+  // The signed-in user must always be present, even if they've never
+  // touched a ticket and aren't (yet) an active row in the Users sheet.
+  if(ME) registerStaff(ME);
+}
+
+// Dropdown-only sourcing: department/person pickers must come straight from
+// the Users cache (payload.Users), active rows only — not from every code
+// discoverDirectory() happens to see in the ticket log.
+function activeUsersList(){ return USERS_LIST.filter(u=>u.status==='active'); }
+function activeDeptOptions(){
+  const seen = new Set(), out = [];
+  activeUsersList().forEach(u=>{
+    if(!u.deptName) return;
+    const key = u.deptName.toLowerCase();
+    if(seen.has(key)) return;
+    seen.add(key);
+    out.push({name:u.deptName});
+  });
+  return out.sort((a,b)=>a.name.localeCompare(b.name));
+}
+function activePersonOptions(){
+  return activeUsersList().slice().sort((a,b)=>a.name.localeCompare(b.name));
+}
+
+function isManager(id){ const s=staff(id); return !!s && s.role==='manager'; }
+function isGM(id){ const s=staff(id); return !!s && s.role==='gm'; }
+function isWorker(id){ const s=staff(id); return !!s && s.role==='worker'; }
+function deptWorkers(deptId){ return STAFF.filter(s=>s.dept===deptId); }
+function assignablePeopleFor(actorId){
+  if(isGM(actorId)) return STAFF;
+  const a = staff(actorId);
+  if(a && a.dept) return deptWorkers(a.dept); // managers AND workers can delegate within their own department
+  return a ? [a] : [];
+}
+
+// nameOf() resolves any id/token this app ever stores in From/To/Assigned
+// slots: a staff code, a subject-employee code, or a department name/id —
+// falling back to the raw value so nothing ever renders blank.
+function nameOf(v){
+  if(!v) return '—';
+  if(dept(v)) return dept(v).name + ' (Dept)';
+  const dn = deptByName(v); if(dn) return dn.name + ' (Dept)';
+  const u = userFor(v);
+  if(u) return u.name;
+  if(isSubjectCode(v)) return v;
+  if(isStaffCode(v)) return v;
+  return v;
+}
+function deptNameOfTarget(v){
+  if(dept(v)) return dept(v).name;
+  const dn = deptByName(v); if(dn) return dn.name;
+  return v;
+}
+
+/* ═══════════ CACHE — via shared cacheWatcher.js, with a safe fallback ═══════════ */
+const _AP2_CACHE_KEY = 'ap2_ticLog';
+const _AP2_CACHE_KEY_EMP = 'ap2_employee';
+
+if(typeof window.AP2CacheWatcher === 'undefined'){
+  console.warn('[OpsDeck] cacheWatcher.js did not load — using local fallback');
+  window.AP2CacheWatcher = (function(){
+    const _IDB_NAME = 'ap2_fleet_cache', _IDB_STORE = 'datasets';
+    let _conn = null;
+    function _open(){
+      if(_conn) return Promise.resolve(_conn);
+      return new Promise((res, rej)=>{
+        let done = false;
+        const req = indexedDB.open(_IDB_NAME);
+        const t = setTimeout(()=>{ if(!done){ done=true; rej(new Error('idb-open-timeout')); } }, 2000);
+        req.onsuccess = e=>{ if(!done){ done=true; clearTimeout(t); _conn=e.target.result; res(_conn); } };
+        req.onerror   = e=>{ if(!done){ done=true; clearTimeout(t); rej(e.target.error); } };
+      });
+    }
+    return {
+      init(){},
+      subscribe(){ return ()=>{}; },
+      notifyNow(){},
+      getStatus(){ return {healthy:false, mode:'local-fallback', lastError:'cacheWatcher.js not loaded'}; },
+      async readKey(key){
+        try{
+          const db = await _open();
+          if(!db.objectStoreNames.contains(_IDB_STORE)) return null;
+          const rec = await new Promise((res, rej)=>{
+            const r = db.transaction(_IDB_STORE, 'readonly').objectStore(_IDB_STORE).get(key);
+            r.onsuccess = ()=>res(r.result || null);
+            r.onerror   = ()=>rej(r.error);
+          });
+          if(!rec || !rec.data) return null;
+          if(Array.isArray(rec.data)) return rec.data.length ? rec.data : null;
+          if(typeof rec.data==='object') return rec.data;
+          return null;
+        }catch(e){
+          if(e && e.name==='NotFoundError') return null;
+          console.warn('[OpsDeck] fallback read failed:', e.message);
+          return null;
+        }
+      }
+    };
+  })();
+}
+async function _readCache(key=_AP2_CACHE_KEY){ return AP2CacheWatcher.readKey(key); }
+
+// Local-only overlay: tickets/events created *in this browser* aren't
+// written back into the real cache (this page doesn't know the backend's
+// write API) — they're kept in localStorage and replayed on top of
+// whatever the real cache contains every time it (re)loads.
+const LOCAL_OVERLAY_KEY = 'opsdeck_local_overlay_v2';
+let LOCAL_EVENTS = [];   // same shape as a parsed event row, local:true
+let LOCAL_MASTERS = {};  // ticketId -> master row, local:true
+function saveOverlay(){
+  try{ localStorage.setItem(LOCAL_OVERLAY_KEY, JSON.stringify({events:LOCAL_EVENTS, masters:LOCAL_MASTERS})); }catch(e){}
+}
+function loadOverlay(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(LOCAL_OVERLAY_KEY)||'{}');
+    LOCAL_EVENTS = Array.isArray(raw.events) ? raw.events : [];
+    LOCAL_MASTERS = raw.masters && typeof raw.masters==='object' ? raw.masters : {};
+  }catch(e){ LOCAL_EVENTS=[]; LOCAL_MASTERS={}; }
+}
+function applyOverlay(){
+  LOCAL_EVENTS.forEach(e=>EVENTS.push(e));
+  Object.keys(LOCAL_MASTERS).forEach(tid=>{ TICKET_MASTER[tid] = LOCAL_MASTERS[tid]; });
+  EVENTS.sort((a,b)=>a.eventId-b.eventId);
+}
+
+/* ═══════════ Parsing ═══════════ */
+function _pick(obj, keys){
+  for(const k of keys){ if(obj[k]!==undefined && obj[k]!==null && obj[k]!=='') return obj[k]; }
+  return '';
+}
+// payload.Ticket rows — the real flow/event log (misleadingly named).
+function parseEventRow(r){
+  if(!r) return null;
+  const ticketId = String(_pick(r,['Ticket_ID','ticketId'])||'').trim();
+  const action = String(_pick(r,['Action','action'])||'').trim();
+  const eventIdRaw = _pick(r,['Event_ID','eventId']);
+  const eventId = Number(eventIdRaw);
+  if(!ticketId || !action || !eventIdRaw || Number.isNaN(eventId)) return null;
+  return {
+    eventId, ticketId, action,
+    status: String(_pick(r,['Status','status'])||'').trim(),
+    from: String(_pick(r,['From','from'])||'').trim(),
+    performedBy: String(_pick(r,['Performed_By','performedBy'])||'').trim(),
+    to: String(_pick(r,['To','to'])||'').trim(),
+    detail: String(_pick(r,['Detail','detail'])||'').trim(),
+    local: false,
+  };
+}
+// payload.ticLog rows — the per-ticket master/creation record (misleadingly named).
+function parseMasterRow(r){
+  if(!r) return null;
+  const ticketId = String(_pick(r,['Ticket_ID','ticketId'])||'').trim();
+  if(!ticketId) return null;
+  return {
+    ticketId,
+    creationEventId: Number(_pick(r,['Event_ID','eventId'])) || null,
+    createdBy: String(_pick(r,['Created_By','createdBy'])||'').trim(),
+    subjectType: String(_pick(r,['Subject_Type','subjectType'])||'Employee').trim(),
+    subjectId: String(_pick(r,['Subject_ID','subjectId'])||'').trim(), // <-- Subject Employee (E2)
+    assignedToInitial: String(_pick(r,['Assigned_To','assignedTo','AssignedTo','Assigned To'])||'').trim(),
+    assignmentType: String(_pick(r,['Assignment_Type','assignmentType','AssignmentType','Assignment Type'])||'').trim(),
+    priority: String(_pick(r,['Priority','priority'])||'Medium').trim(),
+    status: String(_pick(r,['Status','status'])||'').trim(),
+    notes: String(_pick(r,['Notes','notes','Note'])||'').trim(),
+    local: false,
+  };
+}
+
+let EVENTS = [];
+let TICKET_MASTER = {};
+let SUBJECT_EMPLOYEE_COLUMN_SEEN = false;
+
+// A ticket can land in ticLog (master/creation record) before its Ticket
+// (flow/event log) row is written — or that write can be missed entirely.
+// Per requirement: check ticLog FIRST to know a ticket exists and how it
+// was routed; the rest of its flow (accept/transfer/etc.) is then read
+// from the real event log as normal. So for any master row with zero
+// matching event rows, synthesize its CREATED event straight off the
+// master record — status NEW, routed to whatever Assigned_To/Assignment_Type
+// said — so it still shows up as open/unclaimed for that Department or
+// Person instead of silently not existing anywhere.
+function synthesizeMissingCreatedEvents(){
+  const seen = new Set(EVENTS.map(e=>e.ticketId));
+  const synthesized = [];
+  Object.values(TICKET_MASTER).forEach(m=>{
+    if(seen.has(m.ticketId)) return; // already has real event rows — trust those fully
+    if(!m.assignedToInitial){
+      console.warn('[OpsDeck] ticLog row for', m.ticketId, 'has no Assigned_To value — cannot route it into a queue yet.', m);
+      return;
+    }
+    synthesized.push({
+      eventId: m.creationEventId || genEventId(),
+      ticketId: m.ticketId,
+      action: 'CREATED',
+      status: m.status || 'NEW',
+      from: '',
+      performedBy: m.createdBy,
+      to: m.assignedToInitial,
+      detail: m.notes || '(no description provided)',
+      local: false,
+      synthesized: true,
+    });
+  });
+  if(synthesized.length){
+    EVENTS = EVENTS.concat(synthesized).sort((a,b)=>a.eventId-b.eventId);
+  }
+}
+
+function rebuildFromRealCache(eventRowsRaw, masterRowsRaw){
+  EVENTS = (eventRowsRaw||[]).map(parseEventRow).filter(Boolean);
+  EVENTS.sort((a,b)=>a.eventId-b.eventId);
+  TICKET_MASTER = {};
+  (masterRowsRaw||[]).map(parseMasterRow).filter(Boolean).forEach(m=>{ TICKET_MASTER[m.ticketId]=m; });
+  SUBJECT_EMPLOYEE_COLUMN_SEEN = Object.values(TICKET_MASTER).some(m=>m.subjectId);
+  synthesizeMissingCreatedEvents();
+  discoverDirectory(EVENTS, TICKET_MASTER);
+  applyOverlay(); // replay this browser's own local tickets/events on top
+  discoverDirectory(EVENTS, TICKET_MASTER); // re-scan including anything the overlay introduced
+}
+
+function ingestFromCachePayload(payload){
+  if(!payload) return false;
+  // payload.Ticket = flow/event log; payload.ticLog = per-ticket master.
+  const eventRows = Array.isArray(payload.Ticket) ? payload.Ticket
+    : (Array.isArray(payload) ? payload : null);
+  if(!eventRows || !eventRows.length) return false;
+  const masterRows = Array.isArray(payload.ticLog) ? payload.ticLog : [];
+  parseUsers(payload);
+  rebuildFromRealCache(eventRows, masterRows);
+  return true;
+}
+
+async function loadTickets(){
+  const alreadyHaveData = EVENTS.some(r=>!r.local);
+  try{
+    const payload = await _readCache();
+    const applied = ingestFromCachePayload(payload);
+    if(applied){
+      safeRender();
+      refreshOpenDrawer();
+    } else if(!alreadyHaveData){
+      discoverDirectory(EVENTS, TICKET_MASTER);
+      safeRender();
+    }
+  }catch(err){
+    console.error('[OpsDeck] loadTickets error:', err);
+  }
+}
+let _emptyReadStreak = 0;
+async function _applyFromCache(){
+  try{
+    const payload = await _readCache();
+    const applied = ingestFromCachePayload(payload);
+    if(applied){ _emptyReadStreak = 0; safeRender(); refreshOpenDrawer(); }
+    else if(EVENTS.some(r=>!r.local)){
+      _emptyReadStreak++;
+      if(_emptyReadStreak>=2){ EVENTS = EVENTS.filter(r=>r.local); TICKET_MASTER={}; discoverDirectory(EVENTS, TICKET_MASTER); applyOverlay(); safeRender(); _emptyReadStreak=0; }
+    }
+  }catch(e){
+    console.warn('[OpsDeck] background refresh error:', e.message);
+  }
+}
+try{
+  AP2CacheWatcher.init();
+  AP2CacheWatcher.subscribe(()=>{ _applyFromCache(); loadEmployees(); });
+}catch(e){
+  console.warn('[OpsDeck] cacheWatcher wiring failed, continuing without live updates:', e.message);
+}
+window.addEventListener('message', (e)=>{
+  if(!e.data) return;
+  if(e.data.type==='ap-theme' && e.data.theme){ document.documentElement.setAttribute('data-theme', e.data.theme); }
+  // Parent proactively pushes every dataset it holds the moment it's ready —
+  // ticket log AND the employee roster both need to render the instant
+  // their slice lands, same as docPortal's emp/bike/log keys.
+  if(e.data.type==='ap-cache-preload' && e.data.datasets){
+    const payload = e.data.datasets[_AP2_CACHE_KEY];
+    if(ingestFromCachePayload(payload)){ safeRender(); refreshOpenDrawer(); }
+    const empRows = e.data.datasets[_AP2_CACHE_KEY_EMP];
+    if(Array.isArray(empRows) && empRows.length) applyEmployeeRows(empRows);
+  }
+  if(e.data.type==='ap-cache-ready' && e.data.key===_AP2_CACHE_KEY){
+    if(ingestFromCachePayload(e.data.data)){ safeRender(); refreshOpenDrawer(); }
+  }
+  if(e.data.type==='ap-cache-ready' && e.data.key===_AP2_CACHE_KEY_EMP){
+    applyEmployeeRows(e.data.data);
+  }
+  if(e.data.type==='ap-cache-updated'){
+    [_AP2_CACHE_KEY, _AP2_CACHE_KEY_EMP].forEach(key=>{
+      try{ window.parent.postMessage({type:'ap-cache-request', key}, '*'); }catch(err){}
+    });
+  }
+});
+[_AP2_CACHE_KEY, _AP2_CACHE_KEY_EMP].forEach(key=>{
+  try{ window.parent.postMessage({type:'ap-cache-request', key}, '*'); }catch(e){}
+});
+
+/* ═══════════ Ticket accessors ═══════════ */
+function allTicketIds(){ return [...new Set(EVENTS.map(r=>r.ticketId))]; }
+function ticketEvents(tid){ return EVENTS.filter(r=>r.ticketId===tid).sort((a,b)=>a.eventId-b.eventId); }
+function ticketTimeline(tid){ return ticketEvents(tid); }
+function master(tid){ return TICKET_MASTER[tid] || null; }
+function isTerminal(status){ return status==='RESOLVED'; }
+function ticketTitle(tid){ const m=master(tid); return (m && m.notes) || 'Untitled ticket'; }
+function ticketDescription(tid){
+  const evs = ticketEvents(tid);
+  const created = evs.find(e=>e.action==='CREATED');
+  return (created && created.detail) || (master(tid) && master(tid).notes) || '';
+}
+// currentOwner(): the CURRENT, changing state of a ticket — status and who
+// it's with come straight off the latest event row (no derivation/regex
+// needed, the real log already carries Status per row). Fixed facts
+// (Subject Employee/E2, Requester, original Priority) come from the
+// ticket's master row and never change, exactly per the Fixed/Changing
+// split in the requirement (§9).
+function currentOwner(tid){
+  const evs = ticketEvents(tid);
+  if(!evs.length) return null;
+  const latest = evs[evs.length-1];
+  const m = master(tid) || {};
+  return {
+    status: latest.status || 'NEW',
+    assignedTo: latest.to,
+    performedBy: latest.performedBy,
+    action: latest.action,
+    eventId: latest.eventId,
+    priority: m.priority || 'Medium',
+    subjectId: m.subjectId || '',       // Subject Employee (E2) — fixed
+    subjectType: m.subjectType || 'Employee',
+    createdBy: m.createdBy || (evs[0] && evs[0].performedBy) || '',
+  };
+}
+
+/* ═══════════ Activity-trail accessors — "I did X" / "my department did X"
+   These read the whole event log for a given action, not just the
+   ticket's current state, so a ticket you accepted or transferred still
+   shows up here even after it's since moved on to someone else. ═══════════ */
+function ticketsWhereIActed(actorId, action){
+  return allTicketIds().filter(tid=>
+    ticketEvents(tid).some(e=> e.action===action && e.performedBy===actorId)
+  );
+}
+function ticketsWhereDeptActed(deptId, action){
+  return allTicketIds().filter(tid=>
+    ticketEvents(tid).some(e=>{
+      if(e.action!==action) return false;
+      const s = staff(e.performedBy);
+      return s && s.dept===deptId;
+    })
+  );
+}
+function deptRaised(deptId){
+  return allTicketIds().filter(tid=>{
+    const m = master(tid);
+    if(!m || !m.createdBy) return false;
+    const s = staff(m.createdBy);
+    return s && s.dept===deptId;
+  });
+}
+// A TRANSFERRED event's `to` is either a department name (isDeptToken) or
+// a person code/email — this is how "Transferred" (to a department queue)
+// is split from "Delegated" (directly to a person).
+function isTransferToDept(e){ return isDeptToken(e.to); }
+function actedTransferred(actorId, kind){ // kind: 'dept' | 'person'
+  return allTicketIds().filter(tid=>
+    ticketEvents(tid).some(e=> e.action==='TRANSFERRED' && e.performedBy===actorId &&
+      (kind==='dept' ? isTransferToDept(e) : !isTransferToDept(e)))
+  );
+}
+function deptActedTransferred(deptId, kind){
+  return allTicketIds().filter(tid=>
+    ticketEvents(tid).some(e=>{
+      if(e.action!=='TRANSFERRED') return false;
+      const s = staff(e.performedBy);
+      if(!s || s.dept!==deptId) return false;
+      return kind==='dept' ? isTransferToDept(e) : !isTransferToDept(e);
+    })
+  );
+}
+// "Accepted" also absorbs anything I/my department Transferred or
+// Delegated that has SINCE been accepted by the recipient — once accepted
+// it's no longer sitting open under Transferred/Delegated, it moves here.
+function myAccepted(u){
+  const selfAccepted = ticketsWhereIActed(u.id,'ACCEPTED');
+  const nowAccepted = [...actedTransferred(u.id,'dept'), ...actedTransferred(u.id,'person')]
+    .filter(tid=> currentOwner(tid).status!=='NEW');
+  return [...new Set([...selfAccepted, ...nowAccepted])];
+}
+// Transferred (by me) — anything I sent out, whether to a department queue
+// or straight to a person, that's still sitting unclaimed.
+function myTransferred(u){
+  return [...actedTransferred(u.id,'dept'), ...actedTransferred(u.id,'person')]
+    .filter(tid=> currentOwner(tid).status==='NEW');
+}
+// Delegated (to me) — anything someone else put directly in my hands (at
+// creation or via a later transfer) that I haven't accepted yet.
+function myDelegated(u){
+  return allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.status==='NEW' && o.assignedTo===u.id && o.performedBy!==u.id;
+  });
+}
+function deptAccepted(deptId){
+  const selfAccepted = ticketsWhereDeptActed(deptId,'ACCEPTED');
+  const nowAccepted = [...deptActedTransferred(deptId,'dept'), ...deptActedTransferred(deptId,'person')]
+    .filter(tid=> currentOwner(tid).status!=='NEW');
+  return [...new Set([...selfAccepted, ...nowAccepted])];
+}
+function deptTransferred(deptId){ return deptActedTransferred(deptId,'dept').filter(tid=> currentOwner(tid).status==='NEW'); }
+function deptDelegated(deptId){ return deptActedTransferred(deptId,'person').filter(tid=> currentOwner(tid).status==='NEW'); }
+// Everything still open and relevant to a person — BOTH before acceptance
+// (sitting unclaimed in their department's queue, addressed to the dept
+// rather than to them by name) AND after acceptance (currently assigned
+// to them directly). A ticket that was transferred to my department or to
+// me and hasn't been accepted yet is still "open for me" — it doesn't
+// wait for an ACCEPTED event to count.
+function openForMe(u){
+  return allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.assignedTo===u.id && !isTerminal(o.status);
+  });
+}
+// Department Attention = only what's still sitting unclaimed in the queue
+// (no specific person assigned yet). The moment someone accepts one, it's
+// assigned to them by name and moves to THEIR My Portal instead — a
+// ticket needing attention lives in exactly one place, never both.
+function openForDept(deptId){
+  const d = dept(deptId);
+  if(!d) return [];
+  return allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.status==='NEW' && deptNameOfTarget(o.assignedTo)===d.name;
+  });
+}
+// Row label that makes it obvious whether a ticket is still sitting
+// unclaimed (before ACCEPTED) or actively with someone (after).
+function openRowSubLabel(tid){
+  const o = currentOwner(tid);
+  if(o.status==='NEW') return `Unclaimed — waiting in ${deptNameOfTarget(o.assignedTo)}`;
+  return `With ${nameOf(o.assignedTo)}`;
+}
+
+/* ═══════════ Reminder engine (computed live from the event log) ═══════════
+   A REMINDER event's Detail carries its own due date/time ("Reminder:
+   10-Aug-2026 15:00"); Event_ID is deliberately NOT used for this — it's
+   the flow-ordering timestamp, not necessarily wall-clock accurate far
+   into a demo, whereas the Detail's due date is the actual commitment
+   made on the ticket. A REMINDER is "live" (can go overdue) until either
+   a REMINDER_ATTENDED, a newer REMINDER, or a terminal/hold status
+   supersedes it. */
+function latestLiveReminder(tid){
+  const evs = ticketEvents(tid);
+  let live = null;
+  for(const e of evs){
+    if(e.action==='REMINDER') live = e;
+    else if(e.action==='REMINDER_ATTENDED') live = null;
+  }
+  return live;
+}
+function overdueInfo(tid){
+  const owner = currentOwner(tid);
+  if(!owner) return {overdue:false};
+  if(isTerminal(owner.status) || owner.status==='ON HOLD') return {overdue:false};
+  const r = latestLiveReminder(tid);
+  if(!r) return {overdue:false};
+  const dueAt = parseReminderDetail(r.detail);
+  if(!dueAt) return {overdue:false};
+  const now = nowMs();
+  if(now < dueAt) return {overdue:false, dueAt};
+  return {overdue:true, elapsed: now-dueAt, dueAt};
+}
+function tickReminderEngine(){
+  if(demoOffsetMs<=0) return; // only once the demo clock has been fast-forwarded
+  allTicketIds().forEach(tid=>{
+    const od = overdueInfo(tid);
+    if(!od.overdue) return;
+    const evs = ticketEvents(tid);
+    const last = evs[evs.length-1];
+    if(last.action==='REMINDER_ALERT') return; // already alerted for this reminder
+    fireReminderAlert(tid);
+  });
+}
+
+/* ═══════════ Mutations (append-only) ═══════════ */
+let seq = 0;
+function genEventId(){ return nowMs() + (seq++ % 900); }
+function nextTicketId(){
+  let max = 5000;
+  allTicketIds().forEach(tid=>{
+    const m = String(tid).match(/(\d+)\s*$/);
+    if(m) max = Math.max(max, parseInt(m[1],10));
+  });
+  return 'TK-' + (max+1);
+}
+function appendEvent({ticketId, action, status, from, performedBy, to, detail}){
+  const row = {eventId:genEventId(), ticketId, action, status, from:from||'', performedBy:performedBy||'', to:to||'', detail:detail||'', local:true};
+  EVENTS.push(row);
+  LOCAL_EVENTS.push(row);
+  saveOverlay();
+  return row;
+}
+
+// Ticket creation: captures the fixed E2 (subjectEmployeeId) and lets the
+// creator DELEGATE it straight to a department queue OR directly to a
+// specific person in one step (requirement §5 vs §6, chosen at creation).
+function createTicket({creatorId, title, description, priority, subjectType, subjectEmployeeId, targetType, target}){
+  const ticketId = nextTicketId();
+  const ev = appendEvent({
+    ticketId, action:'CREATED', status:'NEW',
+    from:'', performedBy:creatorId, to:target,
+    detail: description || title,
+  });
+  const m = {
+    ticketId, creationEventId: ev.eventId, createdBy:creatorId,
+    subjectType: subjectType||'Employee', subjectId: subjectEmployeeId,
+    assignedToInitial: target, assignmentType: targetType==='department' ? 'DEPARTMENT' : 'PERSON',
+    priority: priority||'Medium', notes: title, local:true,
+  };
+  TICKET_MASTER[ticketId] = m;
+  LOCAL_MASTERS[ticketId] = m;
+  discoverDirectory(EVENTS, TICKET_MASTER);
+  saveOverlay();
+  return ticketId;
+}
+function acceptTicket({ticketId, actorId}){
+  const owner = currentOwner(ticketId);
+  appendEvent({ticketId, action:'ACCEPTED', status:'IN PROGRESS', from:owner.assignedTo, performedBy:actorId, to:actorId, detail:'Ticket accepted.'});
+}
+// Transfer covers BOTH requirement flows: to a Department (re-queues,
+// anyone in that department can accept) and Delegate directly to a Person
+// (also re-queues to NEW — matching the real TK-5002 sample exactly,
+// where even a direct hand-off to M005 still needed its own ACCEPTED
+// event before work began).
+function transferTicket({ticketId, actorId, targetType, target, reason}){
+  const label = targetType==='department' ? deptNameOfTarget(target) : nameOf(target);
+  appendEvent({
+    ticketId, action:'TRANSFERRED', status:'NEW',
+    from:actorId, performedBy:actorId, to:target,
+    detail: reason || (targetType==='department' ? `Transferred to ${label} department.` : `Directly transferred to ${label}.`),
+  });
+}
+function holdTicket({ticketId, actorId, reason}){
+  const owner = currentOwner(ticketId);
+  appendEvent({ticketId, action:'ON_HOLD', status:'ON HOLD', from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:reason||'Put on hold.'});
+}
+function resumeTicket({ticketId, actorId, note}){
+  const owner = currentOwner(ticketId);
+  appendEvent({ticketId, action:'RESUMED', status:'IN PROGRESS', from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:note||'Resumed.'});
+}
+function addComment({ticketId, actorId, comment}){
+  const owner = currentOwner(ticketId);
+  appendEvent({ticketId, action:'COMMENT', status:owner.status, from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:comment});
+}
+function setReminder({ticketId, actorId, dueAtMs}){
+  const owner = currentOwner(ticketId);
+  appendEvent({ticketId, action:'REMINDER', status:owner.status, from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:fmtReminderDetail(dueAtMs)});
+}
+function attendReminder({ticketId, actorId, note}){
+  const owner = currentOwner(ticketId);
+  appendEvent({ticketId, action:'REMINDER_ATTENDED', status:owner.status, from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:note||'Reminder attended.'});
+}
+function fireReminderAlert(ticketId){
+  const owner = currentOwner(ticketId);
+  appendEvent({ticketId, action:'REMINDER_ALERT', status:owner.status, from:owner.assignedTo, performedBy:owner.assignedTo, to:owner.assignedTo, detail:'Automated: reminder overdue, no response yet.'});
+}
+function resolveTicket({ticketId, actorId, comment}){
+  const owner = currentOwner(ticketId);
+  appendEvent({ticketId, action:'RESOLVED', status:'RESOLVED', from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:comment||'Resolved.'});
+}
+
+/* ═══════════ App state ═══════════ */
+const state = {
+  currentUserId: null,
+  view: 'my', // 'my' | 'dept' | 'new' | 'flow' | 'org'
+  ffMode: 'ticket', // 'ticket' | 'subjectEmployee' | 'handler' | 'department' | 'status'
+  ffQuery: '',
+  ffMulti: [], // handler / department — single-select (max one value) filters
+  ffFrom: '', ffTo: '', // date-created range — now a universal refinement, applies under every category
+  ffDateOpen: false, // is the date-filter popover open
+  ffSelectedTicket: null,
+  ffReturnView: null, // the view (my/dept/org) a ticket was opened from, so Back returns there
+  myStatusFilter: 'all',
+  deptStatusFilter: 'all',
+};
+function currentUser(){ return staff(state.currentUserId); }
+
+const TICKET_STATUSES = ['NEW','IN PROGRESS','ON HOLD','RESOLVED'];
+const STATUS_FILTERS = ['all','open',...TICKET_STATUSES];
+function statusFilterLabel(f){
+  return {all:'All', open:'Needs attention'}[f] || f;
+}
+function matchesStatusFilter(status, filter){
+  if(filter==='all') return true;
+  if(filter==='open') return !isTerminal(status);
+  return status===filter;
+}
+function statusFilterBar(current, dataAttr){
+  return `<div class="filter-pills" style="margin-bottom:14px;">
+    ${STATUS_FILTERS.map(f=>`<button class="filter-btn ${current===f?'active':''}" data-${dataAttr}="${f}">${statusFilterLabel(f)}</button>`).join('')}
+  </div>`;
+}
+
+// My Portal / Department Task both use this exact 6-pill set.
+const CATEGORY_FILTERS = ['all','attention','raised','accepted','transferred','delegated'];
+function categoryFilterLabel(f){
+  return {all:'All', attention:'Attention', raised:'Raised', accepted:'Accepted', transferred:'Transferred', delegated:'Delegated'}[f] || f;
+}
+function categoryFilterBar(current, dataAttr){
+  return `<div class="filter-pills" style="margin-bottom:14px;">
+    ${CATEGORY_FILTERS.map(f=>`<button class="filter-btn ${current===f?'active':''}" data-${dataAttr}="${f}">${categoryFilterLabel(f)}</button>`).join('')}
+  </div>`;
+}
+
+/* ═══════════ Identity — real login, not a switcher ═══════════
+   Who's signed in comes from ap_session (written by the rest of the OpsDeck
+   suite on login), exactly like the original OpsDeck.html — the log's
+   role/department for that person is then resolved from the Users
+   directory via metaFor(), same machinery the old "Acting as" bar used,
+   just pinned to one real identity instead of being switchable. */
+function _readSession(){
+  try{
+    const raw = sessionStorage.getItem('ap_session');
+    if(!raw) return null;
+    const parsed = JSON.parse(raw);
+    const s = Array.isArray(parsed) ? parsed[0] : parsed;
+    if(!s || !s.email) return null;
+    return s;
+  }catch(e){ return null; }
+}
+// Fallback used only when this file is opened standalone (no ap_session yet)
+// so the portal still renders something sensible while login is wired up —
+// falls back to the first known user in the connected Users sheet.
+const FALLBACK_SESSION = {};
+let ME = null; // the signed-in staff id (email), set once at boot
+function bootstrapIdentity(){
+  const session = _readSession() || FALLBACK_SESSION;
+  let email = String(session.email||'').trim();
+  if(!email && USERS_LIST.length) email = USERS_LIST[0].email; // last-resort so the portal still renders
+  const known = userFor(email);
+  if(known) email = known.email; // normalize casing to match the real Users row
+  return email || null;
+}
+
+/* ═══════════ Rendering ═══════════ */
+// The Flow Finder Handler/Department single-select panels live inside
+// the normal render tree (unlike the New Ticket drawer, which is appended
+// straight to <body> and so survives a re-render untouched). That means an
+// *unsolicited* re-render — the 15s auto-refresh below, or a background
+// cache update landing mid-interaction — replaces the whole app.innerHTML
+// while the panel is open, which can land exactly on a mousedown/click and
+// make a checkbox appear to silently do nothing. A render triggered by the
+// widget's own onchange (the user just checked a box) still needs to run
+// to show the new chip — this guard is only for renders nobody asked for.
+function flowMselOpenNow(){
+  return state.view==='flow' && ['ffHandlerMsel','ffDeptMsel'].some(id => MSEL_UI[id] && MSEL_UI[id].open);
+}
+const app = document.getElementById('app');
+// For *unsolicited* re-renders (background cache polling, the periodic
+// timer below) — never for renders the widget itself asked for after a
+// user action, which must still run so the UI reflects what they just did.
+function safeRender(){
+  if(flowMselOpenNow()) return;
+  render();
+}
+function render(){
+  tickReminderEngine();
+  if(!state.currentUserId) state.currentUserId = ME || (STAFF.length ? STAFF[0].id : null);
+  const u = currentUser();
+  if(!u){
+    app.innerHTML = `<div class="page"><div class="empty"><b>Waiting on data.</b>No staff codes discovered from ap2_ticLog yet.</div></div>`;
+    return;
+  }
+  // The signed-in user's real name/role/department only exist in the Users
+  // cache. Before that cache has landed, u is backed by metaFor()'s "unknown
+  // M-code" fallback (role:'manager', name falls back to raw email) — showing
+  // that would flash the wrong identity for a moment right after login. Wait
+  // for the real row instead of guessing; once it arrives (ingestFromCachePayload
+  // → parseUsers → USERS_READY) the next safeRender() paints the real thing.
+  if(ME && !userFor(ME) && !USERS_READY){
+    app.innerHTML = `<div class="topbar"><div class="topbar-row1"><div class="brand"><span class="dot"></span>OpsDeck</div></div></div>
+      <div class="page"><div class="empty"><b>Signing you in…</b>Loading your profile from the directory.</div></div>`;
+    return;
+  }
+  app.innerHTML = `
+    ${renderTopbar(u)}
+    <div class="page">${renderView(u)}</div>
+  `;
+  wireGlobal();
+}
+// Cache reads (Users, ap2_employee) finish asynchronously and can land after
+// the New Ticket drawer is already open. Follows docPortal's
+// _refreshOpenDropdowns()/filterDrop() method: a live cache update never
+// rebuilds the whole form. It patches only the piece(s) that are backed by
+// that cache, in place — same input/list DOM nodes, same focus, same
+// mid-interaction state — instead of replacing drawerBody.innerHTML wholesale.
+// That whole-body rebuild was the bug: a cache update landing mid-click blew
+// away the open Subject Employee list before the click could register, which
+// looked like the dropdown "opening and closing" with nothing selected.
+function refreshOpenDrawer(){
+  const drawer = document.getElementById('ticketDrawer');
+  const u = currentUser();
+  if(!drawer || !u) return;
+
+  // ap2_employee cache: mirrors docPortal's emp/bike dropdowns — if the
+  // Subject Employee list is currently open, just re-filter it against the
+  // latest EMPLOYEES with whatever's already typed (same pattern as
+  // docPortal's `filterDrop(mode, document.getElementById(mode+'-search').value)`).
+  // The input keeps its value and focus; nothing about the user's
+  // in-progress click or keystroke is disturbed.
+  const empInput = document.getElementById('ntSubjectInput');
+  const empList = document.getElementById('ntSubjectList');
+  if(empList && empList.classList.contains('open')){
+    filterEmpDrop(empInput ? empInput.value : '');
+  }
+  // Cache-status ping: patched in place too, same as docPortal's
+  // _updateCacheStatus() touching just the #cache-status dot/tooltip.
+  const ping = drawer.querySelector('.cache-ping');
+  if(ping){
+    ping.classList.toggle('ok', EMPLOYEE_CACHE_OK);
+    ping.classList.toggle('warn', !EMPLOYEE_CACHE_OK);
+    ping.title = EMPLOYEE_CACHE_OK
+      ? 'Employee roster loaded from ap2_employee cache'
+      : 'ap2_employee cache unavailable — no employee roster loaded';
+  }
+
+  // Ticket-cache-derived department/person options: same non-destructive
+  // refilter as the Subject Employee field above — if the "Route to" list
+  // is currently open, re-run the filter against the latest
+  // activeDeptOptions()/activePersonOptions() with whatever's already
+  // typed. The input keeps its value and focus either way.
+  const targetInput = document.getElementById('ntTargetInput');
+  const targetList = document.getElementById('ntTargetList');
+  if(targetList && targetList.classList.contains('open')){
+    filterTargetDrop(targetInput ? targetInput.value : '');
+  }
+}
+
+function myOpenCount(id){
+  return allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.assignedTo===id && !isTerminal(o.status);
+  }).length;
+}
+function deptQueueCount(deptId){
+  const d = dept(deptId);
+  if(!d) return 0;
+  return allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && deptNameOfTarget(o.assignedTo)===d.name && !isTerminal(o.status);
+  }).length;
+}
+function orgOpenCount(){ return allTicketIds().filter(tid=>!isTerminal(currentOwner(tid).status)).length; }
+
+function renderTopbar(u){
+  const manager = isManager(u.id), gm = isGM(u.id);
+  const realTitle = (userFor(u.id) && userFor(u.id).roleTitle) || '';
+  const roleLabel = realTitle ? realTitle.toLowerCase() : (gm ? 'general manager' : manager ? 'manager' : 'worker');
+  const myCount = openForMe(u).length;
+  const dCount = manager && u.dept ? openForDept(u.dept).length : 0;
+  const orgCount = gm ? orgOpenCount() : 0;
+  return `
+  <div class="topbar">
+    <div class="topbar-row1">
+      <div class="brand"><span class="dot"></span>OpsDeck</div>
+      <nav class="tabs">
+        <button data-view="my" class="${state.view==='my'?'active':''}">My Portal${myCount?`<span class="badge-count">${myCount}</span>`:''}</button>
+        ${manager && u.dept ? `<button data-view="dept" class="${state.view==='dept'?'active':''}">Department${dCount?`<span class="badge-count">${dCount}</span>`:''}</button>`:''}
+        ${!gm && !manager ? `<button data-view="dept" class="${state.view==='dept'?'active':''}">Department tasks</button>`:''}
+        <button data-view="flow" class="${state.view==='flow'?'active':''}">Flow Finder</button>
+        ${gm ? `<button data-view="org" class="${state.view==='org'?'active':''}">Org Overview${orgCount?`<span class="badge-count">${orgCount}</span>`:''}</button>`:''}
+      </nav>
+      <div class="topbar-spacer"></div>
+      <button class="fab-new" id="newTicketBtn" title="New Ticket" aria-label="New Ticket">+</button>
+      <div class="userbox">
+        <span class="role-pill">${roleLabel}</span>
+        <span class="userbox-name">${nameOf(u.id)}${u.dept && dept(u.dept) ? ` · ${dept(u.dept).name}` : ''}</span>
+      </div>
+    </div>
+    <div class="demo-clock" title="Fast-forward time to see the reminder engine escalate without waiting real hours">
+      <span class="dc-label">Fast-forward</span>
+      <button data-ff="900000">+15m</button>
+      <button data-ff="3600000">+1h</button>
+      <button data-ff="14400000">+4h</button>
+      <button data-ff="reset">reset</button>
+      ${demoOffsetMs>0 ? `<span class="dc-offset">+${fmtDur(demoOffsetMs)} ahead</span>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderView(u){
+  const manager = isManager(u.id), gm = isGM(u.id);
+  if(!gm && state.view==='org') state.view='my';
+  switch(state.view){
+    case 'my': return renderMyPortal(u);
+    case 'dept': return manager ? renderDeptPortal(u) : renderDeptReadOnly(u);
+    case 'flow': return renderFlowFinder(u);
+    case 'org': return renderOrgOverview(u);
+    default: return '';
+  }
+}
+// Human-readable label for a top-level view key, used on Flow Finder's
+// Back button so it tells you where it's actually taking you.
+function viewLabel(v){
+  return {my:'My Portal', dept:'Department', org:'Org Overview', flow:'Flow Finder'}[v] || 'previous screen';
+}
+// Opens a ticket's timeline inside Flow Finder, remembering whichever
+// screen it was opened from (My Portal / Department / Org Overview) so
+// the Back button on the timeline returns there instead of always
+// landing on Flow Finder's own results list.
+function openTicketInFlow(tid){
+  state.ffReturnView = (state.view !== 'flow') ? state.view : null;
+  state.view = 'flow';
+  state.ffSelectedTicket = tid;
+  render();
+}
+
+// ----- Ticket row renderer -----
+function actionLabel(action){
+  return {
+    CREATED:'Created', ASSIGNED:'Assigned', ACCEPTED:'Accepted', COMMENT:'Comment',
+    ON_HOLD:'On hold', RESUMED:'Resumed', REMINDER:'Reminder set',
+    REMINDER_ALERT:'Reminder overdue', REMINDER_ATTENDED:'Reminder attended',
+    TRANSFERRED:'Transferred', RESOLVED:'Resolved',
+  }[action] || action;
+}
+function ticketRow(tid, opts={}){
+  const owner = currentOwner(tid);
+  const title = ticketTitle(tid);
+  const od = overdueInfo(tid);
+  const subLabel = opts.subLabel || `With ${nameOf(owner.assignedTo)}`;
+  return `
+  <div class="ticket-row" data-open-ticket="${tid}">
+    <div class="pri-flag pri-${owner.priority}"></div>
+    <div class="t-main">
+      <div class="t-title">${escHtml(title)} <span class="tid">#${tid}</span> ${owner.subjectType?`<span class="type-chip">${escHtml(owner.subjectType)}</span>`:''}</div>
+      <div class="t-sub">For ${owner.subjectId ? nameOf(owner.subjectId) : '—'} · ${subLabel} · raised by ${nameOf(owner.createdBy)}</div>
+    </div>
+    ${od.overdue ? `<div class="overdue-flag">⚠ overdue ${fmtDur(od.elapsed)}</div>` : ''}
+    <div class="status-chip ${statusClass(owner.status)}">${owner.status}</div>
+  </div>`;
+}
+
+// ----- My Portal -----
+function raisedByMe(u){
+  // Tickets this person created (ticLog's Created_By), regardless of who
+  // currently owns them — separate from "assigned to me now" below, so a
+  // ticket doesn't just vanish from view the moment it's accepted/
+  // transferred elsewhere.
+  return allTicketIds().filter(tid=>{
+    const m = master(tid);
+    return m && m.createdBy===u.id;
+  }).sort((a,b)=> currentOwner(b).eventId - currentOwner(a).eventId);
+}
+function activityRow(tid){
+  // For "I accepted" / "I transferred" lists: state is about what happened
+  // on the ticket, so show where it stands now rather than the default
+  // "With X" (which would just repeat the current owner regardless of
+  // whether it's still with the person viewing this list).
+  const o = currentOwner(tid);
+  return ticketRow(tid, {subLabel: isTerminal(o.status) ? `Resolved` : openRowSubLabel(tid)});
+}
+function renderMyPortal(u){
+  const filter = state.myStatusFilter;
+  const byEventDesc = (a,b)=> currentOwner(b).eventId - currentOwner(a).eventId;
+  // "Attention" = anything currently with me by name, PLUS anything sitting
+  // unclaimed in my department's queue (before acceptance) — both count as
+  // open/relevant to me right now.
+  const sections = {
+    attention: openForMe(u).slice().sort(byEventDesc),
+    raised: raisedByMe(u).slice().sort(byEventDesc),
+    accepted: myAccepted(u).sort(byEventDesc),
+    transferred: myTransferred(u).sort(byEventDesc),
+    delegated: myDelegated(u).sort(byEventDesc),
+  };
+
+  const body = filter==='all'
+    ? CATEGORY_FILTERS.filter(f=>f!=='all').map(f=>{
+        const ids = sections[f];
+        return `
+        <div class="section-label" style="margin-top:22px;">${categoryFilterLabel(f)} (${ids.length})</div>
+        ${ids.length ? `<div class="ticket-list">${ids.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">Nothing here yet.</div>`}`;
+      }).join('')
+    : (sections[filter] && sections[filter].length
+        ? `<div class="ticket-list">${sections[filter].map(t=>activityRow(t)).join('')}</div>`
+        : `<div class="empty"><b>Nothing here.</b>No tickets in ${categoryFilterLabel(filter)} right now.</div>`);
+
+  return `
+  <div class="grid2">
+    ${profileCard(u)}
+    <div>
+      <h1 class="page-title">My Portal</h1>
+      <p class="page-sub">Tickets relevant to you, grouped by where they stand. Tap one to see the full timeline and respond.</p>
+      ${categoryFilterBar(filter, 'mystatus')}
+      ${body}
+    </div>
+  </div>`;
+}
+
+function profileCard(u){
+  const d = u.dept ? dept(u.dept) : null;
+  const openCt = openForMe(u).length;
+  const resolvedCt = allTicketIds().filter(tid=>{
+    const o=currentOwner(tid); return o && o.assignedTo===u.id && isTerminal(o.status);
+  }).length;
+  const requestedCt = raisedByMe(u).length;
+  const roleName = (userFor(u.id) && userFor(u.id).roleTitle) || (isGM(u.id) ? 'General Manager' : isManager(u.id) ? 'Manager' : 'Worker');
+  return `
+  <div class="card profile-card">
+    <div class="avatar">${nameOf(u.id).slice(0,2).toUpperCase()}</div>
+    <h2>${nameOf(u.id)}</h2>
+    <p class="role-line">${roleName}${d?` · ${d.name}`:''}</p>
+    <div class="meta-row"><span>Email / code</span><span>${u.id}</span></div>
+    ${d ? `<div class="meta-row"><span>Department</span><span>${d.name}</span></div>` : ''}
+    <div class="stat-strip">
+      <div class="stat-chip"><div class="n">${openCt}</div><div class="l">Open</div></div>
+      <div class="stat-chip"><div class="n">${resolvedCt}</div><div class="l">Resolved</div></div>
+      <div class="stat-chip"><div class="n">${requestedCt}</div><div class="l">Requested</div></div>
+    </div>
+  </div>`;
+}
+
+// ----- Department Portal -----
+function renderDeptPortal(u){
+  if(!isManager(u.id) || !u.dept) return renderMyPortal(u);
+  return renderDeptReadOnly(u, {manager:true});
+}
+function renderDeptReadOnly(u, opts={}){
+  const d = u.dept ? dept(u.dept) : null;
+  if(!d) return renderMyPortal(u);
+  const filter = state.deptStatusFilter;
+  const byEventDesc = (a,b)=> currentOwner(b).eventId - currentOwner(a).eventId;
+  const teamCount = deptWorkers(u.dept).length;
+
+  const sections = {
+    attention: openForDept(u.dept).slice().sort(byEventDesc),
+    raised: deptRaised(u.dept).slice().sort(byEventDesc),
+    accepted: deptAccepted(u.dept).sort(byEventDesc),
+    transferred: deptTransferred(u.dept).sort(byEventDesc),
+    delegated: deptDelegated(u.dept).sort(byEventDesc),
+  };
+
+  const body = filter==='all'
+    ? CATEGORY_FILTERS.filter(f=>f!=='all').map(f=>{
+        const ids = sections[f];
+        return `
+        <div class="section-label" style="margin-top:22px;">${categoryFilterLabel(f)} (${ids.length})</div>
+        ${ids.length ? `<div class="ticket-list">${ids.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">Nothing here yet for ${d.name}.</div>`}`;
+      }).join('')
+    : (sections[filter] && sections[filter].length
+        ? `<div class="ticket-list">${sections[filter].map(t=>activityRow(t)).join('')}</div>`
+        : `<div class="empty"><b>Nothing here.</b>No tickets in ${categoryFilterLabel(filter)} for ${d.name}.</div>`);
+
+  return `
+  <h1 class="page-title">${d.name} — Department</h1>
+  <p class="page-sub">${opts.manager ? `Every ticket routed to ${d.name} (${teamCount} member${teamCount===1?'':'s'} on the team), grouped by where it stands. Open one to accept or reassign.` : `Read-only view of tickets routed to ${d.name}, grouped by where they stand. Your own items are in My Portal.`}</p>
+  ${categoryFilterBar(filter, 'deptstatus')}
+  ${body}
+  `;
+}
+
+/* ═══════════ Flow Finder — Ticket, Subject Employee, Handler,
+   Department, Status, Date range (requirement §10) */
+function ticketTouchesDept(tid, deptIdOrName){
+  const d = dept(deptIdOrName) || deptByName(deptIdOrName);
+  if(!d) return false;
+  return ticketEvents(tid).some(e=> deptNameOfTarget(e.to)===d.name || deptNameOfTarget(e.from)===d.name)
+    || (d.id!=null && deptWorkers(d.id).some(w=> ticketEvents(tid).some(e=>e.performedBy===w.id || e.to===w.id)));
+}
+function uniqueSubjectEmployees(){
+  const seen = new Set();
+  Object.values(TICKET_MASTER).forEach(m=>{ if(m.subjectId) seen.add(m.subjectId); });
+  return [...seen].sort();
+}
+function uniqueHandlers(){
+  const seen = new Set();
+  EVENTS.forEach(e=>{ if(isStaffCode(e.performedBy)) seen.add(e.performedBy); if(isStaffCode(e.to)) seen.add(e.to); });
+  return [...seen].sort();
+}
+
+function ticketNumOf(tid){
+  const m = String(tid||'').match(/(\d+)/);
+  return m ? parseInt(m[1],10) : 0;
+}
+
+/* ═══════════ Flow Finder — category selector (searchable dropdown) ═══════════
+   Replaces the old row of subtab buttons. One shared list drives both the
+   render (renderFlowFinder/renderFfCategorySelect) and the wiring
+   (wireGlobal), so it lives here at module scope instead of as a local
+   inside renderFlowFinder. */
+const FF_MODE_OPTS = [
+  ['ticket','Ticket'], ['subjectEmployee','Subject Employee'], ['handler','Handler'],
+  ['department','Department'], ['status','Status'],
+];
+const FF_CAT_ICONS = {
+  ticket: `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.6 6.2V4.9A1.3 1.3 0 0 1 2.9 3.6h10.2a1.3 1.3 0 0 1 1.3 1.3v1.3a1.6 1.6 0 0 0 0 3.2v1.3a1.3 1.3 0 0 1-1.3 1.3H2.9a1.3 1.3 0 0 1-1.3-1.3V9.4a1.6 1.6 0 0 0 0-3.2Z" stroke-linejoin="round"/><path d="M6.1 3.6v9" stroke-dasharray="1.6 1.6"/></svg>`,
+  subjectEmployee: `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="5.2" r="2.4"/><path d="M2.6 13.4c.7-2.6 2.9-4.1 5.4-4.1s4.7 1.5 5.4 4.1" stroke-linecap="round"/></svg>`,
+  handler: `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M9.7 6.3 12.9 3a2 2 0 0 1 2 3.4L11.9 9.5" stroke-linecap="round" stroke-linejoin="round"/><path d="m9.7 6.3-6 6a1.6 1.6 0 0 0 2.3 2.3l6-6" stroke-linecap="round" stroke-linejoin="round"/><path d="m8.4 5 2.7 2.7" stroke-linecap="round"/></svg>`,
+  department: `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 14V3.6A1.1 1.1 0 0 1 3.1 2.5h5.3a1.1 1.1 0 0 1 1.1 1.1V14" stroke-linejoin="round"/><path d="M9.5 6.8h3.4a1.1 1.1 0 0 1 1.1 1.1V14" stroke-linejoin="round"/><path d="M4.4 5.2h1.6M4.4 8h1.6M4.4 10.8h1.6M10.9 9.6h1.4M10.9 12h1.4" stroke-linecap="round"/></svg>`,
+  status: `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="6"/><path d="M8 4.6v3.6l2.4 1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+};
+const FF_CAL_ICON = `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3.2" width="12" height="10.8" rx="1.6"/><path d="M2 6.4h12M5.2 1.8v2.6M10.8 1.8v2.6" stroke-linecap="round"/></svg>`;
+
+function ffCategoryLabel(mode){
+  return (FF_MODE_OPTS.find(([k])=>k===mode)||['','Ticket'])[1];
+}
+// Renders the trigger + (when open) its floating searchable panel. Uses the
+// same MSEL_UI open/query store and outside-click handler as the other
+// dropdowns in the app ('ffCatSel' is just another key in that store), so
+// clicking outside — or opening another dropdown — closes it for free.
+function renderFfCategorySelect(){
+  const id = 'ffCatSel';
+  const st = mselState(id);
+  const q = st.q.trim().toLowerCase();
+  const filtered = q ? FF_MODE_OPTS.filter(([,l])=>l.toLowerCase().includes(q)) : FF_MODE_OPTS;
+  return `
+  <div class="ff-catsel${st.open?' open':''}" id="${id}">
+    <button type="button" class="ff-cat-trigger" data-ffcat-toggle>
+      <span class="ff-cat-icon">${FF_CAT_ICONS[state.ffMode]||''}</span>
+      <span class="ff-cat-label">${escHtml(ffCategoryLabel(state.ffMode))}</span>
+      <span class="ff-cat-caret">▾</span>
+    </button>
+    ${st.open ? `
+    <div class="ff-cat-panel" data-ffcat-panel>
+      <input type="text" class="ff-cat-search" id="${id}-search" placeholder="Search category…" value="${escAttr(st.q)}" autocomplete="off">
+      <div class="ff-cat-options">
+        ${filtered.length ? filtered.map(([k,l])=>`
+          <div class="ff-cat-option${state.ffMode===k?' sel':''}" data-ffcat-option="${k}">
+            <span class="ff-cat-opt-icon">${FF_CAT_ICONS[k]||''}</span>
+            <span>${escHtml(l)}</span>
+            <span class="ff-cat-check">✓</span>
+          </div>`).join('') : `<div class="ff-cat-empty">No matching category</div>`}
+      </div>
+    </div>` : ''}
+  </div>`;
+}
+// The date range used to be its own subtab ("Date range") that replaced
+// whatever category you were on. Now it's a small popover next to the
+// search box that narrows the results of *any* category at once.
+function renderFfDateFilter(){
+  const active = !!(state.ffFrom || state.ffTo);
+  return `
+  <div class="ff-datefilter" id="ffDateFilter">
+    <button type="button" class="ff-date-btn${active?' active':''}" data-ffdate-toggle title="Narrow by ticket-created date">
+      <span class="ff-date-icon">${FF_CAL_ICON}</span>
+      <span class="ff-date-label">${active?'Date filtered':'Date filter'}</span>
+      ${active?'<span class="ff-date-dot"></span>':''}
+    </button>
+    ${state.ffDateOpen ? `
+    <div class="ff-date-panel" data-ffdate-panel>
+      <label for="ffFrom">From</label>
+      <input type="date" id="ffFrom" value="${escAttr(state.ffFrom)}">
+      <label for="ffTo">To</label>
+      <input type="date" id="ffTo" value="${escAttr(state.ffTo)}">
+      <div class="ff-date-hint">Filters every category by each ticket's CREATED event — leave blank to show all dates.</div>
+      ${active?`<div class="ff-date-actions"><button type="button" class="ff-date-clear" data-ffdate-clear>Clear dates</button></div>`:''}
+    </div>` : ''}
+  </div>`;
+}
+// Both Flow Finder popovers (category list, date range) live inside
+// .ff-toolbar, which scrolls horizontally when the row is too wide for
+// the screen. An absolutely-positioned panel would get clipped by that
+// scroll container, so the panels are `position:fixed` in CSS and have
+// their on-screen spot computed here from the trigger's real position —
+// fixed elements aren't clipped by an ancestor's overflow, so the panel
+// stays fully visible no matter how far the toolbar has scrolled.
+function positionFfPanel(triggerEl, panelEl, align){
+  if(!triggerEl || !panelEl) return;
+  const r = triggerEl.getBoundingClientRect();
+  const vw = window.innerWidth;
+  panelEl.style.top = (r.bottom + 6) + 'px';
+  const pw = panelEl.offsetWidth || 240;
+  let left = align==='right' ? (r.right - pw) : r.left;
+  left = Math.max(8, Math.min(left, vw - pw - 8));
+  panelEl.style.left = left + 'px';
+}
+// Closes whichever Flow Finder popover is open when its scroll-anchor
+// moves out from under it (toolbar scrolled horizontally, or the page
+// itself scrolled/resized) instead of leaving it floating in the wrong
+// spot — simpler and less jarring than re-tracking it live.
+function ffPanelScrollGuard(){
+  let closed = false;
+  if(mselState('ffCatSel').open){ mselState('ffCatSel').open = false; mselState('ffCatSel').q=''; closed = true; }
+  if(state.ffDateOpen){ state.ffDateOpen = false; closed = true; }
+  if(closed) render();
+}
+function wireFfCategorySelect(){
+  const id = 'ffCatSel';
+  const root = document.getElementById(id);
+  if(!root) return;
+  const toggle = root.querySelector('[data-ffcat-toggle]');
+  if(toggle) toggle.onclick = (e)=>{
+    e.stopPropagation();
+    const st = mselState(id);
+    const wasOpen = st.open;
+    mselCloseAllExcept(id);
+    st.open = !wasOpen;
+    if(!st.open) st.q = '';
+    render();
+    if(st.open){
+      document.addEventListener('mousedown', mselOutsideHandler, true);
+      setTimeout(()=>{ const inp = document.getElementById(id+'-search'); if(inp) inp.focus(); }, 0);
+    }
+  };
+  const panel = root.querySelector('[data-ffcat-panel]');
+  if(panel){
+    panel.onmousedown = (e)=> e.stopPropagation();
+    positionFfPanel(toggle, panel, 'left');
+  }
+  root.querySelectorAll('[data-ffcat-option]').forEach(opt=>{
+    opt.onclick = (e)=>{
+      e.stopPropagation();
+      const val = opt.dataset.ffcatOption;
+      if(val !== state.ffMode){
+        state.ffMode = val; state.ffQuery=''; state.ffMulti=[]; state.ffSelectedTicket=null;
+        // ffFrom/ffTo deliberately left alone — the date range is now
+        // universal and should survive a category switch.
+      }
+      mselState(id).open = false;
+      mselState(id).q = '';
+      render();
+    };
+  });
+  const search = document.getElementById(id+'-search');
+  if(search) search.oninput = ()=>{ mselState(id).q = search.value; render(); };
+}
+function ffDateOutsideHandler(e){
+  const wrap = document.getElementById('ffDateFilter');
+  if(wrap && wrap.contains(e.target)) return;
+  state.ffDateOpen = false;
+  document.removeEventListener('mousedown', ffDateOutsideHandler, true);
+  render();
+}
+function wireFfDateFilter(){
+  const btn = document.querySelector('[data-ffdate-toggle]');
+  if(btn) btn.onclick = (e)=>{
+    e.stopPropagation();
+    state.ffDateOpen = !state.ffDateOpen;
+    render();
+    if(state.ffDateOpen) document.addEventListener('mousedown', ffDateOutsideHandler, true);
+  };
+  const panel = document.querySelector('[data-ffdate-panel]');
+  if(panel){
+    panel.onmousedown = (e)=> e.stopPropagation();
+    positionFfPanel(btn, panel, 'right');
+  }
+  const clearBtn = document.querySelector('[data-ffdate-clear]');
+  if(clearBtn) clearBtn.onclick = (e)=>{ e.stopPropagation(); state.ffFrom=''; state.ffTo=''; render(); };
+}
+// Toolbar is a fresh DOM node every render, so its scroll listener needs
+// re-attaching each time; the window resize listener only needs adding
+// once (window persists across renders).
+let _ffResizeGuardAttached = false;
+function wireFfToolbarScrollGuard(){
+  const toolbar = document.querySelector('.ff-toolbar');
+  if(toolbar) toolbar.onscroll = ffPanelScrollGuard;
+  if(!_ffResizeGuardAttached){
+    window.addEventListener('resize', ffPanelScrollGuard);
+    _ffResizeGuardAttached = true;
+  }
+}
+// Flow Finder's own result row — same data as ticketRow() but with the
+// ticket number pinned to the left as a badge (results are always sorted
+// newest-ticket-first), used only inside Flow Finder so every other
+// ticket list in the app keeps its original row layout untouched.
+function flowTicketRow(tid){
+  const owner = currentOwner(tid);
+  const title = ticketTitle(tid);
+  const od = overdueInfo(tid);
+  return `
+  <div class="ticket-row" data-open-ticket="${tid}">
+    <div class="ff-tid-badge">#${escHtml(tid)}</div>
+    <div class="pri-flag pri-${owner.priority}"></div>
+    <div class="t-main">
+      <div class="t-title">${escHtml(title)} ${owner.subjectType?`<span class="type-chip">${escHtml(owner.subjectType)}</span>`:''}</div>
+      <div class="t-sub">For ${owner.subjectId ? nameOf(owner.subjectId) : '—'} · With ${nameOf(owner.assignedTo)} · raised by ${nameOf(owner.createdBy)}</div>
+    </div>
+    ${od.overdue ? `<div class="overdue-flag">⚠ overdue ${fmtDur(od.elapsed)}</div>` : ''}
+    <div class="status-chip ${statusClass(owner.status)}">${owner.status}</div>
+  </div>`;
+}
+function renderFlowFinder(u){
+  const scoped = isManager(u.id) && u.dept;
+  let matches = [];
+
+  if(state.ffMode==='ticket'){
+    matches = allTicketIds().filter(tid=>{
+      if(scoped && !ticketTouchesDept(tid, u.dept)) return false;
+      if(!state.ffQuery) return true;
+      const q = state.ffQuery.toLowerCase();
+      if(String(tid).toLowerCase().includes(q)) return true;
+      if(ticketTitle(tid).toLowerCase().includes(q)) return true;
+      const m = master(tid);
+      if(m && m.subjectId && m.subjectId.toLowerCase().includes(q)) return true;
+      return ticketEvents(tid).some(e=>
+        nameOf(e.to).toLowerCase().includes(q) || nameOf(e.performedBy).toLowerCase().includes(q)
+      );
+    });
+  } else if(state.ffMode==='subjectEmployee'){
+    matches = state.ffQuery ? allTicketIds().filter(tid=>{
+      const m = master(tid); return m && m.subjectId===state.ffQuery;
+    }) : [];
+  } else if(state.ffMode==='handler'){
+    matches = state.ffMulti.length ? allTicketIds().filter(tid=>{
+      return ticketEvents(tid).some(e=> state.ffMulti.includes(e.performedBy) || state.ffMulti.includes(e.to));
+    }) : [];
+  } else if(state.ffMode==='department'){
+    // Every user with a home department is scoped to it here — not just
+    // managers — so "Department" always opens straight onto every ticket
+    // that has touched their own department. Only users without a
+    // department (e.g. GM) get the picker, and even then it's one
+    // department at a time.
+    const targetDeptIds = u.dept ? [u.dept] : state.ffMulti;
+    matches = targetDeptIds.length ? allTicketIds().filter(tid=> targetDeptIds.some(id=>ticketTouchesDept(tid, id))) : [];
+  } else if(state.ffMode==='status'){
+    // Shows every (in-scope) ticket until a status is picked, then narrows.
+    matches = allTicketIds().filter(tid=>{
+      if(scoped && !ticketTouchesDept(tid, u.dept)) return false;
+      if(!state.ffQuery) return true;
+      return currentOwner(tid).status===state.ffQuery;
+    });
+  }
+
+  // Date range used to be its own mode ("Date range") that replaced whatever
+  // other filter was active. It's now a standing refinement — available
+  // under every category at once instead of a separate subtab item — so it
+  // runs here, after the mode-specific matches, on top of whichever
+  // category produced them.
+  if(state.ffFrom || state.ffTo){
+    const fromMs = state.ffFrom ? new Date(state.ffFrom+'T00:00:00').getTime() : null;
+    const toMs = state.ffTo ? new Date(state.ffTo+'T23:59:59').getTime() : null;
+    matches = matches.filter(tid=>{
+      const created = ticketEvents(tid)[0];
+      if(!created) return false;
+      if(fromMs && created.eventId < fromMs) return false;
+      if(toMs && created.eventId > toMs) return false;
+      return true;
+    });
+  }
+
+  const sortedMatches = matches.slice().sort((a,b)=> ticketNumOf(b) - ticketNumOf(a));
+  const resultsHtml = sortedMatches.length ? sortedMatches.map(t=>flowTicketRow(t)).join('') :
+    `<div class="empty"><b>No matches.</b>Try a different search.</div>`;
+
+  // Same source as the "+" New Ticket window's dropdowns (activeDeptOptions
+  // / activePersonOptions, the active Users cache) — not just whoever
+  // happens to already appear in the ticket log.
+  const handlerOptions = activePersonOptions().filter(p => !u.dept || (dept(u.dept) && p.deptName && p.deptName.toLowerCase()===dept(u.dept).name.toLowerCase()));
+  const departmentOptions = activeDeptOptions();
+
+  let queryControl;
+  if(state.ffMode==='ticket'){
+    queryControl = `<input type="text" id="ffQuery" placeholder="Search by ticket #, title, or Subject Employee (E-code)…" value="${state.ffQuery.replace(/"/g,'&quot;')}">`;
+  } else if(state.ffMode==='subjectEmployee'){
+    // Sourced from the ap2_employee cache (same roster + same search-box
+    // pattern as the New Ticket "+" drawer's Subject Employee field),
+    // instead of only whatever E-codes already happen to appear in tickets.
+    queryControl = `<div style="flex:1;">
+      <span class="cache-ping ${EMPLOYEE_CACHE_OK?'ok':'warn'}" title="${EMPLOYEE_CACHE_OK?'Employee roster loaded from ap2_employee cache':'ap2_employee cache unavailable — no employee roster loaded'}" style="float:right;margin-top:11px;"></span>
+      ${ffSubjDropShell()}
+    </div>`;
+  } else if(state.ffMode==='handler'){
+    const opts = handlerOptions.map(p=>({value:p.email, label:p.name, sub:p.email}));
+    queryControl = `<div style="flex:1;">${renderMultiSelect('ffHandlerMsel', opts, state.ffMulti, {
+      single:true,
+      placeholder: opts.length ? 'Select a handler…' : (u.dept ? 'No handlers in your department yet' : 'No handlers yet'),
+      searchPlaceholder:'Search by name or email…'
+    })}</div>`;
+  } else if(state.ffMode==='department'){
+    queryControl = u.dept
+      ? `<div class="hint">Showing every ticket for ${dept(u.dept).name} — your department.</div>`
+      : `<div style="flex:1;">${renderMultiSelect('ffDeptMsel', departmentOptions.map(d=>({value:d.name, label:d.name})), state.ffMulti, {
+          single:true,
+          placeholder: departmentOptions.length ? 'Select a department…' : 'No departments yet',
+          searchPlaceholder:'Search departments…'
+        })}</div>`;
+  } else if(state.ffMode==='status'){
+    queryControl = `<select id="ffQuery">
+      <option value="">All statuses</option>
+      ${TICKET_STATUSES.map(v=>`<option value="${v}" ${state.ffQuery===v?'selected':''}>${v}</option>`).join('')}
+    </select>`;
+  }
+
+  return `
+  ${!SUBJECT_EMPLOYEE_COLUMN_SEEN ? `<div class="empty" style="text-align:left;padding:12px 14px;margin-bottom:14px;border-color:var(--amber-dim);">
+    <b style="color:var(--amber);font-size:13px;">No Subject Employee (E2) values found yet.</b>
+    The connected ticLog master rows have a Subject_ID column, but nothing in it is filled in yet — searches by Subject Employee won't return anything until a ticket carries one.
+  </div>` : ''}
+  <div class="ff-header-row">
+    <h1 class="page-title">Flow Finder</h1>
+    <div class="ff-filters-col">
+      <div class="ff-caption">
+        <span class="ff-cap-icon">${FF_CAT_ICONS[state.ffMode]||''}</span>
+        Searching by <strong>${escHtml(ffCategoryLabel(state.ffMode))}</strong>${(state.ffFrom||state.ffTo) ? ` <span class="ff-cap-dates">· ${escHtml(state.ffFrom||'any date')} → ${escHtml(state.ffTo||'any date')}</span>` : ''}
+      </div>
+      <div class="ff-toolbar">
+        <div class="ff-toolbar-scroll">
+          <div class="ff-searchbox">
+            ${renderFfCategorySelect()}
+            <span class="ff-box-divider"></span>
+            <div class="ff-query-wrap">${queryControl}</div>
+          </div>
+          ${renderFfDateFilter()}
+        </div>
+      </div>
+    </div>
+  </div>
+  ${state.ffSelectedTicket ? renderTimelineView(state.ffSelectedTicket, u) : `<div class="ff-results">${resultsHtml}</div>`}
+  `;
+}
+
+/* ═══════════ Flow Finder "Subject Employee" search dropdown ═══════════
+   Same plain search-box + highlighted list pattern as the New Ticket "+"
+   drawer's Subject Employee field (empSearchDropShell et al.), pulling
+   from the same ap2_employee cache (EMPLOYEES) — kept as its own set of
+   functions/DOM ids so the New Ticket drawer code above is untouched. */
+function ffSubjSelectedLabel(){
+  const id = state.ffQuery;
+  if(!id) return '';
+  const e = EMPLOYEES.find(x=>String(x.id)===String(id));
+  return e ? employeeLabel(e) : id;
+}
+function ffSubjDropShell(){
+  return `
+  <div class="emp-drop" id="ffSubjectDrop">
+    <input type="text" class="emp-drop-input" id="ffSubjectInput" autocomplete="off"
+      placeholder="${EMPLOYEES.length?'Search by ID or name…':'No employees in cache'}"
+      value="${escAttr(ffSubjSelectedLabel())}">
+    <div class="dropdown-list" id="ffSubjectList"></div>
+  </div>`;
+}
+function filterFfSubjDrop(q){
+  const list = document.getElementById('ffSubjectList');
+  if(!list) return;
+  const lq = q.toLowerCase().trim();
+  const hits = (lq ? EMPLOYEES.filter(e=>String(e.id).toLowerCase().includes(lq)||e.name.toLowerCase().includes(lq)) : EMPLOYEES).slice(0,15);
+  const escRe = s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const hl = v=>{
+    const safe = escHtml(v);
+    return lq ? safe.replace(new RegExp(`(${escRe(lq)})`,'gi'),'<em>$1</em>') : safe;
+  };
+  let html;
+  if(!EMPLOYEES.length){
+    html = `<div class="di no-match">No employees in cache</div>`;
+  }else if(!hits.length){
+    html = `<div class="di no-match">No employees found</div>`;
+  }else{
+    html = hits.map(e=>`<div class="di" data-ff-emp-id="${escAttr(e.id)}">
+        <div class="dn">${hl(e.name)}</div>
+        <div class="ds">ID: ${hl(String(e.id))}</div>
+      </div>`).join('');
+  }
+  list.innerHTML = html;
+  list.classList.add('open');
+  const wrap = document.getElementById('ffSubjectDrop'); if(wrap) wrap.classList.add('open');
+}
+function openFfSubjDrop(){
+  const input = document.getElementById('ffSubjectInput');
+  filterFfSubjDrop(input ? input.value : '');
+}
+function closeFfSubjDrop(){
+  const list = document.getElementById('ffSubjectList'); if(list) list.classList.remove('open');
+  const wrap = document.getElementById('ffSubjectDrop'); if(wrap) wrap.classList.remove('open');
+}
+function selectFfSubjDrop(id){
+  state.ffQuery = String(id);
+  closeFfSubjDrop();
+  render();
+}
+
+function kindOfAction(action){
+  if(action==='CREATED') return 'created';
+  if(action==='TRANSFERRED' || action==='ASSIGNED') return 'forward';
+  if(action==='ACCEPTED') return 'accept';
+  if(action==='ON_HOLD') return 'hold';
+  if(action==='RESUMED') return 'resume';
+  if(action==='COMMENT') return 'comment';
+  if(action==='REMINDER' || action==='REMINDER_ALERT') return 'reminder';
+  if(action==='REMINDER_ATTENDED') return 'result';
+  if(action==='RESOLVED') return 'resolved';
+  return 'forward';
+}
+function kindIcon(k){
+  return {created:'◆', forward:'→', accept:'✓', hold:'⏸', resume:'▶', comment:'💬', reminder:'⏰', result:'↩', resolved:'✓'}[k] || '•';
+}
+
+function renderTimelineView(tid, u){
+  const rows = ticketTimeline(tid);
+  const m = master(tid);
+  const owner = currentOwner(tid);
+  let items = '';
+  rows.forEach((r,i)=>{
+    const k = kindOfAction(r.action);
+    const gap = i>0 ? fmtDur(r.eventId - rows[i-1].eventId) : null;
+    const whoLine = `${nameOf(r.performedBy)}${r.to && r.to!==r.performedBy ? ` → ${nameOf(r.to)}` : ''}`;
+    items += `
+    <div class="tl-item k-${k}">
+      ${gap ? `<div class="tl-gap">+${gap}</div>` : ''}
+      <div class="tl-dot">${kindIcon(k)}</div>
+      <div class="tl-card">
+        <div class="tl-head">
+          <span class="tl-action">${actionLabel(r.action)}</span>
+          <span class="tl-ts">${fmtTs(r.eventId)}</span>
+        </div>
+        <div class="tl-who">${whoLine} · <span class="status-chip ${statusClass(r.status)}" style="padding:1px 7px;font-size:10px;">${r.status}</span></div>
+        ${r.detail ? `<div class="tl-notes">${escHtml(r.detail)}</div>` : ''}
+      </div>
+    </div>`;
+  });
+  const backLabel = state.ffReturnView ? `← Back to ${viewLabel(state.ffReturnView)}` : '← Back to results';
+  return `
+  <button class="btn btn-ghost btn-sm" id="ffBack">${backLabel}</button>
+  <div class="card" style="margin-top:12px;">
+    <div class="kicker">Ticket #${tid}</div>
+    <h2 style="font-family:var(--font-display);margin:0 0 4px;">${escHtml(ticketTitle(tid))}</h2>
+    <p class="page-sub" style="margin-bottom:2px;">
+      <b style="color:var(--text-dim);">Subject Employee (E2):</b> ${owner.subjectId ? nameOf(owner.subjectId) : '<span style="color:var(--red);">not recorded</span>'}
+      &nbsp;·&nbsp; Requester: ${owner.createdBy ? nameOf(owner.createdBy) : '—'}
+      &nbsp;·&nbsp; Priority: ${owner.priority}
+    </p>
+    <p class="page-sub" style="margin-bottom:0;">Every logged event for this ticket, oldest to newest. Event_ID doubles as the timestamp (down to the second).</p>
+    <div class="tl-wrap"><div class="timeline">${items}</div></div>
+  </div>
+  ${renderRespondPanel(tid, u)}
+  `;
+}
+
+/* ═══════════ Respond panel — permission gate covers every real action:
+   Accept (from a dept queue or a direct hand-off), Comment, Hold/Resume,
+   Set/Attend Reminder, Transfer (to dept or delegate to a person),
+   Resolve. */
+function respondPermission(tid, u){
+  const owner = currentOwner(tid);
+  if(!owner) return {mode:'none'};
+  if(isTerminal(owner.status)) return {mode:'none'};
+  if(isGM(u.id)) return {mode:'none'}; // GM: read-only oversight
+  if(owner.status==='NEW'){
+    const target = owner.assignedTo;
+    if(isDeptToken(target)){
+      const td = deptByName(target);
+      if(isManager(u.id) && u.dept && td && td.id===u.dept) return {mode:'accept-dept'};
+      if(!isManager(u.id) && u.dept && td && td.id===u.dept) return {mode:'accept-dept'};
+      return {mode:'none'};
+    }
+    if(target===u.id) return {mode:'accept-direct'};
+    return {mode:'none'};
+  }
+  if(owner.assignedTo===u.id){
+    return {mode:'full', ticketStatus:owner.status};
+  }
+  const ownerStaff = staff(owner.assignedTo);
+  if(isManager(u.id) && u.dept && ownerStaff && ownerStaff.dept===u.dept){
+    return {mode:'oversee'};
+  }
+  return {mode:'none'};
+}
+
+function renderRespondPanel(tid, u){
+  const perm = respondPermission(tid, u);
+  const owner = currentOwner(tid);
+  if(perm.mode==='none') return '';
+  if(perm.mode==='accept-dept' || perm.mode==='accept-direct'){
+    return `
+    <div class="card" style="margin-top:14px;">
+      <div class="section-label" style="margin-top:0;">New ticket — accept it?</div>
+      <p class="hint" style="margin-bottom:10px;">${perm.mode==='accept-dept' ? `Unclaimed in ${nameOf(owner.assignedTo)}. Any member of that department can accept it.` : `Directly transferred to you. Accept it to start working, or hand it off again.`}</p>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-sm" data-respond="accept" data-tid="${tid}">Accept</button>
+        <button class="btn btn-sm" data-respond="transferPerson" data-tid="${tid}">Delegate to someone else</button>
+      </div>
+    </div>`;
+  }
+  if(perm.mode==='oversee'){
+    return `
+    <div class="card" style="margin-top:14px;">
+      <div class="section-label" style="margin-top:0;">Manager oversight</div>
+      <p class="hint" style="margin-bottom:10px;">Currently with ${nameOf(owner.assignedTo)}. You can transfer it within ${u.dept ? dept(u.dept).name : 'your team'}.</p>
+      <div class="btn-row">
+        <button class="btn btn-sm" data-respond="transferPerson" data-tid="${tid}">Reassign</button>
+      </div>
+    </div>`;
+  }
+  // full: owner === current actor
+  const canTransferDept = true;
+  return `
+  <div class="card" style="margin-top:14px;">
+    <div class="section-label" style="margin-top:0;">Respond to this ticket</div>
+    <div class="btn-row">
+      ${owner.status==='ON HOLD'
+        ? `<button class="btn btn-primary btn-sm" data-respond="resume" data-tid="${tid}">Resume</button>`
+        : `<button class="btn btn-sm" data-respond="hold" data-tid="${tid}">Put on hold</button>`}
+      <button class="btn btn-sm" data-respond="comment" data-tid="${tid}">Add comment</button>
+      <button class="btn btn-amber btn-sm" data-respond="reminder" data-tid="${tid}">Set reminder</button>
+      ${overdueInfo(tid).overdue ? `<button class="btn btn-sm" data-respond="attend" data-tid="${tid}">Attend reminder</button>` : ''}
+      <button class="btn btn-sm" data-respond="transferPerson" data-tid="${tid}">Delegate to person</button>
+      ${canTransferDept ? `<button class="btn btn-sm" data-respond="transferDept" data-tid="${tid}">Transfer to department</button>` : ''}
+      <button class="btn btn-primary btn-sm" data-respond="resolve" data-tid="${tid}">Resolve</button>
+    </div>
+  </div>`;
+}
+
+// ----- Org Overview (GM) -----
+// Every ticket, org-wide, whose latest reminder has gone overdue and
+// hasn't been attended yet — no department scoping, no status filter.
+// This is what "Pending" means for GM/CEO/CFO/Head-tier oversight: things
+// that were promised a follow-up and haven't gotten one.
+function orgPendingTickets(){
+  return allTicketIds().filter(tid => overdueInfo(tid).overdue);
+}
+function renderOrgOverview(u){
+  const pending = orgPendingTickets();
+  const groups = DEPARTMENTS.map(d=>{
+    const tids = allTicketIds().filter(tid=> deptNameOfTarget(currentOwner(tid).assignedTo)===d.name);
+    return {dept:d, tids};
+  });
+  return `
+  <h1 class="page-title">Org Overview</h1>
+  <p class="page-sub">Read-only view across every department's tickets, wherever they currently sit — nothing here is filtered by department or status. Use Flow Finder to inspect any of them in detail.</p>
+  <div class="section-label" style="color:var(--red);">Pending — reminders triggered, not yet attended (${pending.length})</div>
+  ${pending.length
+    ? `<div class="ticket-list">${pending.map(t=>ticketRow(t, {subLabel:`With ${nameOf(currentOwner(t).assignedTo)} · ${deptNameOfTarget(currentOwner(t).assignedTo)}`})).join('')}</div>`
+    : `<div class="empty">Nothing overdue across the whole org right now.</div>`}
+  ${groups.map(g=>`
+    <div class="section-label">${g.dept.name} (${g.tids.length})</div>
+    ${g.tids.length ? `<div class="ticket-list">${g.tids.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty">Nothing currently in ${g.dept.name}.</div>`}
+  `).join('')}
+  `;
+}
+
+// ---------- Toast ----------
+function toast(msg){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className='toast';
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(()=>el.remove(), 3200);
+}
+
+/* ═══════════ Respond modal — one modal, branches per action ═══════════ */
+function openRespondModal(kind, tid){
+  const actor = currentUser();
+  const backdrop = document.createElement('div');
+  backdrop.className='modal-backdrop';
+  const titles = {
+    accept:'Accept ticket', hold:'Put on hold', resume:'Resume', comment:'Add comment',
+    reminder:'Set reminder', attend:'Attend reminder', transferPerson:'Delegate to a person',
+    transferDept:'Transfer to a department', resolve:'Resolve ticket',
+  };
+  let extra = '';
+  let needsComment = true;
+  if(kind==='reminder'){
+    const in1h = new Date(nowMs()+3600000);
+    const defVal = `${in1h.getFullYear()}-${pad(in1h.getMonth()+1)}-${pad(in1h.getDate())}T${pad(in1h.getHours())}:${pad(in1h.getMinutes())}`;
+    extra = `<div class="field"><label>Remind at</label><input type="datetime-local" id="rm-when" value="${defVal}"></div>`;
+    needsComment = false;
+  } else if(kind==='transferPerson'){
+    const people = assignablePeopleFor(actor.id).filter(e=>e.id!==actor.id).concat(isManager(actor.id)||isGM(actor.id) ? STAFF.filter(e=>e.id!==actor.id) : []);
+    const uniquePeople = [...new Map(people.map(p=>[p.id,p])).values()];
+    extra = `<div class="field"><label>Delegate to</label><select id="rm-person">${uniquePeople.map(e=>`<option value="${e.id}">${nameEmailLabel(e.id)}${e.dept&&dept(e.dept)?` — ${dept(e.dept).name}`:''}</option>`).join('')}</select></div>`;
+  } else if(kind==='transferDept'){
+    extra = `<div class="field"><label>Transfer to department</label><select id="rm-dept">${DEPARTMENTS.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}</select></div>`;
+  } else if(kind==='accept'){
+    needsComment = false;
+  }
+  backdrop.innerHTML = `
+    <div class="modal">
+      <h3>${titles[kind]}</h3>
+      <p class="modal-sub">#${tid} · ${escHtml(ticketTitle(tid))}</p>
+      ${extra}
+      <div class="field"><label>Comment${needsComment?' (required)':' (optional)'}</label><textarea id="rm-comment" placeholder="What's the update?"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="rm-cancel">Cancel</button>
+        <button class="btn btn-primary" id="rm-confirm">Confirm</button>
+      </div>
+    </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector('#rm-cancel').onclick=()=>backdrop.remove();
+  backdrop.querySelector('#rm-confirm').onclick=()=>{
+    const comment = backdrop.querySelector('#rm-comment').value.trim();
+    if(needsComment && !comment){ toast('A comment is required before you can respond.'); return; }
+    const actorId = state.currentUserId;
+    if(kind==='accept'){
+      acceptTicket({ticketId:tid, actorId});
+      toast('Ticket accepted.');
+    } else if(kind==='hold'){
+      holdTicket({ticketId:tid, actorId, reason:comment});
+      toast('Put on hold.');
+    } else if(kind==='resume'){
+      resumeTicket({ticketId:tid, actorId, note:comment});
+      toast('Resumed.');
+    } else if(kind==='comment'){
+      addComment({ticketId:tid, actorId, comment});
+      toast('Comment added.');
+    } else if(kind==='reminder'){
+      const when = backdrop.querySelector('#rm-when').value;
+      if(!when){ toast('Pick a date/time first.'); return; }
+      setReminder({ticketId:tid, actorId, dueAtMs:new Date(when).getTime()});
+      toast('Reminder set.');
+    } else if(kind==='attend'){
+      attendReminder({ticketId:tid, actorId, note:comment});
+      toast('Reminder attended.');
+    } else if(kind==='transferPerson'){
+      const person = backdrop.querySelector('#rm-person').value;
+      transferTicket({ticketId:tid, actorId, targetType:'person', target:person, reason:comment});
+      toast(`Delegated to ${nameOf(person)} — waiting for them to accept.`);
+    } else if(kind==='transferDept'){
+      const deptId = backdrop.querySelector('#rm-dept').value;
+      transferTicket({ticketId:tid, actorId, targetType:'department', target:dept(deptId).name, reason:comment});
+      toast(`Transferred to ${dept(deptId).name} — waiting for someone to accept.`);
+    } else if(kind==='resolve'){
+      resolveTicket({ticketId:tid, actorId, comment});
+      toast('Resolved.');
+    }
+    backdrop.remove();
+    render();
+  };
+}
+
+/* ═══════════ Wiring ═══════════ */
+function wireGlobal(){
+  document.querySelectorAll('[data-ff]').forEach(b=>{
+    b.onclick = ()=>{
+      if(b.dataset.ff==='reset') demoOffsetMs = 0;
+      else demoOffsetMs += parseInt(b.dataset.ff,10);
+      render();
+    };
+  });
+  document.querySelectorAll('[data-view]').forEach(b=>{
+    b.onclick=()=>{ state.view=b.dataset.view; state.ffSelectedTicket=null; render(); };
+  });
+  document.querySelectorAll('[data-mystatus]').forEach(b=>{
+    b.onclick=()=>{ state.myStatusFilter=b.dataset.mystatus; render(); };
+  });
+  document.querySelectorAll('[data-deptstatus]').forEach(b=>{
+    b.onclick=()=>{ state.deptStatusFilter=b.dataset.deptstatus; render(); };
+  });
+  window.__mselRefresh = render;
+  wireFfCategorySelect();
+  wireFfDateFilter();
+  wireFfToolbarScrollGuard();
+  ['ffHandlerMsel','ffDeptMsel'].forEach(id=>{
+    if(document.getElementById(id)){
+      wireMultiSelect(id, ()=>state.ffMulti, (v)=>{ state.ffMulti = v; }, render, {single:true});
+    }
+  });
+  const ffq = document.getElementById('ffQuery');
+  if(ffq){
+    const ev = state.ffMode==='ticket' ? 'input' : 'change';
+    ffq.addEventListener(ev, ()=>{ state.ffQuery = ffq.value; render(); });
+  }
+  const ffFrom = document.getElementById('ffFrom');
+  if(ffFrom) ffFrom.addEventListener('change', ()=>{ state.ffFrom = ffFrom.value; render(); });
+  const ffTo = document.getElementById('ffTo');
+  if(ffTo) ffTo.addEventListener('change', ()=>{ state.ffTo = ffTo.value; render(); });
+  const ffSubjInput = document.getElementById('ffSubjectInput');
+  if(ffSubjInput){
+    ffSubjInput.oninput = ()=> filterFfSubjDrop(ffSubjInput.value);
+    ffSubjInput.onfocus = ()=> openFfSubjDrop();
+    ffSubjInput.onblur = ()=> setTimeout(closeFfSubjDrop, 160);
+  }
+  const ffSubjList = document.getElementById('ffSubjectList');
+  if(ffSubjList){
+    ffSubjList.addEventListener('mousedown', e=>{
+      e.preventDefault();
+      const row = e.target.closest('[data-ff-emp-id]');
+      if(row) selectFfSubjDrop(row.dataset.ffEmpId);
+    });
+  }
+  document.querySelectorAll('[data-open-ticket]').forEach(row=>{
+    row.onclick=()=>{ openTicketInFlow(row.dataset.openTicket); };
+  });
+  const ffBack = document.getElementById('ffBack');
+  if(ffBack) ffBack.onclick=()=>{
+    state.ffSelectedTicket = null;
+    if(state.ffReturnView){ state.view = state.ffReturnView; state.ffReturnView = null; }
+    render();
+  };
+  document.querySelectorAll('[data-respond]').forEach(b=>{
+    b.onclick=()=> openRespondModal(b.dataset.respond, b.dataset.tid);
+  });
+  const newTicketBtn = document.getElementById('newTicketBtn');
+  if(newTicketBtn) newTicketBtn.onclick = openNewTicketDrawer;
+}
+
+/* ═══════════ New Ticket drawer ═══════════
+   Captures the fixed E2 (Subject Employee) up front, and lets creation
+   itself be a delegation: route straight to a Department queue OR
+   directly to a named Person — both supported, matching TK-5001 (dept)
+   and TK-5002 (direct-to-person) in the real sample data. */
+let newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:''};
+/* ═══════════ Employee search dropdown — same render method as docPortal's
+   filterDrop: plain search box + highlighted name/id list, instead of the
+   checkbox multi-select. Used only for the New Ticket "Subject Employee"
+   field (ap2_employee cache). ═══════════ */
+/* ═══════════ Employee search dropdown — same render method as docPortal's
+   filterDrop: plain search box + highlighted name/id list, instead of the
+   checkbox multi-select. Used only for the New Ticket "Subject Employee"
+   field (ap2_employee cache).
+   Like docPortal, the input/list DOM nodes are rendered once and then
+   patched directly (list.innerHTML=...) rather than being torn down and
+   rebuilt on every keystroke/click — a full-page re-render mid-mousedown
+   was racing against the click and closing the dropdown before the
+   selection registered. */
+function empDropSelectedLabel(){
+  const id = newTicketForm.subjectEmployee;
+  if(!id) return '';
+  const e = EMPLOYEES.find(x=>String(x.id)===String(id));
+  return e ? employeeLabel(e) : id;
+}
+function empSearchDropShell(){
+  return `
+  <div class="emp-drop" id="ntSubjectDrop">
+    <input type="text" class="emp-drop-input" id="ntSubjectInput" autocomplete="off"
+      placeholder="${EMPLOYEES.length?'Search by ID or name…':'No employees in cache'}"
+      value="${escAttr(empDropSelectedLabel())}">
+    <div class="dropdown-list" id="ntSubjectList"></div>
+  </div>`;
+}
+function filterEmpDrop(q){
+  const list = document.getElementById('ntSubjectList');
+  if(!list) return;
+  const lq = q.toLowerCase().trim();
+  const hits = (lq ? EMPLOYEES.filter(e=>String(e.id).toLowerCase().includes(lq)||e.name.toLowerCase().includes(lq)) : EMPLOYEES).slice(0,15);
+  const escRe = s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const hl = v=>{
+    const safe = escHtml(v);
+    return lq ? safe.replace(new RegExp(`(${escRe(lq)})`,'gi'),'<em>$1</em>') : safe;
+  };
+  let html;
+  if(!EMPLOYEES.length){
+    html = `<div class="di no-match">No employees in cache</div>`;
+  }else if(!hits.length){
+    html = `<div class="di no-match">No employees found</div>`;
+  }else{
+    html = hits.map(e=>`<div class="di" data-emp-drop-id="${escAttr(e.id)}">
+        <div class="dn">${hl(e.name)}</div>
+        <div class="ds">ID: ${hl(String(e.id))}</div>
+      </div>`).join('');
+  }
+  if(lq && !hits.some(e=>String(e.id).toLowerCase()===lq)){
+    html += `<div class="di emp-drop-add" data-emp-drop-add="1"><i class="ti ti-plus"></i><span>Use "${escHtml(q.trim())}" as new employee code</span></div>`;
+  }
+  list.innerHTML = html;
+  list.classList.add('open');
+  const wrap = document.getElementById('ntSubjectDrop'); if(wrap) wrap.classList.add('open');
+}
+function openEmpDrop(){
+  const input = document.getElementById('ntSubjectInput');
+  filterEmpDrop(input ? input.value : '');
+}
+function closeEmpDrop(){
+  const list = document.getElementById('ntSubjectList'); if(list) list.classList.remove('open');
+  const wrap = document.getElementById('ntSubjectDrop'); if(wrap) wrap.classList.remove('open');
+}
+function selectEmpDrop(id){
+  newTicketForm.subjectEmployee = String(id);
+  const input = document.getElementById('ntSubjectInput');
+  if(input) input.value = empDropSelectedLabel();
+  closeEmpDrop();
+}
+
+/* ═══════════ Target (Department / Person) search dropdown — same
+   single-search-box method as the Subject Employee field above, used for
+   the New Ticket "Route to" picker. Replaces the old checkbox-panel-style
+   multi-select (which needed an extra click to open, then typing into a
+   second, nested search box — the pattern flagged as unprofessional).
+   Options come from activeDeptOptions()/activePersonOptions() depending on
+   newTicketForm.targetType. ═══════════ */
+function targetDropOptions(){
+  return newTicketForm.targetType==='department'
+    ? activeDeptOptions().map(d=>({value:d.name, label:d.name, sub:''}))
+    : activePersonOptions().map(p=>({value:p.email, label:p.name, sub:p.email}));
+}
+function targetDropSelectedLabel(){
+  const val = newTicketForm.target;
+  if(!val) return '';
+  if(newTicketForm.targetType==='department') return val;
+  const u = userFor(val);
+  return u ? u.name : val;
+}
+function targetSearchDropShell(){
+  const f = newTicketForm;
+  const opts = targetDropOptions();
+  const placeholder = opts.length
+    ? (f.targetType==='department' ? 'Search departments…' : 'Search by name or email…')
+    : (f.targetType==='department' ? 'No departments yet — type to add one' : 'No people available');
+  return `
+  <div class="emp-drop" id="ntTargetDrop">
+    <input type="text" class="emp-drop-input" id="ntTargetInput" autocomplete="off"
+      placeholder="${escAttr(placeholder)}"
+      value="${escAttr(targetDropSelectedLabel())}">
+    <div class="dropdown-list" id="ntTargetList"></div>
+  </div>`;
+}
+function filterTargetDrop(q){
+  const list = document.getElementById('ntTargetList');
+  if(!list) return;
+  const f = newTicketForm;
+  const opts = targetDropOptions();
+  const lq = q.toLowerCase().trim();
+  const hits = (lq ? opts.filter(o=> o.label.toLowerCase().includes(lq) || (o.sub||'').toLowerCase().includes(lq)) : opts).slice(0,15);
+  const escRe = s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const hl = v=>{
+    const safe = escHtml(v);
+    return lq ? safe.replace(new RegExp(`(${escRe(lq)})`,'gi'),'<em>$1</em>') : safe;
+  };
+  let html;
+  if(!opts.length && f.targetType!=='department'){
+    html = `<div class="di no-match">No people available</div>`;
+  }else if(!hits.length){
+    html = `<div class="di no-match">No matches</div>`;
+  }else{
+    html = hits.map(o=>`<div class="di" data-target-drop-value="${escAttr(o.value)}">
+        <div class="dn">${hl(o.label)}</div>
+        ${o.sub?`<div class="ds">${hl(o.sub)}</div>`:''}
+      </div>`).join('');
+  }
+  if(f.targetType==='department' && lq && !hits.some(o=>o.label.toLowerCase()===lq)){
+    html += `<div class="di emp-drop-add" data-target-drop-add="1"><span>+ Use "${escHtml(q.trim())}" as new department name</span></div>`;
+  }
+  list.innerHTML = html;
+  list.classList.add('open');
+  const wrap = document.getElementById('ntTargetDrop'); if(wrap) wrap.classList.add('open');
+}
+function openTargetDrop(){
+  const input = document.getElementById('ntTargetInput');
+  filterTargetDrop(input ? input.value : '');
+}
+function closeTargetDrop(){
+  const list = document.getElementById('ntTargetList'); if(list) list.classList.remove('open');
+  const wrap = document.getElementById('ntTargetDrop'); if(wrap) wrap.classList.remove('open');
+}
+function selectTargetDrop(value){
+  newTicketForm.target = String(value);
+  const input = document.getElementById('ntTargetInput');
+  if(input) input.value = targetDropSelectedLabel();
+  closeTargetDrop();
+}
+
+function newTicketFormHtml(u){
+  const f = newTicketForm;
+  return `
+    <div class="field">
+      <label>Subject Employee (E2)
+        <span class="cache-ping ${EMPLOYEE_CACHE_OK?'ok':'warn'}" title="${EMPLOYEE_CACHE_OK?'Employee roster loaded from ap2_employee cache':'ap2_employee cache unavailable — no employee roster loaded'}"></span>
+      </label>
+      ${empSearchDropShell()}
+    </div>
+    <div class="field">
+
+      <label>Ticket name</label>
+      <input type="text" id="nt-title" placeholder="e.g. SIM package renewal" value="${f.title.replace(/"/g,'&quot;')}">
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="nt-desc" placeholder="What's going on, and what do you need?">${f.description}</textarea>
+    </div>
+    <div class="form-grid">
+      <div class="field">
+        <label>Priority</label>
+        <select id="nt-priority">
+          ${['Critical','High','Medium','Low'].map(p=>`<option ${f.priority===p?'selected':''}>${p}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Route to</label>
+        <div class="filter-pills">
+          <button type="button" class="filter-btn ${f.targetType==='department'?'active':''}" data-target-type="department">Department</button>
+          <button type="button" class="filter-btn ${f.targetType==='person'?'active':''}" data-target-type="person">Person</button>
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <label>${f.targetType==='department' ? 'Department' : 'Delegate to'}</label>
+      <div id="ntTargetWrap">${targetSearchDropShell()}</div>
+      <span class="hint">${f.targetType==='department' ? "Sits as NEW in that department's queue until someone accepts it." : "Still goes to NEW — they'll need to Accept it, exactly like a department hand-off."}</span>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="nt-submit">Create ticket</button>
+      <button class="btn btn-ghost" id="nt-reset">Clear</button>
+    </div>`;
+}
+function openNewTicketDrawer(){
+  if(document.getElementById('ticketDrawer')) return;
+  const u = currentUser();
+  const drawer = document.createElement('aside');
+  drawer.className = 'ticket-drawer';
+  drawer.id = 'ticketDrawer';
+  drawer.innerHTML = `
+    <div class="drawer-head">
+      <div>
+        <h2>New Ticket</h2>
+      </div>
+      <button class="drawer-close" id="drawerClose" aria-label="Close">✕</button>
+    </div>
+    <div class="drawer-body" id="drawerBody">${newTicketFormHtml(u)}</div>`;
+  document.body.appendChild(drawer);
+  document.body.classList.add('drawer-open');
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=> drawer.classList.add('open')); });
+  document.addEventListener('keydown', newTicketDrawerEscHandler);
+  document.addEventListener('mousedown', newTicketDrawerOutsideClick);
+  wireNewTicketDrawerFields(u);
+  document.getElementById('drawerClose').onclick = closeNewTicketDrawer;
+}
+function newTicketDrawerEscHandler(e){ if(e.key==='Escape') closeNewTicketDrawer(); }
+function newTicketDrawerOutsideClick(e){
+  const drawer = document.getElementById('ticketDrawer');
+  const fab = document.getElementById('newTicketBtn');
+  if(!drawer) return;
+  if(drawer.contains(e.target) || (fab && fab.contains(e.target))) return;
+  closeNewTicketDrawer();
+}
+function closeNewTicketDrawer(){
+  const drawer = document.getElementById('ticketDrawer');
+  if(!drawer) return;
+  drawer.classList.remove('open');
+  document.body.classList.remove('drawer-open');
+  document.removeEventListener('keydown', newTicketDrawerEscHandler);
+  document.removeEventListener('mousedown', newTicketDrawerOutsideClick);
+  setTimeout(()=>{ drawer.remove(); }, 220);
+}
+function refreshNewTicketDrawer(u){
+  const body = document.getElementById('drawerBody');
+  if(!body) return;
+  body.innerHTML = newTicketFormHtml(u);
+  wireNewTicketDrawerFields(u);
+}
+function wireNewTicketDrawerFields(u){
+  const empInput = document.getElementById('ntSubjectInput');
+  if(empInput){
+    empInput.oninput = ()=> filterEmpDrop(empInput.value);
+    empInput.onfocus = ()=> openEmpDrop();
+    empInput.onblur = ()=> setTimeout(closeEmpDrop, 160);
+  }
+  const empList = document.getElementById('ntSubjectList');
+  if(empList){
+    empList.addEventListener('mousedown', e=>{
+      e.preventDefault();
+      const row = e.target.closest('[data-emp-drop-id]');
+      if(row){ selectEmpDrop(row.dataset.empDropId); return; }
+      const addRow = e.target.closest('[data-emp-drop-add]');
+      if(addRow){ const empInput2 = document.getElementById('ntSubjectInput'); selectEmpDrop((empInput2?empInput2.value:'').trim()); }
+    });
+  }
+  const t = document.getElementById('nt-title'); if(t) t.oninput = ()=>{ newTicketForm.title = t.value; };
+  const d = document.getElementById('nt-desc'); if(d) d.oninput = ()=>{ newTicketForm.description = d.value; };
+  const p = document.getElementById('nt-priority'); if(p) p.onchange = ()=>{ newTicketForm.priority = p.value; };
+  document.querySelectorAll('[data-target-type]').forEach(b=>{
+    b.onclick = ()=>{ newTicketForm.targetType = b.dataset.targetType; newTicketForm.target=''; refreshNewTicketDrawer(u); };
+  });
+  const targetInput = document.getElementById('ntTargetInput');
+  if(targetInput){
+    targetInput.oninput = ()=> filterTargetDrop(targetInput.value);
+    targetInput.onfocus = ()=> openTargetDrop();
+    targetInput.onblur = ()=> setTimeout(closeTargetDrop, 160);
+  }
+  const targetList = document.getElementById('ntTargetList');
+  if(targetList){
+    targetList.addEventListener('mousedown', e=>{
+      e.preventDefault();
+      const row = e.target.closest('[data-target-drop-value]');
+      if(row){ selectTargetDrop(row.dataset.targetDropValue); return; }
+      const addRow = e.target.closest('[data-target-drop-add]');
+      if(addRow){ const targetInput2 = document.getElementById('ntTargetInput'); selectTargetDrop((targetInput2?targetInput2.value:'').trim()); }
+    });
+  }
+  const submit = document.getElementById('nt-submit');
+  if(submit) submit.onclick = ()=>{
+    const f = newTicketForm;
+    let subjectEmployee = f.subjectEmployee;
+    if(!subjectEmployee){ toast('Select (or enter) the Subject Employee (E2) — who this ticket is about.'); return; }
+    if(!f.title.trim()){ toast('Give this a name first.'); return; }
+    let target = f.target;
+    if(f.targetType==='department' && target==='__new__'){ target = (f.targetNew||'').trim(); }
+    if(!target){ toast(f.targetType==='department' ? 'Choose or name a department.' : 'Choose who to delegate this to.'); return; }
+    const tid = createTicket({
+      creatorId: state.currentUserId, title:f.title, description:f.description||'(no description provided)',
+      priority:f.priority, subjectType:'Employee', subjectEmployeeId:subjectEmployee,
+      targetType:f.targetType, target,
+    });
+    toast(`Ticket ${tid} created for ${subjectEmployee}, routed to ${nameOf(target)}.`);
+    newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:''};
+    closeNewTicketDrawer();
+    openTicketInFlow(tid);
+  };
+  const reset = document.getElementById('nt-reset');
+  if(reset) reset.onclick = ()=>{ newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:''}; refreshNewTicketDrawer(u); };
+}
+
+// periodic re-render so overdue flags stay live without user action
+setInterval(()=>{
+  if(state.view==='my' || state.view==='dept' || (state.view==='flow' && !state.ffSelectedTicket) || state.view==='org'){
+    safeRender();
+  }
+}, 15000);
+
+// ---------- Boot ----------
+loadStaffMeta();
+loadOverlay();
+applyOverlay();          // show this browser's own local tickets immediately, if any
+ME = bootstrapIdentity();
+discoverDirectory(EVENTS, TICKET_MASTER);
+state.currentUserId = ME;
+render();
+loadTickets();            // then read the real ap2_ticLog cache (IndexedDB) and merge it in — Users
+                          // rows arrive with it, so re-resolve identity once real data is in.
+loadEmployees();          // ap2_employee cache, for the New Ticket Subject Employee picker
+async function _reboundIdentityAfterLoad(){
+  ME = bootstrapIdentity();
+  if(!state.currentUserId || state.currentUserId===ME) return;
+  state.currentUserId = ME;
+  discoverDirectory(EVENTS, TICKET_MASTER);
+  safeRender();
+}
+setTimeout(_reboundIdentityAfterLoad, 400);
+
+</script>
+</body>
+</html>
