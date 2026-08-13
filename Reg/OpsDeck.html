@@ -90,12 +90,31 @@
     padding:7px 10px;font-size:13px;max-width:190px;
   }
   .role-pill{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--teal);border:1px solid var(--teal-dim);background:var(--teal-dim);padding:3px 8px;border-radius:20px;font-family:var(--font-mono);white-space:nowrap;flex-shrink:0;}
+  .profile-wrap{position:relative;flex:none;}
+  .profile-trigger{
+    display:flex;align-items:center;gap:8px;background:var(--panel-raised);border:1px solid var(--border);
+    border-radius:20px;padding:4px 12px 4px 4px;cursor:pointer;color:var(--text);transition:.15s;
+  }
+  .profile-trigger:hover{background:var(--panel-hover);border-color:var(--teal-dim);}
+  .profile-trigger-avatar{
+    width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:700;font-size:11px;background:var(--panel);color:var(--teal);
+    border:1px solid var(--border);flex:none;
+  }
+  .profile-trigger-text{display:flex;flex-direction:column;align-items:flex-start;line-height:1.3;gap:2px;}
+  .profile-trigger-text .userbox-name{font-size:12.5px;font-weight:600;white-space:nowrap;color:var(--text);}
+  .profile-dropdown{
+    position:absolute;top:calc(100% + 10px);right:0;width:270px;max-width:88vw;z-index:150;
+    box-shadow:0 16px 40px rgba(0,0,0,.5);animation:slidein .16s ease;
+  }
 
   @media (max-width:760px){
     .topbar{padding:12px 14px;}
     .topbar-row1{flex-wrap:wrap;row-gap:10px;}
     .userbox{width:100%;justify-content:space-between;order:3;}
     .userbox select{max-width:none;flex:1;}
+    .profile-wrap{order:3;}
+    .profile-dropdown{right:0;left:auto;}
     nav.tabs{width:100%;order:2;}
     .topbar-spacer{display:none;}
   }
@@ -547,20 +566,6 @@
   .modal h3{font-family:var(--font-display);margin:0 0 4px;font-size:17px;}
   .modal .modal-sub{color:var(--text-muted);font-size:12.5px;margin:0 0 16px;}
   .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
-
-  /* ---------- Demo fast-forward control ---------- */
-  .demo-clock{display:flex;align-items:center;gap:6px;flex-shrink:0;}
-  .demo-clock .dc-label{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-right:2px;white-space:nowrap;}
-  .demo-clock .dc-offset{font-family:var(--font-mono);font-size:10.5px;color:var(--amber);white-space:nowrap;}
-  .demo-clock button{
-    background:var(--panel-raised);border:1px solid var(--border);color:var(--text-dim);
-    padding:5px 8px;border-radius:5px;font-family:var(--font-mono);font-size:11px;flex-shrink:0;
-  }
-  .demo-clock button:hover{color:var(--amber);border-color:var(--amber-dim);}
-  @media (max-width:760px){
-    .demo-clock{width:100%;order:4;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
-    .demo-clock::-webkit-scrollbar{display:none;}
-  }
 
   /* ---------- Page-wide responsive rules ---------- */
   @media (max-width:640px){
@@ -1740,6 +1745,7 @@ const state = {
   myStatusFilter: 'all',
   deptStatusFilter: 'all',
   notifOpen: false, // bell dropdown, top bar
+  profileOpen: false, // profile dropdown, top bar
 };
 // Dismissed-from-bell ticket IDs — session-only (not persisted, not synced
 // to the cache); a dismiss just hides it from this browser tab's dropdown.
@@ -1965,18 +1971,16 @@ function renderTopbar(u){
       <div class="topbar-spacer"></div>
       ${renderNotifBell(u)}
       <button class="fab-new" id="newTicketBtn" title="New Ticket" aria-label="New Ticket">+</button>
-      <div class="userbox">
-        <span class="role-pill">${roleLabel}</span>
-        <span class="userbox-name">${nameOf(u.id)}${u.dept && dept(u.dept) ? ` · ${dept(u.dept).name}` : ''}</span>
+      <div class="profile-wrap">
+        <button type="button" class="profile-trigger" id="profileBtn" aria-haspopup="true" aria-expanded="${state.profileOpen?'true':'false'}" aria-label="Your profile">
+          <span class="profile-trigger-avatar">${nameOf(u.id).slice(0,2).toUpperCase()}</span>
+          <span class="profile-trigger-text">
+            <span class="userbox-name">${nameOf(u.id)}</span>
+            <span class="role-pill">${roleLabel}</span>
+          </span>
+        </button>
+        ${state.profileOpen ? profileCard(u, 'profile-dropdown') : ''}
       </div>
-    </div>
-    <div class="demo-clock" title="Fast-forward time to see the reminder engine escalate without waiting real hours">
-      <span class="dc-label">Fast-forward</span>
-      <button data-ff="900000">+15m</button>
-      <button data-ff="3600000">+1h</button>
-      <button data-ff="14400000">+4h</button>
-      <button data-ff="reset">reset</button>
-      ${demoOffsetMs>0 ? `<span class="dc-offset">+${fmtDur(demoOffsetMs)} ahead</span>` : ''}
     </div>
   </div>`;
 }
@@ -2068,29 +2072,36 @@ function renderMyPortal(u){
   };
 
   const body = filter==='all'
-    ? CATEGORY_FILTERS.filter(f=>f!=='all').map(f=>{
-        const ids = sections[f];
-        return `
-        <div class="section-label" style="margin-top:22px;">${categoryFilterLabel(f)} (${ids.length})</div>
-        ${ids.length ? `<div class="ticket-list">${ids.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">Nothing here yet.</div>`}`;
-      }).join('')
+    ? mergedTicketList(sections)
     : (sections[filter] && sections[filter].length
         ? `<div class="ticket-list">${sections[filter].map(t=>activityRow(t)).join('')}</div>`
         : `<div class="empty"><b>Nothing here.</b>No tickets in ${categoryFilterLabel(filter)} right now.</div>`);
 
   return `
-  <div class="grid2">
-    ${profileCard(u)}
-    <div>
-      <h1 class="page-title">My Portal</h1>
-      <p class="page-sub">Tickets relevant to you, grouped by where they stand. Tap one to see the full timeline and respond.</p>
-      ${categoryFilterBar(filter, 'mystatus')}
-      ${body}
-    </div>
-  </div>`;
+  <h1 class="page-title">My Portal</h1>
+  <p class="page-sub">Tickets relevant to you, grouped by where they stand. Tap one to see the full timeline and respond.</p>
+  ${categoryFilterBar(filter, 'mystatus')}
+  ${body}
+  `;
 }
 
-function profileCard(u){
+// "All" used to repeat every category (Attention/Raised/Accepted/
+// Transferred/Delegated) as its own labelled sub-section — a ticket that's
+// e.g. both something I raised AND currently have accepted showed up twice.
+// This instead flattens every category into one deduped list, newest first,
+// same as picking any single filter pill.
+function mergedTicketList(sections){
+  const seen = new Set();
+  const ids = [];
+  Object.values(sections).forEach(list=>{
+    list.forEach(tid=>{ if(!seen.has(tid)){ seen.add(tid); ids.push(tid); } });
+  });
+  if(!ids.length) return `<div class="empty">Nothing here yet.</div>`;
+  ids.sort((a,b)=> currentOwner(b).eventId - currentOwner(a).eventId);
+  return `<div class="ticket-list">${ids.map(t=>activityRow(t)).join('')}</div>`;
+}
+
+function profileCard(u, extraClass=''){
   const d = u.dept ? dept(u.dept) : null;
   const openCt = openForMe(u).length;
   const resolvedCt = allTicketIds().filter(tid=>{
@@ -2099,7 +2110,7 @@ function profileCard(u){
   const requestedCt = raisedByMe(u).length;
   const roleName = (userFor(u.id) && userFor(u.id).roleTitle) || (isGM(u.id) ? 'General Manager' : isManager(u.id) ? 'Manager' : 'Worker');
   return `
-  <div class="card profile-card">
+  <div class="card profile-card${extraClass?(' '+extraClass):''}">
     <div class="avatar">${nameOf(u.id).slice(0,2).toUpperCase()}</div>
     <h2>${nameOf(u.id)}</h2>
     <p class="role-line">${roleName}${d?` · ${d.name}`:''}</p>
@@ -2134,12 +2145,7 @@ function renderDeptReadOnly(u, opts={}){
   };
 
   const body = filter==='all'
-    ? CATEGORY_FILTERS.filter(f=>f!=='all').map(f=>{
-        const ids = sections[f];
-        return `
-        <div class="section-label" style="margin-top:22px;">${categoryFilterLabel(f)} (${ids.length})</div>
-        ${ids.length ? `<div class="ticket-list">${ids.map(t=>activityRow(t)).join('')}</div>` : `<div class="empty">Nothing here yet for ${d.name}.</div>`}`;
-      }).join('')
+    ? mergedTicketList(sections)
     : (sections[filter] && sections[filter].length
         ? `<div class="ticket-list">${sections[filter].map(t=>activityRow(t)).join('')}</div>`
         : `<div class="empty"><b>Nothing here.</b>No tickets in ${categoryFilterLabel(filter)} for ${d.name}.</div>`);
@@ -2999,15 +3005,18 @@ function wireGlobal(){
       if(openRow){ state.notifOpen = false; openTicketInFlow(openRow.dataset.notifOpen); }
     });
   }
+  const profileBtn = document.getElementById('profileBtn');
+  if(profileBtn) profileBtn.onclick = (e)=>{ e.stopPropagation(); state.profileOpen = !state.profileOpen; render(); };
 }
-// Click anywhere outside the bell/dropdown closes it — wired once, not
-// re-bound on every render (unlike the handlers above, which live inside
-// the innerHTML that gets replaced each render).
+// Click anywhere outside the bell/dropdown or profile trigger/dropdown
+// closes whichever is open — wired once, not re-bound on every render
+// (unlike the handlers above, which live inside the innerHTML that gets
+// replaced each render).
 document.addEventListener('click', (e)=>{
-  if(!state.notifOpen) return;
-  if(e.target.closest('.bell-wrap')) return;
-  state.notifOpen = false;
-  render();
+  let changed = false;
+  if(state.notifOpen && !e.target.closest('.bell-wrap')){ state.notifOpen = false; changed = true; }
+  if(state.profileOpen && !e.target.closest('.profile-wrap')){ state.profileOpen = false; changed = true; }
+  if(changed) render();
 });
 
 /* ═══════════ New Ticket drawer ═══════════
