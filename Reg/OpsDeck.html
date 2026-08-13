@@ -111,6 +111,18 @@
     box-shadow:0 16px 40px rgba(0,0,0,.5);animation:slidein .16s ease;
   }
 
+  /* ---- Topbar ticket stats: numeric Open/Resolved/Requested cards that
+     live directly in the topbar, independent of the profile-wrap trigger/
+     dropdown, so the counts are visible without opening the profile card. */
+  .topbar-stats{display:flex;align-items:stretch;gap:6px;flex-shrink:0;}
+  .tb-stat{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+    background:var(--panel-raised);border:1px solid var(--border);border-radius:8px;
+    padding:4px 11px;min-width:44px;
+  }
+  .tb-stat .tb-n{font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--teal);line-height:1.15;}
+  .tb-stat .tb-l{font-size:8.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;}
+
   @media (max-width:760px){
     .topbar{padding:12px 14px;}
     .topbar-row1{flex-wrap:wrap;row-gap:10px;}
@@ -120,6 +132,12 @@
     .profile-dropdown{right:0;left:auto;}
     nav.tabs{width:100%;order:2;}
     .topbar-spacer{display:none;}
+    .topbar-stats{order:4;width:100%;justify-content:space-between;}
+    .tb-stat{flex:1;}
+  }
+  @media (max-width:400px){
+    .tb-stat .tb-l{display:none;}
+    .tb-stat{padding:5px 8px;min-width:34px;}
   }
 
   /* ---------- Layout ---------- */
@@ -388,18 +406,32 @@
   .ff-searchbox:has(.emp-drop.open){border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim);}
   .ff-box-divider{width:1px;align-self:stretch;background:var(--border);margin:7px 0;flex-shrink:0;}
 
-  /* Category segment — left side of the combo box, opens the searchable list */
-  .ff-catsel{position:relative;flex:0 0 172px;width:172px;}
+  /* Category segment — left side of the combo box, opens the searchable list.
+     Sized to its content (not a fixed width) so labels like "Subject
+     Employee" always render in full on one line instead of getting clipped
+     mid-word; the ff-toolbar's own horizontal scroll (see above) is what
+     absorbs any overflow on narrow screens, matching the "keeps every
+     control at full, readable width" design used for the rest of the row. */
+  .ff-catsel{position:relative;flex:0 0 auto;width:auto;max-width:220px;}
   .ff-cat-trigger{
     display:flex;align-items:center;gap:8px;width:100%;height:100%;
     background:none;border:none;color:var(--text);
-    padding:9px 8px 9px 12px;font-size:13.5px;font-weight:600;cursor:pointer;
+    padding:9px 10px 9px 12px;font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap;
     border-radius:7px 0 0 7px;transition:background .12s;
   }
   .ff-cat-trigger:hover{background:var(--panel-hover);}
   .ff-cat-trigger .ff-cat-icon{color:var(--teal);flex-shrink:0;display:inline-flex;}
-  .ff-cat-trigger .ff-cat-label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;}
+  .ff-cat-trigger .ff-cat-label{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;}
   .ff-cat-trigger .ff-cat-caret{color:var(--text-muted);font-size:10px;flex-shrink:0;transition:transform .18s ease;}
+  /* Small screens: collapse the trigger to icon-only so a long label like
+     "Subject Employee" doesn't eat the whole toolbar width — the full name
+     is still available as a tooltip/aria-label and inside the open panel. */
+  @media (max-width:480px){
+    .ff-catsel{max-width:none;}
+    .ff-cat-trigger{padding:9px 10px;gap:0;}
+    .ff-cat-trigger .ff-cat-label{display:none;}
+    .ff-cat-trigger .ff-cat-caret{margin-left:4px;}
+  }
   .ff-catsel.open .ff-cat-trigger .ff-cat-caret{transform:rotate(180deg);color:var(--teal);}
   .ff-cat-panel{
     position:fixed;width:240px;z-index:120;
@@ -1981,6 +2013,14 @@ function renderTopbar(u){
   const myCount = openForMe(u).length;
   const dCount = manager && u.dept ? openForDept(u.dept).length : 0;
   const orgCount = gm ? orgOpenCount() : 0;
+  // Same numeric ticket data shown inside the profile card's stat-strip,
+  // surfaced here too so it's readable straight off the topbar without
+  // having to open the profile-wrap dropdown.
+  const tbOpenCt = myCount;
+  const tbResolvedCt = allTicketIds().filter(tid=>{
+    const o=currentOwner(tid); return o && o.assignedTo===u.id && isTerminal(o.status);
+  }).length;
+  const tbRequestedCt = raisedByMe(u).length;
   return `
   <div class="topbar">
     <div class="topbar-row1">
@@ -1993,6 +2033,11 @@ function renderTopbar(u){
         ${gm ? `<button data-view="org" class="${state.view==='org'?'active':''}">${ICON_ORG}<span>Org Overview</span>${orgCount?`<span class="badge-count">${orgCount}</span>`:''}</button>`:''}
       </nav>
       <div class="topbar-spacer"></div>
+      <div class="topbar-stats" aria-label="Your ticket totals">
+        <div class="tb-stat"><span class="tb-n">${tbOpenCt}</span><span class="tb-l">Open</span></div>
+        <div class="tb-stat"><span class="tb-n">${tbResolvedCt}</span><span class="tb-l">Resolved</span></div>
+        <div class="tb-stat"><span class="tb-n">${tbRequestedCt}</span><span class="tb-l">Requested</span></div>
+      </div>
       ${renderNotifBell(u)}
       <button class="fab-new" id="newTicketBtn" title="New Ticket" aria-label="New Ticket">${ICON_PLUS}</button>
       <div class="profile-wrap">
@@ -2238,7 +2283,7 @@ function renderFfCategorySelect(){
   const filtered = q ? FF_MODE_OPTS.filter(([,l])=>l.toLowerCase().includes(q)) : FF_MODE_OPTS;
   return `
   <div class="ff-catsel${st.open?' open':''}" id="${id}">
-    <button type="button" class="ff-cat-trigger" data-ffcat-toggle>
+    <button type="button" class="ff-cat-trigger" data-ffcat-toggle title="${escAttr(ffCategoryLabel(state.ffMode))}" aria-label="Search category: ${escAttr(ffCategoryLabel(state.ffMode))}">
       <span class="ff-cat-icon">${FF_CAT_ICONS[state.ffMode]||''}</span>
       <span class="ff-cat-label">${escHtml(ffCategoryLabel(state.ffMode))}</span>
       <span class="ff-cat-caret">▾</span>
