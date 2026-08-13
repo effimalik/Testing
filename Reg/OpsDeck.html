@@ -35,6 +35,7 @@
     --font-mono:'IBM Plex Mono', monospace;
     --font-body:'Inter', sans-serif;
     --radius:10px;
+    --topbar-h:64px;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -76,7 +77,9 @@
   nav.tabs button{
     background:none;border:none;color:var(--text-muted);font-size:13.5px;font-weight:500;
     padding:8px 14px;border-radius:7px;transition:all .15s;position:relative;white-space:nowrap;flex-shrink:0;
+    display:inline-flex;align-items:center;gap:7px;
   }
+  nav.tabs button svg{width:15px;height:15px;flex:none;}
   nav.tabs button:hover{color:var(--text);background:var(--panel-raised);}
   nav.tabs button.active{color:var(--bg);background:var(--teal);}
   .badge-count{
@@ -137,10 +140,13 @@
   .profile-card .role-line{color:var(--text-muted);font-size:13px;margin:0 0 14px;}
   .profile-card .meta-row{display:flex;justify-content:space-between;font-size:12.5px;padding:8px 0;border-top:1px solid var(--border-soft);color:var(--text-dim);}
   .profile-card .meta-row span:first-child{color:var(--text-muted);}
-  .stat-strip{display:flex;gap:10px;margin-top:14px;}
-  .stat-chip{flex:1;background:var(--panel-raised);border:1px solid var(--border-soft);border-radius:8px;padding:9px 8px;text-align:center;}
-  .stat-chip .n{font-family:var(--font-mono);font-size:18px;font-weight:600;}
-  .stat-chip .l{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;}
+  .stat-strip{display:flex;gap:8px;margin-top:14px;}
+  .stat-chip{
+    flex:1;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:12px 8px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.25);
+  }
+  .stat-chip .n{font-family:var(--font-mono);font-size:19px;font-weight:700;color:var(--teal);}
+  .stat-chip .l{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:3px;}
   .access-chip{font-size:10px;font-family:var(--font-mono);border:1px solid var(--border-soft);color:var(--text-dim);background:var(--panel-raised);padding:3px 7px;border-radius:5px;display:inline-flex;align-items:center;gap:5px;}
   .access-chip .flags{color:var(--teal);font-weight:700;letter-spacing:1px;}
   .access-chip.no-access{color:var(--text-muted);}
@@ -500,6 +506,7 @@
     box-shadow:0 2px 8px rgba(79,209,197,.25);transition:.15s;margin-right:2px;
   }
   .fab-new:hover{background:#63DBD0;transform:translateY(-1px);box-shadow:0 4px 12px rgba(79,209,197,.35);}
+  .fab-new svg{width:17px;height:17px;}
   .bell-wrap{position:relative;flex:none;margin-right:6px;}
   .bell-btn{
     width:32px;height:32px;border-radius:50%;border:1px solid var(--border);flex:none;
@@ -539,10 +546,9 @@
   .notif-dropdown-item .notif-title{font-size:13px;}
   .notif-dropdown-item .notif-sub{font-size:11.5px;}
   .notif-dropdown-empty{padding:24px 16px;text-align:center;color:var(--text-muted);font-size:12.5px;}
-  #app{transition:margin-right .22s ease;}
-  body.drawer-open #app{margin-right:min(420px,92vw);}
+  body.drawer-open .page{margin-right:min(420px,92vw);transition:margin-right .22s ease;}
   .ticket-drawer{
-    position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);
+    position:fixed;top:var(--topbar-h,64px);right:0;bottom:0;width:min(420px,92vw);
     background:var(--panel);border-left:1px solid var(--border);
     box-shadow:-12px 0 32px rgba(0,0,0,.45);
     transform:translateX(100%);transition:transform .22s ease;
@@ -1854,7 +1860,18 @@ function render(){
     <div class="page">${renderView(u)}</div>
   `;
   wireGlobal();
+  syncTopbarHeight();
 }
+// Keeps --topbar-h in sync with the real rendered topbar (it can be one or
+// two rows depending on viewport width / how many nav tabs wrap), so the
+// New Ticket drawer — and anything else pinned under the topbar — sits
+// right below it instead of overlapping it or guessing a fixed height.
+function syncTopbarHeight(){
+  const bar = document.querySelector('.topbar');
+  if(!bar) return;
+  document.documentElement.style.setProperty('--topbar-h', bar.offsetHeight + 'px');
+}
+window.addEventListener('resize', ()=>{ syncTopbarHeight(); });
 // Cache reads (Users, ap2_employee) finish asynchronously and can land after
 // the New Ticket drawer is already open. Follows docPortal's
 // _refreshOpenDropdowns()/filterDrop() method: a live cache update never
@@ -1920,6 +1937,13 @@ function deptQueueCount(deptId){
 function orgOpenCount(){ return allTicketIds().filter(tid=>!isTerminal(currentOwner(tid).status)).length; }
 
 const ICON_BELL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`;
+// Topbar nav-tab / new-ticket icons — same stroke-based style as ICON_BELL
+// and the existing ICON_PERSON/ICON_DEPARTMENT above.
+const ICON_MYPORTAL = ICON_PERSON;
+const ICON_DEPTTAB = ICON_DEPARTMENT;
+const ICON_FLOW = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>`;
+const ICON_ORG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>`;
+const ICON_PLUS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>`;
 function renderNotifBell(u){
   const items = todaysNotifiableResolutions(u.id).filter(x=>!notifDismissed.has(x.ticketId+':'+x.resolvedEvent.eventId));
   const count = items.length;
@@ -1962,15 +1986,15 @@ function renderTopbar(u){
     <div class="topbar-row1">
       <div class="brand"><span class="dot"></span>OpsDeck</div>
       <nav class="tabs">
-        <button data-view="my" class="${state.view==='my'?'active':''}">My Portal${myCount?`<span class="badge-count">${myCount}</span>`:''}</button>
-        ${manager && u.dept ? `<button data-view="dept" class="${state.view==='dept'?'active':''}">Department${dCount?`<span class="badge-count">${dCount}</span>`:''}</button>`:''}
-        ${!gm && !manager ? `<button data-view="dept" class="${state.view==='dept'?'active':''}">Department tasks</button>`:''}
-        <button data-view="flow" class="${state.view==='flow'?'active':''}">Flow Finder</button>
-        ${gm ? `<button data-view="org" class="${state.view==='org'?'active':''}">Org Overview${orgCount?`<span class="badge-count">${orgCount}</span>`:''}</button>`:''}
+        <button data-view="my" class="${state.view==='my'?'active':''}">${ICON_MYPORTAL}<span>My Portal</span>${myCount?`<span class="badge-count">${myCount}</span>`:''}</button>
+        ${manager && u.dept ? `<button data-view="dept" class="${state.view==='dept'?'active':''}">${ICON_DEPTTAB}<span>Department</span>${dCount?`<span class="badge-count">${dCount}</span>`:''}</button>`:''}
+        ${!gm && !manager ? `<button data-view="dept" class="${state.view==='dept'?'active':''}">${ICON_DEPTTAB}<span>Department tasks</span></button>`:''}
+        <button data-view="flow" class="${state.view==='flow'?'active':''}">${ICON_FLOW}<span>Flow Finder</span></button>
+        ${gm ? `<button data-view="org" class="${state.view==='org'?'active':''}">${ICON_ORG}<span>Org Overview</span>${orgCount?`<span class="badge-count">${orgCount}</span>`:''}</button>`:''}
       </nav>
       <div class="topbar-spacer"></div>
       ${renderNotifBell(u)}
-      <button class="fab-new" id="newTicketBtn" title="New Ticket" aria-label="New Ticket">+</button>
+      <button class="fab-new" id="newTicketBtn" title="New Ticket" aria-label="New Ticket">${ICON_PLUS}</button>
       <div class="profile-wrap">
         <button type="button" class="profile-trigger" id="profileBtn" aria-haspopup="true" aria-expanded="${state.profileOpen?'true':'false'}" aria-label="Your profile">
           <span class="profile-trigger-avatar">${nameOf(u.id).slice(0,2).toUpperCase()}</span>
