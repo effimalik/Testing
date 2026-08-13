@@ -212,11 +212,16 @@
   .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
   .field.full{grid-column:1/-1;}
   .field label{font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;}
-  .field input[type=text],.field textarea,.field select,.field input[type=date]{
+  .field input[type=text],.field textarea,.field select,.field input[type=date],.field input[type=time]{
     background:var(--panel-raised);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:10px 11px;font-size:13.5px;
   }
+  .field input[type=date],.field input[type=time]{color-scheme:dark;}
   .field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--teal);}
   .field textarea{resize:vertical;min-height:70px;}
+  .dt-row{display:flex;gap:8px;}
+  .dt-row input[type=date]{flex:1.3;}
+  .dt-row input[type=time]{flex:1;}
+  .dt-hint{font-size:11.5px;color:var(--text-muted);margin-top:6px;}
   .seg{display:flex;gap:6px;}
   .seg button{flex:1;background:var(--panel-raised);border:1px solid var(--border);color:var(--text-dim);padding:9px;border-radius:7px;font-size:13px;font-weight:600;}
   .seg button.sel{border-color:var(--teal);color:var(--teal);background:var(--teal-dim);}
@@ -2488,10 +2493,7 @@ function renderRespondPanel(tid, u){
   <div class="card" style="margin-top:14px;">
     <div class="section-label" style="margin-top:0;">Respond to this ticket</div>
     <div class="btn-row">
-      ${owner.status==='ON HOLD'
-        ? `<button class="btn btn-primary btn-sm" data-respond="resume" data-tid="${tid}">Resume</button>`
-        : `<button class="btn btn-sm" data-respond="hold" data-tid="${tid}">Put on hold</button>`}
-      <button class="btn btn-sm" data-respond="comment" data-tid="${tid}">Add comment</button>
+      ${owner.status==='ON HOLD' ? `<button class="btn btn-primary btn-sm" data-respond="resume" data-tid="${tid}">Resume</button>` : ''}
       <button class="btn btn-amber btn-sm" data-respond="reminder" data-tid="${tid}">Set reminder</button>
       ${overdueInfo(tid).overdue ? `<button class="btn btn-sm" data-respond="attend" data-tid="${tid}">Attend reminder</button>` : ''}
       <button class="btn btn-sm" data-respond="delegate" data-tid="${tid}">Delegate</button>
@@ -2544,7 +2546,7 @@ function openRespondModal(kind, tid){
   const backdrop = document.createElement('div');
   backdrop.className='modal-backdrop';
   const titles = {
-    accept:'Accept ticket', hold:'Put on hold', resume:'Resume', comment:'Add comment',
+    accept:'Accept ticket', resume:'Resume',
     reminder:'Set reminder', attend:'Attend reminder', delegate:'Delegate ticket',
     resolve:'Done',
   };
@@ -2561,10 +2563,45 @@ function openRespondModal(kind, tid){
     const people = activePersonOptions().filter(p=>p.email!==actor.id);
     return `<select id="rm-target">${people.map(p=>`<option value="${escAttr(p.email)}">${escHtml(p.name)} — ${escHtml(p.email)}${p.deptName?` — ${escHtml(p.deptName)}`:''}</option>`).join('')}</select>`;
   }
+  // Reminder due-date picker: quick presets + a clean split date/time
+  // pair (native datetime-local renders inconsistently across browsers).
+  function reminderDateTimeParts(d){
+    return {
+      date: `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,
+      time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+    };
+  }
+  function applyReminderPreset(preset){
+    let d;
+    if(preset==='30m') d = new Date(nowMs()+30*60000);
+    else if(preset==='1h') d = new Date(nowMs()+3600000);
+    else { // '1d' — next day, 10:00 AM, not "24h from now"
+      d = new Date(nowMs());
+      d.setDate(d.getDate()+1);
+      d.setHours(10,0,0,0);
+    }
+    const parts = reminderDateTimeParts(d);
+    const dateInput = backdrop.querySelector('#rm-date');
+    const timeInput = backdrop.querySelector('#rm-time');
+    if(dateInput) dateInput.value = parts.date;
+    if(timeInput) timeInput.value = parts.time;
+  }
   if(kind==='reminder'){
-    const in1h = new Date(nowMs()+3600000);
-    const defVal = `${in1h.getFullYear()}-${pad(in1h.getMonth()+1)}-${pad(in1h.getDate())}T${pad(in1h.getHours())}:${pad(in1h.getMinutes())}`;
-    extra = `<div class="field"><label>Remind at</label><input type="datetime-local" id="rm-when" value="${defVal}"></div>`;
+    const defaultDue = new Date(nowMs()+3600000); // 1 hour out, same as the "1 hour" preset
+    const parts = reminderDateTimeParts(defaultDue);
+    extra = `<div class="field">
+      <label>Remind at</label>
+      <div class="filter-pills" id="rmReminderPresets" style="margin-bottom:10px;">
+        <button type="button" class="filter-btn" data-rm-preset="30m">30 min</button>
+        <button type="button" class="filter-btn" data-rm-preset="1h">1 hour</button>
+        <button type="button" class="filter-btn" data-rm-preset="1d">Tomorrow 10 AM</button>
+      </div>
+      <div class="dt-row">
+        <input type="date" id="rm-date" value="${parts.date}">
+        <input type="time" id="rm-time" value="${parts.time}">
+      </div>
+      <div class="dt-hint" id="rmReminderHint"></div>
+    </div>`;
     needsComment = false;
   } else if(kind==='delegate'){
     extra = `<div class="field">
@@ -2590,6 +2627,30 @@ function openRespondModal(kind, tid){
       </div>
     </div>`;
   document.body.appendChild(backdrop);
+  if(kind==='reminder'){
+    const dateInput = backdrop.querySelector('#rm-date');
+    const timeInput = backdrop.querySelector('#rm-time');
+    const hint = backdrop.querySelector('#rmReminderHint');
+    const fmtHint = ()=>{
+      if(!dateInput.value || !timeInput.value){ hint.textContent=''; return; }
+      const d = new Date(`${dateInput.value}T${timeInput.value}`);
+      if(isNaN(d.getTime())){ hint.textContent=''; return; }
+      const wd = d.toLocaleDateString(undefined,{weekday:'short'});
+      const mon = MONTH_ABBR[d.getMonth()];
+      let h = d.getHours(), ampm = h>=12?'PM':'AM'; h = h%12 || 12;
+      hint.textContent = `Reminder set for ${wd}, ${d.getDate()}-${mon}-${d.getFullYear()} at ${h}:${pad(d.getMinutes())} ${ampm}`;
+    };
+    backdrop.querySelectorAll('[data-rm-preset]').forEach(b=>{
+      b.onclick = ()=>{
+        backdrop.querySelectorAll('[data-rm-preset]').forEach(x=>x.classList.toggle('active', x===b));
+        applyReminderPreset(b.dataset.rmPreset);
+        fmtHint();
+      };
+    });
+    dateInput.oninput = ()=>{ backdrop.querySelectorAll('[data-rm-preset]').forEach(x=>x.classList.remove('active')); fmtHint(); };
+    timeInput.oninput = ()=>{ backdrop.querySelectorAll('[data-rm-preset]').forEach(x=>x.classList.remove('active')); fmtHint(); };
+    fmtHint();
+  }
   if(kind==='delegate'){
     backdrop.querySelectorAll('[data-rm-target-type]').forEach(b=>{
       b.onclick = ()=>{
@@ -2610,19 +2671,16 @@ function openRespondModal(kind, tid){
     if(kind==='accept'){
       acceptTicket({ticketId:tid, actorId});
       toast('Ticket accepted.');
-    } else if(kind==='hold'){
-      holdTicket({ticketId:tid, actorId, reason:comment});
-      toast('Put on hold.');
     } else if(kind==='resume'){
       resumeTicket({ticketId:tid, actorId, note:comment});
       toast('Resumed.');
-    } else if(kind==='comment'){
-      addComment({ticketId:tid, actorId, comment});
-      toast('Comment added.');
     } else if(kind==='reminder'){
-      const when = backdrop.querySelector('#rm-when').value;
-      if(!when){ toast('Pick a date/time first.'); return; }
-      setReminder({ticketId:tid, actorId, dueAtMs:new Date(when).getTime()});
+      const dateVal = backdrop.querySelector('#rm-date').value;
+      const timeVal = backdrop.querySelector('#rm-time').value;
+      if(!dateVal || !timeVal){ toast('Pick a date and time first.'); return; }
+      const dueAtMs = new Date(`${dateVal}T${timeVal}`).getTime();
+      if(isNaN(dueAtMs)){ toast('Pick a valid date and time.'); return; }
+      setReminder({ticketId:tid, actorId, dueAtMs});
       toast('Reminder set.');
     } else if(kind==='attend'){
       attendReminder({ticketId:tid, actorId, note:comment});
