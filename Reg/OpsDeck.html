@@ -64,7 +64,7 @@
   .topbar-row1{display:flex;align-items:center;gap:16px;}
   .brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:19px;letter-spacing:0.2px;flex-shrink:0;}
   .brand .dot{width:9px;height:9px;border-radius:2px;background:var(--amber);box-shadow:0 0 10px var(--amber);animation:pulse 2.2s ease-in-out infinite;}
-  .cache-ping{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:7px;vertical-align:middle;animation:pulse 2.2s ease-in-out infinite;}
+  .cache-ping{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:7px;vertical-align:middle;}
   .cache-ping.ok{background:var(--teal);box-shadow:0 0 8px var(--teal);}
   .cache-ping.warn{background:var(--amber);box-shadow:0 0 8px var(--amber);}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
@@ -122,6 +122,7 @@
   }
   .tb-stat .tb-n{font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--teal);line-height:1.15;}
   .tb-stat .tb-l{font-size:8.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;}
+  .tb-stat .tb-l-icon{display:none;color:var(--text-muted);align-items:center;justify-content:center;margin-top:1px;}
 
   @media (max-width:760px){
     .topbar{padding:12px 14px;}
@@ -135,8 +136,12 @@
     .topbar-stats{order:4;width:100%;justify-content:space-between;}
     .tb-stat{flex:1;}
   }
+  /* When the topbar is too narrow to fit the "Open/Resolved/Requested"
+     words comfortably, swap the text label for a small icon instead of
+     letting it wrap or clip. */
   @media (max-width:400px){
     .tb-stat .tb-l{display:none;}
+    .tb-stat .tb-l-icon{display:flex;}
     .tb-stat{padding:5px 8px;min-width:34px;}
   }
 
@@ -406,32 +411,25 @@
   .ff-searchbox:has(.emp-drop.open){border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-dim);}
   .ff-box-divider{width:1px;align-self:stretch;background:var(--border);margin:7px 0;flex-shrink:0;}
 
-  /* Category segment — left side of the combo box, opens the searchable list.
-     Sized to its content (not a fixed width) so labels like "Subject
-     Employee" always render in full on one line instead of getting clipped
-     mid-word; the ff-toolbar's own horizontal scroll (see above) is what
-     absorbs any overflow on narrow screens, matching the "keeps every
-     control at full, readable width" design used for the rest of the row. */
-  .ff-catsel{position:relative;flex:0 0 auto;width:auto;max-width:220px;}
+  /* Category segment — left side of the combo box, opens the searchable
+     list. Icon-only at all sizes: the human-readable category name
+     ("Subject Employee", "Handler", ...) is already shown in the caption
+     line above ("Searching by <b>Subject Employee</b>"), so repeating the
+     full word inside this narrow trigger only invited it to get clipped
+     or to crowd out the search input next to it. The name is still
+     available via title/aria-label and inside the open panel's option
+     list, so nothing is lost — the row just stays tidy at every width. */
+  .ff-catsel{position:relative;flex:0 0 auto;}
   .ff-cat-trigger{
-    display:flex;align-items:center;gap:8px;width:100%;height:100%;
+    display:flex;align-items:center;gap:0;width:100%;height:100%;
     background:none;border:none;color:var(--text);
-    padding:9px 10px 9px 12px;font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap;
+    padding:9px 12px;font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap;
     border-radius:7px 0 0 7px;transition:background .12s;
   }
   .ff-cat-trigger:hover{background:var(--panel-hover);}
   .ff-cat-trigger .ff-cat-icon{color:var(--teal);flex-shrink:0;display:inline-flex;}
-  .ff-cat-trigger .ff-cat-label{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;}
-  .ff-cat-trigger .ff-cat-caret{color:var(--text-muted);font-size:10px;flex-shrink:0;transition:transform .18s ease;}
-  /* Small screens: collapse the trigger to icon-only so a long label like
-     "Subject Employee" doesn't eat the whole toolbar width — the full name
-     is still available as a tooltip/aria-label and inside the open panel. */
-  @media (max-width:480px){
-    .ff-catsel{max-width:none;}
-    .ff-cat-trigger{padding:9px 10px;gap:0;}
-    .ff-cat-trigger .ff-cat-label{display:none;}
-    .ff-cat-trigger .ff-cat-caret{margin-left:4px;}
-  }
+  .ff-cat-trigger .ff-cat-label{display:none;}
+  .ff-cat-trigger .ff-cat-caret{color:var(--text-muted);font-size:10px;flex-shrink:0;margin-left:6px;transition:transform .18s ease;}
   .ff-catsel.open .ff-cat-trigger .ff-cat-caret{transform:rotate(180deg);color:var(--teal);}
   .ff-cat-panel{
     position:fixed;width:240px;z-index:120;
@@ -1976,6 +1974,12 @@ const ICON_DEPTTAB = ICON_DEPARTMENT;
 const ICON_FLOW = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>`;
 const ICON_ORG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>`;
 const ICON_PLUS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>`;
+// Small glyphs for the topbar ticket-stat cards — swapped in for the text
+// label ("Open"/"Resolved"/"Requested") when the topbar is too tight to
+// show both, so the cards stay compact without losing meaning.
+const ICON_STAT_OPEN = `<svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="5.6"/></svg>`;
+const ICON_STAT_RESOLVED = `<svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 8.4 6.4 11.6 12.8 5.2"/></svg>`;
+const ICON_STAT_REQUESTED = `<svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12.4V3.6M4.4 7.2 8 3.6l3.6 3.6"/></svg>`;
 function renderNotifBell(u){
   const items = todaysNotifiableResolutions(u.id).filter(x=>!notifDismissed.has(x.ticketId+':'+x.resolvedEvent.eventId));
   const count = items.length;
@@ -2034,9 +2038,9 @@ function renderTopbar(u){
       </nav>
       <div class="topbar-spacer"></div>
       <div class="topbar-stats" aria-label="Your ticket totals">
-        <div class="tb-stat"><span class="tb-n">${tbOpenCt}</span><span class="tb-l">Open</span></div>
-        <div class="tb-stat"><span class="tb-n">${tbResolvedCt}</span><span class="tb-l">Resolved</span></div>
-        <div class="tb-stat"><span class="tb-n">${tbRequestedCt}</span><span class="tb-l">Requested</span></div>
+        <div class="tb-stat" title="Open"><span class="tb-n">${tbOpenCt}</span><span class="tb-l">Open</span><span class="tb-l-icon">${ICON_STAT_OPEN}</span></div>
+        <div class="tb-stat" title="Resolved"><span class="tb-n">${tbResolvedCt}</span><span class="tb-l">Resolved</span><span class="tb-l-icon">${ICON_STAT_RESOLVED}</span></div>
+        <div class="tb-stat" title="Requested"><span class="tb-n">${tbRequestedCt}</span><span class="tb-l">Requested</span><span class="tb-l-icon">${ICON_STAT_REQUESTED}</span></div>
       </div>
       ${renderNotifBell(u)}
       <button class="fab-new" id="newTicketBtn" title="New Ticket" aria-label="New Ticket">${ICON_PLUS}</button>
@@ -2523,9 +2527,9 @@ function renderFlowFinder(u){
     // Sourced from the ap2_employee cache (same roster + same search-box
     // pattern as the New Ticket "+" drawer's Subject Employee field),
     // instead of only whatever E-codes already happen to appear in tickets.
-    queryControl = `<div style="flex:1;">
-      <span class="cache-ping ${EMPLOYEE_CACHE_OK?'ok':'warn'}" title="${EMPLOYEE_CACHE_OK?'Employee roster loaded from ap2_employee cache':'ap2_employee cache unavailable — no employee roster loaded'}" style="float:right;margin-top:11px;"></span>
+    queryControl = `<div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;">
       ${ffSubjDropShell()}
+      <span class="cache-ping ${EMPLOYEE_CACHE_OK?'ok':'warn'}" title="${EMPLOYEE_CACHE_OK?'Employee roster loaded from ap2_employee cache':'ap2_employee cache unavailable — no employee roster loaded'}" style="flex-shrink:0;margin-left:0;margin-right:10px;"></span>
     </div>`;
   } else if(state.ffMode==='handler'){
     const opts = handlerOptions.map(p=>({value:p.email, label:p.name, sub:p.email}));
