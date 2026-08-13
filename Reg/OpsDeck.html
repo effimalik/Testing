@@ -1196,6 +1196,7 @@ function rebuildFromRealCache(eventRowsRaw, masterRowsRaw){
   synthesizeMissingCreatedEvents();
   discoverDirectory(EVENTS, TICKET_MASTER);
   applyOverlay(); // replay this browser's own local tickets/events on top
+  trackMaxEventId(EVENTS); // covers real cache rows + this browser's saved local rows, whatever scale each uses
   discoverDirectory(EVENTS, TICKET_MASTER); // re-scan including anything the overlay introduced
 }
 
@@ -1469,7 +1470,24 @@ function tickReminderEngine(){
 
 /* ═══════════ Mutations (append-only) ═══════════ */
 let seq = 0;
-function genEventId(){ return nowMs() + (seq++ % 900); }
+// Real backend Event_IDs aren't guaranteed to be JS Date.now()-ms values —
+// they can use a different numeric scale (e.g. a YYYYMMDDHHMMSS-style
+// stamp), which can land far above a real-time ms value. If a new local
+// event's id were just "now", it could sort as OLDER than a ticket's own
+// real Created row, and currentOwner() (which trusts the highest eventId)
+// would then keep reading the ticket as still NEW even after Accept/Done/
+// Delegate — which is exactly the bug this fixes. maxKnownEventId tracks
+// the highest eventId seen from ANY source (real cache rows, synthesized
+// rows, overlay rows) so every new local event is guaranteed to sort after
+// all of them, regardless of what scale the backend's IDs use.
+let maxKnownEventId = 0;
+function trackMaxEventId(list){
+  (list||[]).forEach(e=>{ const v = Number(e && e.eventId) || 0; if(v > maxKnownEventId) maxKnownEventId = v; });
+}
+function genEventId(){
+  maxKnownEventId = Math.max(maxKnownEventId + 1, nowMs() + (seq++ % 900));
+  return maxKnownEventId;
+}
 function nextTicketId(){
   let max = 5000;
   allTicketIds().forEach(tid=>{
@@ -2557,7 +2575,7 @@ function openRespondModal(kind, tid){
       </div>
       <div id="rmTargetWrap">${delegateTargetFieldHtml(delegateTargetType)}</div>
     </div>`;
-  } else if(kind==='accept'){
+  } else if(kind==='accept' || kind==='resolve'){
     needsComment = false;
   }
   backdrop.innerHTML = `
@@ -3009,6 +3027,7 @@ setInterval(()=>{
 loadStaffMeta();
 loadOverlay();
 applyOverlay();          // show this browser's own local tickets immediately, if any
+trackMaxEventId(EVENTS); // seed the counter from any local rows saved in a previous session
 ME = bootstrapIdentity();
 discoverDirectory(EVENTS, TICKET_MASTER);
 state.currentUserId = ME;
