@@ -1383,16 +1383,22 @@ function deptAccepted(deptId){
 }
 function deptTransferred(deptId){ return deptActedTransferred(deptId,'dept').filter(tid=> currentOwner(tid).status==='NEW'); }
 function deptDelegated(deptId){ return deptActedTransferred(deptId,'person').filter(tid=> currentOwner(tid).status==='NEW'); }
-// Everything still open and relevant to a person — BOTH before acceptance
-// (sitting unclaimed in their department's queue, addressed to the dept
-// rather than to them by name) AND after acceptance (currently assigned
-// to them directly). A ticket that was transferred to my department or to
-// me and hasn't been accepted yet is still "open for me" — it doesn't
-// wait for an ACCEPTED event to count.
+// Everything still open and relevant to a person — accepted or not — used
+// for the nav badge count and the profile "Open" stat.
 function openForMe(u){
   return allTicketIds().filter(tid=>{
     const o = currentOwner(tid);
     return o && o.assignedTo===u.id && !isTerminal(o.status);
+  });
+}
+// "Attention" (My Portal tab) = tickets sitting with me by name that I
+// haven't accepted yet — the moment I accept one it moves fully into
+// "Accepted" below and drops out of this list (Done / Delegate / Transfer
+// all live on the ticket from there).
+function myAttention(u){
+  return allTicketIds().filter(tid=>{
+    const o = currentOwner(tid);
+    return o && o.assignedTo===u.id && o.status==='NEW';
   });
 }
 // Department Attention = only what's still sitting unclaimed in the queue
@@ -1837,11 +1843,11 @@ function activityRow(tid){
 function renderMyPortal(u){
   const filter = state.myStatusFilter;
   const byEventDesc = (a,b)=> currentOwner(b).eventId - currentOwner(a).eventId;
-  // "Attention" = anything currently with me by name, PLUS anything sitting
-  // unclaimed in my department's queue (before acceptance) — both count as
-  // open/relevant to me right now.
+  // "Attention" = tickets with me by name that I haven't accepted yet.
+  // Once accepted, a ticket moves out of Attention and lives in Accepted
+  // from then on — that's where Done / Delegate / Transfer happen.
   const sections = {
-    attention: openForMe(u).slice().sort(byEventDesc),
+    attention: myAttention(u).slice().sort(byEventDesc),
     raised: raisedByMe(u).slice().sort(byEventDesc),
     accepted: myAccepted(u).sort(byEventDesc),
     transferred: myTransferred(u).sort(byEventDesc),
@@ -2529,11 +2535,14 @@ function openRespondModal(kind, tid){
     extra = `<div class="field"><label>Remind at</label><input type="datetime-local" id="rm-when" value="${defVal}"></div>`;
     needsComment = false;
   } else if(kind==='transferPerson'){
-    const people = assignablePeopleFor(actor.id).filter(e=>e.id!==actor.id).concat(isManager(actor.id)||isGM(actor.id) ? STAFF.filter(e=>e.id!==actor.id) : []);
-    const uniquePeople = [...new Map(people.map(p=>[p.id,p])).values()];
-    extra = `<div class="field"><label>Delegate to</label><select id="rm-person">${uniquePeople.map(e=>`<option value="${e.id}">${nameEmailLabel(e.id)}${e.dept&&dept(e.dept)?` — ${dept(e.dept).name}`:''}</option>`).join('')}</select></div>`;
+    // Same source as the New Ticket drawer's "Person" picker (activePersonOptions) —
+    // any active person, not just the actor's own department/team.
+    const people = activePersonOptions().filter(p=>p.email!==actor.id);
+    extra = `<div class="field"><label>Delegate to</label><select id="rm-person">${people.map(p=>`<option value="${escAttr(p.email)}">${escHtml(p.name)} — ${escHtml(p.email)}${p.deptName?` — ${escHtml(p.deptName)}`:''}</option>`).join('')}</select></div>`;
   } else if(kind==='transferDept'){
-    extra = `<div class="field"><label>Transfer to department</label><select id="rm-dept">${DEPARTMENTS.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}</select></div>`;
+    // Same source as the New Ticket drawer's "Department" picker (activeDeptOptions).
+    const deptOpts = activeDeptOptions();
+    extra = `<div class="field"><label>Transfer to department</label><select id="rm-dept">${deptOpts.map(d=>`<option value="${escAttr(deptIdFor(d.name))}">${escHtml(d.name)}</option>`).join('')}</select></div>`;
   } else if(kind==='accept'){
     needsComment = false;
   }
