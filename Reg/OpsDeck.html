@@ -692,6 +692,13 @@ function fmtDur(ms){
   return dd+'d '+(h%24)+'h';
 }
 function statusClass(s){ return 'st-'+String(s||'').replace(/\s+/g,''); }
+// Display-only relabel: the underlying status value stored on every event/
+// ticket row stays exactly 'NEW' (so every comparison, filter, and the real
+// ap2_ticLog vocabulary are untouched) — this just changes what a brand-new,
+// not-yet-accepted ticket is CALLED wherever its status is shown to a user.
+// Once someone Accepts it the stored status becomes 'IN PROGRESS' already,
+// which already displays as-is.
+function statusDisplayLabel(s){ return s==='NEW' ? 'Open' : s; }
 const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function fmtReminderDetail(ms){
   const d = new Date(ms);
@@ -1742,7 +1749,7 @@ function currentUser(){ return staff(state.currentUserId); }
 const TICKET_STATUSES = ['NEW','IN PROGRESS','ON HOLD','RESOLVED'];
 const STATUS_FILTERS = ['all','open',...TICKET_STATUSES];
 function statusFilterLabel(f){
-  return {all:'All', open:'Needs attention'}[f] || f;
+  return {all:'All', open:'Needs attention'}[f] || statusDisplayLabel(f);
 }
 function matchesStatusFilter(status, filter){
   if(filter==='all') return true;
@@ -2023,7 +2030,7 @@ function ticketRow(tid, opts={}){
       <div class="t-sub">For ${owner.subjectId ? nameOf(owner.subjectId) : '—'} · ${subLabel} · raised by ${nameOf(owner.createdBy)}</div>
     </div>
     ${od.overdue ? `<div class="overdue-flag">⚠ overdue ${fmtDur(od.elapsed)}</div>` : ''}
-    <div class="status-chip ${statusClass(owner.status)}">${owner.status}</div>
+    <div class="status-chip ${statusClass(owner.status)}">${statusDisplayLabel(owner.status)}</div>
   </div>`;
 }
 
@@ -2362,7 +2369,7 @@ function flowTicketRow(tid){
       <div class="t-sub">For ${owner.subjectId ? nameOf(owner.subjectId) : '—'} · With ${nameOf(owner.assignedTo)} · raised by ${nameOf(owner.createdBy)}</div>
     </div>
     ${od.overdue ? `<div class="overdue-flag">⚠ overdue ${fmtDur(od.elapsed)}</div>` : ''}
-    <div class="status-chip ${statusClass(owner.status)}">${owner.status}</div>
+    <div class="status-chip ${statusClass(owner.status)}">${statusDisplayLabel(owner.status)}</div>
   </div>`;
 }
 function renderFlowFinder(u){
@@ -2463,7 +2470,7 @@ function renderFlowFinder(u){
   } else if(state.ffMode==='status'){
     queryControl = `<select id="ffQuery">
       <option value="">All statuses</option>
-      ${TICKET_STATUSES.map(v=>`<option value="${v}" ${state.ffQuery===v?'selected':''}>${v}</option>`).join('')}
+      ${TICKET_STATUSES.map(v=>`<option value="${v}" ${state.ffQuery===v?'selected':''}>${statusDisplayLabel(v)}</option>`).join('')}
     </select>`;
   }
 
@@ -2588,7 +2595,7 @@ function renderTimelineView(tid, u){
           <span class="tl-action">${actionLabel(r.action)}</span>
           <span class="tl-ts">${fmtTs(r.eventId)}</span>
         </div>
-        <div class="tl-who">${whoLine} · <span class="status-chip ${statusClass(r.status)}" style="padding:1px 7px;font-size:10px;">${r.status}</span></div>
+        <div class="tl-who">${whoLine} · <span class="status-chip ${statusClass(r.status)}" style="padding:1px 7px;font-size:10px;">${statusDisplayLabel(r.status)}</span></div>
         ${r.detail ? `<div class="tl-notes">${escHtml(r.detail)}</div>` : ''}
       </div>
     </div>`;
