@@ -358,7 +358,7 @@
   .ff-cat-trigger .ff-cat-caret{color:var(--text-muted);font-size:10px;flex-shrink:0;transition:transform .18s ease;}
   .ff-catsel.open .ff-cat-trigger .ff-cat-caret{transform:rotate(180deg);color:var(--teal);}
   .ff-cat-panel{
-    position:absolute;left:0;top:calc(100% + 6px);width:240px;z-index:70;
+    position:fixed;width:240px;z-index:120;
     background:var(--panel-raised);border:1px solid var(--border);border-radius:9px;
     box-shadow:0 14px 34px rgba(0,0,0,.5);padding:8px;
     animation:ffPop .16s ease;
@@ -415,7 +415,7 @@
   .ff-date-btn .ff-date-icon{display:inline-flex;flex-shrink:0;}
   .ff-date-btn .ff-date-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 6px var(--teal);flex-shrink:0;}
   .ff-date-panel{
-    position:absolute;right:0;top:calc(100% + 6px);z-index:70;width:238px;
+    position:fixed;z-index:120;width:238px;
     background:var(--panel-raised);border:1px solid var(--border);border-radius:9px;
     box-shadow:0 14px 34px rgba(0,0,0,.5);padding:12px;
     animation:ffPop .16s ease;
@@ -519,7 +519,6 @@
        readable width and scrolls horizontally rather than shrinking or
        wrapping. */
     .ff-header-row{flex-direction:column;align-items:flex-start;gap:10px;}
-    .ff-date-panel{right:auto;left:0;width:206px;}
     .modal{padding:18px;}
     nav.tabs button{font-size:12.5px;padding:7px 10px;}
   }
@@ -2020,6 +2019,33 @@ function renderFfDateFilter(){
     </div>` : ''}
   </div>`;
 }
+// Both Flow Finder popovers (category list, date range) live inside
+// .ff-toolbar, which scrolls horizontally when the row is too wide for
+// the screen. An absolutely-positioned panel would get clipped by that
+// scroll container, so the panels are `position:fixed` in CSS and have
+// their on-screen spot computed here from the trigger's real position —
+// fixed elements aren't clipped by an ancestor's overflow, so the panel
+// stays fully visible no matter how far the toolbar has scrolled.
+function positionFfPanel(triggerEl, panelEl, align){
+  if(!triggerEl || !panelEl) return;
+  const r = triggerEl.getBoundingClientRect();
+  const vw = window.innerWidth;
+  panelEl.style.top = (r.bottom + 6) + 'px';
+  const pw = panelEl.offsetWidth || 240;
+  let left = align==='right' ? (r.right - pw) : r.left;
+  left = Math.max(8, Math.min(left, vw - pw - 8));
+  panelEl.style.left = left + 'px';
+}
+// Closes whichever Flow Finder popover is open when its scroll-anchor
+// moves out from under it (toolbar scrolled horizontally, or the page
+// itself scrolled/resized) instead of leaving it floating in the wrong
+// spot — simpler and less jarring than re-tracking it live.
+function ffPanelScrollGuard(){
+  let closed = false;
+  if(mselState('ffCatSel').open){ mselState('ffCatSel').open = false; mselState('ffCatSel').q=''; closed = true; }
+  if(state.ffDateOpen){ state.ffDateOpen = false; closed = true; }
+  if(closed) render();
+}
 function wireFfCategorySelect(){
   const id = 'ffCatSel';
   const root = document.getElementById(id);
@@ -2039,7 +2065,10 @@ function wireFfCategorySelect(){
     }
   };
   const panel = root.querySelector('[data-ffcat-panel]');
-  if(panel) panel.onmousedown = (e)=> e.stopPropagation();
+  if(panel){
+    panel.onmousedown = (e)=> e.stopPropagation();
+    positionFfPanel(toggle, panel, 'left');
+  }
   root.querySelectorAll('[data-ffcat-option]').forEach(opt=>{
     opt.onclick = (e)=>{
       e.stopPropagation();
@@ -2073,9 +2102,24 @@ function wireFfDateFilter(){
     if(state.ffDateOpen) document.addEventListener('mousedown', ffDateOutsideHandler, true);
   };
   const panel = document.querySelector('[data-ffdate-panel]');
-  if(panel) panel.onmousedown = (e)=> e.stopPropagation();
+  if(panel){
+    panel.onmousedown = (e)=> e.stopPropagation();
+    positionFfPanel(btn, panel, 'right');
+  }
   const clearBtn = document.querySelector('[data-ffdate-clear]');
   if(clearBtn) clearBtn.onclick = (e)=>{ e.stopPropagation(); state.ffFrom=''; state.ffTo=''; render(); };
+}
+// Toolbar is a fresh DOM node every render, so its scroll listener needs
+// re-attaching each time; the window resize listener only needs adding
+// once (window persists across renders).
+let _ffResizeGuardAttached = false;
+function wireFfToolbarScrollGuard(){
+  const toolbar = document.querySelector('.ff-toolbar');
+  if(toolbar) toolbar.onscroll = ffPanelScrollGuard;
+  if(!_ffResizeGuardAttached){
+    window.addEventListener('resize', ffPanelScrollGuard);
+    _ffResizeGuardAttached = true;
+  }
 }
 // Flow Finder's own result row — same data as ticketRow() but with the
 // ticket number pinned to the left as a badge (results are always sorted
@@ -2556,6 +2600,7 @@ function wireGlobal(){
   window.__mselRefresh = render;
   wireFfCategorySelect();
   wireFfDateFilter();
+  wireFfToolbarScrollGuard();
   ['ffHandlerMsel','ffDeptMsel'].forEach(id=>{
     if(document.getElementById(id)){
       wireMultiSelect(id, ()=>state.ffMulti, (v)=>{ state.ffMulti = v; }, render, {single:true});
