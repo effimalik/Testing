@@ -202,6 +202,8 @@
   }
   .filter-btn:hover{background:var(--panel-hover);color:var(--text);}
   .filter-btn.active{background:var(--teal-dim);color:var(--teal);border-color:var(--teal-dim);box-shadow:0 0 0 2px var(--teal-dim);}
+  .filter-btn svg{width:14px;height:14px;flex-shrink:0;}
+  .route-toggle .filter-btn{padding:7px 14px 7px 11px;}
   .subtabs button{background:none;border:none;color:var(--text-muted);font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:6px;}
   .subtabs button.active{background:var(--panel);color:var(--text);}
 
@@ -1142,6 +1144,9 @@ function parseMasterRow(r){
   };
 }
 
+// Icons for the Department/Person route-toggle (New Ticket drawer + Delegate modal)
+const ICON_DEPARTMENT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V7l6-4 6 4v14"/><path d="M10 21v-6h4v6"/><path d="M10 10h.01M14 10h.01M10 14h.01M14 14h.01"/></svg>`;
+const ICON_PERSON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>`;
 let EVENTS = [];
 let TICKET_MASTER = {};
 let SUBJECT_EMPLOYEE_COLUMN_SEEN = false;
@@ -2546,9 +2551,9 @@ function openRespondModal(kind, tid){
   } else if(kind==='delegate'){
     extra = `<div class="field">
       <label>Route to</label>
-      <div class="filter-pills" id="rmTargetPills" style="margin-bottom:10px;">
-        <button type="button" class="filter-btn active" data-rm-target-type="department">Department</button>
-        <button type="button" class="filter-btn" data-rm-target-type="person">Person</button>
+      <div class="filter-pills route-toggle" id="rmTargetPills" role="radiogroup" aria-label="Route to" style="margin-bottom:10px;">
+        <button type="button" class="filter-btn active" data-rm-target-type="department" role="radio" aria-checked="true">${ICON_DEPARTMENT}Department</button>
+        <button type="button" class="filter-btn" data-rm-target-type="person" role="radio" aria-checked="false">${ICON_PERSON}Person</button>
       </div>
       <div id="rmTargetWrap">${delegateTargetFieldHtml(delegateTargetType)}</div>
     </div>`;
@@ -2571,7 +2576,10 @@ function openRespondModal(kind, tid){
     backdrop.querySelectorAll('[data-rm-target-type]').forEach(b=>{
       b.onclick = ()=>{
         delegateTargetType = b.dataset.rmTargetType;
-        backdrop.querySelectorAll('[data-rm-target-type]').forEach(x=> x.classList.toggle('active', x===b));
+        backdrop.querySelectorAll('[data-rm-target-type]').forEach(x=>{
+          x.classList.toggle('active', x===b);
+          x.setAttribute('aria-checked', x===b ? 'true' : 'false');
+        });
         document.getElementById('rmTargetWrap').innerHTML = delegateTargetFieldHtml(delegateTargetType);
       };
     });
@@ -2867,9 +2875,9 @@ function newTicketFormHtml(u){
       </div>
       <div class="field">
         <label>Route to</label>
-        <div class="filter-pills">
-          <button type="button" class="filter-btn ${f.targetType==='department'?'active':''}" data-target-type="department">Department</button>
-          <button type="button" class="filter-btn ${f.targetType==='person'?'active':''}" data-target-type="person">Person</button>
+        <div class="filter-pills route-toggle" role="radiogroup" aria-label="Route to">
+          <button type="button" class="filter-btn ${f.targetType==='department'?'active':''}" data-target-type="department" role="radio" aria-checked="${f.targetType==='department'}">${ICON_DEPARTMENT}Department</button>
+          <button type="button" class="filter-btn ${f.targetType==='person'?'active':''}" data-target-type="person" role="radio" aria-checked="${f.targetType==='person'}">${ICON_PERSON}Person</button>
         </div>
       </div>
     </div>
