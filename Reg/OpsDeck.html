@@ -1658,7 +1658,53 @@ function tickReminderEngine(){
   });
 }
 
-/* ═══════════ Mutations (append-only) ═══════════ */
+/* ═══════════ Mutations (append-only) ═══════════
+   Writes now persist to the real backend — the same Apps Script /exec
+   endpoint auth.js and dataLayer.js already talk to for reads — instead of
+   staying browser-local. Every mutation below:
+     1. Builds + commits its event row into EVENTS/TICKET_MASTER immediately
+        (optimistic — the UI never blocks on network latency), then paints it.
+     2. Awaits postAction(), which POSTs to /exec with this session's
+        sessionId/token (from window.Auth, set on login by the OpsDeck
+        suite's own login.html).
+     3. On success: leaves the optimistic row in place — the next real
+        cache read will supersede it with the server's canonical row anyway.
+     4. On failure: rolls the optimistic row back out, re-renders, and
+        rethrows so the caller (a modal's Confirm handler, the New Ticket
+        drawer's Submit) can surface the error and let the user retry. */
+const API_BASE = 'https://script.google.com/macros/s/AKfycbwrHCi1-Ur0L3Rns8sAPNVLkRH4UIXAxt3t6tQB-rnjtBDIMZPzGf5PNCOwaDMZYClI/exec';
+
+// One write call. Sent as text/plain (not application/json) so Apps
+// Script's doPost never triggers a CORS preflight — the same trick
+// auth.js's destroySession beacon already uses against this exact endpoint.
+// sessionId/token ride on every write so the backend authenticates the
+// call itself; the client-supplied actorId is a display convenience only,
+// never the thing the server should trust for who-did-this.
+async function postAction(action, payload){
+  const creds = window.Auth && window.Auth.getCredentials ? window.Auth.getCredentials() : null;
+  if(!creds || !creds.sessionId || !creds.token){
+    throw new Error('Your session has expired — please sign in again.');
+  }
+  let res;
+  try{
+    res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: {'Content-Type':'text/plain'}, // avoid CORS preflight against /exec
+      body: JSON.stringify({action, sessionId:creds.sessionId, token:creds.token, ...payload}),
+    });
+  }catch(networkErr){
+    throw new Error('Could not reach the server — check your connection and try again.');
+  }
+  if(!res.ok) throw new Error(`Server error (HTTP ${res.status}) on "${action}".`);
+  let json;
+  try{ json = await res.json(); }
+  catch(e){ throw new Error(`Server returned an unreadable response for "${action}".`); }
+  if(!json || json.success===false){
+    throw new Error((json && (json.error||json.message)) || `Server rejected "${action}".`);
+  }
+  return json;
+}
+
 let seq = 0;
 // Real backend Event_IDs aren't guaranteed to be JS Date.now()-ms values —
 // they can use a different numeric scale (e.g. a YYYYMMDDHHMMSS-style
@@ -1693,11 +1739,18 @@ function appendEvent({ticketId, action, status, from, performedBy, to, detail}){
   saveOverlay();
   return row;
 }
+// Undo an appendEvent() — used when the matching server write fails, so a
+// rejected mutation never leaves a "ghost" event behind in this browser.
+function rollbackEvent(row){
+  EVENTS = EVENTS.filter(e=>e!==row);
+  LOCAL_EVENTS = LOCAL_EVENTS.filter(e=>e!==row);
+  saveOverlay();
+}
 
 // Ticket creation: captures the fixed E2 (subjectEmployeeId) and lets the
 // creator DELEGATE it straight to a department queue OR directly to a
 // specific person in one step (requirement §5 vs §6, chosen at creation).
-function createTicket({creatorId, title, description, priority, subjectType, subjectEmployeeId, targetType, target, notifyOnDone}){
+async function createTicket({creatorId, title, description, priority, subjectType, subjectEmployeeId, targetType, target, notifyOnDone}){
   const ticketId = nextTicketId();
   const ev = appendEvent({
     ticketId, action:'CREATED', status:'NEW',
@@ -1719,52 +1772,144 @@ function createTicket({creatorId, title, description, priority, subjectType, sub
   LOCAL_MASTERS[ticketId] = m;
   discoverDirectory(EVENTS, TICKET_MASTER);
   saveOverlay();
+  safeRender(); // paint the new ticket immediately, before the server confirms
+  try{
+    await postAction('createTicket', {
+      ticketId, eventId: ev.eventId, creatorId, title, description,
+      priority: m.priority, subjectType: m.subjectType, subjectEmployeeId,
+      targetType: m.assignmentType, target, notifyOnDone: m.notifyRaw,
+    });
+  }catch(err){
+    rollbackEvent(ev);
+    delete TICKET_MASTER[ticketId];
+    delete LOCAL_MASTERS[ticketId];
+    saveOverlay();
+    discoverDirectory(EVENTS, TICKET_MASTER);
+    safeRender();
+    throw err;
+  }
   return ticketId;
 }
-function acceptTicket({ticketId, actorId}){
+async function acceptTicket({ticketId, actorId}){
   const owner = currentOwner(ticketId);
-  appendEvent({ticketId, action:'ACCEPTED', status:'IN PROGRESS', from:owner.assignedTo, performedBy:actorId, to:actorId, detail:'Ticket accepted.'});
+  const ev = appendEvent({ticketId, action:'ACCEPTED', status:'IN PROGRESS', from:owner.assignedTo, performedBy:actorId, to:actorId, detail:'Ticket accepted.'});
+  safeRender();
+  try{
+    await postAction('acceptTicket', {ticketId, eventId: ev.eventId, actorId});
+  }catch(err){
+    rollbackEvent(ev);
+    safeRender();
+    throw err;
+  }
 }
 // Transfer covers BOTH requirement flows: to a Department (re-queues,
 // anyone in that department can accept) and Delegate directly to a Person
 // (also re-queues to NEW — matching the real TK-5002 sample exactly,
 // where even a direct hand-off to M005 still needed its own ACCEPTED
 // event before work began).
-function transferTicket({ticketId, actorId, targetType, target, reason}){
+async function transferTicket({ticketId, actorId, targetType, target, reason}){
   const label = targetType==='department' ? deptNameOfTarget(target) : nameOf(target);
-  appendEvent({
+  const detail = reason || (targetType==='department' ? `Transferred to ${label} department.` : `Directly transferred to ${label}.`);
+  const ev = appendEvent({
     ticketId, action:'TRANSFERRED', status:'NEW',
     from:actorId, performedBy:actorId, to:target,
-    detail: reason || (targetType==='department' ? `Transferred to ${label} department.` : `Directly transferred to ${label}.`),
+    detail,
   });
+  safeRender();
+  try{
+    await postAction('transferTicket', {ticketId, eventId: ev.eventId, actorId, targetType, target, reason: detail});
+  }catch(err){
+    rollbackEvent(ev);
+    safeRender();
+    throw err;
+  }
 }
-function holdTicket({ticketId, actorId, reason}){
+async function holdTicket({ticketId, actorId, reason}){
   const owner = currentOwner(ticketId);
-  appendEvent({ticketId, action:'ON_HOLD', status:'ON HOLD', from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:reason||'Put on hold.'});
+  const detail = reason || 'Put on hold.';
+  const ev = appendEvent({ticketId, action:'ON_HOLD', status:'ON HOLD', from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail});
+  safeRender();
+  try{
+    await postAction('holdTicket', {ticketId, eventId: ev.eventId, actorId, reason: detail});
+  }catch(err){
+    rollbackEvent(ev);
+    safeRender();
+    throw err;
+  }
 }
-function resumeTicket({ticketId, actorId, note}){
+async function resumeTicket({ticketId, actorId, note}){
   const owner = currentOwner(ticketId);
-  appendEvent({ticketId, action:'RESUMED', status:'IN PROGRESS', from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:note||'Resumed.'});
+  const detail = note || 'Resumed.';
+  const ev = appendEvent({ticketId, action:'RESUMED', status:'IN PROGRESS', from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail});
+  safeRender();
+  try{
+    await postAction('resumeTicket', {ticketId, eventId: ev.eventId, actorId, note: detail});
+  }catch(err){
+    rollbackEvent(ev);
+    safeRender();
+    throw err;
+  }
 }
-function addComment({ticketId, actorId, comment}){
+async function addComment({ticketId, actorId, comment}){
   const owner = currentOwner(ticketId);
-  appendEvent({ticketId, action:'COMMENT', status:owner.status, from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:comment});
+  const ev = appendEvent({ticketId, action:'COMMENT', status:owner.status, from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:comment});
+  safeRender();
+  try{
+    await postAction('addComment', {ticketId, eventId: ev.eventId, actorId, comment});
+  }catch(err){
+    rollbackEvent(ev);
+    safeRender();
+    throw err;
+  }
 }
-function setReminder({ticketId, actorId, dueAtMs}){
+async function setReminder({ticketId, actorId, dueAtMs}){
   const owner = currentOwner(ticketId);
-  appendEvent({ticketId, action:'REMINDER', status:owner.status, from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:fmtReminderDetail(dueAtMs)});
+  const detail = fmtReminderDetail(dueAtMs);
+  const ev = appendEvent({ticketId, action:'REMINDER', status:owner.status, from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail});
+  safeRender();
+  try{
+    await postAction('setReminder', {ticketId, eventId: ev.eventId, actorId, dueAtMs, detail});
+  }catch(err){
+    rollbackEvent(ev);
+    safeRender();
+    throw err;
+  }
 }
-function attendReminder({ticketId, actorId, note}){
+async function attendReminder({ticketId, actorId, note}){
   const owner = currentOwner(ticketId);
-  appendEvent({ticketId, action:'REMINDER_ATTENDED', status:owner.status, from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:note||'Reminder attended.'});
+  const detail = note || 'Reminder attended.';
+  const ev = appendEvent({ticketId, action:'REMINDER_ATTENDED', status:owner.status, from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail});
+  safeRender();
+  try{
+    await postAction('attendReminder', {ticketId, eventId: ev.eventId, actorId, note: detail});
+  }catch(err){
+    rollbackEvent(ev);
+    safeRender();
+    throw err;
+  }
 }
+// Automated / demo-clock-driven only (see tickReminderEngine, which only
+// runs once the on-page fast-forward clock has been used) — this simulates
+// what an overdue reminder would look like and is never a real user action,
+// so unlike everything else in this section it stays local-only and does
+// NOT write through to the server.
 function fireReminderAlert(ticketId){
   const owner = currentOwner(ticketId);
   appendEvent({ticketId, action:'REMINDER_ALERT', status:owner.status, from:owner.assignedTo, performedBy:owner.assignedTo, to:owner.assignedTo, detail:'Automated: reminder overdue, no response yet.'});
+  safeRender();
 }
-function resolveTicket({ticketId, actorId, comment}){
+async function resolveTicket({ticketId, actorId, comment}){
   const owner = currentOwner(ticketId);
-  appendEvent({ticketId, action:'RESOLVED', status:'RESOLVED', from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:comment||'Resolved.'});
+  const detail = comment || 'Resolved.';
+  const ev = appendEvent({ticketId, action:'RESOLVED', status:'RESOLVED', from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail});
+  safeRender();
+  try{
+    await postAction('resolveTicket', {ticketId, eventId: ev.eventId, actorId, comment: detail});
+  }catch(err){
+    rollbackEvent(ev);
+    safeRender();
+    throw err;
+  }
 }
 
 /* ═══════════ App state ═══════════ */
@@ -2956,49 +3101,58 @@ function openRespondModal(kind, tid){
     });
   }
   backdrop.querySelector('#rm-cancel').onclick=()=>backdrop.remove();
-  backdrop.querySelector('#rm-confirm').onclick=()=>{
+  backdrop.querySelector('#rm-confirm').onclick=async ()=>{
+    const confirmBtn = backdrop.querySelector('#rm-confirm');
     const comment = backdrop.querySelector('#rm-comment').value.trim();
     if(needsComment && !comment){ toast('A comment is required before you can respond.'); return; }
     const actorId = state.currentUserId;
-    if(kind==='accept'){
-      acceptTicket({ticketId:tid, actorId});
-      toast('Ticket accepted.');
-    } else if(kind==='resume'){
-      resumeTicket({ticketId:tid, actorId, note:comment});
-      toast('Resumed.');
-    } else if(kind==='reminder'){
-      const dateVal = backdrop.querySelector('#rm-date').value;
-      const timeVal = backdrop.querySelector('#rm-time').value;
-      if(!dateVal || !timeVal){ toast('Pick a date and time first.'); return; }
-      const dueAtMs = new Date(`${dateVal}T${timeVal}`).getTime();
-      if(isNaN(dueAtMs)){ toast('Pick a valid date and time.'); return; }
-      setReminder({ticketId:tid, actorId, dueAtMs});
-      toast('Reminder set.');
-    } else if(kind==='attend'){
-      attendReminder({ticketId:tid, actorId, note:comment});
-      toast('Reminder attended.');
-    } else if(kind==='delegate'){
-      const targetVal = backdrop.querySelector('#rm-target').value;
-      if(delegateTargetType==='department'){
-        transferTicket({ticketId:tid, actorId, targetType:'department', target:dept(targetVal).name, reason:comment});
-        toast(`Transferred to ${dept(targetVal).name} — waiting for someone to accept.`);
-      } else {
-        transferTicket({ticketId:tid, actorId, targetType:'person', target:targetVal, reason:comment});
-        toast(`Delegated to ${nameOf(targetVal)} — waiting for them to accept.`);
+    confirmBtn.disabled = true; // block double-submit while the write is in flight
+    try{
+      if(kind==='accept'){
+        await acceptTicket({ticketId:tid, actorId});
+        toast('Ticket accepted.');
+      } else if(kind==='resume'){
+        await resumeTicket({ticketId:tid, actorId, note:comment});
+        toast('Resumed.');
+      } else if(kind==='reminder'){
+        const dateVal = backdrop.querySelector('#rm-date').value;
+        const timeVal = backdrop.querySelector('#rm-time').value;
+        if(!dateVal || !timeVal){ toast('Pick a date and time first.'); confirmBtn.disabled=false; return; }
+        const dueAtMs = new Date(`${dateVal}T${timeVal}`).getTime();
+        if(isNaN(dueAtMs)){ toast('Pick a valid date and time.'); confirmBtn.disabled=false; return; }
+        await setReminder({ticketId:tid, actorId, dueAtMs});
+        toast('Reminder set.');
+      } else if(kind==='attend'){
+        await attendReminder({ticketId:tid, actorId, note:comment});
+        toast('Reminder attended.');
+      } else if(kind==='delegate'){
+        const targetVal = backdrop.querySelector('#rm-target').value;
+        if(delegateTargetType==='department'){
+          await transferTicket({ticketId:tid, actorId, targetType:'department', target:dept(targetVal).name, reason:comment});
+          toast(`Transferred to ${dept(targetVal).name} — waiting for someone to accept.`);
+        } else {
+          await transferTicket({ticketId:tid, actorId, targetType:'person', target:targetVal, reason:comment});
+          toast(`Delegated to ${nameOf(targetVal)} — waiting for them to accept.`);
+        }
+      } else if(kind==='resolve'){
+        await resolveTicket({ticketId:tid, actorId, comment});
+        toast('Done.');
+        // The creator gets the "now Done" corner box only if the ticLog/Ticket
+        // cache's Notify column is YES for this ticket — same flag that drives
+        // the bell dropdown. It'll also show up in the bell dropdown either way
+        // once render() runs, but this box is the just-happened-live nudge.
+        const m = master(tid);
+        const justResolved = EVENTS.filter(e=>e.ticketId===tid && e.action==='RESOLVED').sort((a,b)=>b.eventId-a.eventId)[0];
+        if(m && m.createdBy===actorId && notifyFlagFor(tid, justResolved)) notifyTicketDone(tid);
       }
-    } else if(kind==='resolve'){
-      resolveTicket({ticketId:tid, actorId, comment});
-      toast('Done.');
-      // The creator gets the "now Done" corner box only if the ticLog/Ticket
-      // cache's Notify column is YES for this ticket — same flag that drives
-      // the bell dropdown. It'll also show up in the bell dropdown either way
-      // once render() runs, but this box is the just-happened-live nudge.
-      const m = master(tid);
-      const justResolved = EVENTS.filter(e=>e.ticketId===tid && e.action==='RESOLVED').sort((a,b)=>b.eventId-a.eventId)[0];
-      if(m && m.createdBy===actorId && notifyFlagFor(tid, justResolved)) notifyTicketDone(tid);
+      backdrop.remove();
+      render();
+    }catch(err){
+      // Mutation already rolled its optimistic event back out of EVENTS —
+      // just tell the person and let them retry from the still-open modal.
+      toast(err && err.message ? err.message : 'Something went wrong — please try again.');
+      confirmBtn.disabled = false;
     }
-    backdrop.remove();
-    render();
   };
 }
 
@@ -3386,7 +3540,7 @@ function wireNewTicketDrawerFields(u){
     });
   }
   const submit = document.getElementById('nt-submit');
-  if(submit) submit.onclick = ()=>{
+  if(submit) submit.onclick = async ()=>{
     const f = newTicketForm;
     let subjectEmployee = f.subjectEmployee;
     if(!subjectEmployee){ toast('Select (or enter) the Subject Employee (E2) — who this ticket is about.'); return; }
@@ -3394,15 +3548,24 @@ function wireNewTicketDrawerFields(u){
     let target = f.target;
     if(f.targetType==='department' && target==='__new__'){ target = (f.targetNew||'').trim(); }
     if(!target){ toast(f.targetType==='department' ? 'Choose or name a department.' : 'Choose who to delegate this to.'); return; }
-    const tid = createTicket({
-      creatorId: state.currentUserId, title:f.title, description:f.description||'(no description provided)',
-      priority:f.priority, subjectType:'Employee', subjectEmployeeId:subjectEmployee,
-      targetType:f.targetType, target, notifyOnDone:f.notifyOnDone,
-    });
-    toast(`Ticket ${tid} created for ${subjectEmployee}, routed to ${nameOf(target)}.`);
-    newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:'', notifyOnDone:true};
-    closeNewTicketDrawer();
-    openTicketInFlow(tid);
+    submit.disabled = true; // block double-submit while the write is in flight
+    try{
+      const tid = await createTicket({
+        creatorId: state.currentUserId, title:f.title, description:f.description||'(no description provided)',
+        priority:f.priority, subjectType:'Employee', subjectEmployeeId:subjectEmployee,
+        targetType:f.targetType, target, notifyOnDone:f.notifyOnDone,
+      });
+      toast(`Ticket ${tid} created for ${subjectEmployee}, routed to ${nameOf(target)}.`);
+      newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:'', notifyOnDone:true};
+      closeNewTicketDrawer();
+      openTicketInFlow(tid);
+    }catch(err){
+      // createTicket already rolled its optimistic event back out of
+      // EVENTS/TICKET_MASTER — just tell the person and let them retry
+      // from the still-open drawer.
+      toast(err && err.message ? err.message : 'Something went wrong — please try again.');
+      submit.disabled = false;
+    }
   };
   const reset = document.getElementById('nt-reset');
   if(reset) reset.onclick = ()=>{ newTicketForm = {priority:'Medium', subjectType:'Employee', subjectEmployee:'', targetType:'department', target:'', title:'', description:'', notifyOnDone:true}; refreshNewTicketDrawer(u); };
