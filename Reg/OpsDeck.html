@@ -1360,9 +1360,15 @@ function ingestFromCachePayload(payload){
   // payload.Ticket = flow/event log; payload.ticLog = per-ticket master.
   const eventRows = Array.isArray(payload.Ticket) ? payload.Ticket
     : (Array.isArray(payload) ? payload : null);
-  if(!eventRows || !eventRows.length) return false;
-  const masterRows = Array.isArray(payload.ticLog) ? payload.ticLog : [];
+  // Users must be parsed even when there are no tickets yet — otherwise an
+  // empty ticket log leaves USERS_READY stuck false forever and the app
+  // never gets past "Signing you in…", even though the Users cache landed fine.
   parseUsers(payload);
+  if(!eventRows || !eventRows.length){
+    discoverDirectory(EVENTS, TICKET_MASTER); // re-sync STAFF/DEPARTMENTS now that Users may have just arrived
+    return false;
+  }
+  const masterRows = Array.isArray(payload.ticLog) ? payload.ticLog : [];
   rebuildFromRealCache(eventRows, masterRows);
   return true;
 }
