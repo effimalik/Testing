@@ -215,6 +215,7 @@
   .st-INPROGRESS{background:var(--blue-dim);color:var(--blue);}
   .st-ONHOLD{background:var(--amber-dim);color:var(--amber);}
   .st-RESOLVED{background:var(--teal-dim);color:var(--teal);}
+  .st-CLOSED{background:var(--teal-dim);color:var(--teal);}
   .overdue-flag{
     font-family:var(--font-mono);font-size:10.5px;color:#fff;background:var(--red);
     padding:3px 8px;border-radius:5px;display:flex;align-items:center;gap:5px;animation:ring 1.6s ease-in-out infinite;
@@ -647,6 +648,8 @@
     padding:2px 4px;border-radius:4px;
   }
   .notif-close:hover{color:var(--text);background:var(--panel-hover);}
+  .notif-box.notif-alarm{border-color:var(--amber-dim);}
+  .notif-box.notif-alarm .notif-icon{background:var(--amber-dim);color:var(--amber);}
 
   .kicker{font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
 </style>
@@ -1461,7 +1464,14 @@ function allTicketIds(){ return [...new Set(EVENTS.map(r=>r.ticketId))]; }
 function ticketEvents(tid){ return EVENTS.filter(r=>r.ticketId===tid).sort((a,b)=>a.eventId-b.eventId); }
 function ticketTimeline(tid){ return ticketEvents(tid); }
 function master(tid){ return TICKET_MASTER[tid] || null; }
-function isTerminal(status){ return status==='RESOLVED'; }
+// Terminal = no further reminders/alarms should fire and the ticket drops
+// out of "open" counts. RESOLVED is the only terminal status the real
+// ap2_ticLog vocabulary emits today; CLOSED is included defensively so
+// that if/when the backend ever adds a distinct Closed state, every
+// reminder-stopping, counting, and filtering code path here (tickReminderEngine,
+// myOpenCount, deptQueueCount, orgOpenCount, matchesStatusFilter, overdueInfo)
+// picks it up immediately with no further changes needed.
+function isTerminal(status){ return status==='RESOLVED' || status==='CLOSED'; }
 function ticketTitle(tid){ const m=master(tid); return (m && m.notes) || 'Untitled ticket'; }
 // Same calendar day check as demo fast-forward's "now" (nowMs()), so this
 // tracks the demo clock instead of real wall-clock time when it's been
@@ -1659,6 +1669,19 @@ function latestLiveReminder(tid){
   }
   return live;
 }
+// Full state of the ticket's current reminder cycle: which REMINDER is in
+// effect, and — if it's been attended — the REMINDER_ATTENDED event that
+// closed it. A newer REMINDER always starts a fresh cycle (attendedAt
+// resets), matching latestLiveReminder()'s semantics above.
+function reminderCycleState(tid){
+  const evs = ticketEvents(tid);
+  let liveReminder = null, attendedAt = null;
+  for(const e of evs){
+    if(e.action==='REMINDER'){ liveReminder = e; attendedAt = null; }
+    else if(e.action==='REMINDER_ATTENDED' && liveReminder){ attendedAt = e; }
+  }
+  return {liveReminder, attendedAt};
+}
 function overdueInfo(tid){
   const owner = currentOwner(tid);
   if(!owner) return {overdue:false};
@@ -1671,15 +1694,44 @@ function overdueInfo(tid){
   if(now < dueAt) return {overdue:false, dueAt};
   return {overdue:true, elapsed: now-dueAt, dueAt};
 }
+// Runs continuously (real wall-clock time, not just the demo fast-forward
+// clock) for every ticket currently assigned to whoever is logged into
+// this browser — so reminders always follow the ticket's current handler
+// after a transfer/delegate (a re-assigned ticket's alarms simply start
+// following whoever it's now with, the next time they load/poll).
+//   • First alert fires the moment a reminder's due time passes.
+//   • If still unattended, another alert fires every 30 minutes after that.
+//   • Once attended, if the ticket is still not resolved, an hourly
+//     "still pending" alarm takes over — and keeps going, day after day,
+//     until the ticket is resolved (or put on hold).
+//   • Resolving the ticket stops everything immediately (isTerminal check
+//     below); attending a reminder never resolves it on its own.
 function tickReminderEngine(){
-  if(demoOffsetMs<=0) return; // only once the demo clock has been fast-forwarded
+  const uid = state.currentUserId;
+  if(!uid) return;
+  const now = nowMs();
   allTicketIds().forEach(tid=>{
-    const od = overdueInfo(tid);
-    if(!od.overdue) return;
+    const owner = currentOwner(tid);
+    if(!owner || owner.assignedTo!==uid) return; // only alarm for the ticket's current handler
+    if(isTerminal(owner.status) || owner.status==='ON HOLD') return; // stop on resolve/hold
+    const {liveReminder, attendedAt} = reminderCycleState(tid);
+    if(!liveReminder) return; // no reminder set on this ticket
     const evs = ticketEvents(tid);
-    const last = evs[evs.length-1];
-    if(last.action==='REMINDER_ALERT') return; // already alerted for this reminder
-    fireReminderAlert(tid);
+
+    if(!attendedAt){
+      const dueAt = parseReminderDetail(liveReminder.detail);
+      if(!dueAt || now < dueAt) return;
+      const lastAlert = [...evs].reverse().find(e=> e.action==='REMINDER_ALERT' && e.eventId>liveReminder.eventId);
+      if(!lastAlert || now - lastAlert.eventId >= 30*60000){
+        fireReminderAlert(tid, 'Automated: reminder overdue, no response yet.');
+      }
+    } else {
+      const lastAlarm = [...evs].reverse().find(e=> e.action==='REMINDER_ALERT' && e.eventId>attendedAt.eventId);
+      const baseline = lastAlarm ? lastAlarm.eventId : attendedAt.eventId;
+      if(now - baseline >= 60*60000){
+        fireReminderAlert(tid, 'Automated: ticket still pending after reminder attended.');
+      }
+    }
   });
 }
 
@@ -1913,15 +1965,77 @@ async function attendReminder({ticketId, actorId, note}){
     throw err;
   }
 }
-// Automated / demo-clock-driven only (see tickReminderEngine, which only
-// runs once the on-page fast-forward clock has been used) — this simulates
-// what an overdue reminder would look like and is never a real user action,
-// so unlike everything else in this section it stays local-only and does
-// NOT write through to the server.
-function fireReminderAlert(ticketId){
+// System-fired (no human click) — covers both the pre-attendance 30-min
+// escalation and the post-attendance hourly pending alarm; detail text
+// tells them apart (see tickReminderEngine). Unlike user-initiated
+// mutations this does NOT roll back the optimistic event on a failed
+// write — rolling back would make it fire again on the very next check,
+// turning a network hiccup into a beep storm. It's logged instead, and
+// the next scheduled check simply carries on from there.
+async function fireReminderAlert(ticketId, detail){
   const owner = currentOwner(ticketId);
-  appendEvent({ticketId, action:'REMINDER_ALERT', status:owner.status, from:owner.assignedTo, performedBy:owner.assignedTo, to:owner.assignedTo, detail:'Automated: reminder overdue, no response yet.'});
+  if(!owner) return;
+  const actorId = owner.assignedTo;
+  const ev = appendEvent({ticketId, action:'REMINDER_ALERT', status:owner.status, from:owner.assignedTo, performedBy:owner.assignedTo, to:owner.assignedTo, detail});
+  playBeep();
+  notifyReminderAlarm(ticketId, detail);
   safeRender();
+  try{
+    await postAction('reminderAlertTicket', {ticketId, eventId: ev.eventId, actorId, detail});
+  }catch(err){
+    console.warn('[OpsDeck] reminder alert failed to persist (will not re-fire immediately):', err.message);
+  }
+}
+// Short two-tone beep via WebAudio — no external asset needed. Browsers
+// block audio until the page has seen at least one user interaction
+// (click/tap), which is a browser policy, not something a demo/mutation
+// flag can bypass — the very first alarm after page load may arrive
+// silently (with the visible notification still showing) until then.
+let _audioCtx = null;
+function playBeep(){
+  try{
+    if(!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = _audioCtx;
+    if(ctx.state==='suspended') ctx.resume();
+    const tone = (delay)=>{
+      setTimeout(()=>{
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = 'sine'; osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime+0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.35);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(); osc.stop(ctx.currentTime+0.36);
+      }, delay);
+    };
+    tone(0); tone(450);
+  }catch(e){
+    console.warn('[OpsDeck] beep failed:', e.message);
+  }
+}
+// Persistent on-screen alarm — same pattern as notifyTicketDone (the
+// "ticket resolved" popup), amber-accented to read as an alert rather
+// than a completion. Stays until dismissed or clicked through.
+function notifyReminderAlarm(ticketId, detail){
+  const wrap = document.getElementById('notifWrap');
+  if(!wrap) return;
+  const m = master(ticketId);
+  const title = m && m.notes ? m.notes : ticketId;
+  const el = document.createElement('div');
+  el.className = 'notif-box notif-alarm';
+  el.innerHTML = `
+    <span class="notif-icon">${ICON_BELL}</span>
+    <span class="notif-body">
+      <div class="notif-title">${escHtml(ticketId)} — reminder alarm</div>
+      <div class="notif-sub">${escHtml(title)} · ${escHtml(detail)} — click to view</div>
+    </span>
+    <button type="button" class="notif-close" aria-label="Dismiss">✕</button>`;
+  el.addEventListener('click', (e)=>{
+    if(e.target.closest('.notif-close')){ el.remove(); return; }
+    el.remove();
+    openTicketInFlow(ticketId);
+  });
+  wrap.appendChild(el);
 }
 async function resolveTicket({ticketId, actorId, comment}){
   const owner = currentOwner(ticketId);
@@ -3597,6 +3711,10 @@ setInterval(()=>{
     safeRender();
   }
 }, 15000);
+// Reminder/escalation/hourly-pending-alarm engine — runs independently of
+// which screen is open (or whether a render was even due), so an alarm on
+// a ticket the user isn't currently looking at still fires on time.
+setInterval(tickReminderEngine, 30000);
 
 // ---------- Boot ----------
 loadStaffMeta();
