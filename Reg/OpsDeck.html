@@ -716,9 +716,28 @@
 let demoOffsetMs = 0;
 function nowMs(){ return Date.now() + demoOffsetMs; }
 function pad(n,l=2){ return String(n).padStart(l,'0'); }
+// All ticket/reminder timestamps are shown and entered in UAE time
+// (Asia/Dubai), regardless of the device's own timezone. Dubai runs a
+// fixed UTC+4 offset with no daylight saving, so a plain numeric offset
+// is reliable — no Intl/timezone tables needed. Event_IDs and dueAtMs
+// values themselves stay absolute epoch ms (unaffected); only display
+// and user-entered wall-clock time go through these.
+const UAE_OFFSET_MS = 4*3600000;
+function dubaiParts(ms){
+  const d = new Date(ms + UAE_OFFSET_MS);
+  return {
+    year: d.getUTCFullYear(), month: d.getUTCMonth(), day: d.getUTCDate(),
+    hour: d.getUTCHours(), minute: d.getUTCMinutes(), second: d.getUTCSeconds(),
+    weekdayIdx: d.getUTCDay(),
+  };
+}
+function dubaiToMs(year, month, day, hour, minute, second=0){
+  return Date.UTC(year, month, day, hour, minute, second) - UAE_OFFSET_MS;
+}
+const WEEKDAY_ABBR = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 function fmtTs(ms){
-  const d = new Date(ms);
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  const d = dubaiParts(ms);
+  return `${d.year}-${pad(d.month+1)}-${pad(d.day)} ${pad(d.hour)}:${pad(d.minute)}:${pad(d.second)}`;
 }
 function fmtDur(ms){
   ms = Math.abs(ms);
@@ -742,15 +761,15 @@ function statusClass(s){ return 'st-'+String(s||'').replace(/\s+/g,''); }
 function statusDisplayLabel(s){ return s==='NEW' ? 'Open' : s; }
 const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function fmtReminderDetail(ms){
-  const d = new Date(ms);
-  return `Reminder: ${pad(d.getDate())}-${MONTH_ABBR[d.getMonth()]}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const d = dubaiParts(ms);
+  return `Reminder: ${pad(d.day)}-${MONTH_ABBR[d.month]}-${d.year} ${pad(d.hour)}:${pad(d.minute)}`;
 }
 function parseReminderDetail(detail){
   const m = String(detail||'').match(/Reminder:\s*(\d{1,2})-([A-Za-z]{3})-(\d{4})\s+(\d{1,2}):(\d{2})/);
   if(!m) return null;
   const monthIdx = MONTH_ABBR.findIndex(x=>x.toLowerCase()===m[2].toLowerCase());
   if(monthIdx<0) return null;
-  return new Date(+m[3], monthIdx, +m[1], +m[4], +m[5], 0, 0).getTime();
+  return dubaiToMs(+m[3], monthIdx, +m[1], +m[4], +m[5], 0);
 }
 
 /* ═══════════ Identity codes ═══════════
@@ -1448,8 +1467,8 @@ function ticketTitle(tid){ const m=master(tid); return (m && m.notes) || 'Untitl
 // tracks the demo clock instead of real wall-clock time when it's been
 // fast-forwarded.
 function isSameCalendarDay(msA, msB){
-  const a = new Date(msA), b = new Date(msB);
-  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+  const a = dubaiParts(msA), b = dubaiParts(msB);
+  return a.year===b.year && a.month===b.month && a.day===b.day;
 }
 // Tickets that: (1) this user either CREATED or DELEGATED (i.e. performed a
 // TRANSFERRED event on — routing it to a department queue or straight to a
@@ -2998,32 +3017,32 @@ function openRespondModal(kind, tid){
   }
   // Reminder due-date picker: quick presets + a clean split date/time
   // pair (native datetime-local renders inconsistently across browsers).
-  function reminderDateTimeParts(d){
+  function reminderDateTimeParts(ms){
+    const d = dubaiParts(ms);
     return {
-      date: `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,
-      time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+      date: `${d.year}-${pad(d.month+1)}-${pad(d.day)}`,
+      time: `${pad(d.hour)}:${pad(d.minute)}`,
     };
   }
   function applyReminderPreset(preset){
-    let d;
-    if(preset==='30m') d = new Date(nowMs()+30*60000);
-    else if(preset==='1h') d = new Date(nowMs()+3600000);
-    else { // '1d' — next day, 10:00 AM, not "24h from now"
-      d = new Date(nowMs());
-      d.setDate(d.getDate()+1);
-      d.setHours(10,0,0,0);
+    let ms;
+    if(preset==='30m') ms = nowMs()+30*60000;
+    else if(preset==='1h') ms = nowMs()+3600000;
+    else { // '1d' — next day, 10:00 AM UAE time, not "24h from now"
+      const p = dubaiParts(nowMs());
+      ms = dubaiToMs(p.year, p.month, p.day+1, 10, 0);
     }
-    const parts = reminderDateTimeParts(d);
+    const parts = reminderDateTimeParts(ms);
     const dateInput = backdrop.querySelector('#rm-date');
     const timeInput = backdrop.querySelector('#rm-time');
     if(dateInput) dateInput.value = parts.date;
     if(timeInput) timeInput.value = parts.time;
   }
   if(kind==='reminder'){
-    const defaultDue = new Date(nowMs()+3600000); // 1 hour out, same as the "1 hour" preset
+    const defaultDue = nowMs()+3600000; // 1 hour out, same as the "1 hour" preset
     const parts = reminderDateTimeParts(defaultDue);
     extra = `<div class="field">
-      <label>Remind at</label>
+      <label>Remind at (UAE time)</label>
       <div class="filter-pills" id="rmReminderPresets" style="margin-bottom:10px;">
         <button type="button" class="filter-btn" data-rm-preset="30m">30 min</button>
         <button type="button" class="filter-btn" data-rm-preset="1h">1 hour</button>
@@ -3066,12 +3085,15 @@ function openRespondModal(kind, tid){
     const hint = backdrop.querySelector('#rmReminderHint');
     const fmtHint = ()=>{
       if(!dateInput.value || !timeInput.value){ hint.textContent=''; return; }
-      const d = new Date(`${dateInput.value}T${timeInput.value}`);
-      if(isNaN(d.getTime())){ hint.textContent=''; return; }
-      const wd = d.toLocaleDateString(undefined,{weekday:'short'});
-      const mon = MONTH_ABBR[d.getMonth()];
-      let h = d.getHours(), ampm = h>=12?'PM':'AM'; h = h%12 || 12;
-      hint.textContent = `Reminder set for ${wd}, ${d.getDate()}-${mon}-${d.getFullYear()} at ${h}:${pad(d.getMinutes())} ${ampm}`;
+      const [y,mo,da] = dateInput.value.split('-').map(Number);
+      const [hh,mm] = timeInput.value.split(':').map(Number);
+      if([y,mo,da,hh,mm].some(n=>isNaN(n))){ hint.textContent=''; return; }
+      const ms = dubaiToMs(y, mo-1, da, hh, mm, 0);
+      const d = dubaiParts(ms);
+      const wd = WEEKDAY_ABBR[d.weekdayIdx];
+      const mon = MONTH_ABBR[d.month];
+      let h = d.hour, ampm = h>=12?'PM':'AM'; h = h%12 || 12;
+      hint.textContent = `Reminder set for ${wd}, ${d.day}-${mon}-${d.year} at ${h}:${pad(d.minute)} ${ampm} (UAE time)`;
     };
     backdrop.querySelectorAll('[data-rm-preset]').forEach(b=>{
       b.onclick = ()=>{
@@ -3114,8 +3136,10 @@ function openRespondModal(kind, tid){
         const dateVal = backdrop.querySelector('#rm-date').value;
         const timeVal = backdrop.querySelector('#rm-time').value;
         if(!dateVal || !timeVal){ toast('Pick a date and time first.'); confirmBtn.disabled=false; return; }
-        const dueAtMs = new Date(`${dateVal}T${timeVal}`).getTime();
-        if(isNaN(dueAtMs)){ toast('Pick a valid date and time.'); confirmBtn.disabled=false; return; }
+        const [y,mo,da] = dateVal.split('-').map(Number);
+        const [hh,mm] = timeVal.split(':').map(Number);
+        if([y,mo,da,hh,mm].some(n=>isNaN(n))){ toast('Pick a valid date and time.'); confirmBtn.disabled=false; return; }
+        const dueAtMs = dubaiToMs(y, mo-1, da, hh, mm, 0);
         await setReminder({ticketId:tid, actorId, dueAtMs});
         toast('Reminder set.');
       } else if(kind==='attend'){
