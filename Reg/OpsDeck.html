@@ -261,39 +261,79 @@
   .subtabs button.active{background:var(--panel);color:var(--text);}
 
   /* ---------- Reports (Org Overview) ---------- */
+  .rep-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px;}
+  .rep-header-badge{
+    width:40px;height:40px;border-radius:10px;background:var(--teal-dim);color:var(--teal);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .rep-header-badge svg{width:20px;height:20px;}
+  .rep-header-titles{display:flex;align-items:center;gap:14px;}
+  .rep-generated{
+    font-family:var(--font-mono);font-size:11px;color:var(--text-muted);text-align:right;white-space:nowrap;
+    padding-top:6px;
+  }
+  .rep-panel{
+    background:var(--panel);border:1px solid var(--border);border-radius:12px;
+    padding:20px 22px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.18);
+  }
+  .rep-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+  .rep-panel-head-left{display:flex;align-items:center;gap:10px;}
+  .rep-panel-icon{
+    width:26px;height:26px;border-radius:7px;background:var(--panel-raised);color:var(--teal);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--border-soft);
+  }
+  .rep-panel-icon svg{width:14px;height:14px;}
+  .rep-panel-title{font-family:var(--font-display);font-size:14.5px;font-weight:600;color:var(--text);}
+  .rep-panel-meta{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);}
   .rep-filters{margin-bottom:18px;}
   .rep-field-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:end;}
   @media (max-width:760px){.rep-field-row{grid-template-columns:1fr 1fr;}}
   .rep-field-row .field{margin-bottom:0;}
-  .rep-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:18px 0 6px;}
-  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:10px 0 6px;}
+  .rep-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
   @media (max-width:640px){.kpi-grid{grid-template-columns:1fr 1fr;}}
-  .kpi-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
-  .kpi-n{font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--text);}
-  .kpi-l{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
-  .bar-chart{display:flex;flex-direction:column;gap:10px;margin-bottom:8px;}
-  .bar-row{display:grid;grid-template-columns:140px 1fr auto;gap:10px;align-items:center;}
+  .kpi-card{
+    background:var(--panel-raised);border:1px solid var(--border);border-left:3px solid var(--border);
+    border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+    transition:.15s;
+  }
+  .kpi-card:hover{border-color:#37444F;}
+  .kpi-card.kpi-total{border-left-color:var(--blue);}
+  .kpi-card.kpi-pending{border-left-color:var(--amber);}
+  .kpi-card.kpi-done{border-left-color:var(--teal);}
+  .kpi-card.kpi-rate{border-left-color:#9B7EDE;}
+  .kpi-n{font-family:var(--font-display);font-size:23px;font-weight:700;color:var(--text);line-height:1;}
+  .kpi-l{font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:5px;}
+  .kpi-icon{width:28px;height:28px;border-radius:7px;background:var(--panel-hover);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text-muted);}
+  .kpi-icon svg{width:14px;height:14px;}
+  .kpi-card.kpi-total .kpi-icon{color:var(--blue);}
+  .kpi-card.kpi-pending .kpi-icon{color:var(--amber);}
+  .kpi-card.kpi-done .kpi-icon{color:var(--teal);}
+  .kpi-card.kpi-rate .kpi-icon{color:#9B7EDE;}
+  .bar-chart{display:flex;flex-direction:column;gap:12px;}
+  .bar-row{display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:center;}
   @media (max-width:640px){.bar-row{grid-template-columns:96px 1fr auto;}}
-  .bar-label{font-size:12.5px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .bar-track{display:flex;height:14px;border-radius:4px;overflow:hidden;background:var(--panel-raised);border:1px solid var(--border-soft);}
+  .bar-label{font-size:12.5px;color:var(--text-dim);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bar-track{display:flex;height:15px;border-radius:5px;overflow:hidden;background:var(--panel-hover);border:1px solid var(--border-soft);}
   .bar-seg{height:100%;}
-  .bar-seg.pending{background:var(--amber);}
-  .bar-seg.done{background:var(--teal);}
+  .bar-seg.pending{background:linear-gradient(90deg,#F2A93B,#E8934B);}
+  .bar-seg.done{background:linear-gradient(90deg,#4FD1C5,#39B8AC);}
   .bar-nums{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);white-space:nowrap;}
-  .legend{display:flex;gap:16px;font-size:11.5px;color:var(--text-muted);margin:2px 0 20px;}
+  .legend{display:flex;gap:16px;font-size:11.5px;color:var(--text-muted);margin-top:14px;padding-top:14px;border-top:1px solid var(--border-soft);}
   .lg-dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle;}
   .lg-dot.pending{background:var(--amber);}
   .lg-dot.done{background:var(--teal);}
-  .rep-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);}
+  .rep-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;}
   table.rep-table{width:100%;border-collapse:collapse;font-size:12.5px;}
-  table.rep-table th{text-align:left;font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);padding:10px 12px;background:var(--panel-raised);border-bottom:1px solid var(--border);white-space:nowrap;}
-  table.rep-table td{padding:9px 12px;border-bottom:1px solid var(--border-soft);color:var(--text-dim);white-space:nowrap;}
+  table.rep-table th{text-align:left;font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);padding:11px 14px;background:var(--panel-raised);border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;}
+  table.rep-table td{padding:10px 14px;border-bottom:1px solid var(--border-soft);color:var(--text-dim);white-space:nowrap;}
   table.rep-table td.mono{font-family:var(--font-mono);font-size:11.5px;}
+  table.rep-table tbody tr:nth-child(even){background:rgba(255,255,255,.012);}
   table.rep-table tbody tr:last-child td{border-bottom:none;}
-  table.rep-table tbody tr[data-open-ticket]{cursor:pointer;}
+  table.rep-table tbody tr[data-open-ticket]{cursor:pointer;transition:background .1s;}
   table.rep-table tbody tr[data-open-ticket]:hover td{background:var(--panel-hover);color:var(--text);}
-  .rep-group-detail{border:1px solid var(--border);border-radius:var(--radius);margin-top:10px;overflow:hidden;}
-  .rep-group-detail summary{padding:11px 14px;cursor:pointer;font-size:13px;font-weight:600;background:var(--panel);list-style:none;display:flex;align-items:center;justify-content:space-between;}
+  .rep-group-detail{border:1px solid var(--border);border-radius:10px;margin-top:10px;overflow:hidden;}
+  .rep-group-detail summary{padding:11px 14px;cursor:pointer;font-size:13px;font-weight:600;background:var(--panel-raised);list-style:none;display:flex;align-items:center;justify-content:space-between;}
   .rep-group-detail summary::-webkit-details-marker{display:none;}
   .rep-group-detail summary::after{content:'▾';color:var(--text-muted);font-size:11px;}
   .rep-group-detail[open] summary{border-bottom:1px solid var(--border);}
@@ -612,8 +652,16 @@
   .notif-dropdown-item:hover{background:var(--panel-hover);}
   .notif-dropdown-item .notif-icon{width:26px;height:26px;}
   .notif-dropdown-item .notif-icon svg{width:14px;height:14px;}
+  .notif-dropdown-item.kind-reminder .notif-icon{background:var(--amber-dim);color:var(--amber);}
+  .notif-dropdown-item.kind-done .notif-icon{background:var(--teal-dim);color:var(--teal);}
+  .notif-dropdown-item .notif-kind-tag{
+    font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:.5px;
+    padding:1px 6px;border-radius:10px;flex-shrink:0;margin-left:6px;
+  }
+  .notif-dropdown-item.kind-reminder .notif-kind-tag{background:var(--amber-dim);color:var(--amber);}
+  .notif-dropdown-item.kind-done .notif-kind-tag{background:var(--teal-dim);color:var(--teal);}
   .notif-dropdown-item .notif-body{flex:1;min-width:0;}
-  .notif-dropdown-item .notif-title{font-size:13px;}
+  .notif-dropdown-item .notif-title{font-size:13px;display:flex;align-items:center;flex-wrap:wrap;gap:0;}
   .notif-dropdown-item .notif-sub{font-size:11.5px;}
   .notif-dropdown-empty{padding:24px 16px;text-align:center;color:var(--text-muted);font-size:12.5px;}
   body.drawer-open .page{margin-right:min(420px,92vw);transition:margin-right .22s ease;}
@@ -2134,7 +2182,6 @@ const state = {
   deptStatusFilter: 'all',
   notifOpen: false, // bell dropdown, top bar
   profileOpen: false, // profile dropdown, top bar
-  orgSub: 'overview', // 'overview' | 'reports' — Org Overview's own sub-nav
   reportMode: 'table', // 'table' | 'dashboard' — the two report view modes
   reportGroup: 'case', // 'case' | 'dept' | 'role' | 'employee' — table-mode grouping
   reportFrom: '', reportTo: '', // date-created range filter, applies to every report/graph
@@ -2315,6 +2362,18 @@ function deptQueueCount(deptId){
 function orgOpenCount(){ return allTicketIds().filter(tid=>!isTerminal(currentOwner(tid).status)).length; }
 
 const ICON_BELL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`;
+// A distinct alarm-clock glyph for reminder-kind notifications, so the
+// bell dropdown reads at a glance without needing to parse the text —
+// ICON_BELL stays reserved for the bell button itself / toast alarms.
+const ICON_ALARM = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.5 1.5"/><path d="M8 2.5 5 5M16 2.5l3 2.5"/></svg>`;
+// A ticket-shaped glyph for done-kind (ticket resolved) notifications.
+const ICON_TICKET = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1.5a1.5 1.5 0 0 0 0 3V15a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1.5a1.5 1.5 0 0 0 0-3V9Z"/><path d="M10 7v10" stroke-dasharray="1.6 1.8"/></svg>`;
+// Target/completion-rate glyph, used on the Reports KPI cards.
+const ICON_TARGET = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".6" fill="currentColor"/></svg>`;
+const ICON_REPORT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 16.5h6M9 9.5h2.5"/></svg>`;
+const ICON_FILTER = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M7 12h10M10 19h4"/></svg>`;
+const ICON_CHART = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M11 20V4M18 20v-7"/></svg>`;
+const ICON_TABLE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 10h18M9 4v16"/></svg>`;
 // Topbar nav-tab / new-ticket icons — same stroke-based style as ICON_BELL
 // and the existing ICON_PERSON/ICON_DEPARTMENT above.
 const ICON_MYPORTAL = ICON_PERSON;
@@ -2334,7 +2393,7 @@ function renderNotifBell(u){
     .map(x=>({
       kind:'done', ticketId:x.ticketId, sortKey:x.resolvedEvent.eventId,
       dismissKey:'D:'+x.ticketId+':'+x.resolvedEvent.eventId,
-      icon:ICON_CHECK, title:`${x.ticketId} is now Done`,
+      icon:ICON_TICKET, kindLabel:'Ticket', title:`${x.ticketId} is now Done`,
       sub:`${ticketTitle(x.ticketId)} · ${x.via==='delegated'?'delegated by you':'created by you'}`,
     }));
   const reminderItems = activeReminderAlerts(u.id)
@@ -2342,7 +2401,7 @@ function renderNotifBell(u){
     .map(x=>({
       kind:'reminder', ticketId:x.ticketId, sortKey:x.alertEvent.eventId,
       dismissKey:'R:'+x.ticketId+':'+x.alertEvent.eventId,
-      icon:ICON_BELL, title:`${x.ticketId} — reminder alarm`,
+      icon:ICON_ALARM, kindLabel:'Reminder', title:`${x.ticketId} — reminder alarm`,
       sub:`${ticketTitle(x.ticketId)} · ${x.attended?'still pending after reminder attended':'reminder overdue, not yet attended'}`,
     }));
   const items = [...doneItems, ...reminderItems].sort((a,b)=>b.sortKey-a.sortKey);
@@ -2361,10 +2420,10 @@ function renderNotifBell(u){
       </div>
       <div class="notif-dropdown-list">
         ${items.length ? items.map(x=>`
-          <div class="notif-dropdown-item" data-notif-open="${escAttr(x.ticketId)}">
+          <div class="notif-dropdown-item kind-${x.kind}" data-notif-open="${escAttr(x.ticketId)}">
             <span class="notif-icon">${x.icon}</span>
             <span class="notif-body">
-              <div class="notif-title">${escHtml(x.title)}</div>
+              <div class="notif-title">${escHtml(x.title)}<span class="notif-kind-tag">${escHtml(x.kindLabel)}</span></div>
               <div class="notif-sub">${escHtml(x.sub)}</div>
             </span>
             <button type="button" class="notif-close" aria-label="Dismiss" data-notif-dismiss="${escAttr(x.dismissKey)}">✕</button>
@@ -3139,32 +3198,7 @@ function orgPendingTickets(){
   return allTicketIds().filter(tid => overdueInfo(tid).overdue);
 }
 function renderOrgOverview(u){
-  return `
-  <h1 class="page-title">Org Overview</h1>
-  <p class="page-sub">Read-only view across every department's tickets, wherever they currently sit. Use Flow Finder to inspect any of them in detail.</p>
-  <div class="subtabs" style="margin-bottom:20px;">
-    <button data-orgsub="overview" class="${state.orgSub==='overview'?'active':''}">Overview</button>
-    <button data-orgsub="reports" class="${state.orgSub==='reports'?'active':''}">Reports</button>
-  </div>
-  ${state.orgSub==='reports' ? renderOrgReports(u) : renderOrgOverviewBody(u)}
-  `;
-}
-function renderOrgOverviewBody(u){
-  const pending = orgPendingTickets();
-  const groups = DEPARTMENTS.map(d=>{
-    const tids = allTicketIds().filter(tid=> deptNameOfTarget(currentOwner(tid).assignedTo)===d.name);
-    return {dept:d, tids};
-  });
-  return `
-  <div class="section-label" style="color:var(--red);">Pending — reminders triggered, not yet attended (${pending.length})</div>
-  ${pending.length
-    ? `<div class="ticket-list">${pending.map(t=>ticketRow(t, {subLabel:`With ${nameOf(currentOwner(t).assignedTo)} · ${deptNameOfTarget(currentOwner(t).assignedTo)}`})).join('')}</div>`
-    : `<div class="empty">Nothing overdue across the whole org right now.</div>`}
-  ${groups.map(g=>`
-    <div class="section-label">${g.dept.name} (${g.tids.length})</div>
-    ${g.tids.length ? `<div class="ticket-list">${g.tids.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty">Nothing currently in ${g.dept.name}.</div>`}
-  `).join('')}
-  `;
+  return renderOrgReports(u);
 }
 
 /* ═══════════ Reports (Org Overview → Reports) ═══════════
@@ -3250,10 +3284,10 @@ function renderKpiCards(tids){
   const done = total-pending;
   const pct = total ? Math.round(done/total*100) : 0;
   return `<div class="kpi-grid">
-    <div class="kpi-card"><div class="kpi-n">${total}</div><div class="kpi-l">Total tickets</div></div>
-    <div class="kpi-card"><div class="kpi-n" style="color:var(--amber);">${pending}</div><div class="kpi-l">Pending</div></div>
-    <div class="kpi-card"><div class="kpi-n" style="color:var(--teal);">${done}</div><div class="kpi-l">Done</div></div>
-    <div class="kpi-card"><div class="kpi-n">${pct}%</div><div class="kpi-l">Completion rate</div></div>
+    <div class="kpi-card kpi-total"><div><div class="kpi-n">${total}</div><div class="kpi-l">Total tickets</div></div><div class="kpi-icon">${ICON_TICKET}</div></div>
+    <div class="kpi-card kpi-pending"><div><div class="kpi-n">${pending}</div><div class="kpi-l">Pending</div></div><div class="kpi-icon">${ICON_ALARM}</div></div>
+    <div class="kpi-card kpi-done"><div><div class="kpi-n">${done}</div><div class="kpi-l">Done</div></div><div class="kpi-icon">${ICON_CHECK}</div></div>
+    <div class="kpi-card kpi-rate"><div><div class="kpi-n">${pct}%</div><div class="kpi-l">Completion rate</div></div><div class="kpi-icon">${ICON_TARGET}</div></div>
   </div>`;
 }
 // Stacked Pending/Done bar per group — this is the "Pending vs. Done
@@ -3333,9 +3367,25 @@ function renderOrgReports(u){
   const byDept = groupTickets(filtered, tid=>deptNameOfTarget(currentOwner(tid).assignedTo));
   const byRole = groupTickets(filtered, ticketRoleGroup);
   const byEmployee = groupTickets(filtered, tid=>nameOf(currentOwner(tid).assignedTo)).slice(0,8);
+  const activeGroupLabel = (REPORT_GROUPS.find(g=>g.key===state.reportGroup)||{}).label || 'Report';
 
   return `
-  <div class="card rep-filters">
+  <div class="rep-header">
+    <div class="rep-header-titles">
+      <div class="rep-header-badge">${ICON_REPORT}</div>
+      <div>
+        <h1 class="page-title" style="margin:0;">Organization Reports</h1>
+        <p class="page-sub" style="margin:2px 0 0;">Every ticket across every department, filterable and exportable to Flow Finder for detail.</p>
+      </div>
+    </div>
+    <div class="rep-generated">Generated<br>${fmtTs(nowMs())}</div>
+  </div>
+
+  <div class="rep-panel rep-filters">
+    <div class="rep-panel-head">
+      <div class="rep-panel-head-left"><div class="rep-panel-icon">${ICON_FILTER}</div><div class="rep-panel-title">Filters</div></div>
+      ${filtersActive ? `<button class="btn btn-ghost btn-sm" id="repClearFilters">Clear filters</button>` : `<span class="rep-panel-meta">${filtered.length} of ${allTicketIds().length} tickets</span>`}
+    </div>
     <div class="rep-field-row">
       <div class="field"><label>Created from</label><input type="date" id="repFrom" value="${escAttr(state.reportFrom)}"></div>
       <div class="field"><label>Created to</label><input type="date" id="repTo" value="${escAttr(state.reportTo)}"></div>
@@ -3348,33 +3398,40 @@ function renderOrgReports(u){
         ${deptOpts.map(d=>`<option value="${escAttr(d.name)}" ${state.reportDept===d.name?'selected':''}>${escHtml(d.name)}</option>`).join('')}
       </select></div>
     </div>
-    ${filtersActive ? `<button class="btn btn-ghost btn-sm" id="repClearFilters" style="margin-top:12px;">Clear filters</button>` : ''}
   </div>
 
-  ${renderKpiCards(filtered)}
+  <div class="rep-panel">
+    ${renderKpiCards(filtered)}
+  </div>
 
-  <div class="section-label" style="color:var(--red);">Pending vs. Done — by department</div>
-  ${renderPendingDoneBars(byDept)}
-
-  <div class="rep-toolbar">
-    <div class="seg" style="max-width:240px;">
-      <button data-reportmode="table" class="${state.reportMode==='table'?'sel':''}">Table view</button>
-      <button data-reportmode="dashboard" class="${state.reportMode==='dashboard'?'sel':''}">Dashboard view</button>
+  <div class="rep-panel">
+    <div class="rep-panel-head">
+      <div class="rep-panel-head-left"><div class="rep-panel-icon">${ICON_CHART}</div><div class="rep-panel-title">Pending vs. Done — by department</div></div>
+      <span class="rep-panel-meta">${filtered.length} tickets</span>
     </div>
-    ${state.reportMode==='table' ? `<div class="filter-pills">
-      ${REPORT_GROUPS.map(g=>`<button class="filter-btn ${state.reportGroup===g.key?'active':''}" data-reportgroup="${g.key}">${g.label}</button>`).join('')}
-    </div>` : ''}
+    ${renderPendingDoneBars(byDept)}
   </div>
 
-  ${state.reportMode==='table' ? `
-    <div class="section-label">${(REPORT_GROUPS.find(g=>g.key===state.reportGroup)||{}).label} report (${filtered.length} tickets)</div>
-    ${body}
-  ` : `
-    <div class="section-label">Pending vs. Done — by role</div>
-    ${renderPendingDoneBars(byRole)}
-    <div class="section-label">Top employees by ticket volume</div>
-    ${renderPendingDoneBars(byEmployee)}
-  `}
+  <div class="rep-panel">
+    <div class="rep-panel-head">
+      <div class="rep-panel-head-left"><div class="rep-panel-icon">${state.reportMode==='table'?ICON_TABLE:ICON_CHART}</div><div class="rep-panel-title">${state.reportMode==='table' ? activeGroupLabel+' report' : 'Dashboard'}</div></div>
+      <div class="seg" style="max-width:220px;">
+        <button data-reportmode="table" class="${state.reportMode==='table'?'sel':''}">Table</button>
+        <button data-reportmode="dashboard" class="${state.reportMode==='dashboard'?'sel':''}">Dashboard</button>
+      </div>
+    </div>
+    ${state.reportMode==='table' ? `
+      <div class="filter-pills" style="margin-bottom:16px;">
+        ${REPORT_GROUPS.map(g=>`<button class="filter-btn ${state.reportGroup===g.key?'active':''}" data-reportgroup="${g.key}">${g.label}</button>`).join('')}
+      </div>
+      ${body}
+    ` : `
+      <div class="section-label" style="margin-top:0;">Pending vs. Done — by role</div>
+      ${renderPendingDoneBars(byRole)}
+      <div class="section-label">Top employees by ticket volume</div>
+      ${renderPendingDoneBars(byEmployee)}
+    `}
+  </div>
   `;
 }
 
@@ -3617,9 +3674,6 @@ function wireGlobal(){
   });
   document.querySelectorAll('[data-deptstatus]').forEach(b=>{
     b.onclick=()=>{ state.deptStatusFilter=b.dataset.deptstatus; render(); };
-  });
-  document.querySelectorAll('[data-orgsub]').forEach(b=>{
-    b.onclick=()=>{ state.orgSub=b.dataset.orgsub; render(); };
   });
   document.querySelectorAll('[data-reportmode]').forEach(b=>{
     b.onclick=()=>{ state.reportMode=b.dataset.reportmode; render(); };
