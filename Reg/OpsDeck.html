@@ -260,6 +260,45 @@
   .subtabs button{background:none;border:none;color:var(--text-muted);font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:6px;}
   .subtabs button.active{background:var(--panel);color:var(--text);}
 
+  /* ---------- Reports (Org Overview) ---------- */
+  .rep-filters{margin-bottom:18px;}
+  .rep-field-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:end;}
+  @media (max-width:760px){.rep-field-row{grid-template-columns:1fr 1fr;}}
+  .rep-field-row .field{margin-bottom:0;}
+  .rep-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:18px 0 6px;}
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:10px 0 6px;}
+  @media (max-width:640px){.kpi-grid{grid-template-columns:1fr 1fr;}}
+  .kpi-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+  .kpi-n{font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--text);}
+  .kpi-l{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
+  .bar-chart{display:flex;flex-direction:column;gap:10px;margin-bottom:8px;}
+  .bar-row{display:grid;grid-template-columns:140px 1fr auto;gap:10px;align-items:center;}
+  @media (max-width:640px){.bar-row{grid-template-columns:96px 1fr auto;}}
+  .bar-label{font-size:12.5px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bar-track{display:flex;height:14px;border-radius:4px;overflow:hidden;background:var(--panel-raised);border:1px solid var(--border-soft);}
+  .bar-seg{height:100%;}
+  .bar-seg.pending{background:var(--amber);}
+  .bar-seg.done{background:var(--teal);}
+  .bar-nums{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);white-space:nowrap;}
+  .legend{display:flex;gap:16px;font-size:11.5px;color:var(--text-muted);margin:2px 0 20px;}
+  .lg-dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle;}
+  .lg-dot.pending{background:var(--amber);}
+  .lg-dot.done{background:var(--teal);}
+  .rep-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);}
+  table.rep-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.rep-table th{text-align:left;font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);padding:10px 12px;background:var(--panel-raised);border-bottom:1px solid var(--border);white-space:nowrap;}
+  table.rep-table td{padding:9px 12px;border-bottom:1px solid var(--border-soft);color:var(--text-dim);white-space:nowrap;}
+  table.rep-table td.mono{font-family:var(--font-mono);font-size:11.5px;}
+  table.rep-table tbody tr:last-child td{border-bottom:none;}
+  table.rep-table tbody tr[data-open-ticket]{cursor:pointer;}
+  table.rep-table tbody tr[data-open-ticket]:hover td{background:var(--panel-hover);color:var(--text);}
+  .rep-group-detail{border:1px solid var(--border);border-radius:var(--radius);margin-top:10px;overflow:hidden;}
+  .rep-group-detail summary{padding:11px 14px;cursor:pointer;font-size:13px;font-weight:600;background:var(--panel);list-style:none;display:flex;align-items:center;justify-content:space-between;}
+  .rep-group-detail summary::-webkit-details-marker{display:none;}
+  .rep-group-detail summary::after{content:'▾';color:var(--text-muted);font-size:11px;}
+  .rep-group-detail[open] summary{border-bottom:1px solid var(--border);}
+  .rep-group-detail .rep-table-wrap{border:none;border-radius:0;}
+
   /* ---------- Forms ---------- */
   .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
   .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
@@ -2095,6 +2134,12 @@ const state = {
   deptStatusFilter: 'all',
   notifOpen: false, // bell dropdown, top bar
   profileOpen: false, // profile dropdown, top bar
+  orgSub: 'overview', // 'overview' | 'reports' — Org Overview's own sub-nav
+  reportMode: 'table', // 'table' | 'dashboard' — the two report view modes
+  reportGroup: 'case', // 'case' | 'dept' | 'role' | 'employee' — table-mode grouping
+  reportFrom: '', reportTo: '', // date-created range filter, applies to every report/graph
+  reportPerson: 'all', // filter by currently-assigned person (email/staff code)
+  reportDept: 'all', // filter by currently-assigned department
 };
 // Dismissed-from-bell ticket IDs — session-only (not persisted, not synced
 // to the cache); a dismiss just hides it from this browser tab's dropdown.
@@ -3094,14 +3139,23 @@ function orgPendingTickets(){
   return allTicketIds().filter(tid => overdueInfo(tid).overdue);
 }
 function renderOrgOverview(u){
+  return `
+  <h1 class="page-title">Org Overview</h1>
+  <p class="page-sub">Read-only view across every department's tickets, wherever they currently sit. Use Flow Finder to inspect any of them in detail.</p>
+  <div class="subtabs" style="margin-bottom:20px;">
+    <button data-orgsub="overview" class="${state.orgSub==='overview'?'active':''}">Overview</button>
+    <button data-orgsub="reports" class="${state.orgSub==='reports'?'active':''}">Reports</button>
+  </div>
+  ${state.orgSub==='reports' ? renderOrgReports(u) : renderOrgOverviewBody(u)}
+  `;
+}
+function renderOrgOverviewBody(u){
   const pending = orgPendingTickets();
   const groups = DEPARTMENTS.map(d=>{
     const tids = allTicketIds().filter(tid=> deptNameOfTarget(currentOwner(tid).assignedTo)===d.name);
     return {dept:d, tids};
   });
   return `
-  <h1 class="page-title">Org Overview</h1>
-  <p class="page-sub">Read-only view across every department's tickets, wherever they currently sit — nothing here is filtered by department or status. Use Flow Finder to inspect any of them in detail.</p>
   <div class="section-label" style="color:var(--red);">Pending — reminders triggered, not yet attended (${pending.length})</div>
   ${pending.length
     ? `<div class="ticket-list">${pending.map(t=>ticketRow(t, {subLabel:`With ${nameOf(currentOwner(t).assignedTo)} · ${deptNameOfTarget(currentOwner(t).assignedTo)}`})).join('')}</div>`
@@ -3110,6 +3164,217 @@ function renderOrgOverview(u){
     <div class="section-label">${g.dept.name} (${g.tids.length})</div>
     ${g.tids.length ? `<div class="ticket-list">${g.tids.map(t=>ticketRow(t)).join('')}</div>` : `<div class="empty">Nothing currently in ${g.dept.name}.</div>`}
   `).join('')}
+  `;
+}
+
+/* ═══════════ Reports (Org Overview → Reports) ═══════════
+   Department-wise / case-wise (ticket-wise) / role-wise ("objective-wise" —
+   there's no Objective field in the real data, so this groups by the
+   currently-assigned person's role: Worker/Manager/GM or their real title
+   from the Users cache) / employee-wise breakdowns, each filterable by
+   date-created range, person, and department, with a Table (full data) and
+   a Dashboard (visual) view mode, per the requirement doc. */
+const REPORT_GROUPS = [
+  {key:'case', label:'Case-wise'},
+  {key:'dept', label:'Department-wise'},
+  {key:'role', label:'Role-wise (Objective)'},
+  {key:'employee', label:'Employee-wise'},
+];
+// A ticket's creation timestamp — the earliest event row's eventId, which
+// doubles as epoch ms per the app's own Event_ID convention.
+function ticketCreatedMs(tid){
+  const evs = ticketEvents(tid);
+  return evs.length ? evs[0].eventId : null;
+}
+// "YYYY-MM-DD" (native date input) -> epoch ms, in UAE wall-clock time,
+// either the start or end of that day.
+function parseDateInputToMs(str, endOfDay){
+  if(!str) return null;
+  const [y,mo,da] = str.split('-').map(Number);
+  if(!y || !mo || !da) return null;
+  return endOfDay ? dubaiToMs(y, mo-1, da, 23,59,59) : dubaiToMs(y, mo-1, da, 0,0,0);
+}
+// Real title from the Users cache if known ("Officer", "Manager", "GM"...);
+// otherwise falls back to the discovered STAFF tier (Worker/Manager/GM) —
+// this is the only "role" concept the real data actually carries.
+function personRoleLabel(id){
+  const u = userFor(id);
+  if(u && u.roleTitle) return u.roleTitle;
+  const s = staff(id);
+  if(s) return s.role==='gm' ? 'General Manager' : s.role==='manager' ? 'Manager' : 'Worker';
+  return 'Unknown';
+}
+// Role-wise grouping key for a ticket: the role of whoever currently holds
+// it, or "Unassigned (queued)" while it's still sitting in a department
+// queue rather than with a named person.
+function ticketRoleGroup(tid){
+  const o = currentOwner(tid);
+  if(!o) return 'Unknown';
+  if(!isPersonCode(o.assignedTo)) return 'Unassigned (queued)';
+  return personRoleLabel(o.assignedTo);
+}
+function reportMatchesFilters(tid){
+  const o = currentOwner(tid);
+  if(!o) return false;
+  const fromMs = parseDateInputToMs(state.reportFrom, false);
+  const toMs = parseDateInputToMs(state.reportTo, true);
+  if(fromMs!=null || toMs!=null){
+    const created = ticketCreatedMs(tid);
+    if(created==null) return false;
+    if(fromMs!=null && created<fromMs) return false;
+    if(toMs!=null && created>toMs) return false;
+  }
+  if(state.reportPerson!=='all' && o.assignedTo!==state.reportPerson) return false;
+  if(state.reportDept!=='all' && deptNameOfTarget(o.assignedTo)!==state.reportDept) return false;
+  return true;
+}
+function reportFilteredTickets(){ return allTicketIds().filter(reportMatchesFilters); }
+// Buckets a ticket-id list by keyFn into {label, tids, total, pending, done},
+// sorted by volume — the shared shape both the bar charts and the grouped
+// table breakdowns are built from.
+function groupTickets(tids, keyFn){
+  const map = new Map();
+  tids.forEach(tid=>{
+    const key = keyFn(tid) || 'Unknown';
+    if(!map.has(key)) map.set(key, []);
+    map.get(key).push(tid);
+  });
+  return [...map.entries()].map(([label, list])=>{
+    const pending = list.filter(t=> !isTerminal(currentOwner(t).status)).length;
+    return {label, tids:list, total:list.length, pending, done:list.length-pending};
+  }).sort((a,b)=> b.total-a.total);
+}
+function renderKpiCards(tids){
+  const total = tids.length;
+  const pending = tids.filter(t=> !isTerminal(currentOwner(t).status)).length;
+  const done = total-pending;
+  const pct = total ? Math.round(done/total*100) : 0;
+  return `<div class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-n">${total}</div><div class="kpi-l">Total tickets</div></div>
+    <div class="kpi-card"><div class="kpi-n" style="color:var(--amber);">${pending}</div><div class="kpi-l">Pending</div></div>
+    <div class="kpi-card"><div class="kpi-n" style="color:var(--teal);">${done}</div><div class="kpi-l">Done</div></div>
+    <div class="kpi-card"><div class="kpi-n">${pct}%</div><div class="kpi-l">Completion rate</div></div>
+  </div>`;
+}
+// Stacked Pending/Done bar per group — this is the "Pending vs. Done
+// graph, filterable by date, person, department" from the requirement doc.
+function renderPendingDoneBars(groups){
+  if(!groups.length) return `<div class="empty">No tickets match these filters.</div>`;
+  const max = Math.max(1, ...groups.map(g=>g.total));
+  return `<div class="bar-chart">
+    ${groups.map(g=>`
+      <div class="bar-row">
+        <div class="bar-label" title="${escAttr(g.label)}">${escHtml(g.label)}</div>
+        <div class="bar-track">
+          <div class="bar-seg pending" style="width:${(g.pending/max*100).toFixed(2)}%"></div>
+          <div class="bar-seg done" style="width:${(g.done/max*100).toFixed(2)}%"></div>
+        </div>
+        <div class="bar-nums">${g.pending} pending · ${g.done} done</div>
+      </div>`).join('')}
+  </div>
+  <div class="legend"><span class="lg-dot pending"></span>Pending<span class="lg-dot done"></span>Done</div>`;
+}
+// Flat, full-data ticket table — the "case-wise" report, and also what
+// every grouped report's expandable detail drills into. Rows reuse the
+// existing [data-open-ticket] wiring, so clicking one opens Flow Finder.
+function renderTicketTable(tids){
+  if(!tids.length) return `<div class="empty">No tickets match these filters.</div>`;
+  const rows = tids.slice().sort((a,b)=> currentOwner(b).eventId-currentOwner(a).eventId);
+  return `<div class="rep-table-wrap"><table class="rep-table">
+    <thead><tr><th>Ticket</th><th>Subject</th><th>Department</th><th>Assigned to</th><th>Role</th><th>Priority</th><th>Status</th><th>Created</th></tr></thead>
+    <tbody>
+    ${rows.map(tid=>{
+      const o = currentOwner(tid);
+      const created = ticketCreatedMs(tid);
+      return `<tr data-open-ticket="${escAttr(tid)}">
+        <td class="mono">${escHtml(tid)}</td>
+        <td>${escHtml(ticketTitle(tid))}</td>
+        <td>${escHtml(deptNameOfTarget(o.assignedTo))}</td>
+        <td>${escHtml(nameOf(o.assignedTo))}</td>
+        <td>${escHtml(ticketRoleGroup(tid))}</td>
+        <td>${escHtml(o.priority)}</td>
+        <td><span class="status-chip ${statusClass(o.status)}">${escHtml(statusDisplayLabel(o.status))}</span></td>
+        <td class="mono">${created!=null ? fmtTs(created) : '—'}</td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table></div>`;
+}
+// Grouped report (department-wise / role-wise / employee-wise): a summary
+// row per group plus a collapsible full ticket table underneath it.
+function renderGroupedReport(groups, groupLabel){
+  if(!groups.length) return `<div class="empty">No tickets match these filters.</div>`;
+  return `<div class="rep-table-wrap"><table class="rep-table rep-table-summary">
+    <thead><tr><th>${escHtml(groupLabel)}</th><th>Total</th><th>Pending</th><th>Done</th><th>Completion</th></tr></thead>
+    <tbody>
+    ${groups.map(g=>{
+      const pct = g.total ? Math.round(g.done/g.total*100) : 0;
+      return `<tr><td>${escHtml(g.label)}</td><td>${g.total}</td><td style="color:var(--amber);">${g.pending}</td><td style="color:var(--teal);">${g.done}</td><td>${pct}%</td></tr>`;
+    }).join('')}
+    </tbody>
+  </table></div>
+  ${groups.map(g=>`
+    <details class="rep-group-detail">
+      <summary>${escHtml(g.label)} — ${g.total} ticket${g.total===1?'':'s'}</summary>
+      ${renderTicketTable(g.tids)}
+    </details>`).join('')}`;
+}
+function renderOrgReports(u){
+  const filtered = reportFilteredTickets();
+  const deptOpts = activeDeptOptions();
+  const personOpts = activePersonOptions();
+  const filtersActive = state.reportFrom || state.reportTo || state.reportPerson!=='all' || state.reportDept!=='all';
+  let body;
+  if(state.reportGroup==='case') body = renderTicketTable(filtered);
+  else if(state.reportGroup==='dept') body = renderGroupedReport(groupTickets(filtered, tid=>deptNameOfTarget(currentOwner(tid).assignedTo)), 'Department');
+  else if(state.reportGroup==='role') body = renderGroupedReport(groupTickets(filtered, ticketRoleGroup), 'Role');
+  else body = renderGroupedReport(groupTickets(filtered, tid=>nameOf(currentOwner(tid).assignedTo)), 'Employee');
+
+  const byDept = groupTickets(filtered, tid=>deptNameOfTarget(currentOwner(tid).assignedTo));
+  const byRole = groupTickets(filtered, ticketRoleGroup);
+  const byEmployee = groupTickets(filtered, tid=>nameOf(currentOwner(tid).assignedTo)).slice(0,8);
+
+  return `
+  <div class="card rep-filters">
+    <div class="rep-field-row">
+      <div class="field"><label>Created from</label><input type="date" id="repFrom" value="${escAttr(state.reportFrom)}"></div>
+      <div class="field"><label>Created to</label><input type="date" id="repTo" value="${escAttr(state.reportTo)}"></div>
+      <div class="field"><label>Person</label><select id="repPerson">
+        <option value="all">All people</option>
+        ${personOpts.map(p=>`<option value="${escAttr(p.email)}" ${state.reportPerson===p.email?'selected':''}>${escHtml(p.name)}</option>`).join('')}
+      </select></div>
+      <div class="field"><label>Department</label><select id="repDept">
+        <option value="all">All departments</option>
+        ${deptOpts.map(d=>`<option value="${escAttr(d.name)}" ${state.reportDept===d.name?'selected':''}>${escHtml(d.name)}</option>`).join('')}
+      </select></div>
+    </div>
+    ${filtersActive ? `<button class="btn btn-ghost btn-sm" id="repClearFilters" style="margin-top:12px;">Clear filters</button>` : ''}
+  </div>
+
+  ${renderKpiCards(filtered)}
+
+  <div class="section-label" style="color:var(--red);">Pending vs. Done — by department</div>
+  ${renderPendingDoneBars(byDept)}
+
+  <div class="rep-toolbar">
+    <div class="seg" style="max-width:240px;">
+      <button data-reportmode="table" class="${state.reportMode==='table'?'sel':''}">Table view</button>
+      <button data-reportmode="dashboard" class="${state.reportMode==='dashboard'?'sel':''}">Dashboard view</button>
+    </div>
+    ${state.reportMode==='table' ? `<div class="filter-pills">
+      ${REPORT_GROUPS.map(g=>`<button class="filter-btn ${state.reportGroup===g.key?'active':''}" data-reportgroup="${g.key}">${g.label}</button>`).join('')}
+    </div>` : ''}
+  </div>
+
+  ${state.reportMode==='table' ? `
+    <div class="section-label">${(REPORT_GROUPS.find(g=>g.key===state.reportGroup)||{}).label} report (${filtered.length} tickets)</div>
+    ${body}
+  ` : `
+    <div class="section-label">Pending vs. Done — by role</div>
+    ${renderPendingDoneBars(byRole)}
+    <div class="section-label">Top employees by ticket volume</div>
+    ${renderPendingDoneBars(byEmployee)}
+  `}
   `;
 }
 
@@ -3353,6 +3618,25 @@ function wireGlobal(){
   document.querySelectorAll('[data-deptstatus]').forEach(b=>{
     b.onclick=()=>{ state.deptStatusFilter=b.dataset.deptstatus; render(); };
   });
+  document.querySelectorAll('[data-orgsub]').forEach(b=>{
+    b.onclick=()=>{ state.orgSub=b.dataset.orgsub; render(); };
+  });
+  document.querySelectorAll('[data-reportmode]').forEach(b=>{
+    b.onclick=()=>{ state.reportMode=b.dataset.reportmode; render(); };
+  });
+  document.querySelectorAll('[data-reportgroup]').forEach(b=>{
+    b.onclick=()=>{ state.reportGroup=b.dataset.reportgroup; render(); };
+  });
+  const repFrom = document.getElementById('repFrom');
+  if(repFrom) repFrom.addEventListener('change', ()=>{ state.reportFrom=repFrom.value; render(); });
+  const repTo = document.getElementById('repTo');
+  if(repTo) repTo.addEventListener('change', ()=>{ state.reportTo=repTo.value; render(); });
+  const repPerson = document.getElementById('repPerson');
+  if(repPerson) repPerson.addEventListener('change', ()=>{ state.reportPerson=repPerson.value; render(); });
+  const repDept = document.getElementById('repDept');
+  if(repDept) repDept.addEventListener('change', ()=>{ state.reportDept=repDept.value; render(); });
+  const repClear = document.getElementById('repClearFilters');
+  if(repClear) repClear.onclick = ()=>{ state.reportFrom=''; state.reportTo=''; state.reportPerson='all'; state.reportDept='all'; render(); };
   window.__mselRefresh = render;
   wireFfCategorySelect();
   wireFfDateFilter();
