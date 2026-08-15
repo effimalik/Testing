@@ -2852,6 +2852,7 @@ function respondPermission(tid, u){
   if(isTerminal(owner.status)) return {mode:'none'};
   if(isGM(u.id)) return {mode:'none'}; // GM: read-only oversight
   if(owner.status==='NEW'){
+    if(owner.createdBy===u.id) return {mode:'none'}; // creator can't accept their own ticket
     const target = owner.assignedTo;
     if(isDeptToken(target)){
       const td = deptByName(target);
@@ -2883,7 +2884,6 @@ function renderRespondPanel(tid, u){
       <p class="hint" style="margin-bottom:10px;">${perm.mode==='accept-dept' ? `Unclaimed in ${nameOf(owner.assignedTo)}. Any member of that department can accept it.` : `Directly transferred to you. Accept it to start working, or hand it off again.`}</p>
       <div class="btn-row">
         <button class="btn btn-primary btn-sm" data-respond="accept" data-tid="${tid}">Accept</button>
-        <button class="btn btn-sm" data-respond="delegate" data-tid="${tid}">Delegate to someone else</button>
       </div>
     </div>`;
   }
