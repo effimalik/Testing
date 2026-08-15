@@ -2026,17 +2026,6 @@ function render(){
       <div class="page"><div class="empty"><b>Waiting on data.</b>No staff codes discovered from ap2_ticLog yet.</div></div>`;
     return;
   }
-  // The signed-in user's real name/role/department only exist in the Users
-  // cache. Before that cache has landed, u is backed by metaFor()'s "unknown
-  // M-code" fallback (role:'manager', name falls back to raw email) — showing
-  // that would flash the wrong identity for a moment right after login. Wait
-  // for the real row instead of guessing; once it arrives (ingestFromCachePayload
-  // → parseUsers → USERS_READY) the next safeRender() paints the real thing.
-  if(ME && !userFor(ME) && !USERS_READY){
-    app.innerHTML = `<div class="topbar"><div class="topbar-row1"><div class="brand"><span class="dot"></span>OpsDeck</div></div></div>
-      <div class="page"><div class="empty"><b>Signing you in…</b>Loading your profile from the directory.</div></div>`;
-    return;
-  }
   app.innerHTML = `
     ${renderTopbar(u)}
     <div class="page">${renderView(u)}</div>
