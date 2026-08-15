@@ -1312,13 +1312,16 @@ function parseMasterRow(r){
 }
 // Resolve the notify-on-done flag for a ticket: ticLog (master) row wins if
 // it has a value; fall back to the RESOLVED event row's own value; default
-// to NOT notifying if neither cache sheet has the column populated, so a
-// missing/renamed column fails closed instead of spamming everyone.
+// to notifying if neither cache sheet has the column populated. Tickets
+// created through OpsDeck itself always write an explicit YES/NO, so this
+// default only matters for legacy/imported rows whose Notify column was
+// never set — and the spec requires the generator be notified on resolve
+// unconditionally, so a missing column should not silently suppress that.
 function notifyFlagFor(tid, resolvedEvent){
   const m = master(tid);
   if(m && m.notifyRaw!==undefined && m.notifyRaw!=='') return isYesFlag(m.notifyRaw);
   if(resolvedEvent && resolvedEvent.notifyRaw!==undefined && resolvedEvent.notifyRaw!=='') return isYesFlag(resolvedEvent.notifyRaw);
-  return false;
+  return true;
 }
 
 // Icons for the Department/Person route-toggle (New Ticket drawer + Delegate modal)
@@ -1681,6 +1684,32 @@ function reminderCycleState(tid){
     else if(e.action==='REMINDER_ATTENDED' && liveReminder){ attendedAt = e; }
   }
   return {liveReminder, attendedAt};
+}
+// Tickets currently assigned to this user that have at least one
+// REMINDER_ALERT fired in the current cycle (either "overdue, unattended"
+// or "attended but still pending") and aren't resolved/on-hold yet.
+// Unlike the toast in notifyReminderAlarm() — which fires once and is gone
+// the moment it's dismissed or missed — this is recomputed fresh on every
+// render, so a reminder alert stays discoverable from the bell for as long
+// as it's genuinely still outstanding, matching how "done today" persists
+// in the same dropdown.
+function activeReminderAlerts(userId){
+  if(!userId) return [];
+  const out = [];
+  allTicketIds().forEach(tid=>{
+    const owner = currentOwner(tid);
+    if(!owner || owner.assignedTo!==userId) return;
+    if(isTerminal(owner.status) || owner.status==='ON HOLD') return;
+    const {liveReminder, attendedAt} = reminderCycleState(tid);
+    if(!liveReminder) return;
+    const evs = ticketEvents(tid);
+    const baseline = attendedAt ? attendedAt.eventId : liveReminder.eventId;
+    const lastAlert = [...evs].reverse().find(e=> e.action==='REMINDER_ALERT' && e.eventId>baseline);
+    if(!lastAlert) return; // no alert has actually fired yet for this cycle
+    out.push({ticketId:tid, alertEvent:lastAlert, attended:!!attendedAt});
+  });
+  out.sort((a,b)=>b.alertEvent.eventId - a.alertEvent.eventId);
+  return out;
 }
 function overdueInfo(tid){
   const owner = currentOwner(tid);
@@ -2255,31 +2284,47 @@ const ICON_STAT_OPEN = `<svg viewBox="0 0 16 16" width="11" height="11" fill="no
 const ICON_STAT_RESOLVED = `<svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 8.4 6.4 11.6 12.8 5.2"/></svg>`;
 const ICON_STAT_REQUESTED = `<svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12.4V3.6M4.4 7.2 8 3.6l3.6 3.6"/></svg>`;
 function renderNotifBell(u){
-  const items = todaysNotifiableResolutions(u.id).filter(x=>!notifDismissed.has(x.ticketId+':'+x.resolvedEvent.eventId));
+  const doneItems = todaysNotifiableResolutions(u.id)
+    .filter(x=>!notifDismissed.has('D:'+x.ticketId+':'+x.resolvedEvent.eventId))
+    .map(x=>({
+      kind:'done', ticketId:x.ticketId, sortKey:x.resolvedEvent.eventId,
+      dismissKey:'D:'+x.ticketId+':'+x.resolvedEvent.eventId,
+      icon:ICON_CHECK, title:`${x.ticketId} is now Done`,
+      sub:`${ticketTitle(x.ticketId)} · ${x.via==='delegated'?'delegated by you':'created by you'}`,
+    }));
+  const reminderItems = activeReminderAlerts(u.id)
+    .filter(x=>!notifDismissed.has('R:'+x.ticketId+':'+x.alertEvent.eventId))
+    .map(x=>({
+      kind:'reminder', ticketId:x.ticketId, sortKey:x.alertEvent.eventId,
+      dismissKey:'R:'+x.ticketId+':'+x.alertEvent.eventId,
+      icon:ICON_BELL, title:`${x.ticketId} — reminder alarm`,
+      sub:`${ticketTitle(x.ticketId)} · ${x.attended?'still pending after reminder attended':'reminder overdue, not yet attended'}`,
+    }));
+  const items = [...doneItems, ...reminderItems].sort((a,b)=>b.sortKey-a.sortKey);
   const count = items.length;
   return `
   <div class="bell-wrap">
-    <button type="button" class="bell-btn${count?' has-items':''}" id="notifBellBtn" title="Tickets you created or delegated that finished today" aria-label="Notifications">
+    <button type="button" class="bell-btn${count?' has-items':''}" id="notifBellBtn" title="Tickets finished today, and reminder alarms needing your attention" aria-label="Notifications">
       ${ICON_BELL}
       ${count?`<span class="bell-dot">${count>9?'9+':count}</span>`:''}
     </button>
     ${state.notifOpen ? `
     <div class="notif-dropdown" id="notifDropdown">
       <div class="notif-dropdown-head">
-        <h4>Done today</h4>
-        <span class="nd-sub">${count} of your ticket${count===1?'':'s'}</span>
+        <h4>Notifications</h4>
+        <span class="nd-sub">${count} item${count===1?'':'s'}</span>
       </div>
       <div class="notif-dropdown-list">
         ${items.length ? items.map(x=>`
           <div class="notif-dropdown-item" data-notif-open="${escAttr(x.ticketId)}">
-            <span class="notif-icon">${ICON_CHECK}</span>
+            <span class="notif-icon">${x.icon}</span>
             <span class="notif-body">
-              <div class="notif-title">${escHtml(x.ticketId)} is now Done</div>
-              <div class="notif-sub">${escHtml(ticketTitle(x.ticketId))} · ${x.via==='delegated'?'delegated by you':'created by you'}</div>
+              <div class="notif-title">${escHtml(x.title)}</div>
+              <div class="notif-sub">${escHtml(x.sub)}</div>
             </span>
-            <button type="button" class="notif-close" aria-label="Dismiss" data-notif-dismiss="${escAttr(x.ticketId)}:${x.resolvedEvent.eventId}">✕</button>
+            <button type="button" class="notif-close" aria-label="Dismiss" data-notif-dismiss="${escAttr(x.dismissKey)}">✕</button>
           </div>
-        `).join('') : `<div class="notif-dropdown-empty">No tickets you created or delegated were finished today (with notifications on).</div>`}
+        `).join('') : `<div class="notif-dropdown-empty">Nothing to show — no tickets finished today and no active reminder alarms.</div>`}
       </div>
     </div>` : ''}
   </div>`;
