@@ -2016,7 +2016,8 @@ function render(){
   if(!state.currentUserId) state.currentUserId = ME || (STAFF.length ? STAFF[0].id : null);
   const u = currentUser();
   if(!u){
-    app.innerHTML = `<div class="page"><div class="empty"><b>Waiting on data.</b>No staff codes discovered from ap2_ticLog yet.</div></div>`;
+    app.innerHTML = `<div class="topbar"><div class="topbar-row1"><div class="brand"><span class="dot"></span>OpsDeck</div></div></div>
+      <div class="page"><div class="empty"><b>Waiting on data.</b>No staff codes discovered from ap2_ticLog yet.</div></div>`;
     return;
   }
   // The signed-in user's real name/role/department only exist in the Users
