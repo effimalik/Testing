@@ -1880,7 +1880,7 @@ async function addComment({ticketId, actorId, comment}){
   const ev = appendEvent({ticketId, action:'COMMENT', status:owner.status, from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail:comment});
   safeRender();
   try{
-    await postAction('addComment', {ticketId, eventId: ev.eventId, actorId, comment});
+    await postAction('commentTicket', {ticketId, eventId: ev.eventId, actorId, comment});
   }catch(err){
     rollbackEvent(ev);
     safeRender();
@@ -1893,7 +1893,7 @@ async function setReminder({ticketId, actorId, dueAtMs}){
   const ev = appendEvent({ticketId, action:'REMINDER', status:owner.status, from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail});
   safeRender();
   try{
-    await postAction('setReminder', {ticketId, eventId: ev.eventId, actorId, dueAtMs, detail});
+    await postAction('reminderTicket', {ticketId, eventId: ev.eventId, actorId, dueAtMs, detail});
   }catch(err){
     rollbackEvent(ev);
     safeRender();
@@ -1906,7 +1906,7 @@ async function attendReminder({ticketId, actorId, note}){
   const ev = appendEvent({ticketId, action:'REMINDER_ATTENDED', status:owner.status, from:owner.assignedTo, performedBy:actorId, to:owner.assignedTo, detail});
   safeRender();
   try{
-    await postAction('attendReminder', {ticketId, eventId: ev.eventId, actorId, note: detail});
+    await postAction('reminderAttendedTicket', {ticketId, eventId: ev.eventId, actorId, note: detail});
   }catch(err){
     rollbackEvent(ev);
     safeRender();
