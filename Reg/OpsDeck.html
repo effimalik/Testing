@@ -13,24 +13,24 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root, [data-theme="dark"]{
-    --bg:#0F1720;
-    --bg-grid: #131D27;
-    --panel:#172029;
-    --panel-raised:#1D2833;
-    --panel-hover:#212E3A;
-    --border:#28333F;
-    --border-soft:#1E2830;
-    --text:#EAEEF2;
-    --text-dim:#B3BEC9;
-    --text-muted:#7C8998;
-    --teal:#4FD1C5;
-    --teal-dim:#2C4A48;
-    --amber:#F2A93B;
-    --amber-dim:#4A3A1E;
-    --red:#E8574B;
-    --red-dim:#4A2420;
-    --blue:#5B8DEF;
-    --blue-dim:#22314F;
+    --bg:#0d1117;
+    --bg-grid:#161b22;
+    --panel:#21262d;
+    --panel-raised:#2d333b;
+    --panel-hover:#42474F;
+    --border:#30363d;
+    --border-soft:#1E242A;
+    --text:#e6edf3;
+    --text-dim:#8b949e;
+    --text-muted:#6e7681;
+    --teal:#39d353;
+    --teal-dim:rgba(57,211,83,.12);
+    --amber:#e3b341;
+    --amber-dim:rgba(227,179,65,.12);
+    --red:#f85149;
+    --red-dim:rgba(248,81,73,.12);
+    --blue:#58a6ff;
+    --blue-dim:rgba(88,166,255,.12);
     --font-display:'Space Grotesk', sans-serif;
     --font-mono:'IBM Plex Mono', monospace;
     --font-body:'Inter', sans-serif;
@@ -38,91 +38,89 @@
     --topbar-h:64px;
   }
   [data-theme="light"]{
-    --bg:#F3F5F8;
-    --bg-grid:#EAEEF3;
-    --panel:#FFFFFF;
-    --panel-raised:#F0F3F7;
-    --panel-hover:#E4E9EF;
-    --border:#D7DEE6;
-    --border-soft:#E5E9EE;
-    --text:#101820;
-    --text-dim:#3E4750;
-    --text-muted:#68727C;
-    --teal:#0E8074;
-    --teal-dim:#CFEFEA;
-    --amber:#93650B;
-    --amber-dim:#F6E3C2;
-    --red:#B23327;
-    --red-dim:#F6D6D2;
-    --blue:#2A5DC9;
-    --blue-dim:#DCE6FA;
+    --bg:#f0f2f5;
+    --bg-grid:#ffffff;
+    --panel:#ffffff;
+    --panel-raised:#e2e7ed;
+    --panel-hover:#D4D9DF;
+    --border:#c8d0d9;
+    --border-soft:#DCE1E7;
+    --text:#0d1117;
+    --text-dim:#3d454f;
+    --text-muted:#5a6370;
+    --teal:#116329;
+    --teal-dim:rgba(17,99,41,.13);
+    --amber:#7d4e00;
+    --amber-dim:rgba(125,78,0,.13);
+    --red:#a8111b;
+    --red-dim:rgba(168,17,27,.11);
+    --blue:#0550ae;
+    --blue-dim:rgba(5,80,174,.12);
   }
   [data-theme="purple"]{
-    --bg:#0F0B1E;
-    --bg-grid:#150F28;
-    --panel:#1B1533;
-    --panel-raised:#241C43;
-    --panel-hover:#2C2352;
-    --border:#3A2E5E;
-    --border-soft:#2A2148;
-    --text:#E8E0FF;
-    --text-dim:#B4A6DE;
-    --text-muted:#8577B0;
-    --teal:#4ADE80;
-    --teal-dim:#204A34;
-    --amber:#FBBF24;
-    --amber-dim:#4A3B14;
-    --red:#F87171;
-    --red-dim:#4A2222;
-    --blue:#C084FC;
-    --blue-dim:#3A2A57;
+    --bg:#0f0b1e;
+    --bg-grid:#17112e;
+    --panel:#221a3a;
+    --panel-raised:#2c2250;
+    --panel-hover:#413862;
+    --border:#3a2e5e;
+    --border-soft:#241C3E;
+    --text:#e8e0ff;
+    --text-dim:#a899d4;
+    --text-muted:#7a6ca8;
+    --teal:#4ade80;
+    --teal-dim:rgba(74,222,128,.12);
+    --amber:#fbbf24;
+    --amber-dim:rgba(251,191,36,.12);
+    --red:#f87171;
+    --red-dim:rgba(248,113,113,.12);
+    --blue:#c084fc;
+    --blue-dim:rgba(192,132,252,.14);
   }
   [data-theme="ocean"]{
     --bg:#071520;
-    --bg-grid:#0B1E2E;
-    --panel:#0F2438;
-    --panel-raised:#153048;
-    --panel-hover:#1B3C58;
-    --border:#1E4A72;
-    --border-soft:#173A5C;
-    --text:#D6EEFF;
-    --text-dim:#9BC8E8;
-    --text-muted:#5F94BC;
-    --teal:#34D399;
-    --teal-dim:#173F32;
-    --amber:#FBBF24;
-    --amber-dim:#4A3B14;
-    --red:#F87171;
-    --red-dim:#4A2222;
-    --blue:#38BDF8;
-    --blue-dim:#123650;
+    --bg-grid:#0d2035;
+    --panel:#143050;
+    --panel-raised:#1a3d60;
+    --panel-hover:#315070;
+    --border:#1e4a72;
+    --border-soft:#123049;
+    --text:#d6eeff;
+    --text-dim:#7db8e8;
+    --text-muted:#4a87b8;
+    --teal:#34d399;
+    --teal-dim:rgba(52,211,153,.12);
+    --amber:#fbbf24;
+    --amber-dim:rgba(251,191,36,.12);
+    --red:#f87171;
+    --red-dim:rgba(248,113,113,.12);
+    --blue:#38bdf8;
+    --blue-dim:rgba(56,189,248,.14);
   }
   [data-theme="slate"]{
-    --bg:#0E1117;
-    --bg-grid:#141922;
-    --panel:#1A1F28;
-    --panel-raised:#222836;
-    --panel-hover:#2A3140;
-    --border:#3A4556;
-    --border-soft:#2A323F;
-    --text:#E2E8F0;
-    --text-dim:#A7B3C2;
-    --text-muted:#71808F;
-    --teal:#4ADE80;
-    --teal-dim:#1E3A2C;
-    --amber:#FBBF24;
-    --amber-dim:#4A3B14;
-    --red:#F87171;
-    --red-dim:#4A2222;
-    --blue:#60A5FA;
-    --blue-dim:#213251;
+    --bg:#0e1117;
+    --bg-grid:#1a1f28;
+    --panel:#28303e;
+    --panel-raised:#313c4e;
+    --panel-hover:#465060;
+    --border:#3a4556;
+    --border-soft:#242B36;
+    --text:#e2e8f0;
+    --text-dim:#94a3b8;
+    --text-muted:#64748b;
+    --teal:#4ade80;
+    --teal-dim:rgba(74,222,128,.12);
+    --amber:#fbbf24;
+    --amber-dim:rgba(251,191,36,.12);
+    --red:#f87171;
+    --red-dim:rgba(248,113,113,.12);
+    --blue:#60a5fa;
+    --blue-dim:rgba(96,165,250,.13);
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    background:
-      linear-gradient(var(--bg-grid) 1px, transparent 1px) 0 0/100% 28px,
-      var(--bg);
+    background:var(--bg);
     color:var(--text);
     font-family:var(--font-body);
     min-height:100vh;
@@ -343,7 +341,7 @@
   .btn svg{width:14px;height:14px;flex-shrink:0;}
   .btn:hover{background:var(--panel-hover);border-color:#3A4753;}
   .btn-primary{background:var(--teal);color:#062522;border-color:var(--teal);font-weight:600;}
-  .btn-primary:hover{background:#69dbd0;}
+  .btn-primary:hover{background:#70DF83;}
   .btn-amber{background:var(--amber);color:#2a1c04;border-color:var(--amber);font-weight:600;}
   .btn-amber:hover{background:#f7bb5c;}
   .btn-ghost{background:none;border-color:transparent;color:var(--text-muted);}
@@ -782,7 +780,7 @@
     display:flex;align-items:center;justify-content:center;
     box-shadow:0 2px 8px rgba(79,209,197,.25);transition:.15s;margin-right:2px;
   }
-  .fab-new:hover{background:#63DBD0;transform:translateY(-1px);box-shadow:0 4px 12px rgba(79,209,197,.35);}
+  .fab-new:hover{background:#70DF83;transform:translateY(-1px);box-shadow:0 4px 12px rgba(57,211,83,.35);}
   .fab-new svg{width:17px;height:17px;}
   .bell-wrap{position:relative;flex:none;margin-right:6px;}
   .bell-btn{
@@ -902,9 +900,19 @@
     .rep-header-badge svg{width:17px;height:17px;}
     .card{padding:15px;}
     .profile-dropdown{width:calc(100vw - 24px);right:-4px;}
-    .notif-dropdown{width:calc(100vw - 24px);right:-4px;}
+    .notif-dropdown{width:calc(100vw - 24px);right:-4px;max-height:60vh;}
     .profile-card .avatar{width:44px;height:44px;font-size:16px;margin-bottom:10px;}
     .profile-card h2{font-size:16px;}
+  }
+  @media (max-width:360px){
+    /* Extra-narrow phones: tighten the notif dropdown's own padding/type
+       scale a bit further so items don't feel cramped once width is
+       already capped by the 480px rule above. */
+    .notif-dropdown{right:-2px;}
+    .notif-dropdown-head{padding:9px 11px;}
+    .notif-dropdown-item{padding:9px 11px;gap:8px;}
+    .notif-dropdown-item .notif-title{font-size:12.5px;}
+    .notif-dropdown-item .notif-sub{font-size:11px;}
   }
 
   .toast-wrap{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;}
@@ -2420,6 +2428,20 @@ const state = {
 // Dismissed-from-bell ticket IDs — session-only (not persisted, not synced
 // to the cache); a dismiss just hides it from this browser tab's dropdown.
 const notifDismissed = new Set();
+// Auto-hide timer for the bell dropdown — closes it 5s after opening,
+// paused while the pointer is over the dropdown itself so a person
+// reading/scanning it doesn't have it vanish underneath them.
+let _notifAutoHideTimer = null;
+function _clearNotifAutoHide(){
+  if(_notifAutoHideTimer){ clearTimeout(_notifAutoHideTimer); _notifAutoHideTimer = null; }
+}
+function _armNotifAutoHide(){
+  _clearNotifAutoHide();
+  _notifAutoHideTimer = setTimeout(()=>{
+    _notifAutoHideTimer = null;
+    if(state.notifOpen){ state.notifOpen = false; render(); }
+  }, 5000);
+}
 function currentUser(){ return staff(state.currentUserId); }
 
 const TICKET_STATUSES = ['NEW','IN PROGRESS','ON HOLD','RESOLVED'];
@@ -4350,7 +4372,12 @@ function wireGlobal(){
   const newTicketBtn = document.getElementById('newTicketBtn');
   if(newTicketBtn) newTicketBtn.onclick = openNewTicketDrawer;
   const notifBellBtn = document.getElementById('notifBellBtn');
-  if(notifBellBtn) notifBellBtn.onclick = (e)=>{ e.stopPropagation(); state.notifOpen = !state.notifOpen; render(); };
+  if(notifBellBtn) notifBellBtn.onclick = (e)=>{
+    e.stopPropagation();
+    state.notifOpen = !state.notifOpen;
+    if(state.notifOpen) _armNotifAutoHide(); else _clearNotifAutoHide();
+    render();
+  };
   const notifDropdown = document.getElementById('notifDropdown');
   if(notifDropdown){
     notifDropdown.addEventListener('click', e=>{
@@ -4358,8 +4385,12 @@ function wireGlobal(){
       const dismissKey = e.target.closest('[data-notif-dismiss]');
       if(dismissKey){ notifDismissed.add(dismissKey.dataset.notifDismiss); render(); return; }
       const openRow = e.target.closest('[data-notif-open]');
-      if(openRow){ state.notifOpen = false; openTicketInFlow(openRow.dataset.notifOpen); }
+      if(openRow){ _clearNotifAutoHide(); state.notifOpen = false; openTicketInFlow(openRow.dataset.notifOpen); }
     });
+    // Pause the countdown while the pointer is over the dropdown, resume
+    // (fresh 5s) once it leaves — same courtesy as a toast that pauses on hover.
+    notifDropdown.addEventListener('mouseenter', _clearNotifAutoHide);
+    notifDropdown.addEventListener('mouseleave', ()=>{ if(state.notifOpen) _armNotifAutoHide(); });
   }
   const profileBtn = document.getElementById('profileBtn');
   if(profileBtn) profileBtn.onclick = (e)=>{ e.stopPropagation(); state.profileOpen = !state.profileOpen; render(); };
@@ -4370,7 +4401,7 @@ function wireGlobal(){
 // replaced each render).
 document.addEventListener('click', (e)=>{
   let changed = false;
-  if(state.notifOpen && !e.target.closest('.bell-wrap')){ state.notifOpen = false; changed = true; }
+  if(state.notifOpen && !e.target.closest('.bell-wrap')){ state.notifOpen = false; _clearNotifAutoHide(); changed = true; }
   if(state.profileOpen && !e.target.closest('.profile-wrap')){ state.profileOpen = false; changed = true; }
   if(changed) render();
 });
@@ -4566,15 +4597,6 @@ function newTicketFormHtml(u){
     <div class="field">
       <label>${f.targetType==='department' ? 'Department' : 'Delegate to'}</label>
       <div id="ntTargetWrap">${targetSearchDropShell()}</div>
-      <span class="hint">${f.targetType==='department' ? "Queued until someone accepts it." : "Sent as NEW — they'll need to accept it."}</span>
-    </div>
-    <div class="field">
-      <label>Notify me when done</label>
-      <div class="filter-pills" role="radiogroup" aria-label="Notify me when done">
-        <button type="button" class="filter-btn ${f.notifyOnDone?'active':''}" data-notify-flag="yes" role="radio" aria-checked="${f.notifyOnDone===true}">Yes</button>
-        <button type="button" class="filter-btn ${!f.notifyOnDone?'active':''}" data-notify-flag="no" role="radio" aria-checked="${f.notifyOnDone===false}">No</button>
-      </div>
-      <span class="hint">Alerts you here the moment it's marked Done.</span>
     </div>
     <div class="btn-row">
       <button class="btn btn-primary" id="nt-submit" title="Create ticket">${ICON_PLUS}<span class="btn-label">Create ticket</span></button>
@@ -4648,9 +4670,6 @@ function wireNewTicketDrawerFields(u){
   const p = document.getElementById('nt-priority'); if(p) p.onchange = ()=>{ newTicketForm.priority = p.value; };
   document.querySelectorAll('[data-target-type]').forEach(b=>{
     b.onclick = ()=>{ newTicketForm.targetType = b.dataset.targetType; newTicketForm.target=''; refreshNewTicketDrawer(u); };
-  });
-  document.querySelectorAll('[data-notify-flag]').forEach(b=>{
-    b.onclick = ()=>{ newTicketForm.notifyOnDone = (b.dataset.notifyFlag==='yes'); refreshNewTicketDrawer(u); };
   });
   const targetInput = document.getElementById('ntTargetInput');
   if(targetInput){
