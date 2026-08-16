@@ -451,6 +451,15 @@
   .dropdown-list .di.emp-drop-add{display:flex;align-items:center;gap:7px;color:var(--teal);font-weight:600;font-size:12.5px;border-top:1px solid var(--border-soft);}
   .dropdown-list .di em{color:var(--teal);font-style:normal;}
 
+  /* Flow Finder's Subject Employee search dropdown lives inside
+     .ff-toolbar, which scrolls/clips past its own boundary — the same
+     problem the category and date panels below solve with
+     position:fixed + JS-computed coordinates (see positionFfPanel).
+     Same fix here, so it always renders above everything on the page
+     (including the results list underneath it) instead of getting
+     clipped by the toolbar and appearing to sit behind it. */
+  #ffSubjectDrop .dropdown-list{position:fixed;left:auto;right:auto;top:auto;z-index:120;box-shadow:0 14px 34px rgba(0,0,0,.5);}
+
   /* ---------- Professional multi-select ---------- */
   .msel{position:relative;}
   .msel-control{
@@ -2889,6 +2898,8 @@ function ffPanelScrollGuard(){
   let closed = false;
   if(mselState('ffCatSel').open){ mselState('ffCatSel').open = false; mselState('ffCatSel').q=''; closed = true; }
   if(state.ffDateOpen){ state.ffDateOpen = false; closed = true; }
+  const subjList = document.getElementById('ffSubjectList');
+  if(subjList && subjList.classList.contains('open')){ closeFfSubjDrop(); }
   if(closed) render();
 }
 function wireFfCategorySelect(){
@@ -4161,9 +4172,20 @@ function wireGlobal(){
   const ffTo = document.getElementById('ffTo');
   if(ffTo) ffTo.addEventListener('change', ()=>{ state.ffTo = ffTo.value; render(); });
   const ffSubjInput = document.getElementById('ffSubjectInput');
+  const ffSubjWrap = document.getElementById('ffSubjectDrop');
+  // Subject dropdown escapes the toolbar's clipping the same way the
+  // category/date panels do: position:fixed in CSS, real coordinates
+  // (and a matching width, since it no longer stretches via left:0/right:0)
+  // computed here from the input's own on-screen position.
+  const positionFfSubjList = ()=>{
+    const list = document.getElementById('ffSubjectList');
+    if(!list || !ffSubjWrap) return;
+    list.style.width = ffSubjWrap.offsetWidth + 'px';
+    positionFfPanel(ffSubjWrap, list, 'left');
+  };
   if(ffSubjInput){
-    ffSubjInput.oninput = ()=> filterFfSubjDrop(ffSubjInput.value);
-    ffSubjInput.onfocus = ()=> openFfSubjDrop();
+    ffSubjInput.oninput = ()=>{ filterFfSubjDrop(ffSubjInput.value); positionFfSubjList(); };
+    ffSubjInput.onfocus = ()=>{ openFfSubjDrop(); positionFfSubjList(); };
     ffSubjInput.onblur = ()=> setTimeout(closeFfSubjDrop, 160);
   }
   const ffSubjList = document.getElementById('ffSubjectList');
