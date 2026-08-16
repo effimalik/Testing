@@ -246,6 +246,18 @@
   }
   .empty b{display:block;color:var(--text-dim);font-family:var(--font-display);font-size:16px;margin-bottom:6px;font-weight:600;}
 
+  /* ---------- Skeleton loading (shimmer/wave) ---------- */
+  .skel-bar{
+    height:13px;border-radius:6px;
+    background:linear-gradient(90deg,var(--panel-raised) 25%,var(--border) 42%,var(--panel-raised) 63%);
+    background-size:400% 100%;animation:skel-shimmer 1.4s ease infinite;
+  }
+  @keyframes skel-shimmer{0%{background-position:100% 0;}100%{background-position:0 0;}}
+  .skel-topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:14px;}
+  .skel-topbar .skel-bar{height:16px;}
+  .skel-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;}
+  .skel-card .skel-bar + .skel-bar{margin-top:12px;}
+
   /* ---------- Buttons ---------- */
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--border);background:var(--panel-raised);color:var(--text);padding:8px 14px;border-radius:7px;font-size:13px;font-weight:500;transition:.12s;white-space:nowrap;}
   .btn svg{width:14px;height:14px;flex-shrink:0;}
@@ -2393,6 +2405,25 @@ function bootstrapIdentity(){
 function flowMselOpenNow(){
   return state.view==='flow' && ['ffHandlerMsel','ffDeptMsel'].some(id => MSEL_UI[id] && MSEL_UI[id].open);
 }
+// Skeleton ("wave" shimmer) rows, used while data hasn't loaded yet.
+// widths lets each bar vary in width for a more natural look.
+function _skelBar(width){
+  return `<div class="skel-bar" style="width:${width || (40 + Math.round(Math.random()*45))}%;"></div>`;
+}
+function _skelCard(barCount){
+  return `<div class="skel-card">${Array.from({length:barCount||3}).map(()=>_skelBar()).join('')}</div>`;
+}
+// Full-page skeleton shown at boot / while data is still loading —
+// replaces the old "Waiting on data." empty-state message.
+function renderSkeletonPage(){
+  return `
+    <div class="skel-topbar">${_skelBar(10)}${_skelBar(14)}</div>
+    <div class="page">
+      ${_skelCard(4)}
+      ${_skelCard(3)}
+      ${_skelCard(5)}
+    </div>`;
+}
 const app = document.getElementById('app');
 // For *unsolicited* re-renders (background cache polling, the periodic
 // timer below) — never for renders the widget itself asked for after a
@@ -2406,8 +2437,7 @@ function render(){
   if(!state.currentUserId) state.currentUserId = ME || (STAFF.length ? STAFF[0].id : null);
   const u = currentUser();
   if(!u){
-    app.innerHTML = `<div class="topbar"><div class="topbar-row1"><div class="brand"><span class="dot"></span><span class="brand-word">OpsDeck</span></div></div></div>
-      <div class="page"><div class="empty"><b>Waiting on data.</b>No staff codes discovered from ap2_ticLog yet.</div></div>`;
+    app.innerHTML = renderSkeletonPage();
     return;
   }
   app.innerHTML = `
