@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{
+  :root, [data-theme="dark"]{
     --bg:#0F1720;
     --bg-grid: #131D27;
     --panel:#172029;
@@ -36,6 +36,86 @@
     --font-body:'Inter', sans-serif;
     --radius:10px;
     --topbar-h:64px;
+  }
+  [data-theme="light"]{
+    --bg:#F3F5F8;
+    --bg-grid:#EAEEF3;
+    --panel:#FFFFFF;
+    --panel-raised:#F0F3F7;
+    --panel-hover:#E4E9EF;
+    --border:#D7DEE6;
+    --border-soft:#E5E9EE;
+    --text:#101820;
+    --text-dim:#3E4750;
+    --text-muted:#68727C;
+    --teal:#0E8074;
+    --teal-dim:#CFEFEA;
+    --amber:#93650B;
+    --amber-dim:#F6E3C2;
+    --red:#B23327;
+    --red-dim:#F6D6D2;
+    --blue:#2A5DC9;
+    --blue-dim:#DCE6FA;
+  }
+  [data-theme="purple"]{
+    --bg:#0F0B1E;
+    --bg-grid:#150F28;
+    --panel:#1B1533;
+    --panel-raised:#241C43;
+    --panel-hover:#2C2352;
+    --border:#3A2E5E;
+    --border-soft:#2A2148;
+    --text:#E8E0FF;
+    --text-dim:#B4A6DE;
+    --text-muted:#8577B0;
+    --teal:#4ADE80;
+    --teal-dim:#204A34;
+    --amber:#FBBF24;
+    --amber-dim:#4A3B14;
+    --red:#F87171;
+    --red-dim:#4A2222;
+    --blue:#C084FC;
+    --blue-dim:#3A2A57;
+  }
+  [data-theme="ocean"]{
+    --bg:#071520;
+    --bg-grid:#0B1E2E;
+    --panel:#0F2438;
+    --panel-raised:#153048;
+    --panel-hover:#1B3C58;
+    --border:#1E4A72;
+    --border-soft:#173A5C;
+    --text:#D6EEFF;
+    --text-dim:#9BC8E8;
+    --text-muted:#5F94BC;
+    --teal:#34D399;
+    --teal-dim:#173F32;
+    --amber:#FBBF24;
+    --amber-dim:#4A3B14;
+    --red:#F87171;
+    --red-dim:#4A2222;
+    --blue:#38BDF8;
+    --blue-dim:#123650;
+  }
+  [data-theme="slate"]{
+    --bg:#0E1117;
+    --bg-grid:#141922;
+    --panel:#1A1F28;
+    --panel-raised:#222836;
+    --panel-hover:#2A3140;
+    --border:#3A4556;
+    --border-soft:#2A323F;
+    --text:#E2E8F0;
+    --text-dim:#A7B3C2;
+    --text-muted:#71808F;
+    --teal:#4ADE80;
+    --teal-dim:#1E3A2C;
+    --amber:#FBBF24;
+    --amber-dim:#4A3B14;
+    --red:#F87171;
+    --red-dim:#4A2222;
+    --blue:#60A5FA;
+    --blue-dim:#213251;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -859,6 +939,15 @@
 </style>
 </head>
 <body>
+<!-- ═══ INSTANT THEME SYNC (no flash) ═══ -->
+<script>
+(function(){
+  try {
+    var t = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch(e) {}
+})();
+</script>
 <div id="app"></div>
 <div class="toast-wrap" id="toastWrap"></div>
 <div class="notif-wrap" id="notifWrap"></div>
