@@ -14,6 +14,7 @@
 <style>
   :root, [data-theme="dark"]{
     --bg:#0d1117;
+    --bg-rgb:13,17,23;
     --bg-grid:#161b22;
     --panel:#21262d;
     --panel-raised:#2d333b;
@@ -39,6 +40,7 @@
   }
   [data-theme="light"]{
     --bg:#f0f2f5;
+    --bg-rgb:240,242,245;
     --bg-grid:#ffffff;
     --panel:#ffffff;
     --panel-raised:#e2e7ed;
@@ -59,6 +61,7 @@
   }
   [data-theme="purple"]{
     --bg:#0f0b1e;
+    --bg-rgb:15,11,30;
     --bg-grid:#17112e;
     --panel:#221a3a;
     --panel-raised:#2c2250;
@@ -79,6 +82,7 @@
   }
   [data-theme="ocean"]{
     --bg:#071520;
+    --bg-rgb:7,21,32;
     --bg-grid:#0d2035;
     --panel:#143050;
     --panel-raised:#1a3d60;
@@ -99,6 +103,7 @@
   }
   [data-theme="slate"]{
     --bg:#0e1117;
+    --bg-rgb:14,17,23;
     --bg-grid:#1a1f28;
     --panel:#28303e;
     --panel-raised:#313c4e;
@@ -135,7 +140,7 @@
     position:sticky;top:0;z-index:40;
     display:flex;flex-direction:column;gap:10px;
     padding:14px 24px;
-    background:rgba(15,23,32,0.94);
+    background:rgba(var(--bg-rgb),0.94);
     backdrop-filter:blur(6px);
     border-bottom:1px solid var(--border);
   }
@@ -164,7 +169,7 @@
     display:inline-block;min-width:16px;padding:0 4px;margin-left:6px;border-radius:20px;
     background:var(--red);color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;
   }
-  nav.tabs button.active .badge-count{background:rgba(15,23,32,.55);color:#fff;}
+  nav.tabs button.active .badge-count{background:rgba(var(--bg-rgb),.55);color:#fff;}
   .userbox{display:flex;align-items:center;gap:10px;flex-shrink:0;}
   .userbox select{
     background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:7px;
@@ -900,7 +905,18 @@
     .rep-header-badge svg{width:17px;height:17px;}
     .card{padding:15px;}
     .profile-dropdown{width:calc(100vw - 24px);right:-4px;}
-    .notif-dropdown{width:calc(100vw - 24px);right:-4px;max-height:60vh;}
+    /* The bell isn't the rightmost element in the topbar (New Ticket +
+       profile sit after it), so anchoring the dropdown to bell-wrap's
+       own right edge pushed it partway off the left side of the screen
+       on narrow phones. Fixed + viewport-centered keeps it fully on
+       screen and visually centered under the topbar regardless of
+       where the bell itself sits. */
+    .notif-dropdown{
+      position:fixed;top:calc(var(--topbar-h,64px) + 8px);
+      left:50%;right:auto;transform:translateX(-50%);
+      width:calc(100vw - 24px);max-width:400px;max-height:60vh;
+      animation:notifFadeIn .16s ease;
+    }
     .profile-card .avatar{width:44px;height:44px;font-size:16px;margin-bottom:10px;}
     .profile-card h2{font-size:16px;}
   }
@@ -908,7 +924,6 @@
     /* Extra-narrow phones: tighten the notif dropdown's own padding/type
        scale a bit further so items don't feel cramped once width is
        already capped by the 480px rule above. */
-    .notif-dropdown{right:-2px;}
     .notif-dropdown-head{padding:9px 11px;}
     .notif-dropdown-item{padding:9px 11px;gap:8px;}
     .notif-dropdown-item .notif-title{font-size:12.5px;}
@@ -918,6 +933,7 @@
   .toast-wrap{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;}
   .toast{background:var(--panel-raised);border:1px solid var(--teal-dim);border-left:3px solid var(--teal);color:var(--text);padding:11px 16px;border-radius:8px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:slidein .25s ease;}
   @keyframes slidein{from{transform:translateX(20px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+  @keyframes notifFadeIn{from{opacity:0;}to{opacity:1;}}
 
   /* ---------- Done notification ---------- */
   .notif-wrap{position:fixed;top:20px;right:20px;z-index:210;display:flex;flex-direction:column;gap:10px;max-width:340px;}
