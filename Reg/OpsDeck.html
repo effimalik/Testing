@@ -489,6 +489,13 @@
     background:var(--panel-raised);border:1px solid var(--border);border-radius:9px;
     box-shadow:0 10px 30px rgba(0,0,0,.45);padding:8px;
   }
+  /* Flow Finder's Handler/Department multi-selects live inside
+     .ff-toolbar, same as the Subject dropdown above — same fix:
+     position:fixed with coordinates computed from the trigger's real
+     position (see positionFfPanel / wireMultiSelect), so the panel
+     always renders above everything instead of clipping at the
+     toolbar's own boundary. */
+  .ff-toolbar .msel-panel{position:fixed;left:auto;right:auto;top:auto;z-index:120;box-shadow:0 14px 34px rgba(0,0,0,.5);}
   .msel-search{
     width:100%;background:var(--panel);border:1px solid var(--border);color:var(--text);
     border-radius:6px;padding:8px 10px;font-size:13px;margin-bottom:6px;
@@ -1172,7 +1179,17 @@ function wireMultiSelect(id, getSelected, setSelected, onRefresh, wopts){
     };
   });
   const panel = root.querySelector(`[data-msel-panel="${id}"]`);
-  if(panel) panel.onmousedown = (e)=> e.stopPropagation();
+  if(panel){
+    panel.onmousedown = (e)=> e.stopPropagation();
+    // Only the Flow Finder toolbar's multi-selects need this — everywhere
+    // else (New Ticket drawer, Respond modal) the plain absolute panel
+    // already renders fine, so scope the fixed-position fix to that one
+    // clipping container instead of changing every msel on the page.
+    if(root.closest('.ff-toolbar')){
+      panel.style.width = root.offsetWidth + 'px';
+      positionFfPanel(root, panel, 'left');
+    }
+  }
   root.querySelectorAll(`[data-msel-check="${id}"]`).forEach(cb=>{
     cb.onchange = ()=>{
       if(wopts.single){
@@ -2898,6 +2915,9 @@ function ffPanelScrollGuard(){
   let closed = false;
   if(mselState('ffCatSel').open){ mselState('ffCatSel').open = false; mselState('ffCatSel').q=''; closed = true; }
   if(state.ffDateOpen){ state.ffDateOpen = false; closed = true; }
+  ['ffHandlerMsel','ffDeptMsel'].forEach(id=>{
+    if(mselState(id).open){ mselState(id).open = false; mselState(id).q = ''; closed = true; }
+  });
   const subjList = document.getElementById('ffSubjectList');
   if(subjList && subjList.classList.contains('open')){ closeFfSubjDrop(); }
   if(closed) render();
