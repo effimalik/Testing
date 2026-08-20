@@ -359,7 +359,7 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
     </div>
   </div>
   <div class="header-meta">
-    <div class="hbadge"><div class="live-dot"></div><span>HR Admin</span></div>
+    <div class="hbadge"><div class="live-dot"></div><span id="hdr-user">HR Admin</span></div>
     <div class="hbadge" style="color:var(--text3);" id="hdr-month-badge">
       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       <span id="hdr-month">June 2025</span>
@@ -816,12 +816,46 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
 
 <script>
 // ═══════════════════════════════════════════════
+// SESSION — logged-in user, read from ap_session (sessionStorage)
+// Same key/shape set at login by docPortal.html:
+// { sessionId, token, email, name, role, permissions, loginAt, lastActive, sessionFingerprint }
+// ═══════════════════════════════════════════════
+function getSession() {
+  try { return JSON.parse(sessionStorage.getItem('ap_session') || '{}'); } catch (_) { return {}; }
+}
+const AP_SESSION = getSession();
+
+// ═══════════════════════════════════════════════
+// TRANSACTION ID — datetime-to-millisecond, guaranteed non-repeating.
+// Assigned to every row the instant it is loaded/parsed. If two rows land
+// in the same millisecond the counter is nudged forward by 1ms so no two
+// Trans IDs can ever collide.
+// ═══════════════════════════════════════════════
+let _lastTransMs = 0;
+function genTransId() {
+  let ms = Date.now();
+  if (ms <= _lastTransMs) ms = _lastTransMs + 1;
+  _lastTransMs = ms;
+  return ms;
+}
+function transMsToDateTime(ms) {
+  try {
+    return new Date(ms).toLocaleString('en-GB', {
+      hour12:false, year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit', second:'2-digit', fractionalSecondDigits:3
+    }).replace(',', '');
+  } catch (_) {
+    return new Date(ms).toISOString();
+  }
+}
+
+// ═══════════════════════════════════════════════
 // CLEAN DATA STORE — no dummy/seed data at all
 // ═══════════════════════════════════════════════
 const DB = {
   currentMonth: 'June 2025',
   currentDedType: '',
-  currentUser:  'HR Admin',
+  currentUser:  AP_SESSION.email || 'Unknown User',   // logged-in user's email — used as "Uploaded By"
   batches:      [],
   auditLog:     [],
   pendingRows:  [],
@@ -829,6 +863,7 @@ const DB = {
   currentFileId:  null,
   uploadQueue:  []
 };
+document.getElementById('hdr-user').textContent = DB.currentUser;
 
 // ═══════════════════════════════════════════════
 // STEP NAVIGATION
@@ -1284,8 +1319,14 @@ function applyColumnMapping() {
 
   // Build parsed rows using user's mapping — sheet first, portal as fallback
   const rows = CM.rawRows.map((cells, i) => {
-    const empId   = getCell(cells, map.empIdCol).replace(/[\u200B-\u200F\uFEFF]/g,'');
-    const dedId   = getCell(cells, map.dedIdCol).replace(/[\u200B-\u200F\uFEFF]/g,'');
+    // Trans ID — assigned the instant this row is loaded. Millisecond-precision
+    // datetime value, guaranteed unique across the whole session.
+    const transId = genTransId();
+
+    const empId = getCell(cells, map.empIdCol).replace(/[\u200B-\u200F\uFEFF]/g,'');
+    let dedId   = getCell(cells, map.dedIdCol).replace(/[\u200B-\u200F\uFEFF]/g,'');
+    let dedIdFromTrans = false;
+    if (!dedId) { dedId = String(transId); dedIdFromTrans = true; } // DedID missing from sheet → same value as Trans ID
 
     let dedType;
     if (map.typeMode === 'manual') {
@@ -1293,12 +1334,12 @@ function applyColumnMapping() {
     } else {
       const sheetType = getCell(cells, map.dedTypeCol);
       if (sheetType) { dedType = sheetType; }
-      else { dedType = DB.currentDedType; typeFromPortalCount++; }
+      else { dedType = DB.currentDedType; typeFromPortalCount++; } // not in sheet → must be chosen manually via portal Deduction Type
     }
 
     const sheetMonth = getCell(cells, map.monthCol);
     const month = sheetMonth || DB.currentMonth;
-    if (!sheetMonth) monthFromPortalCount++;
+    if (!sheetMonth) monthFromPortalCount++; // not in sheet → must be chosen manually via portal Payroll Month
 
     const rawAmt  = getCell(cells, map.amountCol).replace(/,/g,'');
     const remarks = '';
@@ -1308,11 +1349,13 @@ function applyColumnMapping() {
     else if (SPEC_CHARS.test(empId)) errors.push({ field:'EmployeeID', code:'SPECIAL_CHAR', msg:'Special character in Employee ID' });
     else if (!/^[A-Za-z0-9\-_]+$/.test(empId)) errors.push({ field:'EmployeeID', code:'INVALID_FORMAT', msg:'Invalid Employee ID format' });
 
-    if (!dedId) errors.push({ field:'DeductionID', code:'MISSING_FIELD', msg:'Deduction ID is required' });
-    else if (SPEC_CHARS.test(dedId)) errors.push({ field:'DeductionID', code:'SPECIAL_CHAR', msg:'Special character in Deduction ID' });
+    // Deduction ID is never a hard error anymore — if it's missing from the
+    // sheet it was just auto-filled with this row's Trans ID above. Only
+    // flag bad characters when the value genuinely came from the sheet.
+    if (!dedIdFromTrans && SPEC_CHARS.test(dedId)) errors.push({ field:'DeductionID', code:'SPECIAL_CHAR', msg:'Special character in Deduction ID' });
 
-    if (!dedType) errors.push({ field:'DeductionType', code:'MISSING_FIELD', msg:'Deduction Type is required (set in sheet or portal)' });
-    if (!month)   errors.push({ field:'Month', code:'MISSING_FIELD', msg:'Month is required (set in sheet or portal)' });
+    if (!dedType) errors.push({ field:'DeductionType', code:'MISSING_FIELD', msg:'Deduction Type is required — not found in the sheet, choose one manually from the portal Deduction Type selector' });
+    if (!month)   errors.push({ field:'Month', code:'MISSING_FIELD', msg:'Month is required — not found in the sheet, choose one manually from the portal Payroll Month selector' });
 
     let amount = NaN;
     if (!rawAmt) {
@@ -1326,7 +1369,7 @@ function applyColumnMapping() {
     }
 
     return {
-      row: i + 1, empId, dedId, dedType,
+      row: i + 1, transId, empId, dedId, dedIdFromTrans, dedType,
       amount: isNaN(amount) ? rawAmt : amount,
       month, remarks,
       status: errors.length > 0 ? 'INVALID' : 'VALID',
@@ -1378,9 +1421,15 @@ function parseRow(cells, headers, rowNum) {
   const rawMonth   = get(['month','date','yyyy']);
   const rawRemarks = get(['remarks','notes','comment']);
 
+  // Trans ID — assigned the instant this row is loaded. Millisecond-precision
+  // datetime value, guaranteed unique across the whole session.
+  const transId = genTransId();
+
   // Cleanse
   const empId   = rawEmpId.replace(/\s+/g,' ').replace(/[\u200B-\u200F\uFEFF]/g,'');
-  const dedId   = rawDedId.replace(/\s+/g,' ').replace(/[\u200B-\u200F\uFEFF]/g,'');
+  let dedId     = rawDedId.replace(/\s+/g,' ').replace(/[\u200B-\u200F\uFEFF]/g,'');
+  let dedIdFromTrans = false;
+  if (!dedId) { dedId = String(transId); dedIdFromTrans = true; } // DedID missing from sheet → same value as Trans ID
   const dedType = rawDedType.replace(/\s+/g,' ');
   const amountStr = rawAmount.replace(/,/g,'').trim();
   const month   = rawMonth.trim() || DB.currentMonth;
@@ -1397,14 +1446,18 @@ function parseRow(cells, headers, rowNum) {
     errors.push({ field:'EmployeeID', code:'INVALID_FORMAT', msg:'Employee ID contains invalid characters' });
   }
 
-  if (!dedId) {
-    errors.push({ field:'DeductionID', code:'MISSING_FIELD', msg:'Deduction ID is required' });
-  } else if (SPEC_CHARS.test(dedId)) {
+  // Deduction ID is never a hard error anymore — if missing from the sheet
+  // it was just auto-filled with this row's Trans ID above. Only flag bad
+  // characters when the value genuinely came from the sheet.
+  if (!dedIdFromTrans && SPEC_CHARS.test(dedId)) {
     errors.push({ field:'DeductionID', code:'SPECIAL_CHAR', msg:'Special character detected in Deduction ID' });
   }
 
   if (!dedType) {
-    errors.push({ field:'DeductionType', code:'MISSING_FIELD', msg:'Deduction Type is required' });
+    errors.push({ field:'DeductionType', code:'MISSING_FIELD', msg:'Deduction Type is required — not found in the sheet, choose one manually from the portal Deduction Type selector' });
+  }
+  if (!month) {
+    errors.push({ field:'Month', code:'MISSING_FIELD', msg:'Month is required — not found in the sheet, choose one manually from the portal Payroll Month selector' });
   }
 
   // Amount validation
@@ -1424,7 +1477,7 @@ function parseRow(cells, headers, rowNum) {
 
   return {
     row: rowNum,
-    empId, dedId, dedType,
+    transId, empId, dedId, dedIdFromTrans, dedType,
     amount: isNaN(amount) ? amountStr : amount,
     month, remarks,
     status: errors.length > 0 ? 'INVALID' : 'VALID',
@@ -1889,7 +1942,7 @@ function renderApproveQueue() {
 const GS = {
   SHEET_ID:   '1rloK0PsZUHVQeUIcPOmYETUuQrX-Y4g-OiGX_wkxgVk',
   SHEET_NAME: 'dedLog',
-  webAppUrl:  'https://script.google.com/macros/s/AKfycbzjllso9nlDkXAB10pMkaW3vjhDzvkT2XNBBGWxEa8EMpagjtKKB_HmlbRIas11Je3_/exec'
+  webAppUrl:  'https://script.google.com/macros/s/AKfycbw-Y_pd83gPT87niFOqKv3-50ZWn30Dl_b5UxJO13RgHKd6I90NyoLcLsxD3Bl3zxp0Lg/exec'
 };
 
 async function approveBatch(id) {
@@ -1901,17 +1954,26 @@ async function approveBatch(id) {
   b.approvedBy = DB.currentUser;
   b.approvedAt = nowStr();
 
-  // Build rows payload — all valid rows in one array
-  // Columns: EmpID | DedID | Type | Amount | Month
-  // Each row keeps its own Month/Type — the sheet value if it had one,
-  // otherwise the portal default that was applied as a fallback at mapping
-  // time. We never force the batch's Payroll Month over a sheet-provided value.
+  // Build rows payload — all valid rows in one array, columns matching the
+  // dedLog sheet exactly:
+  // Trans ID | EmpID | DedID | Type | Amount | Month | Batch | Uploaded By | DateTime
+  //  - Trans ID    → generated the instant this row was loaded (millisecond-precision, never repeats)
+  //  - EmpID/DedID/Type/Amount/Month → unchanged, exactly as resolved by the portal
+  //    (sheet value if present, portal selection as fallback — see validate step).
+  //    We never force the batch's Payroll Month over a sheet-provided value.
+  //  - Batch       → the batch's Date & Time only (not the Batch ID text)
+  //  - Uploaded By → the logged-in user's email, from ap_session
+  //  - DateTime    → this row's own datetime, to the millisecond, from its Trans ID
   const rows = b.rows.map(r => [
+    r.transId,
     r.empId,
     r.dedId,
     r.dedType,
     typeof r.amount === 'number' ? r.amount : parseFloat(String(r.amount).replace(/,/g,'')) || 0,
-    r.month || b.month
+    r.month || b.month,
+    b.uploadedAt,
+    b.uploadedBy,
+    transMsToDateTime(r.transId)
   ]);
 
   // Pull the active session (set at login) so the backend auth gate accepts this write —
@@ -1926,8 +1988,6 @@ async function approveBatch(id) {
     sessionId:  session.sessionId || '',
     token:      session.token || '',
     batchId:    b.id,
-    approvedBy: b.approvedBy,
-    approvedAt: b.approvedAt,
     rows:       rows          // entire batch in ONE call
   };
 
