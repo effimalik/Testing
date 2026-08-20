@@ -1919,7 +1919,7 @@ function renderApproveQueue() {
           <span>${b.month}</span>
           <span>${b.validRows} valid rows</span>
           <span class="mono" style="color:var(--purple);">AED ${fmt(b.savedAmount,0)}</span>
-          <span>By ${b.uploadedBy} · ${b.uploadedAt}</span>
+          <span>Uploaded By ${b.uploadedBy} · ${b.uploadedAt}</span>
           ${b.status==='APPROVED'?`<span style="color:var(--teal);">Approved by ${b.approvedBy} · ${b.approvedAt}</span>`:''}
         </div>
         <div style="display:flex;gap:14px;margin-top:4px;font-size:11.5px;color:var(--text3);">
@@ -1942,7 +1942,7 @@ function renderApproveQueue() {
 const GS = {
   SHEET_ID:   '1rloK0PsZUHVQeUIcPOmYETUuQrX-Y4g-OiGX_wkxgVk',
   SHEET_NAME: 'dedLog',
-  webAppUrl:  'https://script.google.com/macros/s/AKfycbyMfy74WQ2F8--6lB8qnlgFZ6HlZ4Go45SEFWJeK75SugGmJUc5I5MYDX4wCJAKPd5P/exec'
+  webAppUrl:  'https://script.google.com/macros/s/AKfycbw-Y_pd83gPT87niFOqKv3-50ZWn30Dl_b5UxJO13RgHKd6I90NyoLcLsxD3Bl3zxp0Lg/exec'
 };
 
 async function approveBatch(id) {
@@ -1951,18 +1951,19 @@ async function approveBatch(id) {
 
   // Lock batch immediately in UI
   b.status     = 'APPROVED';
-  b.approvedBy = DB.currentUser;
+  b.approvedBy = b.uploadedBy;   // Approved By = the same email that uploaded the batch
   b.approvedAt = nowStr();
 
   // Build rows payload — all valid rows in one array, columns matching the
   // dedLog sheet exactly:
-  // Trans ID | EmpID | DedID | Type | Amount | Month | Batch | Uploaded By | DateTime
+  // Trans ID | EmpID | DedID | Type | Amount | Month | Batch | Uploaded By | Approved By | DateTime
   //  - Trans ID    → generated the instant this row was loaded (millisecond-precision, never repeats)
   //  - EmpID/DedID/Type/Amount/Month → unchanged, exactly as resolved by the portal
   //    (sheet value if present, portal selection as fallback — see validate step).
   //    We never force the batch's Payroll Month over a sheet-provided value.
   //  - Batch       → the batch's Date & Time only (not the Batch ID text)
   //  - Uploaded By → the logged-in user's email, from ap_session
+  //  - Approved By → same email as Uploaded By
   //  - DateTime    → this row's own datetime, to the millisecond, from its Trans ID
   const rows = b.rows.map(r => [
     r.transId,
@@ -1973,6 +1974,7 @@ async function approveBatch(id) {
     r.month || b.month,
     b.uploadedAt,
     b.uploadedBy,
+    b.approvedBy,
     transMsToDateTime(r.transId)
   ]);
 
