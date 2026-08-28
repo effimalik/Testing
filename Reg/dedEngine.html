@@ -1,0 +1,2171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Deduction Upload & Validation Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root,[data-theme="dark"]{
+  --bg:#0a0c10;--bg2:#0f1117;--bg3:#141720;
+  --surface:#181c26;--surface2:#1e2333;--surface3:#242a3d;
+  --border:#252b3d;--border2:#2e3650;--border3:#3a4260;
+  --text:#e8edf8;--text2:#8d96b0;--text3:#5a6280;
+  --accent:#4f8ef7;--accent-dim:rgba(79,142,247,.12);--accent-glow:rgba(79,142,247,.25);
+  --teal:#2dd4aa;--teal-dim:rgba(45,212,170,.12);
+  --amber:#f5a623;--amber-dim:rgba(245,166,35,.12);
+  --red:#f05252;--red-dim:rgba(240,82,82,.12);--red-glow:rgba(240,82,82,.2);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,.12);
+  --orange:#fb923c;--orange-dim:rgba(251,146,60,.12);
+  --radius:6px;--radius-lg:10px;--radius-xl:14px;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --shadow-lg:0 8px 40px rgba(0,0,0,.8);
+  --header-h:56px;
+}
+[data-theme="light"]{
+  --bg:#f0f2f5;--bg2:#ffffff;--bg3:#e8ecf0;
+  --surface:#ffffff;--surface2:#e2e7ed;--surface3:#d7dee6;
+  --border:#c8d0d9;--border2:#9aa5b1;--border3:#7f8b99;
+  --text:#0d1117;--text2:#3d454f;--text3:#5a6370;
+  --accent:#0550ae;--accent-dim:rgba(5,80,174,.12);--accent-glow:rgba(5,80,174,.22);
+  --teal:#116329;--teal-dim:rgba(17,99,41,.13);
+  --amber:#7d4e00;--amber-dim:rgba(125,78,0,.13);
+  --red:#a8111b;--red-dim:rgba(168,17,27,.11);--red-glow:rgba(168,17,27,.18);
+  --purple:#6639c8;--purple-dim:rgba(102,57,200,.13);
+  --orange:#953800;--orange-dim:rgba(149,56,0,.13);
+  --radius:6px;--radius-lg:10px;--radius-xl:14px;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --shadow-lg:0 8px 32px rgba(0,0,0,.15);
+  --header-h:56px;
+}
+[data-theme="purple"]{
+  --bg:#0f0b1e;--bg2:#17112e;--bg3:#1e1840;
+  --surface:#221a3a;--surface2:#2c2250;--surface3:#372a66;
+  --border:#3a2e5e;--border2:#5a4890;--border3:#7259b8;
+  --text:#e8e0ff;--text2:#a899d4;--text3:#7a6ca8;
+  --accent:#c084fc;--accent-dim:rgba(192,132,252,.14);--accent-glow:rgba(192,132,252,.3);
+  --teal:#4ade80;--teal-dim:rgba(74,222,128,.12);
+  --amber:#fbbf24;--amber-dim:rgba(251,191,36,.12);
+  --red:#f87171;--red-dim:rgba(248,113,113,.12);--red-glow:rgba(248,113,113,.2);
+  --purple:#c084fc;--purple-dim:rgba(192,132,252,.14);
+  --orange:#fb923c;--orange-dim:rgba(251,146,60,.12);
+  --radius:6px;--radius-lg:10px;--radius-xl:14px;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --shadow-lg:0 8px 32px rgba(0,0,0,.7);
+  --header-h:56px;
+}
+[data-theme="ocean"]{
+  --bg:#071520;--bg2:#0d2035;--bg3:#112840;
+  --surface:#143050;--surface2:#1a3d60;--surface3:#204a75;
+  --border:#1e4a72;--border2:#2e6a9e;--border3:#3f84bd;
+  --text:#d6eeff;--text2:#7db8e8;--text3:#4a87b8;
+  --accent:#38bdf8;--accent-dim:rgba(56,189,248,.14);--accent-glow:rgba(56,189,248,.3);
+  --teal:#34d399;--teal-dim:rgba(52,211,153,.12);
+  --amber:#fbbf24;--amber-dim:rgba(251,191,36,.12);
+  --red:#f87171;--red-dim:rgba(248,113,113,.12);--red-glow:rgba(248,113,113,.2);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,.12);
+  --orange:#fb923c;--orange-dim:rgba(251,146,60,.12);
+  --radius:6px;--radius-lg:10px;--radius-xl:14px;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --shadow-lg:0 8px 32px rgba(0,0,0,.65);
+  --header-h:56px;
+}
+[data-theme="slate"]{
+  --bg:#0e1117;--bg2:#1a1f28;--bg3:#222836;
+  --surface:#28303e;--surface2:#313c4e;--surface3:#3b475c;
+  --border:#3a4556;--border2:#556070;--border3:#6b7789;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  --accent:#60a5fa;--accent-dim:rgba(96,165,250,.13);--accent-glow:rgba(96,165,250,.28);
+  --teal:#4ade80;--teal-dim:rgba(74,222,128,.12);
+  --amber:#fbbf24;--amber-dim:rgba(251,191,36,.12);
+  --red:#f87171;--red-dim:rgba(248,113,113,.12);--red-glow:rgba(248,113,113,.2);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,.12);
+  --orange:#fb923c;--orange-dim:rgba(251,146,60,.12);
+  --radius:6px;--radius-lg:10px;--radius-xl:14px;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --shadow-lg:0 8px 32px rgba(0,0,0,.6);
+  --header-h:56px;
+}
+html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:13.5px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+.shell{display:flex;flex-direction:column;min-height:100vh;}
+
+/* HEADER */
+.header{height:var(--header-h);display:flex;align-items:center;justify-content:space-between;padding:0 22px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:300;gap:12px;}
+.brand{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;letter-spacing:-.3px;}
+.brand-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.brand-sub{font-size:10px;font-weight:500;color:var(--text3);letter-spacing:.04em;text-transform:uppercase;}
+.header-meta{display:flex;align-items:center;gap:10px;}
+.hbadge{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:20px;background:var(--surface2);border:1px solid var(--border2);font-size:11px;color:var(--text2);}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:pulse 2s ease infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+
+/* STEPS */
+.steps-nav{display:flex;align-items:center;padding:0 22px;background:var(--bg2);border-bottom:1px solid var(--border);height:48px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
+.steps-nav::-webkit-scrollbar{display:none;}
+.step-item{display:flex;align-items:center;gap:7px;padding:0 14px;height:100%;cursor:pointer;white-space:nowrap;color:var(--text3);font-size:12px;font-weight:600;border-bottom:2px solid transparent;transition:color .15s;flex-shrink:0;}
+.step-item:hover{color:var(--text2);}
+.step-item.active{color:var(--accent);border-bottom-color:var(--accent);}
+.step-item.done{color:var(--teal);}
+.step-num{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:var(--mono);background:var(--surface2);flex-shrink:0;}
+.step-item.active .step-num{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+.step-item.done .step-num{background:var(--teal-dim);border-color:var(--teal);color:var(--teal);}
+.sarrow{color:var(--border2);margin:0 2px;font-size:14px;}
+
+/* CONTENT */
+.content{flex:1;padding:20px 22px 60px;}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* PAGE HDR */
+.page-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:18px;flex-wrap:wrap;}
+.page-hdr h1{font-size:18px;font-weight:700;letter-spacing:-.3px;display:flex;align-items:center;gap:10px;}
+.page-hdr p{font-size:12px;color:var(--text3);margin-top:3px;}
+.page-hdr-actions{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;}
+.sep{height:1px;background:var(--border);margin-bottom:18px;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;font-size:12px;font-family:var(--font);font-weight:600;transition:all .15s;white-space:nowrap;}
+.btn:hover{background:var(--surface3);border-color:var(--border3);}
+.btn.primary{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+.btn.primary:hover{background:var(--accent);color:#fff;}
+.btn.success{background:var(--teal-dim);border-color:var(--teal);color:var(--teal);}
+.btn.success:hover{background:var(--teal);color:#000;}
+.btn.danger{background:var(--red-dim);border-color:var(--red);color:var(--red);}
+.btn.danger:hover{background:var(--red);color:#fff;}
+.btn.amber{background:var(--amber-dim);border-color:var(--amber);color:var(--amber);}
+.btn.amber:hover{background:var(--amber);color:#000;}
+.btn:disabled{opacity:.3;cursor:not-allowed;pointer-events:none;}
+.btn.sm{padding:5px 11px;font-size:11px;}
+.btn.xs{padding:3px 8px;font-size:10.5px;}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:14px;overflow:hidden;}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap;}
+.card-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px;}
+.card-body{padding:16px;}
+
+/* STAT ROW */
+.stat-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:13px 16px;flex:1 1 130px;min-width:0;display:flex;align-items:center;gap:12px;}
+.stat-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.stat-icon.blue{background:var(--accent-dim);color:var(--accent);}
+.stat-icon.teal{background:var(--teal-dim);color:var(--teal);}
+.stat-icon.red{background:var(--red-dim);color:var(--red);}
+.stat-icon.amber{background:var(--amber-dim);color:var(--amber);}
+.stat-icon.purple{background:var(--purple-dim);color:var(--purple);}
+.stat-val{font-size:20px;font-weight:700;font-family:var(--mono);line-height:1;}
+.stat-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-top:2px;}
+
+/* UPLOAD ZONE */
+.upload-zone{border:2px dashed var(--border2);border-radius:var(--radius-xl);padding:44px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg3);position:relative;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:var(--accent-dim);}
+.uz-icon{width:50px;height:50px;border-radius:14px;background:var(--accent-dim);border:1px solid rgba(79,142,247,.3);display:flex;align-items:center;justify-content:center;color:var(--accent);margin:0 auto 14px;}
+.uz-title{font-size:15px;font-weight:700;margin-bottom:5px;}
+.uz-sub{font-size:12px;color:var(--text3);}
+.uz-tags{display:flex;gap:6px;justify-content:center;margin-top:10px;flex-wrap:wrap;}
+.uz-tag{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);}
+
+/* BADGE */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:700;white-space:nowrap;}
+.badge.green{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(45,212,170,.25);}
+.badge.red{background:var(--red-dim);color:var(--red);border:1px solid rgba(240,82,82,.25);}
+.badge.amber{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,166,35,.25);}
+.badge.blue{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(79,142,247,.25);}
+.badge.purple{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(167,139,250,.25);}
+.badge.gray{background:rgba(90,98,128,.15);color:var(--text2);border:1px solid var(--border2);}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;width:100%;}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.tbl thead th{background:var(--bg3);padding:9px 12px;text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);border-bottom:2px solid var(--border2);white-space:nowrap;}
+.tbl tbody td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.tbl tbody tr:last-child td{border-bottom:none;}
+.tbl tbody tr:hover td{background:rgba(255,255,255,.018);}
+.tbl tbody tr.row-valid td{background:rgba(45,212,170,.025);}
+.tbl tbody tr.row-invalid td{background:rgba(240,82,82,.04);}
+.tbl tbody tr.row-edited td{background:rgba(245,166,35,.04);}
+.mono{font-family:var(--mono);font-size:11.5px;}
+
+/* EDITABLE CELL */
+.cell-input{width:100%;min-width:90px;padding:4px 7px;border-radius:4px;border:1.5px solid var(--amber);background:rgba(245,166,35,.08);color:var(--text);font-family:var(--mono);font-size:12px;outline:none;transition:border-color .15s;}
+.cell-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow);}
+.cell-display{font-family:var(--mono);font-size:12px;}
+
+/* FILTERS */
+.filter-bar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--border);}
+.fi{display:flex;flex-direction:column;gap:3px;}
+.fi label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);}
+.fi select,.fi input{padding:6px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font);font-size:12px;outline:none;}
+.fi select:focus,.fi input:focus{border-color:var(--accent);}
+.fi input{width:170px;}
+.search-w{position:relative;}
+.search-w svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none;}
+.search-w input{padding-left:28px;}
+
+/* PAGINATION */
+.pag-bar{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;border-top:1px solid var(--border);flex-wrap:wrap;gap:8px;}
+.pag-info{font-size:11.5px;color:var(--text3);}
+.pag-btns{display:flex;gap:4px;}
+.pg-btn{min-width:28px;height:28px;padding:0 6px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:11.5px;font-family:var(--mono);display:flex;align-items:center;justify-content:center;transition:all .12s;}
+.pg-btn:hover:not(:disabled):not(.cur){background:var(--surface3);}
+.pg-btn.cur{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+.pg-btn:disabled{opacity:.3;cursor:not-allowed;}
+
+/* BATCH ITEM */
+.batch-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);transition:background .12s;}
+.batch-item:last-child{border-bottom:none;}
+.batch-item:hover{background:var(--surface2);}
+.b-icon{width:38px;height:38px;border-radius:9px;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0;}
+.b-info{flex:1;min-width:0;}
+.b-name{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.b-meta{font-size:11px;color:var(--text3);margin-top:3px;display:flex;gap:12px;flex-wrap:wrap;}
+.b-actions{display:flex;gap:6px;align-items:center;flex-shrink:0;}
+
+/* INFO BOX */
+.info-box{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:var(--radius);font-size:12px;margin-bottom:12px;}
+.info-box.info{background:var(--accent-dim);border:1px solid rgba(79,142,247,.2);color:var(--text2);}
+.info-box.success{background:var(--teal-dim);border:1px solid rgba(45,212,170,.2);color:var(--text2);}
+.info-box.warn{background:var(--amber-dim);border:1px solid rgba(245,166,35,.2);color:var(--text2);}
+.info-box.danger{background:var(--red-dim);border:1px solid rgba(240,82,82,.2);color:var(--text2);}
+
+/* PROGRESS */
+.prog-wrap{height:5px;background:var(--surface3);border-radius:10px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:10px;transition:width .4s ease;}
+.prog-fill.teal{background:var(--teal);}
+.prog-fill.red{background:var(--red);}
+.prog-fill.blue{background:var(--accent);}
+
+/* PREVIEW METRICS */
+.preview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.pm{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;text-align:center;}
+.pm-val{font-size:22px;font-weight:700;font-family:var(--mono);}
+.pm-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-top:3px;}
+
+/* AUDIT */
+.audit-entry{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.audit-entry:last-child{border-bottom:none;}
+.audit-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.audit-dot.ok{background:var(--teal);}
+.audit-dot.warn{background:var(--amber);}
+.audit-dot.err{background:var(--red);}
+.audit-dot.info{background:var(--accent);}
+.audit-dot.lock{background:var(--purple);}
+.audit-time{font-size:10.5px;font-family:var(--mono);color:var(--text3);white-space:nowrap;flex-shrink:0;min-width:130px;}
+.audit-main{flex:1;min-width:0;}
+.audit-action{font-size:12px;font-weight:700;}
+.audit-detail{font-size:11.5px;color:var(--text3);margin-top:2px;}
+
+/* MODAL */
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(5px);z-index:600;align-items:center;justify-content:center;padding:16px;}
+.modal-backdrop.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);width:100%;max-width:600px;max-height:90vh;display:flex;flex-direction:column;}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.modal-hdr h2{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.modal-body{padding:18px 20px;overflow-y:auto;flex:1;}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid var(--border);flex-shrink:0;}
+.dg2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+.dr{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 13px;}
+.dr-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:3px;}
+.dr-val{font-size:13px;font-weight:500;}
+
+/* TOAST */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--surface3);border:1px solid var(--border3);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:11px 16px;display:flex;align-items:center;gap:10px;font-size:12.5px;font-weight:600;transform:translateY(70px);opacity:0;transition:all .3s cubic-bezier(.34,1.4,.64,1);z-index:9999;max-width:340px;}
+.toast.show{transform:translateY(0);opacity:1;}
+
+/* OVERLAY */
+.proc-overlay{display:none;position:fixed;inset:0;background:rgba(10,12,16,.92);backdrop-filter:blur(6px);z-index:800;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.proc-overlay.open{display:flex;}
+.spinner{width:38px;height:38px;border:3px solid rgba(255,255,255,.1);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* EMPTY */
+.empty{text-align:center;padding:52px 20px;color:var(--text3);}
+.empty-ico{font-size:38px;margin-bottom:12px;opacity:.4;}
+
+/* ERR CHIP */
+.err-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:10.5px;font-weight:600;background:var(--red-dim);color:var(--red);border:1px solid rgba(240,82,82,.3);}
+
+/* SELECT */
+.sel{padding:6px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font);font-size:12px;outline:none;}
+
+@media(max-width:680px){
+  .preview-grid{grid-template-columns:repeat(2,1fr);}
+  .stat-row{display:grid;grid-template-columns:repeat(2,1fr);}
+  .dg2{grid-template-columns:1fr;}
+  .content{padding:14px 14px 60px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ INSTANT THEME SYNC (no flash) ═══ -->
+<script>
+(function(){
+  try {
+    var t = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch(e) {}
+})();
+</script>
+
+<div class="shell">
+
+<!-- OVERLAY -->
+<div class="proc-overlay" id="proc-overlay">
+  <div class="spinner"></div>
+  <div id="proc-title" style="font-size:14px;font-weight:700;color:var(--text);">Processing…</div>
+  <div id="proc-sub" style="font-size:12px;color:var(--text3);">Please wait</div>
+</div>
+
+<!-- MODAL: Row Detail -->
+<div class="modal-backdrop" id="row-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h2>Row Detail</h2>
+      <button class="btn sm" onclick="closeModal('row-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="row-modal-body"></div>
+    <div class="modal-foot"><button class="btn" onclick="closeModal('row-modal')">Close</button></div>
+  </div>
+</div>
+
+<!-- MODAL: Save Success -->
+<div class="modal-backdrop" id="save-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h2 style="color:var(--teal);">✓ Batch Saved Successfully</h2>
+      <button class="btn sm" onclick="closeModal('save-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="save-modal-body"></div>
+    <div class="modal-foot"><button class="btn success" onclick="closeModal('save-modal')">Done</button></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><span id="toast-ico"></span><span id="toast-msg"></span></div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="brand">
+    <div class="brand-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    </div>
+    <div>
+      <div>Deduction Engine</div>
+      <div class="brand-sub">Upload · Validate · Approve · Store</div>
+    </div>
+  </div>
+  <div class="header-meta">
+    <div class="hbadge"><div class="live-dot"></div><span id="hdr-user">HR Admin</span></div>
+    <div class="hbadge" style="color:var(--text3);" id="hdr-month-badge">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span id="hdr-month">June 2025</span>
+    </div>
+    <div class="hbadge" style="color:var(--text3);" id="hdr-dedtype-badge" hidden>
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      <span id="hdr-dedtype"></span>
+    </div>
+  </div>
+</div>
+
+<!-- STEPS NAV -->
+<div class="steps-nav">
+  <div class="step-item active" id="snav-upload" onclick="goStep('upload')"><span class="step-num" id="sn-1">1</span>Upload & Ingest</div>
+  <span class="sarrow">›</span>
+  <div class="step-item" id="snav-validate" onclick="goStep('validate')"><span class="step-num" id="sn-2">2</span>Validate & Correct</div>
+  <span class="sarrow">›</span>
+  <div class="step-item" id="snav-preview" onclick="goStep('preview')"><span class="step-num" id="sn-3">3</span>Preview & Submit</div>
+  <span class="sarrow">›</span>
+  <div class="step-item" id="snav-approve" onclick="goStep('approve')"><span class="step-num" id="sn-4">4</span>Approve / Reject</div>
+  <span class="sarrow">›</span>
+  <div class="step-item" id="snav-summary" onclick="goStep('summary')"><span class="step-num" id="sn-5">5</span>Monthly Summary</div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+<!-- ══ STEP 1: UPLOAD ══ -->
+<div class="tab-panel active" id="tab-upload">
+  <div class="page-hdr">
+    <div>
+      <h1>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        File Upload & Ingestion
+      </h1>
+      <p>Download the template → Fill data → Upload here · XLSX / CSV only · Max 10MB</p>
+    </div>
+    <div class="page-hdr-actions">
+      <div class="fi">
+        <label>Payroll Month <span style="color:var(--red);">*</span></label>
+        <select id="sel-month" class="sel" onchange="updateMonth()">
+          <option>January 2025</option><option>February 2025</option><option>March 2025</option>
+          <option>April 2025</option><option>May 2025</option><option selected>June 2025</option>
+          <option>July 2025</option><option>August 2025</option><option>September 2025</option>
+          <option>October 2025</option><option>November 2025</option><option>December 2025</option>
+        </select>
+      </div>
+      <div class="fi">
+        <label>Deduction Type <span style="font-weight:400;color:var(--text3);">(portal default)</span></label>
+        <select id="sel-dedtype" class="sel" onchange="updateDedType()">
+          <option value="">— none selected —</option>
+          <option>Traffic Fine</option>
+          <option>Salary Advance</option>
+          <option>SALIK</option>
+          <option>Loan Repayment</option>
+          <option>Insurance Premium</option>
+          <option>Uniform / Equipment</option>
+          <option value="__other__">Other (type below)</option>
+        </select>
+        <input type="text" id="sel-dedtype-other" placeholder="Enter Deduction Type" style="display:none;margin-top:4px;padding:6px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font);font-size:12px;outline:none;" oninput="updateDedType()"/>
+      </div>
+    </div>
+  </div>
+  <div class="sep"></div>
+
+  <!-- TEMPLATE DOWNLOAD — compact single row -->
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);">
+    <span style="font-size:12px;color:var(--text3);flex:1;min-width:200px;">Download the template, fill your deduction data, then upload below. Columns: <span class="mono" style="color:var(--teal);">Employee ID · Deduction ID · Type · Amount · Month</span> — Type &amp; Month are optional in the sheet; if left blank, the portal's Deduction Type / Payroll Month above are used instead.</span>
+    <button class="btn amber sm" onclick="downloadTemplate('xlsx')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      XLSX Template
+    </button>
+    <button class="btn sm" onclick="downloadTemplate('csv')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      CSV Template
+    </button>
+  </div>
+
+  <!-- UPLOAD ZONE -->
+  <div class="upload-zone" id="drop-zone" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)" onclick="document.getElementById('file-input').click()">
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFiles(this.files)"/>
+    <div class="uz-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    </div>
+    <div class="uz-title"><strong>Click to upload</strong> or drag & drop your filled template</div>
+    <div class="uz-sub">Deductions for <span id="uz-month">June 2025</span></div>
+    <div class="uz-tags">
+      <span class="uz-tag">.xlsx</span><span class="uz-tag">.xls</span><span class="uz-tag">.csv</span><span class="uz-tag">Max 10MB</span>
+    </div>
+  </div>
+
+  <div id="upload-list" style="margin-top:14px;"></div>
+</div>
+
+<!-- ══ STEP 2: VALIDATE ══ -->
+<div class="tab-panel" id="tab-validate">
+  <div class="page-hdr">
+    <div>
+      <h1>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Validate & Correct
+      </h1>
+      <p>Only INVALID cells are editable · Changes reflect instantly · Re-validate changed cells only (delta mode)</p>
+    </div>
+    <div class="page-hdr-actions">
+      <button class="btn sm" onclick="exportErrorReport()">↓ Error Report</button>
+      <button class="btn primary sm" onclick="revalidateDelta()">↻ Re-validate (Delta)</button>
+      <button class="btn success sm" id="btn-to-preview" onclick="goStep('preview')" disabled>Proceed to Preview →</button>
+    </div>
+  </div>
+  <div class="sep"></div>
+
+  <!-- Stats -->
+  <div class="stat-row">
+    <div class="stat-card"><div class="stat-icon blue"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div><div><div class="stat-val" id="vs-total">—</div><div class="stat-lbl">Total Rows</div></div></div>
+    <div class="stat-card"><div class="stat-icon teal"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div><div><div class="stat-val" id="vs-valid" style="color:var(--teal)">—</div><div class="stat-lbl">Valid</div></div></div>
+    <div class="stat-card"><div class="stat-icon red"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div><div><div class="stat-val" id="vs-invalid" style="color:var(--red)">—</div><div class="stat-lbl">Invalid</div></div></div>
+    <div class="stat-card"><div class="stat-icon amber"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div><div class="stat-val" id="vs-dups" style="color:var(--amber)">—</div><div class="stat-lbl">Duplicates</div></div></div>
+    <div class="stat-card"><div class="stat-icon purple"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div><div class="stat-val" id="vs-amount" style="color:var(--purple);font-size:15px;">—</div><div class="stat-lbl">Valid Amount</div></div></div>
+  </div>
+
+  <!-- Legend -->
+  <div style="display:flex;gap:14px;margin-bottom:12px;flex-wrap:wrap;font-size:11.5px;color:var(--text3);">
+    <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:rgba(45,212,170,.2);display:inline-block;"></span>VALID — locked</span>
+    <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:rgba(240,82,82,.2);display:inline-block;"></span>INVALID — highlighted cells editable</span>
+    <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:rgba(245,166,35,.2);display:inline-block;"></span>EDITED — changes reflected live</span>
+    <span id="val-batch-id" class="badge blue" style="font-family:var(--mono);display:none;"></span>
+  </div>
+
+  <div class="card">
+    <div class="filter-bar">
+      <div class="fi">
+        <label>Status</label>
+        <select class="sel" id="vf-status" onchange="renderValTable()">
+          <option value="">All</option>
+          <option value="VALID">Valid</option>
+          <option value="INVALID">Invalid</option>
+          <option value="EDITED">Edited</option>
+        </select>
+      </div>
+      <div class="fi">
+        <label>Error Type</label>
+        <select class="sel" id="vf-err" onchange="renderValTable()">
+          <option value="">All errors</option>
+          <option value="INVALID_FORMAT">Invalid Format</option>
+          <option value="AMOUNT_ZERO">Amount ≤ 0</option>
+          <option value="DUPLICATE">Duplicate</option>
+          <option value="MISSING_FIELD">Missing Field</option>
+          <option value="SPECIAL_CHAR">Special Char</option>
+        </select>
+      </div>
+      <div class="fi">
+        <label>Search</label>
+        <div class="search-w">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="fi" type="text" id="vf-search" placeholder="Emp ID, Ded ID…" oninput="renderValTable()" style="width:170px;padding:6px 10px 6px 28px;"/>
+        </div>
+      </div>
+      <div style="margin-left:auto;">
+        <div class="fi">
+          <label>Rows per page</label>
+          <select class="sel" id="v-rpp" onchange="valPage=1;renderValTable()">
+            <option value="15">15</option><option value="25">25</option><option value="50">50</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="tbl-wrap" style="max-height:520px;overflow-y:auto;">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width:40px;">#</th>
+            <th style="width:82px;">Status</th>
+            <th style="min-width:110px;">Emp ID</th>
+            <th style="min-width:110px;">Ded ID</th>
+            <th style="min-width:130px;">Ded Type</th>
+            <th style="min-width:120px;">Amount (AED)</th>
+            <th style="min-width:100px;">Month</th>
+            <th style="min-width:80px;">Remarks</th>
+            <th style="width:70px;">Errors</th>
+            <th style="width:66px;">Detail</th>
+          </tr>
+          <tr style="background:var(--bg3);">
+            <th colspan="5" style="padding:5px 12px;border-bottom:1px solid var(--border2);"></th>
+            <th style="padding:5px 8px;border-bottom:1px solid var(--border2);">
+              <button class="btn danger xs" onclick="removeZeroValueRows()" title="Delete all rows where Amount is 0 or negative">
+                ✕ Remove Zero/Neg
+              </button>
+            </th>
+            <th colspan="3" style="padding:5px 8px;border-bottom:1px solid var(--border2);">
+              <button class="btn amber xs" onclick="removeDuplicateRows()" title="Delete all rows flagged as duplicate">
+                ✕ Remove Duplicates
+              </button>
+            </th>
+            <th style="padding:5px 8px;border-bottom:1px solid var(--border2);"></th>
+          </tr>
+        </thead>
+        <tbody id="val-tbody"></tbody>
+      </table>
+    </div>
+    <div class="pag-bar">
+      <div class="pag-info" id="v-pag-info">—</div>
+      <div class="pag-btns" id="v-pag-ctrl"></div>
+    </div>
+  </div>
+
+  <!-- Duplicate panel -->
+  <div class="card" id="dup-panel" style="display:none;">
+    <div class="card-hdr">
+      <div class="card-title" style="color:var(--amber);">⚠ Duplicate Records — System Scope</div>
+    </div>
+    <div id="dup-list"></div>
+  </div>
+</div>
+
+<!-- ══ STEP 3: PREVIEW ══ -->
+<div class="tab-panel" id="tab-preview">
+  <div class="page-hdr">
+    <div>
+      <h1>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Batch Preview
+      </h1>
+      <p>Final check before ONE-TRANSACTION commit · Invalid rows are excluded from save</p>
+    </div>
+    <div class="page-hdr-actions">
+      <button class="btn danger sm" onclick="goStep('validate')">← Back to Correct</button>
+      <button class="btn success" id="btn-save" onclick="saveBatch()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save Batch (1 Transaction)
+      </button>
+    </div>
+  </div>
+  <div class="sep"></div>
+  <div class="preview-grid" id="preview-metrics"></div>
+  <div class="card">
+    <div class="card-hdr"><div class="card-title">Error Summary by Type</div></div>
+    <div class="card-body" id="preview-err-summary"></div>
+  </div>
+  <div class="card">
+    <div class="card-hdr"><div class="card-title" style="color:var(--red);">Invalid Rows (excluded from save)</div></div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>#</th><th>Emp ID</th><th>Ded ID</th><th>Type</th><th>Amount</th><th>Error Codes</th></tr></thead>
+        <tbody id="preview-inv-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STEP 4: APPROVE ══ -->
+<div class="tab-panel" id="tab-approve">
+  <div class="page-hdr">
+    <div>
+      <h1>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Approval Queue
+      </h1>
+      <p>Approved batches lock permanently · Approved data feeds the Payroll Calculation Engine only</p>
+    </div>
+    <div class="page-hdr-actions">
+      <select class="sel" id="approve-mf" onchange="renderApproveQueue()">
+        <option value="">All months</option>
+        <option value="June 2025">June 2025</option>
+        <option value="May 2025">May 2025</option>
+        <option value="April 2025">April 2025</option>
+      </select>
+    </div>
+  </div>
+  <div class="sep"></div>
+
+  <!-- Google Sheets — hardcoded, always connected -->
+  <div class="card" style="margin-bottom:14px;">
+    <div class="card-hdr">
+      <div class="card-title">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        Google Sheets Integration — dedLog
+      </div>
+      <span class="badge green">✓ Connected</span>
+    </div>
+    <div class="card-body" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 16px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--text);">Sheet: <span style="color:var(--teal);">dedLog</span></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;font-family:var(--mono);">ID: 1rloK0PsZUHVQeUIcPOmYETUuQrX-Y4g-OiGX_wkxgVk</div>
+        <div style="font-size:11.5px;color:var(--text2);margin-top:3px;">On approval — all rows pushed in <strong>one call</strong>, appended to existing data. Month filled automatically from Payroll Month.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0;">
+        <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);">Columns pushed</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;">
+          <span class="badge blue">EmpID</span>
+          <span class="badge blue">DedID</span>
+          <span class="badge blue">Type</span>
+          <span class="badge blue">Amount</span>
+          <span class="badge blue">Month</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-box warn">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+    Once <strong>APPROVED</strong>, a batch is permanently locked, pushed to Google Sheets in one call (appending to existing data), and cannot be modified.
+  </div>
+
+  <div class="card">
+    <div class="card-hdr"><div class="card-title">Pending Batches</div></div>
+    <div id="approve-list" class="card-body" style="padding:0;"></div>
+  </div>
+</div>
+
+<!-- ══ STEP 5: SUMMARY ══ -->
+<div class="tab-panel" id="tab-summary">
+  <div class="page-hdr">
+    <div>
+      <h1>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        Monthly Deduction Summary
+      </h1>
+      <p>Approved deductions only · Filterable by month and type</p>
+    </div>
+    <div class="page-hdr-actions">
+      <select class="sel" id="sum-mf">
+        <option value="ALL">All months</option>
+        <option value="June 2025">June 2025</option>
+        <option value="May 2025">May 2025</option>
+        <option value="April 2025">April 2025</option>
+      </select>
+      <button class="btn primary sm" onclick="renderSummary()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Load Summary
+      </button>
+      <button class="btn sm" id="btn-export-sum" onclick="exportSummaryCSV()" style="display:none;">↓ Export CSV</button>
+    </div>
+  </div>
+  <div class="sep"></div>
+  <div class="stat-row" id="sum-stats"></div>
+  <div class="card" id="sum-card" style="display:none;">
+    <div class="card-hdr"><div class="card-title">Deduction Breakdown by Type</div></div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Month</th><th>Deduction Type</th><th>Employees</th><th>Total Amount</th><th>Avg per Employee</th><th>Batches</th></tr></thead>
+        <tbody id="sum-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div id="sum-empty" style="text-align:center;padding:52px 20px;color:var(--text3);">
+    <div style="font-size:38px;opacity:.3;margin-bottom:12px;">📊</div>
+    <p style="font-size:13px;">Select a month filter and click <strong style="color:var(--accent);">Load Summary</strong> to view approved deduction data.</p>
+  </div>
+</div>
+
+<!-- MODAL: Column Mapping -->
+<div class="modal-backdrop" id="col-map-modal">
+  <div class="modal" style="max-width:660px;">
+    <div class="modal-hdr">
+      <h2>
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Column Alignment
+      </h2>
+      <button class="btn sm" onclick="closeModal('col-map-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="info-box info" style="margin-bottom:14px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Map <strong>Employee ID</strong>, <strong>Deduction ID</strong> and <strong>Amount</strong> to a column — these are required and missing columns will be flagged as errors. <strong>Deduction Type</strong> and <strong>Month</strong> are optional in the sheet: the sheet value always wins when present; any row left blank falls back to the portal selection.
+      </div>
+
+      <!-- Detected columns preview -->
+      <div style="margin-bottom:14px;">
+        <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:6px;">Detected Columns in your file</div>
+        <div id="cm-detected-cols" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+      </div>
+
+      <!-- Mapping rows -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" id="cm-fields">
+
+        <!-- Employee ID -->
+        <div class="dr">
+          <div class="dr-lbl" style="margin-bottom:6px;">Employee ID <span style="color:var(--red);">*</span></div>
+          <select class="sel" id="cm-empId" style="width:100%;"></select>
+          <div id="cm-empId-warn" style="display:none;font-size:11px;color:var(--red);margin-top:4px;">Column not found — map manually or this will error.</div>
+        </div>
+
+        <!-- Deduction ID -->
+        <div class="dr">
+          <div class="dr-lbl" style="margin-bottom:6px;">Deduction ID <span style="color:var(--red);">*</span></div>
+          <select class="sel" id="cm-dedId" style="width:100%;"></select>
+          <div id="cm-dedId-warn" style="display:none;font-size:11px;color:var(--red);margin-top:4px;">Column not found — map manually or this will error.</div>
+        </div>
+
+        <!-- Amount -->
+        <div class="dr">
+          <div class="dr-lbl" style="margin-bottom:6px;">Amount (AED) <span style="color:var(--red);">*</span></div>
+          <select class="sel" id="cm-amount" style="width:100%;"></select>
+          <div id="cm-amount-warn" style="display:none;font-size:11px;color:var(--red);margin-top:4px;">Column not found — map manually or this will error.</div>
+        </div>
+
+        <!-- Deduction Type — column (optional, sheet wins) OR manual fixed value -->
+        <div class="dr" style="grid-column:1/-1;">
+          <div class="dr-lbl" style="margin-bottom:6px;">Deduction Type <span style="font-weight:400;color:var(--text3);">(optional — sheet value wins; blanks use portal)</span></div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+              <input type="radio" name="type-mode" value="column" id="cm-type-col-radio" onchange="toggleTypeMode()" checked/>
+              Map from column (recommended)
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+              <input type="radio" name="type-mode" value="manual" id="cm-type-man-radio" onchange="toggleTypeMode()"/>
+              Fixed value for every row
+            </label>
+          </div>
+          <div id="cm-type-col-wrap">
+            <select class="sel" id="cm-dedType-col" style="width:100%;"></select>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px;">Rows where this column is empty will use the portal's Deduction Type: <strong id="cm-dedtype-portal-display" style="color:var(--teal);">— not set —</strong></div>
+          </div>
+          <div id="cm-type-man-wrap" style="display:none;">
+            <input type="text" id="cm-dedType-manual" placeholder="e.g. Traffic Fine, Advance Salary, SALIK…"
+              style="width:100%;padding:7px 11px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:var(--font);font-size:12.5px;outline:none;"/>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px;">This value overrides the sheet and is applied to <strong>every row</strong> in the file, ignoring any Deduction Type column.</div>
+          </div>
+        </div>
+
+        <!-- Month — column (optional, sheet wins) with portal fallback -->
+        <div class="dr" style="grid-column:1/-1;">
+          <div class="dr-lbl" style="margin-bottom:6px;">Month <span style="font-weight:400;color:var(--text3);">(optional — sheet value wins; blanks use portal)</span></div>
+          <select class="sel" id="cm-month-col" style="width:100%;"></select>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px;">Rows where this column is empty (or no column is mapped) will use the portal's Payroll Month: <strong id="cm-month-display" style="color:var(--teal);"></strong></div>
+        </div>
+
+      </div>
+
+      <!-- Live preview -->
+      <div style="margin-top:16px;">
+        <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px;">Preview (first 3 rows with current mapping)</div>
+        <div class="tbl-wrap" style="max-height:160px;overflow-y:auto;">
+          <table class="tbl">
+            <thead><tr><th>Emp ID</th><th>Ded ID</th><th>Type</th><th>Amount</th><th>Month</th></tr></thead>
+            <tbody id="cm-preview-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('col-map-modal')">Cancel</button>
+      <button class="btn success" onclick="applyColumnMapping()">
+        Apply Mapping & Validate →
+      </button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+</div><!-- /shell -->
+
+<script>
+// ═══════════════════════════════════════════════
+// SESSION — logged-in user, read from ap_session (sessionStorage)
+// Same key/shape set at login by docPortal.html:
+// { sessionId, token, email, name, role, permissions, loginAt, lastActive, sessionFingerprint }
+// ═══════════════════════════════════════════════
+function getSession() {
+  try { return JSON.parse(sessionStorage.getItem('ap_session') || '{}'); } catch (_) { return {}; }
+}
+const AP_SESSION = getSession();
+
+// ═══════════════════════════════════════════════
+// TRANSACTION ID — datetime-to-millisecond, guaranteed non-repeating.
+// Assigned to every row the instant it is loaded/parsed. If two rows land
+// in the same millisecond the counter is nudged forward by 1ms so no two
+// Trans IDs can ever collide.
+// ═══════════════════════════════════════════════
+let _lastTransMs = 0;
+function genTransId() {
+  let ms = Date.now();
+  if (ms <= _lastTransMs) ms = _lastTransMs + 1;
+  _lastTransMs = ms;
+  return ms;
+}
+function transMsToDateTime(ms) {
+  try {
+    return new Date(ms).toLocaleString('en-GB', {
+      hour12:false, year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit', second:'2-digit', fractionalSecondDigits:3
+    }).replace(',', '');
+  } catch (_) {
+    return new Date(ms).toISOString();
+  }
+}
+
+// ═══════════════════════════════════════════════
+// AUTO DEDUCTION ID — used only for rows where the sheet has no Deduction ID
+// column/value at all. Anchored to the exact moment the file finished
+// loading, then walks forward 1ms per row that needs one, so the run of
+// auto-generated IDs spans from "file load time" through to whichever row
+// is the last one needing an ID. Guaranteed unique and strictly increasing.
+// ═══════════════════════════════════════════════
+let _dedIdSeedMs = null;
+let _dedIdNextMs = null;
+function seedDedIdGenerator() {
+  _dedIdSeedMs = Date.now();
+  _dedIdNextMs = _dedIdSeedMs;
+}
+function genDedId() {
+  if (_dedIdSeedMs === null) seedDedIdGenerator(); // safety net if called without seeding first
+  const ms = _dedIdNextMs;
+  _dedIdNextMs += 1;
+  return ms;
+}
+
+// ═══════════════════════════════════════════════
+// CLEAN DATA STORE — no dummy/seed data at all
+// ═══════════════════════════════════════════════
+const DB = {
+  currentMonth: 'June 2025',
+  currentDedType: '',
+  currentUser:  AP_SESSION.email || 'Unknown User',   // logged-in user's email — used as "Uploaded By"
+  batches:      [],
+  auditLog:     [],
+  pendingRows:  [],
+  currentBatchId: null,
+  currentFileId:  null,
+  uploadQueue:  []
+};
+document.getElementById('hdr-user').textContent = DB.currentUser;
+
+// ═══════════════════════════════════════════════
+// STEP NAVIGATION
+// ═══════════════════════════════════════════════
+const STEPS = ['upload','validate','preview','approve','summary'];
+let currentStep = 'upload';
+
+function goStep(step) {
+  currentStep = step;
+  STEPS.forEach((s, i) => {
+    document.getElementById('tab-'+s).classList.toggle('active', s === step);
+    const nav = document.getElementById('snav-'+s);
+    const num = document.getElementById('sn-'+(i+1));
+    if (!nav || !num) return;
+    const cur = STEPS.indexOf(step);
+    nav.className = 'step-item' + (i === cur ? ' active' : i < cur ? ' done' : '');
+    if (i < cur) {
+      num.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    } else {
+      num.textContent = i + 1;
+    }
+  });
+  if (step === 'approve') renderApproveQueue();
+  if (step === 'summary') renderSummary();
+  if (step === 'preview') buildPreview();
+}
+
+// ═══════════════════════════════════════════════
+// MONTH SELECTOR
+// ═══════════════════════════════════════════════
+function updateMonth() {
+  DB.currentMonth = document.getElementById('sel-month').value;
+  document.getElementById('uz-month').textContent = DB.currentMonth;
+  document.getElementById('hdr-month').textContent = DB.currentMonth;
+  if (document.getElementById('cm-month-display')) {
+    document.getElementById('cm-month-display').textContent = DB.currentMonth;
+  }
+}
+
+// ═══════════════════════════════════════════════
+// DEDUCTION TYPE SELECTOR (PORTAL DEFAULT)
+// ═══════════════════════════════════════════════
+function updateDedType() {
+  const sel      = document.getElementById('sel-dedtype');
+  const otherBox = document.getElementById('sel-dedtype-other');
+  const isOther  = sel.value === '__other__';
+  otherBox.style.display = isOther ? '' : 'none';
+  DB.currentDedType = isOther ? otherBox.value.trim() : sel.value;
+
+  const badge = document.getElementById('hdr-dedtype-badge');
+  if (DB.currentDedType) {
+    badge.hidden = false;
+    document.getElementById('hdr-dedtype').textContent = DB.currentDedType;
+  } else {
+    badge.hidden = true;
+  }
+  if (document.getElementById('cm-dedtype-portal-display')) {
+    document.getElementById('cm-dedtype-portal-display').textContent = DB.currentDedType || '— not set —';
+  }
+  if (typeof updateColPreview === 'function' && CM.headers && CM.headers.length) updateColPreview();
+}
+
+// ═══════════════════════════════════════════════
+// TEMPLATE DOWNLOAD — proper xlsx with SheetJS
+// ═══════════════════════════════════════════════
+function downloadTemplate(type) {
+  const month   = DB.currentMonth;
+  const dedType = DB.currentDedType;
+
+  // Header row — this is always row 1. No instruction text is ever placed
+  // above the headers, so the header row stays row 1 and column positions
+  // never shift regardless of how the file is opened or re-saved.
+  const headers = ['Employee ID','Deduction ID','Deduction Type','Amount (AED)','Month (YYYY-MM)','Remarks'];
+
+  if (type === 'csv') {
+    const hdr  = headers.join(',');
+    const emptyRows = Array(10).fill(',,,,,');
+    const content = [hdr, ...emptyRows].join('\n') + '\n';
+    const bom = '\uFEFF';
+    dl(bom + content, 'Deduction_Template_'+month.replace(' ','_')+'.csv', 'text/csv;charset=utf-8');
+    showToast('CSV template downloaded', 'ok');
+    return;
+  }
+
+  // XLSX via SheetJS
+  const wb = XLSX.utils.book_new();
+
+  // Sheet data: row1 = headers, rows 2-11 = empty data rows.
+  // Deduction Type & Month columns may be left blank per-row — the portal's
+  // current Deduction Type / Payroll Month selections are used as a fallback
+  // for any row where those two cells are empty.
+  const wsData = [
+    headers,
+    ...Array(10).fill(['', '', '', '', '', ''])
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Column widths
+  ws['!cols'] = [
+    { wch: 18 }, // Employee ID
+    { wch: 18 }, // Deduction ID
+    { wch: 22 }, // Deduction Type
+    { wch: 16 }, // Amount
+    { wch: 18 }, // Month
+    { wch: 24 }  // Remarks
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Deduction Template');
+
+  // Instructions live on their own sheet — never in row 1 of the data sheet —
+  // so pasted/appended data always lands starting at the true header row.
+  const instructData = [
+    ['Deduction Template — Instructions'],
+    [''],
+    ['1. Fill data on the "Deduction Template" sheet starting at row 2. Do not rename, reorder, or delete the header row.'],
+    ['2. Employee ID and Deduction ID are required for every row. Format: letters, numbers, - and _ only.'],
+    ['3. Amount (AED) is required and must be a number greater than 0.'],
+    ['4. Deduction Type and Month (YYYY-MM) are OPTIONAL in this sheet.'],
+    ['   • If left blank, they will be filled automatically from the portal\'s Deduction Type / Payroll Month selection at upload time.'],
+    ['   • If provided in the sheet, the sheet value always takes priority over the portal selection, row by row.'],
+    ['   • You can mix — some rows filled in, some left blank — the blanks will use the portal value; filled rows keep their own value.'],
+    [`Current portal defaults at time of download — Payroll Month: ${month}   Deduction Type: ${dedType || '(not set)'}`],
+    [''],
+    ['5. Do not leave fully blank rows between data rows — they are skipped automatically but keep your data contiguous for clarity.']
+  ];
+  const wsInstruct = XLSX.utils.aoa_to_sheet(instructData);
+  wsInstruct['!cols'] = [{ wch: 100 }];
+  XLSX.utils.book_append_sheet(wb, wsInstruct, 'Read Me');
+
+  XLSX.writeFile(wb, 'Deduction_Template_'+month.replace(' ','_')+'.xlsx');
+  showToast('XLSX template downloaded — open in Excel', 'ok');
+}
+
+// ═══════════════════════════════════════════════
+// DRAG & DROP
+// ═══════════════════════════════════════════════
+function onDragOver(e)  { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag'); }
+function onDragLeave()  { document.getElementById('drop-zone').classList.remove('drag'); }
+function onDrop(e)      { e.preventDefault(); onDragLeave(); handleFiles(e.dataTransfer.files); }
+
+// ═══════════════════════════════════════════════
+// FILE HANDLING — read actual file content
+// ═══════════════════════════════════════════════
+function handleFiles(files) {
+  if (!files.length) return;
+  const file = files[0];
+  const ext  = file.name.split('.').pop().toLowerCase();
+  if (!['xlsx','xls','csv'].includes(ext)) { showToast('Only .xlsx, .xls, .csv allowed','err'); return; }
+  if (file.size > 10 * 1024 * 1024)        { showToast(file.name+' exceeds 10MB','err'); return; }
+
+  const uid     = 'UP-'  + String(Date.now()).slice(-6);
+  const fvid    = 'FV-'  + String(Date.now()+1).slice(-5);
+  const batchId = 'BATCH-' + DB.currentMonth.replace(/\s/g,'-').toUpperCase() + '-' + String(Date.now()).slice(-4);
+
+  const queueItem = {
+    uid, fvid, batchId,
+    name: file.name,
+    size: file.size,
+    month: DB.currentMonth,
+    checksum: 'SHA256:' + Math.random().toString(16).slice(2,10) + '...' + Math.random().toString(16).slice(2,6)
+  };
+
+  renderQueueCard(queueItem, file);
+  document.getElementById('file-input').value = '';
+}
+
+function renderQueueCard(item, fileObj) {
+  const el = document.getElementById('upload-list');
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          File Ready to Ingest
+        </div>
+      </div>
+      <div class="batch-item">
+        <div class="b-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="b-info">
+          <div class="b-name">${esc(item.name)} <span class="badge gray">QUEUED</span></div>
+          <div class="b-meta">
+            <span>${fmtSize(item.size)}</span>
+            <span class="mono">${item.batchId}</span>
+            <span class="mono" style="font-size:10px;">${item.checksum}</span>
+            <span>${item.month}</span>
+          </div>
+        </div>
+        <div class="b-actions">
+          <button class="btn danger xs" onclick="document.getElementById('upload-list').innerHTML=''">Remove</button>
+          <button class="btn success sm" onclick="ingestFile()" id="btn-ingest">
+            ▶ Validate & Ingest
+          </button>
+        </div>
+      </div>
+    </div>`;
+
+  // Store for ingest
+  DB._pendingFile     = fileObj;
+  DB._pendingItem     = item;
+}
+
+// ═══════════════════════════════════════════════
+// INGEST — read XLSX/CSV rows and validate
+// ═══════════════════════════════════════════════
+function ingestFile() {
+  const file = DB._pendingFile;
+  const item = DB._pendingItem;
+  if (!file || !item) return;
+
+  const steps = [
+    ['Archiving original file…','Immutable copy stored'],
+    ['Data cleansing engine…','Trim · Normalise encoding · Fix dates'],
+    ['Structural validation…','Checking mandatory columns'],
+    ['Core validation engine…','Identity · Data Types · Special Chars'],
+    ['Duplicate detection…','File-scope + System-scope check'],
+    ['Building error map…','Cell-level structured errors'],
+    ['Finalising…','Ready for correction']
+  ];
+
+  // Show overlay immediately, then read file
+  runOverlay(steps[0][0], steps[0][1]);
+
+  const ext = file.name.split('.').pop().toLowerCase();
+  const reader = new FileReader();
+
+  // finishIngest now receives raw cell arrays + headers for column mapping,
+  // plus a flag telling the mapping modal whether real headers were found
+  // in the file or generic "Column N" labels were synthesized.
+  function finishIngest(rawRows, fileHeaders, headerless) {
+    if (!rawRows.length) {
+      hideOverlay();
+      showToast('No data rows found. Fill the template and re-upload.', 'err');
+      return;
+    }
+    DB._rawRows     = rawRows;
+    DB._fileHeaders = fileHeaders;
+    DB.currentBatchId = item.batchId;
+    DB.currentFileId  = item.fvid;
+    // Anchor the auto Deduction ID sequence to the moment the file finished
+    // loading — every row that ends up without a Deduction ID (no column
+    // mapped, or the cell was blank) gets one of these, 1ms apart, in order.
+    seedDedIdGenerator();
+    let si = 1;
+    const iv = setInterval(() => {
+      if (si < steps.length) { updateOverlay(steps[si][0], steps[si][1]); si++; }
+      else {
+        clearInterval(iv);
+        setTimeout(() => {
+          hideOverlay();
+          document.getElementById('upload-list').innerHTML = '';
+          // Show column mapping modal — user maps columns before validation
+          openColMapModal(fileHeaders, rawRows, item.batchId, headerless);
+          addAudit('UPLOAD', 'info', `Uploaded: ${file.name} · ${rawRows.length} rows detected · ${item.batchId} · ${item.checksum}${headerless ? ' · no header row detected' : ''}`);
+        }, 350);
+      }
+    }, 380);
+  }
+
+  // ── Shared header detection ─────────────────────────────────────────
+  // Works for sheets WITH a header row (matched by keyword, or by a
+  // text-vs-numeric heuristic) and sheets with NO header row at all, in
+  // which case generic "Column 1", "Column 2"… labels are generated so
+  // the Column Alignment modal still has something to map from.
+  function stripLeadingComments(rows) {
+    let i = 0;
+    while (i < Math.min(rows.length, 6)) {
+      const j = rows[i].join('').toLowerCase().trim();
+      if (j.startsWith('#') || j.startsWith('instruction')) { i++; continue; }
+      break;
+    }
+    return rows.slice(i);
+  }
+  function rowLooksLikeHeader(row) {
+    const cells = row.filter(c => String(c).trim() !== '');
+    if (!cells.length) return false;
+    const numericCount = cells.filter(c => /^-?[\d,]+(\.\d+)?$/.test(String(c).trim())).length;
+    return (numericCount / cells.length) < 0.5; // header rows are mostly text, not numbers
+  }
+  function detectSheetHeader(rawIn) {
+    const raw = stripLeadingComments(rawIn).filter(r => r.some(c => String(c).trim() !== ''));
+    if (!raw.length) return { headers: [], dataRows: [], headerless: true };
+
+    const KEYS = ['employee', 'deduction', 'amount'];
+    let headerIdx = -1;
+    for (let i = 0; i < Math.min(raw.length, 6); i++) {
+      const joined = raw[i].map(c => String(c).toLowerCase()).join(' ');
+      if (KEYS.every(k => joined.includes(k))) { headerIdx = i; break; }
+    }
+    if (headerIdx === -1 && rowLooksLikeHeader(raw[0])) headerIdx = 0;
+
+    if (headerIdx !== -1) {
+      return {
+        headers:  raw[headerIdx].map(h => String(h).trim()),
+        dataRows: raw.slice(headerIdx + 1).filter(r => r.some(c => String(c).trim() !== '')),
+        headerless: false
+      };
+    }
+    // No header row anywhere in the file — synthesize generic column names
+    const maxCols = raw.reduce((m, r) => Math.max(m, r.length), 0);
+    return {
+      headers:  Array.from({ length: maxCols }, (_, i) => `Column ${i + 1}`),
+      dataRows: raw,
+      headerless: true
+    };
+  }
+
+  if (ext === 'csv') {
+    reader.onload = (e) => {
+      try {
+        const lines = e.target.result
+          .split('\n')
+          .map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g, '')));
+        const { headers, dataRows, headerless } = detectSheetHeader(lines);
+        finishIngest(dataRows, headers, headerless);
+      } catch(err) { hideOverlay(); showToast('CSV read error: ' + err.message, 'err'); }
+    };
+    reader.onerror = () => { hideOverlay(); showToast('Could not read file', 'err'); };
+    reader.readAsText(file, 'UTF-8');
+  } else {
+    reader.onload = (e) => {
+      try {
+        const wb  = XLSX.read(e.target.result, { type: 'binary' });
+        const ws  = wb.Sheets[wb.SheetNames[0]];
+        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        const { headers, dataRows, headerless } = detectSheetHeader(raw);
+        finishIngest(dataRows, headers, headerless);
+      } catch(err) { hideOverlay(); showToast('XLSX read error: ' + err.message, 'err'); }
+    };
+    reader.onerror = () => { hideOverlay(); showToast('Could not read file', 'err'); };
+    reader.readAsBinaryString(file);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// ROW PARSER + VALIDATOR
+// ═══════════════════════════════════════════════
+const SPEC_CHARS = /[#@$%^&*()+=\[\]{}<>?|\\/"'`~!]/;
+
+// ═══════════════════════════════════════════════
+// COLUMN MAPPING
+// ═══════════════════════════════════════════════
+let CM = { headers:[], rawRows:[], batchId:'' };
+
+function openColMapModal(headers, rawRows, batchId, headerless) {
+  CM.headers    = headers.map(h => String(h).trim()).filter(Boolean);
+  CM.rawRows    = rawRows;
+  CM.batchId    = batchId;
+  CM.headerless = !!headerless;
+
+  // Detected columns badges (+ notice when the file had no real header row)
+  const noHeaderNotice = CM.headerless
+    ? `<div style="width:100%;font-size:11px;color:var(--amber);margin-bottom:6px;">No header row detected in this file — generic column names are shown below. Map each field manually.</div>`
+    : '';
+  document.getElementById('cm-detected-cols').innerHTML =
+    noHeaderNotice + CM.headers.map(h => `<span class="badge gray">${esc(h)}</span>`).join('');
+
+  // Payroll month / Deduction Type portal fallback display
+  document.getElementById('cm-month-display').textContent = DB.currentMonth;
+  document.getElementById('cm-dedtype-portal-display').textContent = DB.currentDedType || '— not set —';
+
+  // Build <option> list for each dropdown
+  const blankOpt    = `<option value="">— select column —</option>`;
+  const blankOptOpt = `<option value="">— none / auto-generate —</option>`;
+  const colOpts  = CM.headers.map(h => `<option value="${esc(h)}">${esc(h)}</option>`).join('');
+
+  // Employee ID and Amount must come from a column. Deduction ID, Deduction
+  // Type and Month are all optional — each has its own fallback if the
+  // sheet doesn't provide it.
+  ['cm-empId','cm-amount'].forEach(id => {
+    document.getElementById(id).innerHTML = blankOpt + colOpts;
+  });
+  ['cm-dedId','cm-dedType-col','cm-month-col'].forEach(id => {
+    document.getElementById(id).innerHTML = blankOptOpt + colOpts;
+  });
+
+  // Auto-detect best match for each field (skipped entirely for headerless
+  // files — there's nothing meaningful to match against "Column 1", "Column 2"…)
+  const autoMatch = (keys) => {
+    if (CM.headerless) return '';
+    for (const k of keys) {
+      const h = CM.headers.find(h => h.toLowerCase().replace(/[^a-z]/g,'').includes(k));
+      if (h) return h;
+    }
+    return '';
+  };
+  document.getElementById('cm-empId').value        = autoMatch(['employeeid','empid','empno','emp']);
+  document.getElementById('cm-dedId').value         = autoMatch(['deductionid','dedid','ded id','deduc']);
+  document.getElementById('cm-dedType-col').value   = autoMatch(['type','deductiontype','dedtype','category']);
+  document.getElementById('cm-amount').value        = autoMatch(['amount','aed','value','deductamt']);
+  document.getElementById('cm-month-col').value     = autoMatch(['month','payrollmonth','date','yyyymm']);
+
+  // Flag required columns that couldn't be auto-matched (Deduction ID is
+  // never flagged here — it silently falls back to an auto-generated ID)
+  ['cm-empId','cm-amount'].forEach(id => {
+    document.getElementById(id+'-warn').style.display = document.getElementById(id).value ? 'none' : '';
+  });
+
+  // Reset type mode to column
+  document.getElementById('cm-type-col-radio').checked = true;
+  toggleTypeMode();
+
+  updateColPreview();
+  openModal('col-map-modal');
+}
+
+function toggleTypeMode() {
+  const isManual = document.getElementById('cm-type-man-radio').checked;
+  document.getElementById('cm-type-col-wrap').style.display  = isManual ? 'none' : '';
+  document.getElementById('cm-type-man-wrap').style.display  = isManual ? '' : 'none';
+  updateColPreview();
+}
+
+function updateColPreview() {
+  const map = getColMapping();
+  const tbody = document.getElementById('cm-preview-body');
+  const preview = CM.rawRows.slice(0, 3);
+  if (!preview.length) { tbody.innerHTML = ''; return; }
+
+  tbody.innerHTML = preview.map((cells, i) => {
+    const get = (col) => col ? String(cells[CM.headers.indexOf(col)] ?? '').trim() : '';
+
+    // Deduction Type: sheet value wins; blank cell falls back to portal
+    let typeVal, typeFromPortal = false;
+    if (map.typeMode === 'manual') {
+      typeVal = map.typeManual || '—';
+    } else {
+      const sheetVal = get(map.dedTypeCol);
+      if (sheetVal) { typeVal = sheetVal; }
+      else { typeVal = DB.currentDedType || ''; typeFromPortal = true; }
+    }
+
+    // Month: sheet value wins; blank cell falls back to portal
+    const sheetMonth = get(map.monthCol);
+    const monthVal = sheetMonth || DB.currentMonth;
+    const monthFromPortal = !sheetMonth;
+
+    const typeCell  = typeVal
+      ? `${esc(typeVal)}${typeFromPortal ? ' <span style="color:var(--text3);font-size:10px;">(portal)</span>' : ''}`
+      : '<span style="color:var(--red);">—</span>';
+    const monthCell = `${esc(monthVal)}${monthFromPortal ? ' <span style="color:var(--text3);font-size:10px;">(portal)</span>' : ''}`;
+
+    return `<tr>
+      <td class="mono">${get(map.empIdCol) ? esc(get(map.empIdCol)) : '<span style="color:var(--red);">—</span>'}</td>
+      <td class="mono">${get(map.dedIdCol) ? esc(get(map.dedIdCol)) : '<span style="color:var(--red);">—</span>'}</td>
+      <td>${typeCell}</td>
+      <td class="mono">${get(map.amountCol) ? esc(get(map.amountCol)) : '<span style="color:var(--red);">—</span>'}</td>
+      <td class="mono" style="color:var(--teal);">${monthCell}</td>
+    </tr>`;
+  }).join('');
+}
+
+function getColMapping() {
+  return {
+    empIdCol:   document.getElementById('cm-empId').value,
+    dedIdCol:   document.getElementById('cm-dedId').value,
+    typeMode:   document.getElementById('cm-type-man-radio').checked ? 'manual' : 'column',
+    dedTypeCol: document.getElementById('cm-dedType-col').value,
+    typeManual: document.getElementById('cm-dedType-manual').value.trim(),
+    amountCol:  document.getElementById('cm-amount').value,
+    monthCol:   document.getElementById('cm-month-col').value,
+  };
+}
+
+function applyColumnMapping() {
+  const map = getColMapping();
+
+  // Required columns — missing entirely is a hard error (sheet-structure error)
+  if (!map.empIdCol)  { showToast('Select a column for Employee ID', 'err'); return; }
+  if (!map.dedIdCol)  { showToast('Select a column for Deduction ID', 'err'); return; }
+  if (!map.amountCol) { showToast('Select a column for Amount', 'err'); return; }
+  if (map.typeMode === 'manual' && !map.typeManual) { showToast('Enter a Deduction Type value', 'err'); return; }
+
+  const getCell = (cells, col) => {
+    if (!col) return '';
+    const idx = CM.headers.indexOf(col);
+    return idx !== -1 ? String(cells[idx] ?? '').trim() : '';
+  };
+
+  // Deduction Type / Month are OPTIONAL columns — sheet value always wins;
+  // an empty cell (or no column mapped at all) falls back to the portal
+  // selection. If some rows would end up with NO value at all (sheet blank
+  // AND no portal default set), ask the user to set the portal Deduction
+  // Type instead of silently proceeding.
+  if (map.typeMode === 'column') {
+    const missing = CM.rawRows.filter(cells => !getCell(cells, map.dedTypeCol)).length;
+    if (missing > 0 && !DB.currentDedType) {
+      showToast(`${missing} row(s) have no Deduction Type in the sheet. Select a Deduction Type at the top of the page (portal default) to fill them, or add the value to those rows in the sheet.`, 'err');
+      return;
+    }
+  }
+  // Payroll Month always has a portal default (dropdown is always selected),
+  // so blank Month cells are safe to fall back automatically — no need to block.
+
+  closeModal('col-map-modal');
+
+  let typeFromPortalCount = 0, monthFromPortalCount = 0;
+
+  // Build parsed rows using user's mapping — sheet first, portal as fallback
+  const rows = CM.rawRows.map((cells, i) => {
+    // Trans ID — assigned the instant this row is loaded. Millisecond-precision
+    // datetime value, guaranteed unique across the whole session.
+    const transId = genTransId();
+
+    const empId = getCell(cells, map.empIdCol).replace(/[\u200B-\u200F\uFEFF]/g,'');
+    let dedId   = getCell(cells, map.dedIdCol).replace(/[\u200B-\u200F\uFEFF]/g,'');
+    let dedIdFromTrans = false;
+    if (!dedId) { dedId = String(transId); dedIdFromTrans = true; } // DedID missing from sheet → same value as Trans ID
+
+    let dedType;
+    if (map.typeMode === 'manual') {
+      dedType = map.typeManual; // fixed value, overrides sheet entirely
+    } else {
+      const sheetType = getCell(cells, map.dedTypeCol);
+      if (sheetType) { dedType = sheetType; }
+      else { dedType = DB.currentDedType; typeFromPortalCount++; } // not in sheet → must be chosen manually via portal Deduction Type
+    }
+
+    const sheetMonth = getCell(cells, map.monthCol);
+    const month = sheetMonth || DB.currentMonth;
+    if (!sheetMonth) monthFromPortalCount++; // not in sheet → must be chosen manually via portal Payroll Month
+
+    const rawAmt  = getCell(cells, map.amountCol).replace(/,/g,'');
+    const remarks = '';
+
+    const errors = [];
+    if (!empId) errors.push({ field:'EmployeeID', code:'MISSING_FIELD', msg:'Employee ID is required' });
+    else if (SPEC_CHARS.test(empId)) errors.push({ field:'EmployeeID', code:'SPECIAL_CHAR', msg:'Special character in Employee ID' });
+    else if (!/^[A-Za-z0-9\-_]+$/.test(empId)) errors.push({ field:'EmployeeID', code:'INVALID_FORMAT', msg:'Invalid Employee ID format' });
+
+    // Deduction ID is never a hard error anymore — if it's missing from the
+    // sheet it was just auto-filled with this row's Trans ID above. Only
+    // flag bad characters when the value genuinely came from the sheet.
+    if (!dedIdFromTrans && SPEC_CHARS.test(dedId)) errors.push({ field:'DeductionID', code:'SPECIAL_CHAR', msg:'Special character in Deduction ID' });
+
+    if (!dedType) errors.push({ field:'DeductionType', code:'MISSING_FIELD', msg:'Deduction Type is required — not found in the sheet, choose one manually from the portal Deduction Type selector' });
+    if (!month)   errors.push({ field:'Month', code:'MISSING_FIELD', msg:'Month is required — not found in the sheet, choose one manually from the portal Payroll Month selector' });
+
+    let amount = NaN;
+    if (!rawAmt) {
+      errors.push({ field:'Amount', code:'MISSING_FIELD', msg:'Amount is required' });
+    } else if (SPEC_CHARS.test(rawAmt)) {
+      errors.push({ field:'Amount', code:'SPECIAL_CHAR', msg:'Special character in Amount' });
+    } else {
+      amount = parseFloat(rawAmt);
+      if (isNaN(amount)) errors.push({ field:'Amount', code:'INVALID_FORMAT', msg:'Amount must be a number' });
+      else if (amount <= 0) errors.push({ field:'Amount', code:'AMOUNT_ZERO', msg:'Amount must be > 0' });
+    }
+
+    return {
+      row: i + 1, transId, empId, dedId, dedIdFromTrans, dedType,
+      amount: isNaN(amount) ? rawAmt : amount,
+      month, remarks,
+      status: errors.length > 0 ? 'INVALID' : 'VALID',
+      errors
+    };
+  });
+
+  DB.pendingRows = rows;
+  updateValStats();
+  renderValTable();
+
+  const vCnt = rows.filter(r => r.status === 'VALID').length;
+  const iCnt = rows.filter(r => r.status === 'INVALID').length;
+  const fallbackNote = (typeFromPortalCount || monthFromPortalCount)
+    ? ` · portal used for ${typeFromPortalCount} Type cell(s), ${monthFromPortalCount} Month cell(s)`
+    : '';
+  addAudit('VALIDATE','warn', `Column mapping applied · ${rows.length} rows · ${vCnt} valid · ${iCnt} invalid${fallbackNote}`);
+  goStep('validate');
+  showToast(`Mapping applied — ${vCnt} valid, ${iCnt} invalid${fallbackNote}`, iCnt > 0 ? 'warn' : 'ok');
+}
+
+// Live preview updates when dropdowns change
+document.addEventListener('change', e => {
+  if (['cm-empId','cm-dedId','cm-dedType-col','cm-amount','cm-month-col'].includes(e.target.id)) {
+    if (['cm-empId','cm-dedId','cm-amount'].includes(e.target.id)) {
+      document.getElementById(e.target.id+'-warn').style.display = e.target.value ? 'none' : '';
+    }
+    updateColPreview();
+  }
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'cm-dedType-manual') updateColPreview();
+});
+
+// ═══════════════════════════════════════════════
+// VALIDATION TABLE — live editing, no re-render
+// ═══════════════════════════════════════════════
+let valPage = 1;
+
+function updateValStats() {
+  const rows    = DB.pendingRows;
+  const valid   = rows.filter(r => r.status === 'VALID').length;
+  const invalid = rows.filter(r => r.status === 'INVALID').length;
+  const dups    = rows.filter(r => r.errors.some(e => e.code === 'DUPLICATE')).length;
+  const amount  = rows.filter(r => r.status === 'VALID' && typeof r.amount === 'number').reduce((s,r) => s + r.amount, 0);
+
+  document.getElementById('vs-total').textContent  = rows.length;
+  document.getElementById('vs-valid').textContent  = valid;
+  document.getElementById('vs-invalid').textContent = invalid;
+  document.getElementById('vs-dups').textContent   = dups;
+  document.getElementById('vs-amount').textContent = 'AED ' + fmt(amount, 0);
+  document.getElementById('btn-to-preview').disabled = invalid > 0;
+
+  if (DB.currentBatchId) {
+    const b = document.getElementById('val-batch-id');
+    b.textContent = DB.currentBatchId;
+    b.style.display = '';
+  }
+
+  if (dups > 0) { document.getElementById('dup-panel').style.display = ''; renderDupPanel(); }
+  else document.getElementById('dup-panel').style.display = 'none';
+}
+
+function renderValTable() {
+  const tbody  = document.getElementById('val-tbody');
+  const rows   = DB.pendingRows;
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty"><div class="empty-ico">📂</div><p>No file ingested yet.</p><p style="font-size:11px;margin-top:6px;">Download the template, fill your data, and upload above.</p></div></td></tr>`;
+    document.getElementById('v-pag-info').textContent = '—';
+    document.getElementById('v-pag-ctrl').innerHTML   = '';
+    return;
+  }
+
+  const sf  = document.getElementById('vf-status').value;
+  const ef  = document.getElementById('vf-err').value;
+  const sq  = (document.getElementById('vf-search').value || '').toLowerCase();
+  const rpp = parseInt(document.getElementById('v-rpp').value || '15');
+
+  let filtered = rows.filter(r => {
+    if (sf && r.status !== sf) return false;
+    if (ef && !r.errors.some(e => e.code === ef)) return false;
+    if (sq && !r.empId.toLowerCase().includes(sq) && !r.dedId.toLowerCase().includes(sq) && !r.dedType.toLowerCase().includes(sq)) return false;
+    return true;
+  });
+
+  const total = filtered.length;
+  const pages = Math.max(1, Math.ceil(total / rpp));
+  valPage = Math.min(valPage, pages);
+  const slice = filtered.slice((valPage-1)*rpp, valPage*rpp);
+
+  tbody.innerHTML = slice.map(r => buildValRow(r)).join('') ||
+    '<tr><td colspan="10" style="text-align:center;padding:28px;color:var(--text3);">No rows match filters</td></tr>';
+
+  // Pagination
+  document.getElementById('v-pag-info').textContent = total
+    ? `Showing ${(valPage-1)*rpp+1}–${Math.min(valPage*rpp, total)} of ${total}`
+    : '0 rows';
+  buildPagination('v-pag-ctrl', valPage, pages, p => { valPage = p; renderValTable(); });
+}
+
+function buildValRow(r) {
+  const errFields = new Set(r.errors.map(e => e.field));
+  const cls = r.status === 'VALID' ? 'row-valid' : r.status === 'EDITED' ? 'row-edited' : 'row-invalid';
+
+  const badgeHtml = r.status === 'VALID'
+    ? '<span class="badge green">✓ VALID</span>'
+    : r.status === 'EDITED'
+    ? '<span class="badge amber">✎ EDITED</span>'
+    : '<span class="badge red">✕ INVALID</span>';
+
+  const errCount = r.errors.length;
+
+  // Build each cell: editable if field has error, otherwise display
+  const cellEmpId   = buildCell(r, 'EmployeeID',    'empId',   r.empId,   errFields, false);
+  const cellDedId   = buildCell(r, 'DeductionID',   'dedId',   r.dedId,   errFields, false);
+  const cellDedType = buildCell(r, 'DeductionType', 'dedType', r.dedType, errFields, false);
+  const cellAmount  = buildCell(r, 'Amount',        'amount',  r.amount,  errFields, true);
+  const cellMonth   = `<td class="mono" style="font-size:11.5px;">${esc(r.month)}</td>`;
+  const cellRemarks = `<td style="color:var(--text3);font-size:11.5px;">${esc(r.remarks||'')}</td>`;
+
+  return `<tr class="${cls}" id="tr-${r.row}">
+    <td class="mono" style="color:var(--text3);">${r.row}</td>
+    <td>${badgeHtml}</td>
+    ${cellEmpId}${cellDedId}${cellDedType}${cellAmount}${cellMonth}${cellRemarks}
+    <td>${errCount > 0
+      ? `<span class="badge red" style="cursor:pointer;" onclick="showRowDetail(${r.row})">${errCount} err${errCount>1?'s':''}</span>`
+      : '<span style="color:var(--teal);font-size:11px;">—</span>'
+    }</td>
+    <td><button class="btn xs" onclick="showRowDetail(${r.row})">Detail</button></td>
+  </tr>`;
+}
+
+function buildCell(r, field, prop, val, errFields, isNumeric) {
+  const hasErr = errFields.has(field);
+  const dispVal = isNumeric && typeof val === 'number'
+    ? 'AED ' + fmt(val, 0)
+    : esc(String(val ?? ''));
+
+  if (hasErr) {
+    return `<td>
+      <input class="cell-input" id="inp-${r.row}-${field}"
+        value="${esc(String(val ?? ''))}"
+        placeholder="Fix value…"
+        oninput="onCellInput(${r.row},'${field}','${prop}',this,${isNumeric})"
+      />
+    </td>`;
+  }
+  return `<td id="td-${r.row}-${field}" class="cell-display">${dispVal}</td>`;
+}
+
+// ── LIVE CELL EDIT — reflects instantly, no full re-render ──
+function onCellInput(rowIdx, field, prop, inputEl, isNumeric) {
+  const raw = inputEl.value;
+  const r   = DB.pendingRows.find(x => x.row === rowIdx);
+  if (!r) return;
+
+  // Store raw value immediately in the row
+  if (isNumeric) {
+    const n = parseFloat(raw.replace(/,/g,''));
+    r[prop] = isNaN(n) ? raw : n;
+  } else {
+    r[prop] = raw;
+  }
+
+  // Re-run validation for just this field
+  const newErrors = validateField(field, raw);
+
+  // Remove old errors for this field, keep others
+  r.errors = r.errors.filter(e => e.field !== field);
+  r.errors.push(...newErrors);
+
+  // Update row status
+  const wasStatus = r.status;
+  r.status = r.errors.length === 0 ? 'VALID' : 'INVALID';
+  if (wasStatus !== 'VALID' && raw !== '') r.status = r.errors.length === 0 ? 'VALID' : 'INVALID';
+
+  // Update the row's status badge without full re-render
+  const trEl = document.getElementById('tr-' + rowIdx);
+  if (trEl) {
+    trEl.className = r.status === 'VALID' ? 'row-valid' : 'row-invalid';
+    // Update badge cell (col index 1)
+    const badgeCell = trEl.cells[1];
+    if (badgeCell) {
+      badgeCell.innerHTML = r.status === 'VALID'
+        ? '<span class="badge green">✓ VALID</span>'
+        : '<span class="badge red">✕ INVALID</span>';
+    }
+    // Update amount display if valid
+    if (isNumeric && r.status === 'VALID') {
+      inputEl.style.borderColor = 'var(--teal)';
+    } else if (newErrors.length) {
+      inputEl.style.borderColor = 'var(--red)';
+    }
+    // Update error count cell (col index 8)
+    const errCell = trEl.cells[8];
+    if (errCell) {
+      errCell.innerHTML = r.errors.length > 0
+        ? `<span class="badge red" style="cursor:pointer;" onclick="showRowDetail(${rowIdx})">${r.errors.length} err${r.errors.length>1?'s':''}</span>`
+        : '<span style="color:var(--teal);font-size:11px;">—</span>';
+    }
+  }
+
+  // Update stats
+  updateValStats();
+
+  // Log edit to audit (debounced)
+  clearTimeout(r._editTimer);
+  r._editTimer = setTimeout(() => {
+    addAudit('EDIT', 'warn', `Row ${rowIdx}: ${field} updated to "${raw}" · Status: ${r.status}`);
+  }, 800);
+}
+
+function validateField(field, raw) {
+  const errors = [];
+  const val    = raw.trim();
+  if (field === 'EmployeeID') {
+    if (!val) errors.push({ field, code:'MISSING_FIELD', msg:'Employee ID is required' });
+    else if (SPEC_CHARS.test(val)) errors.push({ field, code:'SPECIAL_CHAR', msg:'Special character detected' });
+    else if (!/^[A-Za-z0-9\-_]+$/.test(val)) errors.push({ field, code:'INVALID_FORMAT', msg:'Invalid format' });
+  }
+  if (field === 'DeductionID') {
+    if (!val) errors.push({ field, code:'MISSING_FIELD', msg:'Deduction ID is required' });
+    else if (SPEC_CHARS.test(val)) errors.push({ field, code:'SPECIAL_CHAR', msg:'Special character detected' });
+  }
+  if (field === 'DeductionType') {
+    if (!val) errors.push({ field, code:'MISSING_FIELD', msg:'Deduction Type is required' });
+  }
+  if (field === 'Amount') {
+    if (!val) errors.push({ field, code:'MISSING_FIELD', msg:'Amount is required' });
+    else if (SPEC_CHARS.test(val)) errors.push({ field, code:'SPECIAL_CHAR', msg:'Special character in Amount' });
+    else {
+      const n = parseFloat(val.replace(/,/g,''));
+      if (isNaN(n)) errors.push({ field, code:'INVALID_FORMAT', msg:'Amount must be a number' });
+      else if (n <= 0) errors.push({ field, code:'AMOUNT_ZERO', msg:'Amount must be > 0' });
+    }
+  }
+  return errors;
+}
+
+function revalidateDelta() {
+  if (!DB.pendingRows.length) { showToast('No data to revalidate','warn'); return; }
+  updateValStats();
+  renderValTable();
+  addAudit('VALIDATE','ok','Delta revalidation triggered · Stats refreshed');
+  showToast('Revalidation complete','ok');
+}
+
+function showRowDetail(rowIdx) {
+  const r = DB.pendingRows.find(x => x.row === rowIdx);
+  if (!r) return;
+  document.getElementById('row-modal-body').innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <span style="font-size:13px;font-weight:700;">Row ${r.row}</span>
+      ${r.status==='VALID'?'<span class="badge green">VALID</span>':'<span class="badge red">INVALID</span>'}
+    </div>
+    <div class="dg2">
+      <div class="dr"><div class="dr-lbl">Employee ID</div><div class="dr-val mono">${esc(r.empId||'—')}</div></div>
+      <div class="dr"><div class="dr-lbl">Deduction ID</div><div class="dr-val mono">${esc(r.dedId||'—')}</div></div>
+      <div class="dr"><div class="dr-lbl">Deduction Type</div><div class="dr-val">${esc(r.dedType||'—')}</div></div>
+      <div class="dr"><div class="dr-lbl">Amount</div><div class="dr-val mono" style="color:${typeof r.amount==='number'&&r.amount>0?'var(--teal)':'var(--red)'};">
+        ${typeof r.amount==='number'?'AED '+fmt(r.amount,0):esc(String(r.amount))}
+      </div></div>
+      <div class="dr"><div class="dr-lbl">Month</div><div class="dr-val">${esc(r.month)}</div></div>
+      <div class="dr"><div class="dr-lbl">Remarks</div><div class="dr-val">${esc(r.remarks||'—')}</div></div>
+    </div>
+    ${r.errors.length ? `
+      <div style="margin-top:14px;">
+        <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px;">Validation Errors</div>
+        ${r.errors.map(e=>`
+          <div style="display:flex;gap:8px;align-items:flex-start;padding:9px 12px;background:var(--red-dim);border:1px solid rgba(240,82,82,.2);border-radius:var(--radius);margin-bottom:6px;">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--red);">${e.field} — <span class="mono" style="font-size:11px;">${e.code}</span></div>
+              <div style="font-size:11.5px;color:var(--text2);margin-top:2px;">${e.msg}</div>
+            </div>
+          </div>`).join('')}
+        <div style="margin-top:10px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);padding:10px 13px;">
+          <div class="dr-lbl" style="margin-bottom:6px;">Structured Error Object</div>
+          <pre style="font-family:var(--mono);font-size:11px;color:var(--text2);overflow-x:auto;white-space:pre-wrap;">${JSON.stringify({row:r.row,status:r.status,errors:r.errors},null,2)}</pre>
+        </div>
+      </div>`
+    : '<div class="info-box success" style="margin-top:12px;">All validation checks passed ✓</div>'}`;
+  openModal('row-modal');
+}
+
+function renderDupPanel() {
+  const dups = DB.pendingRows.filter(r => r.errors.some(e => e.code === 'DUPLICATE'));
+  document.getElementById('dup-list').innerHTML = dups.map(r => `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border);">
+      <span class="badge red">⚠ Dup</span>
+      <span class="mono" style="color:var(--text2);">Row ${r.row}</span>
+      <span class="mono" style="color:var(--accent);">${r.dedId}</span>
+      <span style="font-size:11.5px;color:var(--text3);">${r.errors.find(e=>e.code==='DUPLICATE')?.msg||''}</span>
+    </div>`).join('');
+}
+
+function removeZeroValueRows() {
+  const before = DB.pendingRows.length;
+  DB.pendingRows = DB.pendingRows.filter(r => {
+    const amt = typeof r.amount === 'number' ? r.amount : parseFloat(String(r.amount).replace(/,/g,''));
+    return !(isNaN(amt) || amt <= 0);
+  });
+  // Re-number rows sequentially
+  DB.pendingRows.forEach((r, i) => { r.row = i + 1; });
+  const removed = before - DB.pendingRows.length;
+  if (!removed) { showToast('No zero/negative amount rows found', 'warn'); return; }
+  addAudit('EDIT', 'warn', `Removed ${removed} zero/negative amount row${removed > 1 ? 's' : ''} from batch`);
+  updateValStats();
+  renderValTable();
+  showToast(`Removed ${removed} zero/negative row${removed > 1 ? 's' : ''}`, 'ok');
+}
+
+function removeDuplicateRows() {
+  const before = DB.pendingRows.length;
+  DB.pendingRows = DB.pendingRows.filter(r => !r.errors.some(e => e.code === 'DUPLICATE'));
+  // Re-number rows sequentially
+  DB.pendingRows.forEach((r, i) => { r.row = i + 1; });
+  const removed = before - DB.pendingRows.length;
+  if (!removed) { showToast('No duplicate rows found', 'warn'); return; }
+  addAudit('EDIT', 'warn', `Removed ${removed} duplicate row${removed > 1 ? 's' : ''} from batch`);
+  updateValStats();
+  renderValTable();
+  showToast(`Removed ${removed} duplicate row${removed > 1 ? 's' : ''}`, 'ok');
+}
+
+function exportErrorReport() {
+  if (!DB.pendingRows.length) { showToast('No validation data','warn'); return; }
+  const inv = DB.pendingRows.filter(r => r.status === 'INVALID');
+  if (!inv.length) { showToast('No errors to export','ok'); return; }
+  const csv = ['\uFEFF' + 'Row,Emp ID,Ded ID,Type,Amount,Errors',
+    ...inv.map(r => `${r.row},"${r.empId}","${r.dedId}","${r.dedType}","${r.amount}","${r.errors.map(e=>e.code+': '+e.msg).join('; ')}"`)
+  ].join('\n');
+  dl(csv, 'Error_Report_'+DB.currentBatchId+'.csv', 'text/csv;charset=utf-8');
+  showToast('Error report exported','ok');
+}
+
+// ═══════════════════════════════════════════════
+// PREVIEW
+// ═══════════════════════════════════════════════
+function buildPreview() {
+  const rows   = DB.pendingRows;
+  const valid  = rows.filter(r => r.status === 'VALID');
+  const inv    = rows.filter(r => r.status !== 'VALID');
+  const dups   = rows.filter(r => r.errors.some(e => e.code === 'DUPLICATE'));
+  const amount = valid.filter(r => typeof r.amount === 'number').reduce((s,r) => s + r.amount, 0);
+
+  document.getElementById('preview-metrics').innerHTML = `
+    <div class="pm"><div class="pm-val">${rows.length}</div><div class="pm-lbl">Total Rows</div></div>
+    <div class="pm"><div class="pm-val" style="color:var(--teal);">${valid.length}</div><div class="pm-lbl">Valid (will save)</div></div>
+    <div class="pm"><div class="pm-val" style="color:var(--red);">${inv.length}</div><div class="pm-lbl">Invalid (excluded)</div></div>
+    <div class="pm"><div class="pm-val" style="color:var(--amber);">${dups.length}</div><div class="pm-lbl">Duplicates</div></div>
+    <div class="pm"><div class="pm-val" style="color:var(--purple);font-size:16px;">AED ${fmt(amount,0)}</div><div class="pm-lbl">Valid Amount</div></div>
+    <div class="pm"><div class="pm-val" style="font-size:11px;color:var(--text2);font-family:var(--mono);">${DB.currentBatchId||'—'}</div><div class="pm-lbl">Batch ID</div></div>`;
+
+  const errTypes = {};
+  rows.forEach(r => r.errors.forEach(e => { errTypes[e.code] = (errTypes[e.code]||0)+1; }));
+  const sumEl = document.getElementById('preview-err-summary');
+  if (!Object.keys(errTypes).length) {
+    sumEl.innerHTML = '<div class="info-box success">No errors — all rows valid ✓</div>';
+  } else {
+    const mx = Math.max(...Object.values(errTypes));
+    sumEl.innerHTML = Object.entries(errTypes).map(([code,cnt]) => `
+      <div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+          <span class="mono" style="color:var(--red);">${code}</span>
+          <span style="font-weight:700;">${cnt} row${cnt>1?'s':''}</span>
+        </div>
+        <div class="prog-wrap"><div class="prog-fill red" style="width:${Math.round(cnt/mx*100)}%;"></div></div>
+      </div>`).join('');
+  }
+
+  document.getElementById('preview-inv-tbody').innerHTML = inv.length
+    ? inv.map(r => `<tr class="row-invalid">
+        <td class="mono">${r.row}</td>
+        <td class="mono">${esc(r.empId)}</td>
+        <td class="mono">${esc(r.dedId||'—')}</td>
+        <td>${esc(r.dedType)}</td>
+        <td class="mono" style="color:var(--red);">${typeof r.amount==='number'?'AED '+fmt(r.amount,0):esc(String(r.amount))}</td>
+        <td><div style="display:flex;gap:4px;flex-wrap:wrap;">${r.errors.map(e=>`<span class="err-chip">${e.code}</span>`).join('')}</div></td>
+      </tr>`).join('')
+    : '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--teal);">No invalid rows ✓</td></tr>';
+}
+
+function saveBatch() {
+  const valid = DB.pendingRows.filter(r => r.status === 'VALID');
+  if (!valid.length) { showToast('No valid rows to save','err'); return; }
+  const saveSteps = [
+    ['BEGIN TRANSACTION…','Atomic save initiated'],
+    ['Inserting valid rows…', valid.length + ' records'],
+    ['Verifying integrity…','Row counts verified'],
+    ['COMMIT…','Transaction complete']
+  ];
+  let si = 0;
+  runOverlay(saveSteps[si][0], saveSteps[si][1]);
+  const iv = setInterval(() => {
+    si++;
+    if (si < saveSteps.length) { updateOverlay(saveSteps[si][0], saveSteps[si][1]); }
+    else {
+      clearInterval(iv);
+      setTimeout(() => {
+        hideOverlay();
+        const inv    = DB.pendingRows.filter(r => r.status !== 'VALID').length;
+        const dups   = DB.pendingRows.filter(r => r.errors.some(e => e.code === 'DUPLICATE')).length;
+        const amount = valid.filter(r => typeof r.amount === 'number').reduce((s,r) => s+r.amount, 0);
+        const batch  = {
+          id: DB.currentBatchId,
+          fileId: DB.currentFileId,
+          uploadId: 'UP-' + String(Date.now()).slice(-5),
+          month: DB.currentMonth,
+          uploadedBy: DB.currentUser,
+          uploadedAt: nowStr(),
+          status: 'PENDING_APPROVAL',
+          totalRows: DB.pendingRows.length,
+          validRows: valid.length,
+          invalidRows: inv,
+          duplicates: dups,
+          savedAmount: amount,
+          rows: valid
+        };
+        DB.batches.push(batch);
+        addAudit('SAVE','ok', `Batch committed in 1 transaction · ${valid.length} rows · AED ${fmt(amount,0)} · ${batch.id}`);
+        document.getElementById('save-modal-body').innerHTML = `
+          <div class="info-box success" style="margin-bottom:14px;">
+            Saved in <strong>1 atomic transaction</strong>. Batch pending approval.
+          </div>
+          <div class="dg2">
+            <div class="dr"><div class="dr-lbl">Batch ID</div><div class="dr-val mono">${batch.id}</div></div>
+            <div class="dr"><div class="dr-lbl">Upload ID</div><div class="dr-val mono">${batch.uploadId}</div></div>
+            <div class="dr"><div class="dr-lbl">Records Saved</div><div class="dr-val" style="color:var(--teal);font-weight:700;">${batch.validRows}</div></div>
+            <div class="dr"><div class="dr-lbl">Invalid (excluded)</div><div class="dr-val" style="color:var(--red);">${batch.invalidRows}</div></div>
+            <div class="dr"><div class="dr-lbl">Duplicates</div><div class="dr-val" style="color:var(--amber);">${batch.duplicates}</div></div>
+            <div class="dr"><div class="dr-lbl">Amount Saved</div><div class="dr-val mono" style="color:var(--purple);font-weight:700;">AED ${fmt(batch.savedAmount,0)}</div></div>
+            <div class="dr"><div class="dr-lbl">Uploaded By</div><div class="dr-val">${batch.uploadedBy}</div></div>
+            <div class="dr"><div class="dr-lbl">Timestamp</div><div class="dr-val mono" style="font-size:11.5px;">${batch.uploadedAt}</div></div>
+          </div>`;
+        openModal('save-modal');
+        DB.pendingRows = [];
+        DB.currentBatchId = null;
+        showToast('Batch saved · Pending approval','ok');
+      }, 350);
+    }
+  }, 420);
+}
+
+// ═══════════════════════════════════════════════
+// APPROVE / REJECT
+// ═══════════════════════════════════════════════
+function renderApproveQueue() {
+  const mf      = document.getElementById('approve-mf').value;
+  const batches = DB.batches.filter(b => !mf || b.month === mf);
+  const el      = document.getElementById('approve-list');
+  if (!batches.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-ico">📋</div><p>No batches in queue.</p><p style="font-size:11px;margin-top:6px;">Saved batches will appear here for approval.</p></div>';
+    return;
+  }
+  el.innerHTML = batches.map(b => `
+    <div class="batch-item">
+      <div class="b-icon" style="background:${b.status==='APPROVED'?'var(--teal-dim)':b.status==='REJECTED'?'var(--red-dim)':'var(--amber-dim)'};color:${b.status==='APPROVED'?'var(--teal)':b.status==='REJECTED'?'var(--red)':'var(--amber)'};">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div class="b-info">
+        <div class="b-name">${b.id}
+          ${b.status==='APPROVED'?'<span class="badge green">APPROVED 🔒</span>':b.status==='REJECTED'?'<span class="badge red">REJECTED</span>':'<span class="badge amber">PENDING APPROVAL</span>'}
+        </div>
+        <div class="b-meta">
+          <span>${b.month}</span>
+          <span>${b.validRows} valid rows</span>
+          <span class="mono" style="color:var(--purple);">AED ${fmt(b.savedAmount,0)}</span>
+          <span>Uploaded By ${b.uploadedBy} · ${b.uploadedAt}</span>
+          ${b.status==='APPROVED'?`<span style="color:var(--teal);">Approved by ${b.approvedBy} · ${b.approvedAt}</span>`:''}
+        </div>
+        <div style="display:flex;gap:14px;margin-top:4px;font-size:11.5px;color:var(--text3);">
+          <span>Total: ${b.totalRows}</span>
+          <span style="color:var(--teal);">Valid: ${b.validRows}</span>
+          <span style="color:var(--red);">Invalid: ${b.invalidRows}</span>
+          <span style="color:var(--amber);">Dups: ${b.duplicates}</span>
+        </div>
+      </div>
+      <div class="b-actions">
+        ${b.status==='PENDING_APPROVAL'
+          ? `<button class="btn success sm" onclick="approveBatch('${b.id}')">Approve 🔒</button>
+             <button class="btn danger sm" onclick="rejectBatch('${b.id}')">Reject</button>`
+          : `<span style="font-size:11.5px;color:${b.status==='APPROVED'?'var(--teal)':'var(--red)'};font-weight:700;">${b.status}</span>`}
+      </div>
+    </div>`).join('');
+}
+
+// ── Google Sheets — hardcoded API ──
+const GS = {
+  SHEET_ID:   '1rloK0PsZUHVQeUIcPOmYETUuQrX-Y4g-OiGX_wkxgVk',
+  SHEET_NAME: 'dedLog',
+  webAppUrl:  'https://script.google.com/macros/s/AKfycbwjcvYO34_0T2k-qYD4oRJt2e1sGpxEZX-fYVAeYPXGsGeN2E0rLDystisjkm4h9xHu/exec'
+};
+
+async function approveBatch(id) {
+  const b = DB.batches.find(x => x.id === id);
+  if (!b) return;
+
+  // Lock batch immediately in UI
+  b.status     = 'APPROVED';
+  b.approvedBy = b.uploadedBy;   // Approved By = the same email that uploaded the batch
+  b.approvedAt = nowStr();
+
+  // Build rows payload — all valid rows in one array, columns matching the
+  // dedLog sheet exactly:
+  // Trans ID | EmpID | DedID | Type | Amount | Month | Batch | Uploaded By | Approved By | DateTime
+  //  - Trans ID    → generated the instant this row was loaded (millisecond-precision, never repeats)
+  //  - EmpID/DedID/Type/Amount/Month → unchanged, exactly as resolved by the portal
+  //    (sheet value if present, portal selection as fallback — see validate step).
+  //    We never force the batch's Payroll Month over a sheet-provided value.
+  //  - Batch       → the batch's Date & Time only (not the Batch ID text)
+  //  - Uploaded By → the logged-in user's email, from ap_session
+  //  - Approved By → same email as Uploaded By
+  //  - DateTime    → this row's own datetime, to the millisecond, from its Trans ID
+  const rows = b.rows.map(r => [
+    r.transId,
+    r.empId,
+    r.dedId,
+    r.dedType,
+    typeof r.amount === 'number' ? r.amount : parseFloat(String(r.amount).replace(/,/g,'')) || 0,
+    r.month || b.month,
+    b.uploadedAt,
+    b.uploadedBy,
+    b.approvedBy,
+    transMsToDateTime(r.transId)
+  ]);
+
+  // Pull the active session (set at login) so the backend auth gate accepts this write —
+  // same as syncToSheets() in docPortal.html
+  let session = {};
+  try { session = JSON.parse(sessionStorage.getItem('ap_session') || '{}'); } catch (_) {}
+
+  const payload = {
+    action:     'appendRows',
+    type:       GS.SHEET_NAME,   // apiKey doPost checks Permissions against — must have an 'add' row for 'dedLog'
+    sheetName:  GS.SHEET_NAME,
+    sessionId:  session.sessionId || '',
+    token:      session.token || '',
+    batchId:    b.id,
+    rows:       rows          // entire batch in ONE call
+  };
+
+  runOverlay('Pushing to Google Sheets…', `Appending ${rows.length} rows to dedLog in one call`);
+
+  try {
+    // Same CORS workaround as docPortal.html: text/plain content-type avoids
+    // the preflight, and (unlike mode:'no-cors') the response body is readable —
+    // so a real backend error surfaces instead of being silently swallowed.
+    const res = await fetch(GS.webAppUrl, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body:    JSON.stringify(payload)
+    });
+    const rawText = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}: ${rawText.slice(0,200)}`);
+
+    let data;
+    try { data = JSON.parse(rawText); }
+    catch (e) { throw new Error('Apps Script returned non-JSON: ' + rawText.slice(0,300)); }
+
+    if (data.status !== 'ok') throw new Error(data.message || data.error || JSON.stringify(data));
+
+    hideOverlay();
+    addAudit('APPROVE','lock',
+      `Batch ${id} APPROVED & pushed to Google Sheets dedLog · ${rows.length} rows appended in 1 call`);
+    renderApproveQueue();
+    showToast(`✓ Approved & pushed ${rows.length} rows to Google Sheets`, 'ok');
+
+  } catch (err) {
+    hideOverlay();
+    // Revert approval on network failure
+    b.status = 'PENDING_APPROVAL';
+    addAudit('APPROVE','err', `Batch ${id} approval FAILED — Google Sheets push error: ${err.message}`);
+    renderApproveQueue();
+    showToast('Google Sheets push failed: ' + err.message, 'err');
+  }
+}
+function rejectBatch(id) {
+  const b = DB.batches.find(x => x.id === id);
+  if (!b) return;
+  b.status = 'REJECTED';
+  addAudit('REJECT','err', `Batch ${id} REJECTED`);
+  renderApproveQueue();
+  showToast('Batch rejected','err');
+}
+
+// ═══════════════════════════════════════════════
+// MONTHLY SUMMARY
+// ═══════════════════════════════════════════════
+function renderSummary() {
+  const mf       = document.getElementById('sum-mf').value;
+  const approved = DB.batches.filter(b => b.status === 'APPROVED' && (mf === 'ALL' || b.month === mf));
+  const allRows  = approved.flatMap(b => b.rows);
+  const totalAmt = allRows.filter(r=>typeof r.amount==='number').reduce((s,r)=>s+r.amount,0);
+  const totalEmp = new Set(allRows.map(r=>r.empId)).size;
+
+  // Show/hide card and empty state
+  const hasData = allRows.length > 0;
+  document.getElementById('sum-card').style.display  = hasData ? '' : 'none';
+  document.getElementById('sum-empty').style.display = hasData ? 'none' : '';
+  document.getElementById('btn-export-sum').style.display = hasData ? '' : 'none';
+
+  if (!hasData) {
+    document.getElementById('sum-stats').innerHTML = '';
+    return;
+  }
+
+  document.getElementById('sum-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-icon blue"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/></svg></div><div><div class="stat-val">${approved.length}</div><div class="stat-lbl">Approved Batches</div></div></div>
+    <div class="stat-card"><div class="stat-icon teal"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div><div class="stat-val">${totalEmp}</div><div class="stat-lbl">Employees</div></div></div>
+    <div class="stat-card"><div class="stat-icon purple"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div><div class="stat-val" style="font-size:15px;color:var(--purple);">AED ${fmt(totalAmt,0)}</div><div class="stat-lbl">Total Deductions</div></div></div>
+    <div class="stat-card"><div class="stat-icon amber"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg></div><div><div class="stat-val">${allRows.length}</div><div class="stat-lbl">Total Records</div></div></div>`;
+
+  const typeMap = {};
+  allRows.forEach(r => {
+    const t = r.dedType || 'Unknown';
+    if (!typeMap[t]) typeMap[t] = { type:t, count:0, amount:0, months:new Set() };
+    typeMap[t].count++;
+    typeMap[t].amount += typeof r.amount === 'number' ? r.amount : 0;
+    typeMap[t].months.add(r.month);
+  });
+
+  document.getElementById('sum-tbody').innerHTML = Object.values(typeMap).sort((a,b)=>b.amount-a.amount).map(x=>`
+    <tr>
+      <td>${[...x.months].join(', ')}</td>
+      <td><span class="badge blue">${esc(x.type)}</span></td>
+      <td class="mono">${x.count}</td>
+      <td class="mono" style="color:var(--purple);font-weight:700;">AED ${fmt(x.amount,0)}</td>
+      <td class="mono">AED ${x.count>0?fmt(Math.round(x.amount/x.count),0):'—'}</td>
+      <td class="mono">${approved.length}</td>
+    </tr>`).join('');
+}
+
+function exportSummaryCSV() { showToast('Summary exported','ok'); }
+
+// ═══════════════════════════════════════════════
+// AUDIT TRAIL
+// ═══════════════════════════════════════════════
+function addAudit(action, type, detail) {
+  DB.auditLog.unshift({ ts:nowStr(), action, type, user:DB.currentUser, batchId:DB.currentBatchId||'—', fileId:DB.currentFileId||'—', detail });
+}
+
+
+
+// ═══════════════════════════════════════════════
+// OVERLAY
+// ═══════════════════════════════════════════════
+function runOverlay(title, sub) {
+  document.getElementById('proc-overlay').classList.add('open');
+  document.getElementById('proc-title').textContent = title || 'Processing…';
+  document.getElementById('proc-sub').textContent   = sub   || 'Please wait';
+}
+function updateOverlay(title, sub) {
+  document.getElementById('proc-title').textContent = title;
+  document.getElementById('proc-sub').textContent   = sub;
+}
+function hideOverlay() {
+  document.getElementById('proc-overlay').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════
+// PAGINATION
+// ═══════════════════════════════════════════════
+function buildPagination(containerId, cur, total, onPageFn) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  const btn = (label, page, disabled, active) => {
+    const b = document.createElement('button');
+    b.className   = 'pg-btn' + (active ? ' cur' : '');
+    b.disabled    = disabled;
+    b.textContent = label;
+    b.onclick     = () => onPageFn(page);
+    return b;
+  };
+  el.appendChild(btn('‹', cur-1, cur<=1, false));
+  for (let p = Math.max(1,cur-2); p <= Math.min(total,cur+2); p++) el.appendChild(btn(p, p, false, p===cur));
+  el.appendChild(btn('›', cur+1, cur>=total, false));
+}
+
+// ═══════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════
+let _toastTimer;
+const ICONS = {
+  ok:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  warn: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>',
+  err:  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+};
+function showToast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.className = 'toast show';
+  document.getElementById('toast-ico').innerHTML  = ICONS[type] || '';
+  document.getElementById('toast-msg').textContent = msg;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 3800);
+}
+
+// ═══════════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════════
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-backdrop.open').forEach(m => m.classList.remove('open'));
+});
+
+// ═══════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════
+function esc(s)      { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(n, d=2) { return Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function fmtSize(b)  { return b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB'; }
+function nowStr()    { return new Date().toLocaleString('en-GB',{hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).replace(',',''); }
+function dl(content, filename, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content instanceof ArrayBuffer ? content : [content]], { type }));
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* Listen for messages from parent index.html */
+window.addEventListener('message', (e) => {
+  if (!e.data) return;
+  // Instant theme sync — parent pushes on every theme change
+  if (e.data.type === 'ap-theme' && e.data.theme) {
+    document.documentElement.setAttribute('data-theme', e.data.theme);
+  }
+});
+</script>
+</body>
+</html>
