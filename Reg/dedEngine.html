@@ -102,24 +102,13 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
 .live-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);animation:pulse 2s ease infinite;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
 
-/* STEPS */
-.steps-nav{display:flex;align-items:center;padding:0 22px;background:var(--bg2);border-bottom:1px solid var(--border);height:48px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
-.steps-nav::-webkit-scrollbar{display:none;}
-.step-item{display:flex;align-items:center;gap:7px;padding:0 14px;height:100%;cursor:pointer;white-space:nowrap;color:var(--text3);font-size:12px;font-weight:600;border-bottom:2px solid transparent;transition:color .15s;flex-shrink:0;}
-.step-item:hover{color:var(--text2);}
-.step-item.active{color:var(--accent);border-bottom-color:var(--accent);}
-.step-item.done{color:var(--teal);}
-.step-num{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:var(--mono);background:var(--surface2);flex-shrink:0;}
-.step-item.active .step-num{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
-.step-item.done .step-num{background:var(--teal-dim);border-color:var(--teal);color:var(--teal);}
-.sarrow{color:var(--border2);margin:0 2px;font-size:14px;}
-.snav-actions{display:flex;align-items:center;gap:8px;margin-left:auto;padding-left:14px;flex-shrink:0;}
+/* NAV BUTTONS (merged into header) */
 .snav-add{width:26px;height:26px;border-radius:50%;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0;}
 .snav-add:hover{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
 .snav-dl-wrap{position:relative;flex-shrink:0;}
 .snav-dl-chevron{transition:transform .15s;}
 .snav-dl-wrap.open .snav-dl-chevron{transform:rotate(180deg);}
-.snav-dl-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);box-shadow:var(--shadow-lg);min-width:170px;z-index:400;overflow:hidden;padding:4px;}
+.snav-dl-menu{display:none;position:absolute;top:calc(100% + 6px);bottom:auto;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);box-shadow:var(--shadow-lg);min-width:170px;z-index:2000;overflow:hidden;padding:4px;}
 .snav-dl-wrap.open .snav-dl-menu{display:block;}
 .snav-dl-menu button{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:calc(var(--radius) - 2px);border:none;background:transparent;color:var(--text);font-size:12px;font-family:var(--font);font-weight:600;cursor:pointer;text-align:left;}
 .snav-dl-menu button:hover{background:var(--surface2);}
@@ -380,21 +369,7 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
   </div>
   <div class="header-meta">
     <div class="hbadge"><div class="live-dot"></div><span id="hdr-user">HR Admin</span></div>
-    <div class="hbadge" style="color:var(--text3);" id="hdr-month-badge">
-      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      <span id="hdr-month">June 2025</span>
-    </div>
-    <div class="hbadge" style="color:var(--text3);" id="hdr-dedtype-badge" hidden>
-      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-      <span id="hdr-dedtype"></span>
-    </div>
-  </div>
-</div>
-
-<!-- ACTION BAR -->
-<div class="steps-nav">
-  <div class="step-item active" id="snav-approve"><span class="step-num" id="sn-1">1</span>Saved Batches</div>
-  <div class="snav-actions">
+    <span id="snav-approve" style="font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap;">Saved Batches</span>
     <button class="snav-add" id="btn-nav-add" onclick="openIngestModal()" title="Upload a new deduction file">+</button>
     <div class="snav-dl-wrap" id="snav-dl-wrap">
       <button class="btn sm" id="btn-nav-download" onclick="toggleDlMenu(event)" title="Download the deduction upload template">
@@ -664,7 +639,6 @@ function updateMonth() {
   if (!sel) return;
   DB.currentMonth = sel.value;
   if (document.getElementById('uz-month')) document.getElementById('uz-month').textContent = DB.currentMonth;
-  if (document.getElementById('hdr-month')) document.getElementById('hdr-month').textContent = DB.currentMonth;
   if (typeof updateColPreview === 'function' && CM.headers && CM.headers.length) updateColPreview();
 }
 
@@ -675,15 +649,6 @@ function updateDedType() {
   const box = document.getElementById('cm-dedType-manual');
   if (!box) return;
   DB.currentDedType = box.value.trim();
-
-  const badge = document.getElementById('hdr-dedtype-badge');
-  if (DB.currentDedType) {
-    badge.hidden = false;
-    document.getElementById('hdr-dedtype').textContent = DB.currentDedType;
-  } else {
-    badge.hidden = true;
-  }
-
   if (typeof updateColPreview === 'function' && CM.headers && CM.headers.length) updateColPreview();
 }
 
@@ -1385,7 +1350,14 @@ async function saveBatch() {
   const amount = valid.filter(r => typeof r.amount === 'number').reduce((s,r) => s+r.amount, 0);
   const uploadedAt = nowStr();
 
-  // Rows payload — Trans ID | EmpID | DedID | Type | Amount | Month | Batch | Uploaded By | DateTime
+  // Rows payload — must match the dedLog sheet's 10 fixed columns exactly,
+  // same structure the old portal always wrote (see approveBatch in the
+  // previous version): Trans ID | EmpID | DedID | Type | Amount | Month |
+  // Batch | Uploaded By | Approved By | DateTime.
+  // This flow has no separate approval step anymore (Save is final), so
+  // "Approved By" is auto-filled with the same user as "Uploaded By" —
+  // never left blank, so every row still lands with all 10 cells and
+  // nothing downstream (DateTime, etc.) shifts into the wrong column.
   const rows = valid.map(r => [
     r.transId,
     r.empId,
@@ -1394,6 +1366,7 @@ async function saveBatch() {
     typeof r.amount === 'number' ? r.amount : parseFloat(String(r.amount).replace(/,/g,'')) || 0,
     r.month || DB.currentMonth,
     uploadedAt,
+    DB.currentUser,
     DB.currentUser,
     transMsToDateTime(r.transId)
   ]);
