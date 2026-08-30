@@ -274,9 +274,11 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   opacity:.75;pointer-events:none;
 }
 
-/* ── Brand zone ── */
+/* ── Brand zone — matches the folded/collapsed sub-bar's width exactly,
+   so the truck toggle button sits directly above the collapsed sidebar
+   rail and the two columns line up. */
 .tb-brand{
-  width:var(--icon-bar-w);
+  width:var(--sub-bar-w-collapsed);
   display:flex;align-items:center;justify-content:center;
   border-right:1px solid var(--border);flex-shrink:0;
   background:linear-gradient(160deg,rgba(88,166,255,.06) 0%,transparent 100%);
@@ -341,12 +343,15 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 .tb-page-label{font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;}
 .tb-page-sub2{font-size:10px;color:var(--text3);margin-top:1px;}
 
-/* shortcuts — always visible, scrollable if needed */
+/* shortcuts — visible, but allowed to shrink (flex-shrink:1) so they
+   never force the topbar's right-side icons (bell/cache/theme/avatar)
+   off-screen. If shrunk below their natural content width, the buttons
+   scroll internally instead of overflowing the strip. */
 .tb-shortcuts{
   display:flex;align-items:center;gap:4px;
   padding:0 8px;
   border-right:1px solid var(--border);
-  flex-shrink:0;
+  flex-shrink:1;min-width:0;
   /* scrollable when items overflow */
   overflow-x:auto;overflow-y:hidden;
   max-width:560px;
@@ -474,10 +479,14 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   display:none;position:fixed;inset:0;z-index:900;
   background:rgba(0,0,0,.55);backdrop-filter:blur(2px);
   align-items:center;justify-content:center;
+  /* breathing room so the card never touches the viewport edge, and
+     lets it shrink/scroll instead of clipping on short screens */
+  padding:16px;box-sizing:border-box;
 }
 .pm-overlay.open{display:flex;}
 .pm-card{
-  width:300px;max-width:90vw;
+  width:300px;max-width:100%;
+  max-height:100%;overflow-y:auto;
   background:var(--surface);border:1px solid var(--border2);
   border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.4);
   padding:22px 20px 18px;text-align:center;
@@ -541,12 +550,12 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   display:flex;flex-direction:row;align-items:center;
   gap:8px;padding:11px 16px 15px;
   /* Glassy, semi-transparent notch instead of a solid black slab —
-     backdrop-filter keeps whatever's behind it (page content) subtly
-     visible through it, so it feels lighter/"attractive" rather than
-     a flat opaque block. */
-  background:color-mix(in srgb, var(--bg2) 78%, transparent);
-  -webkit-backdrop-filter:blur(14px) saturate(140%);
-  backdrop-filter:blur(14px) saturate(140%);
+     backdrop-filter keeps whatever's behind it (page content) clearly
+     visible through it, so it feels light/"floating" rather than a
+     flat opaque block. */
+  background:color-mix(in srgb, var(--bg2) 42%, transparent);
+  -webkit-backdrop-filter:blur(18px) saturate(160%);
+  backdrop-filter:blur(18px) saturate(160%);
   border:1px solid var(--border);border-bottom:none;
   border-radius:22px 22px 0 0;
   box-shadow:var(--shadow-lg);
@@ -683,6 +692,7 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   justify-content:center;align-items:center;
   width:40px;height:40px;padding:0;margin:0 0 4px;gap:0;
   overflow:hidden;
+  pointer-events:auto;cursor:pointer;
 }
 #sub-bar.collapsed .sb2-item i{font-size:18px;transform:scale(1.08);}
 .sb2-header{
@@ -759,6 +769,13 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 /* Hide app name zone on small screens */
 @media(max-width:720px){
   .tb-app{display:none;}
+  /* Not enough room to show shortcut labels without squeezing the
+     bell/cache/theme/avatar icons off-screen — collapse to icon-only
+     instead of letting them "unfold" and push the rest of the topbar
+     out of view. */
+  .tb-sc span{display:none;}
+  .tb-sc{padding:0 7px;gap:0;}
+  .tb-shortcuts{max-width:220px;}
 }
 /* Below this width, the *expanded* sidebar becomes an overlay (like Apple
    Mail on a compact width) instead of squeezing the content area; the
@@ -774,13 +791,10 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   }
 }
 @media(max-width:520px){
-  :root{--icon-bar-w:44px;--topbar-h:44px;--icon-bar-h:60px;}
+  :root{--topbar-h:44px;--icon-bar-h:60px;}
   .tb-vsep{display:none;}
   .tb-uname,.tb-urole{display:none;}
   .tb-user{padding:0 7px;}
-  .tb-sc span{display:none;}
-  /* Make shortcuts compact icon-only */
-  .tb-sc{padding:0 7px;gap:0;}
 }
 
 /* ══ CACHE STATUS BUTTON ══ */
@@ -1791,14 +1805,21 @@ function toggleSidebar() {
   updateDockOffset();
 }
 
-/* Hovering the sidebar (icons or expanded content) unfolds it for
-   selection; leaving it starts the 5s auto-fold countdown. */
+/* Cancel a pending auto-fold while the pointer is over the sidebar (so
+   it doesn't collapse mid-interaction), and re-schedule the fold once
+   the pointer leaves an *expanded* sidebar. Note: this no longer
+   auto-expands a collapsed sidebar on hover — doing so used to shift
+   the icon rail (revealing section headers) right as someone tried to
+   click an icon, moving the click target out from under the cursor
+   and making the folded icons feel unresponsive/misaligned. Expanding
+   is now an explicit action (click the header or the truck icon), so
+   the folded icons stay exactly where they are and are always directly
+   clickable. */
 (function initSubBarHover() {
   const sb = document.getElementById('sub-bar');
   if (!sb) return;
   sb.addEventListener('mouseenter', () => {
     _cancelSubBarFold();
-    if (!sidebarVisible) toggleSidebar();
   });
   sb.addEventListener('mouseleave', () => {
     if (sidebarVisible) _scheduleSubBarFold();
