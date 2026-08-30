@@ -549,13 +549,11 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 .ib-scroll{
   display:flex;flex-direction:row;align-items:center;
   gap:8px;padding:11px 16px 15px;
-  /* Glassy, semi-transparent notch instead of a solid black slab —
-     backdrop-filter keeps whatever's behind it (page content) clearly
-     visible through it, so it feels light/"floating" rather than a
-     flat opaque block. */
+  /* A flat, fixed semi-transparent color — not a backdrop-blur/glass
+     effect, so it doesn't distort or blur whatever page content sits
+     behind it. Just the notch itself, see-through, with a consistent
+     flat tone. */
   background:color-mix(in srgb, var(--bg2) 42%, transparent);
-  -webkit-backdrop-filter:blur(18px) saturate(160%);
-  backdrop-filter:blur(18px) saturate(160%);
   border:1px solid var(--border);border-bottom:none;
   border-radius:22px 22px 0 0;
   box-shadow:var(--shadow-lg);
@@ -682,11 +680,13 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   width:0;min-width:0;max-width:0;flex:none;margin:0;overflow:hidden;
   transition:opacity .12s ease,visibility 0s linear .12s,width .12s ease;
 }
-#sub-bar.collapsed .sb2-section{
-  opacity:0;visibility:hidden;pointer-events:none;
-  max-height:0;padding-top:0;padding-bottom:0;
-  transition:max-height .18s cubic-bezier(.4,0,.2,1) .04s,padding .18s cubic-bezier(.4,0,.2,1) .04s,opacity .1s ease,visibility 0s linear .18s;
-}
+/* Collapsed nav sections: fully removed from layout (display:none)
+   rather than height/opacity-animated. A height/opacity-collapsed
+   section can still register with its natural (non-zero) content
+   width in a column flex container, which is what was throwing the
+   icon column below it out of true center — display:none guarantees
+   it contributes nothing to sizing or alignment at all. */
+#sub-bar.collapsed .sb2-section{display:none;}
 #sub-bar.collapsed .sb2-nav{padding:8px 6px;display:flex;flex-direction:column;align-items:center;}
 #sub-bar.collapsed .sb2-item{
   justify-content:center;align-items:center;
