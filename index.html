@@ -649,7 +649,8 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 #sub-bar.collapsed .sb2-item-label,
 #sub-bar.collapsed .sb2-badge{
   opacity:0;visibility:hidden;pointer-events:none;
-  transition:opacity .12s ease,visibility 0s linear .12s;
+  width:0;min-width:0;max-width:0;flex:none;margin:0;overflow:hidden;
+  transition:opacity .12s ease,visibility 0s linear .12s,width .12s ease;
 }
 #sub-bar.collapsed .sb2-nav{padding:8px 6px;}
 #sub-bar.collapsed .sb2-item{justify-content:center;padding:10px 0;gap:0;}
@@ -659,7 +660,7 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   padding:12px 10px 12px 16px;
   font-size:13px;font-weight:700;
   color:var(--text);
-  border-bottom:1px solid var(--border);flex-shrink:0;white-space:nowrap;
+  flex-shrink:0;white-space:nowrap;
   display:flex;align-items:center;gap:9px;
   transition:padding .24s cubic-bezier(.4,0,.2,1),justify-content .24s cubic-bezier(.4,0,.2,1);
 }
