@@ -157,6 +157,13 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   --orange:#f0883e;--orange-dim:rgba(240,136,62,.12);
   --icon-bar-w:56px;--sub-bar-w:220px;--sub-bar-w-collapsed:60px;--icon-bar-h:68px;--icon-rail-w:76px;
   --topbar-h:52px;
+  /* Live "how much space the sidebar currently occupies in-flow" — kept in
+     sync by JS (see updateDockOffset()) so the bottom notch dock can center
+     itself over the *content* area instead of the full viewport. Without
+     this, the dock (centered on the whole screen) bleeds its rounded left
+     edge over the collapsed sidebar on narrower widths, looking like a
+     stray scrollbar/pill sitting on top of it. */
+  --cur-sidebar-w:220px;
   --radius:8px;--radius-lg:12px;
   --font:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
   --shadow:0 1px 3px rgba(0,0,0,.4);
@@ -519,12 +526,16 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
    it takes no space in .shell's flex flow — the topbar/sidebar/content
    keep their full natural size, unaffected by its presence. ─── */
 #icon-bar{
-  position:fixed;left:50%;bottom:0;
+  position:fixed;bottom:0;
+  /* Center over the content area (to the right of the sidebar), not the
+     whole viewport — see --cur-sidebar-w above. */
+  left:calc(50% + (var(--cur-sidebar-w) / 2));
   transform:translateX(-50%);
   width:max-content;
   background:transparent;border:none;
   z-index:400;
   margin:0;
+  transition:left .24s cubic-bezier(.4,0,.2,1);
 }
 .ib-scroll{
   display:flex;flex-direction:row;align-items:center;
@@ -643,7 +654,13 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   min-width:var(--sub-bar-w-collapsed);
   max-width:var(--sub-bar-w-collapsed);
 }
-#sub-bar.collapsed .sb2-header{justify-content:center;padding:12px 4px;}
+/* Collapsed header: only the module icon + expand chevron remain visible.
+   gap:0 here (instead of inheriting the expanded 9px gap) stops the
+   zero-width, invisible title <span> from still reserving two gap slots
+   — that's what was pushing the icon to the far left and the chevron to
+   the far right instead of the pair sitting together, centered. */
+#sub-bar.collapsed .sb2-header{justify-content:center;align-items:center;padding:12px 4px;gap:0;}
+#sub-bar.collapsed .sb2-header #sb2-icon{margin-right:6px;}
 #sub-bar.collapsed .sb2-header span,
 #sub-bar.collapsed .sb2-item-label,
 #sub-bar.collapsed .sb2-badge{
@@ -1730,6 +1747,27 @@ function _scheduleSubBarFold() {
   }, 5000);
 }
 
+/* Keeps --cur-sidebar-w in sync with how much horizontal space the
+   sidebar actually occupies in normal layout flow right now, so the
+   bottom notch dock (#icon-bar) can re-center itself over the content
+   area and never overlap the sidebar. Below 640px the *expanded*
+   sidebar becomes a floating overlay (position:absolute — see CSS) and
+   no longer pushes the content over, so in that case only the
+   collapsed rail width counts toward the offset. */
+function updateDockOffset() {
+  const collapsedW = 60;   // keep in sync with --sub-bar-w-collapsed
+  const expandedW  = 220;  // keep in sync with --sub-bar-w
+  const isOverlayMode = window.innerWidth <= 640;
+  let w;
+  if (!sidebarVisible) {
+    w = collapsedW;
+  } else {
+    w = isOverlayMode ? collapsedW : expandedW;
+  }
+  document.documentElement.style.setProperty('--cur-sidebar-w', w + 'px');
+}
+window.addEventListener('resize', updateDockOffset);
+
 function toggleSidebar() {
   sidebarVisible = !sidebarVisible;
   const sb = document.getElementById('sub-bar');
@@ -1748,6 +1786,7 @@ function toggleSidebar() {
     if (closeBtn) closeBtn.title = 'Expand';
     _cancelSubBarFold();
   }
+  updateDockOffset();
 }
 
 /* Hovering the sidebar (icons or expanded content) unfolds it for
@@ -1872,6 +1911,7 @@ function ibOpen(id, btn) {
   sb.setAttribute('aria-hidden', 'false');
   document.getElementById('tb-app-zone').classList.remove('collapsed');
   _scheduleSubBarFold();
+  updateDockOffset();
 
   // Auto-load the first item of the first group into the main frame
   // This ensures data is visible immediately without a manual click
@@ -2224,6 +2264,10 @@ window.addEventListener('DOMContentLoaded', () => {
   // Load saved theme; fall back to 'dark'
   const savedTheme = (() => { try { return sessionStorage.getItem('__ui_theme') || 'dark'; } catch(_) { return 'dark'; } })();
   setTheme(savedTheme);
+
+  // Sync the bottom dock's centering offset with the sidebar's actual
+  // starting width/state so it never overlaps the sidebar on load.
+  updateDockOffset();
 
   populateUserChip();
   updateCacheHealthDot();
