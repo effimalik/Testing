@@ -511,74 +511,114 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 /* ═══ BODY ROW ═══ */
 .body-row{flex:1;display:flex;overflow:hidden;min-height:0;}
 
-/* ─── BOTTOM TAB BAR — Apple (iOS/macOS dock) style main menu ───
-   Docked to the bottom of the shell, always visible, never hidden.
-   Icon + label stacked, horizontally scrollable if items overflow. */
+/* ─── BOTTOM DOCK — genuine macOS-dock look: no full-width bar, just a
+   floating rounded pill hugging the icons, centered, sitting in its own
+   row (in normal flow, so it never overlaps the content below it). ─── */
 #icon-bar{
   width:100%;
-  height:var(--icon-bar-h);
   min-height:var(--icon-bar-h);
-  background:var(--bg2);
-  border-top:1px solid var(--border);
-  display:flex;flex-direction:row;align-items:stretch;justify-content:center;
-  padding:6px 10px;gap:4px;
+  background:transparent;border:none;
+  display:flex;align-items:center;justify-content:center;
+  padding:8px 84px 12px;gap:10px;
   flex-shrink:0;z-index:110;position:relative;
   margin:0;
-  border-radius:0;
-  transition:background .2s,border-color .2s;
 }
-/* Scrollable group of primary items — this is the part that scrolls when
-   items overflow; the bar itself (and the pinned Admin button) never move */
+/* The actual floating dock pill — only this has a background, so the row
+   behind/around it stays fully transparent ("without the whole backside
+   of the bar") */
 .ib-scroll{
-  flex:1;min-width:0;
-  display:flex;flex-direction:row;align-items:stretch;justify-content:center;
-  gap:4px;
-  overflow-x:auto;overflow-y:hidden;
+  display:flex;flex-direction:row;align-items:center;
+  gap:6px;padding:7px 10px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:20px;
+  box-shadow:var(--shadow-lg);
+  max-width:100%;min-width:0;
+  overflow-x:auto;overflow-y:visible;
   scrollbar-width:none;
 }
 .ib-scroll::-webkit-scrollbar{display:none;}
 .ib-divider{display:none;}
 .ib-spacer{display:none;}
 .ib-btn{
-  position:relative;
-  min-width:56px;
-  border-radius:12px;border:none;
+  position:relative;flex-shrink:0;
+  width:46px;height:46px;
+  border-radius:13px;border:none;
   background:transparent;color:var(--text2);
   cursor:pointer;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:3px;padding:5px 10px;
-  font-size:19px;transition:background .15s,color .15s;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;
+  transition:transform .15s ease,background .15s,color .15s,box-shadow .15s;
 }
-.ib-btn:hover{background:var(--surface);color:var(--text);}
+.ib-btn:hover{background:var(--surface);color:var(--text);transform:translateY(-4px) scale(1.06);box-shadow:var(--shadow-md);}
 .ib-btn.active{background:var(--accent-dim);color:var(--accent);}
-/* Admin — always pinned to the right edge of the bar, outside the
-   scrollable group, with a divider to set it apart */
-.ib-btn.ib-pinned{
-  flex-shrink:0;
-  margin-left:6px;padding-left:14px;
-  border-left:1px solid var(--border);
-  border-radius:0 12px 12px 0;
-}
+/* Tooltip label — appears ABOVE the icon on hover, like a real mac dock */
 .ib-tip{
-  position:static;
-  transform:none;
-  background:none;color:inherit;
-  font-size:9.5px;font-weight:600;letter-spacing:.01em;
-  padding:0;border-radius:0;
-  white-space:nowrap;pointer-events:none;opacity:1;
-  border:none;z-index:auto;font-family:var(--font);
-  line-height:1;
+  position:absolute;bottom:calc(100% + 10px);left:50%;
+  transform:translateX(-50%);
+  background:var(--surface2);color:var(--text);
+  font-size:11px;font-weight:600;padding:4px 9px;border-radius:6px;
+  white-space:nowrap;pointer-events:none;opacity:0;
+  transition:opacity .15s;border:1px solid var(--border2);
+  z-index:400;font-family:var(--font);
 }
+.ib-btn:hover .ib-tip{opacity:1;}
 
-/* icon-bar adaptive: hide labels + shrink when very tight */
+/* icon-bar adaptive: shrink when very tight */
 @media(max-width:520px){
-  .ib-btn{min-width:44px;font-size:17px;padding:4px 6px;}
-  .ib-tip{font-size:8.5px;}
+  #icon-bar{padding:6px 68px 10px;}
+  .ib-btn{width:40px;height:40px;font-size:17px;border-radius:11px;}
 }
 @media(max-height:400px){
-  #icon-bar{padding:2px 8px;}
-  .ib-btn{padding:2px 8px;}
+  #icon-bar{padding:2px 60px;min-height:52px;}
+  .ib-btn{width:36px;height:36px;}
   .ib-tip{display:none;}
+}
+
+/* ─── ADMIN — separate floating dock button, always pinned to the
+   bottom-right corner, independent of the main dock and its scrolling ─── */
+.admin-dock-wrap{
+  position:fixed;right:18px;bottom:16px;
+  z-index:130;
+  display:flex;flex-direction:column;align-items:flex-end;
+}
+.admin-fab{
+  width:50px;height:50px;border-radius:15px;
+  background:var(--bg2);border:1px solid var(--border);
+  color:var(--text2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;box-shadow:var(--shadow-lg);
+  transition:transform .15s ease,background .15s,color .15s;
+}
+.admin-fab:hover{background:var(--surface);color:var(--text);transform:translateY(-4px) scale(1.06);}
+.admin-fab.active{background:var(--accent-dim);color:var(--accent);}
+/* List — hidden by default, revealed only while hovering the corner area,
+   auto-hides again after the hover-out delay (handled in JS) */
+.admin-flyout{
+  position:absolute;right:0;bottom:calc(100% + 12px);
+  width:210px;max-height:min(60vh,420px);
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:14px;box-shadow:var(--shadow-lg);
+  overflow:hidden;display:flex;flex-direction:column;
+  opacity:0;visibility:hidden;pointer-events:none;
+  transform:translateY(8px) scale(.97);transform-origin:bottom right;
+  transition:opacity .16s ease,transform .16s ease,visibility 0s linear .16s;
+}
+.admin-flyout.open{
+  opacity:1;visibility:visible;pointer-events:auto;
+  transform:translateY(0) scale(1);
+  transition:opacity .16s ease,transform .16s ease;
+}
+.admin-flyout-header{
+  padding:10px 12px;font-size:12px;font-weight:700;color:var(--text);
+  border-bottom:1px solid var(--border);flex-shrink:0;
+  display:flex;align-items:center;gap:8px;
+}
+.admin-flyout-header i{color:var(--accent);font-size:14px;}
+.admin-flyout-nav{overflow-y:auto;padding:8px;min-height:0;}
+@media(max-width:520px){
+  .admin-dock-wrap{right:12px;bottom:12px;}
+  .admin-fab{width:42px;height:42px;border-radius:12px;font-size:18px;}
 }
 
 /* ─── SUB MENU — docked left sidebar (Apple-style, e.g. Mail / Finder) ───
@@ -1176,9 +1216,9 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 
   </div>
 
-  <!-- BOTTOM TAB BAR — main menu, iOS/macOS dock style, never hides.
-       Primary items scroll if they overflow; Admin stays pinned to the
-       right edge at all times. -->
+  <!-- BOTTOM DOCK — main menu, genuine macOS-dock style: a floating pill
+       of icons only, no full-width background. Primary items scroll if
+       they overflow. -->
   <nav id="icon-bar" aria-label="Navigation">
 
     <div class="ib-scroll" id="ib-scroll">
@@ -1206,11 +1246,22 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
         <i class="ti ti-report-money"></i><span class="ib-tip">Payroll</span>
       </button>
     </div>
-
-    <button class="ib-btn ib-pinned" id="ib-admin" onclick="ibOpen('ib-admin',this)" title="Admin">
-      <i class="ti ti-settings"></i><span class="ib-tip">Admin</span>
-    </button>
   </nav>
+</div>
+
+<!-- ADMIN — separate floating dock button, pinned to the bottom-right
+     corner at all times. Its item list is hidden by default and only
+     unfolds while hovering this corner area (auto-hides again a few
+     seconds after the hover leaves). Clicking the gear still opens the
+     Admin section into the main sidebar + content frame as before. -->
+<div class="admin-dock-wrap" id="admin-dock-wrap">
+  <div class="admin-flyout" id="admin-flyout" role="menu" aria-hidden="true">
+    <div class="admin-flyout-header"><i class="ti ti-settings"></i> Admin</div>
+    <div class="admin-flyout-nav" id="admin-flyout-nav"></div>
+  </div>
+  <button class="ib-btn admin-fab" id="ib-admin" onclick="ibOpen('ib-admin',this)" title="Admin">
+    <i class="ti ti-settings"></i><span class="ib-tip">Admin</span>
+  </button>
 </div>
 
 <!-- ══ CACHE STATUS PANEL ══ -->
@@ -1637,6 +1688,21 @@ function _applyPermissions() {
 /* ── Sidebar toggle — collapses the docked left sub-menu down to an
    icon-only rail (like a collapsed macOS Finder sidebar), or expands
    it back to full width with labels. Never fully hides it. ── */
+let _subBarFoldTimer = null;
+
+function _cancelSubBarFold() {
+  if (_subBarFoldTimer) { clearTimeout(_subBarFoldTimer); _subBarFoldTimer = null; }
+}
+
+/* Auto-fold back to the icon-only rail 5s after the mouse leaves the
+   sidebar (re-entering it within that window cancels the countdown). */
+function _scheduleSubBarFold() {
+  _cancelSubBarFold();
+  _subBarFoldTimer = setTimeout(() => {
+    if (sidebarVisible) toggleSidebar();
+  }, 5000);
+}
+
 function toggleSidebar() {
   sidebarVisible = !sidebarVisible;
   const sb = document.getElementById('sub-bar');
@@ -1649,14 +1715,30 @@ function toggleSidebar() {
     appZone.classList.remove('collapsed');
     if (closeIcon) closeIcon.className = 'ti ti-chevron-left';
     if (closeBtn) closeBtn.title = 'Collapse';
+    _scheduleSubBarFold();
   } else {
     sb.classList.add('collapsed');
     sb.setAttribute('aria-hidden', 'false');
     appZone.classList.add('collapsed');
     if (closeIcon) closeIcon.className = 'ti ti-chevron-right';
     if (closeBtn) closeBtn.title = 'Expand';
+    _cancelSubBarFold();
   }
 }
+
+/* Hovering the sidebar (icons or expanded content) unfolds it for
+   selection; leaving it starts the 5s auto-fold countdown. */
+(function initSubBarHover() {
+  const sb = document.getElementById('sub-bar');
+  if (!sb) return;
+  sb.addEventListener('mouseenter', () => {
+    _cancelSubBarFold();
+    if (!sidebarVisible) toggleSidebar();
+  });
+  sb.addEventListener('mouseleave', () => {
+    if (sidebarVisible) _scheduleSubBarFold();
+  });
+})();
 
 /* On very small screens the expanded sidebar overlays the content (see
    CSS); clicking outside it while expanded in that mode collapses it
@@ -1670,6 +1752,55 @@ function _onSidebarOutsideClick(e) {
   }
 }
 document.addEventListener('click', _onSidebarOutsideClick);
+
+/* ── Admin flyout — the gear's item list is hidden by default and only
+   unfolds while hovering the corner dock button/panel, auto-hiding again
+   5s after the hover leaves (same rhythm as the sidebar above). ── */
+let _adminFlyoutTimer = null;
+
+function _buildAdminFlyoutContent() {
+  const sec = SECTIONS['ib-admin'];
+  if (!sec) return;
+  const perms = window.Auth && window.Auth.getPermissions ? window.Auth.getPermissions() : null;
+  const nav = document.getElementById('admin-flyout-nav');
+  if (!nav) return;
+  nav.innerHTML = sec.groups.map(g => {
+    const visibleItems = g.items.filter(item => !item.permKey || _hasPerm(perms, item.permKey));
+    if (!visibleItems.length) return '';
+    return `
+      <div class="sb2-section">${g.label}</div>
+      ${visibleItems.map(item => `
+        <div class="sb2-item" title="${item.label}" onclick="loadPage('${item.file}',this,'${item.label}','${item.icon||sec.icon}','${item.sub}','${sec.pillBg.replace(/'/g,'"')}','${sec.pillColor}');activeSection='ib-admin';document.querySelectorAll('.ib-btn').forEach(b=>b.classList.remove('active'));document.getElementById('ib-admin').classList.add('active');">
+          <i class="ti ${item.icon}"></i><span class="sb2-item-label">${item.label}</span>
+          ${item.badge ? '<span class="sb2-badge">!</span>' : ''}
+        </div>`).join('')}
+    `;
+  }).join('');
+}
+
+function _openAdminFlyout() {
+  if (_adminFlyoutTimer) { clearTimeout(_adminFlyoutTimer); _adminFlyoutTimer = null; }
+  _buildAdminFlyoutContent();
+  const fl = document.getElementById('admin-flyout');
+  if (!fl) return;
+  fl.classList.add('open');
+  fl.setAttribute('aria-hidden', 'false');
+}
+
+function _scheduleCloseAdminFlyout() {
+  if (_adminFlyoutTimer) clearTimeout(_adminFlyoutTimer);
+  _adminFlyoutTimer = setTimeout(() => {
+    const fl = document.getElementById('admin-flyout');
+    if (fl) { fl.classList.remove('open'); fl.setAttribute('aria-hidden', 'true'); }
+  }, 5000);
+}
+
+(function initAdminFlyoutHover() {
+  const wrap = document.getElementById('admin-dock-wrap');
+  if (!wrap) return;
+  wrap.addEventListener('mouseenter', _openAdminFlyout);
+  wrap.addEventListener('mouseleave', _scheduleCloseAdminFlyout);
+})();
 
 /* ── Open icon section — populates the docked sidebar with that section's items ── */
 function ibOpen(id, btn) {
@@ -1710,11 +1841,15 @@ function ibOpen(id, btn) {
   setCtx(sec.pageLabel, sec.pageSub, sec.pillBg, sec.pillColor, sec.pillIcon);
   activeSection = id;
 
-  // Switching sections always reveals the sidebar so its new items are visible
+  // Switching sections always reveals the sidebar so its new items are visible,
+  // then folds back to the icon-only rail 5s later unless it's being hovered
   sidebarVisible = true;
   sb.classList.remove('collapsed');
   sb.setAttribute('aria-hidden', 'false');
   document.getElementById('tb-app-zone').classList.remove('collapsed');
+  const _closeIcon = document.getElementById('sb2-close-icon');
+  if (_closeIcon) _closeIcon.className = 'ti ti-chevron-left';
+  _scheduleSubBarFold();
 
   // Auto-load the first item of the first group into the main frame
   // This ensures data is visible immediately without a manual click
