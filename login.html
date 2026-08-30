@@ -113,16 +113,33 @@ body{
 
 .card{
   width:100%;max-width:360px;
-  background:rgba(255,255,255,.62);
-  -webkit-backdrop-filter:blur(18px) saturate(140%);
-  backdrop-filter:blur(18px) saturate(140%);
-  border:1px solid rgba(255,255,255,.4);
+  position:relative;
+  background:linear-gradient(165deg, rgba(255,255,255,.30) 0%, rgba(255,255,255,.14) 100%);
+  -webkit-backdrop-filter:blur(22px) saturate(160%);
+  backdrop-filter:blur(22px) saturate(160%);
+  border:1px solid rgba(255,255,255,.45);
   border-radius:var(--radius);
   padding:clamp(28px,5vh,40px) clamp(26px,5vw,36px) clamp(22px,4vh,32px);
-  box-shadow:0 8px 24px rgba(0,0,0,.18), 0 24px 60px rgba(0,0,0,.35);
+  box-shadow:0 8px 24px rgba(0,0,0,.22), 0 24px 60px rgba(0,0,0,.40), inset 0 1px 0 rgba(255,255,255,.55);
   text-align:center;
   animation:cardIn .45s cubic-bezier(.22,1,.36,1) both;
 }
+.card::before{
+  content:'';position:absolute;inset:0;border-radius:var(--radius);
+  background:linear-gradient(180deg, rgba(255,255,255,.20) 0%, rgba(255,255,255,0) 40%);
+  pointer-events:none;
+}
+.card > *{position:relative;z-index:1;}
+
+/* ── Glass-mode text: solid, high-contrast ink with a soft lift so it
+   reads cleanly no matter what's behind the frosted panel ── */
+.card .card-title{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.35);}
+.card .card-desc{color:rgba(255,255,255,.88);text-shadow:0 1px 2px rgba(0,0,0,.30);}
+.card .card-footer{border-top-color:rgba(255,255,255,.30);}
+.card .card-footer p{color:rgba(255,255,255,.75);}
+.card .footer-label{color:rgba(255,255,255,.78);}
+.card .card-copyright{color:rgba(255,255,255,.55);}
+.card .card-footer a{color:#fff;text-decoration:underline;text-underline-offset:2px;}
 @keyframes cardIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
 
 .brand-badge{
@@ -140,18 +157,19 @@ body{
 .btn-primary{
   width:100%;height:clamp(42px,6.5vh,48px);
   display:flex;align-items:center;justify-content:center;
-  border-radius:10px;border:none;
-  background:var(--accent);color:#fff;
+  border-radius:10px;border:1px solid rgba(255,255,255,.25);
+  background:linear-gradient(135deg,var(--accent) 0%,#173a8c 100%);color:#fff;
   font-family:var(--font);font-size:14.5px;font-weight:700;
   cursor:pointer;transition:all .15s;position:relative;overflow:hidden;
+  box-shadow:0 8px 20px rgba(37,84,199,.35), inset 0 1px 0 rgba(255,255,255,.25);
 }
-.btn-primary:hover:not(:disabled){background:#1e46ab;}
+.btn-primary:hover:not(:disabled){filter:brightness(1.08);box-shadow:0 10px 24px rgba(37,84,199,.45), inset 0 1px 0 rgba(255,255,255,.3);}
 .btn-primary:active:not(:disabled){transform:translateY(1px);}
 .btn-primary:disabled{opacity:.5;cursor:not-allowed;}
 
 #google-button-container{margin-top:12px;display:none;flex-direction:column;gap:8px;align-items:center;}
 #google-button-container.show{display:flex;}
-#google-button-container p{font-size:11.5px;color:var(--ink3);text-align:center;}
+#google-button-container p{font-size:11.5px;color:rgba(255,255,255,.78);text-align:center;text-shadow:0 1px 2px rgba(0,0,0,.30);}
 
 .card-footer{margin-top:clamp(14px,2.5vh,22px);padding-top:clamp(10px,1.8vh,16px);border-top:1px solid var(--border);}
 .card-footer p{font-size:11.5px;color:var(--ink3);line-height:1.6;text-align:center;}
@@ -160,13 +178,16 @@ body{
 .footer-label{font-size:11.5px;color:var(--ink3);margin-bottom:10px;}
 .footer-icons{display:flex;justify-content:center;gap:14px;}
 .icon-btn{
-  width:38px;height:38px;border-radius:50%;flex-shrink:0;
+  width:40px;height:40px;border-radius:50%;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
-  background:rgba(255,255,255,.55);border:1px solid var(--border2);
-  color:var(--accent);font-size:17px;text-decoration:none;
-  transition:all .15s;
+  background:rgba(255,255,255,.16);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.40);
+  color:#fff;font-size:16.5px;text-decoration:none;
+  box-shadow:0 4px 12px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.25);
+  transition:all .18s;
 }
-.icon-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent);transform:translateY(-1px);}
+.icon-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 18px rgba(37,84,199,.45);}
 .card-copyright{font-size:9px;color:var(--ink3);text-align:center;margin-top:8px;letter-spacing:.01em;opacity:.75;}
 
 /* Generic click ripple */
@@ -193,15 +214,15 @@ body{
 .verify-spinner.error i{color:var(--danger);font-size:18px;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
-.verify-title{font-family:var(--display);font-size:15px;font-weight:700;color:var(--ink);}
-.verify-sub{font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.5;}
+.verify-title{font-family:var(--display);font-size:15px;font-weight:700;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.35);}
+.verify-sub{font-size:12.5px;color:rgba(255,255,255,.85);margin-top:4px;line-height:1.5;text-shadow:0 1px 2px rgba(0,0,0,.30);}
 
 .verify-cancel{
   display:block;margin:20px auto 0;background:none;border:none;
-  font-family:var(--font);font-size:11.5px;color:var(--ink3);
+  font-family:var(--font);font-size:11.5px;color:rgba(255,255,255,.70);
   cursor:pointer;text-decoration:underline;text-underline-offset:2px;
 }
-.verify-cancel:hover{color:var(--ink2);}
+.verify-cancel:hover{color:#fff;}
 
 /* ══════════════════════════════════════════════════════
    OVERLAYS — Access Denied / Access Requested
@@ -285,10 +306,10 @@ body{
             <p class="footer-label">Need help?</p>
             <div class="footer-icons">
               <a href="mailto:afanhaidarzia@gmail.com" class="icon-btn" aria-label="Email us" title="Email us">
-                <i class="ti ti-brand-gmail"></i>
+                <i class="ti ti-mail"></i>
               </a>
               <a href="tel:+971509517012" class="icon-btn" aria-label="Call us" title="Call us">
-                <i class="ti ti-phone"></i>
+                <i class="ti ti-phone-call"></i>
               </a>
             </div>
             <p class="card-copyright">All Rights Reserved by FleetFlow Pro Owner</p>
