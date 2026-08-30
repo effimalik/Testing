@@ -56,141 +56,121 @@
   --radius:16px;
 }
 
-html,body{height:100%;width:100%;font-family:var(--font);color:var(--ink);font-size:14.5px;-webkit-font-smoothing:antialiased;}
-body{background:var(--paper2);}
+html,body{height:100%;width:100%;font-family:var(--font);color:var(--ink);font-size:14.5px;-webkit-font-smoothing:antialiased;overflow:hidden;overscroll-behavior:none;}
+body{
+  /* ── PLACEHOLDER BACKGROUND — swap the url() below for your company image ── */
+  background:
+    linear-gradient(160deg, rgba(10,20,36,.72) 0%, rgba(10,20,36,.55) 55%, rgba(10,20,36,.78) 100%),
+    url('https://picsum.photos/seed/fleetflow-desktop/1920/1080') center/cover no-repeat;
+}
 
 ::selection{background:var(--accent-dim);color:var(--accent);}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px;}
 
 /* ══════════════════════════════════════════════════════
-   SHELL — split screen: brand panel + content panel
+   DESKTOP BACKDROP + MAC-STYLE WINDOW
+   A fixed-size "window" is scaled (via JS) to always fit
+   inside the viewport, so no scrollbar can ever appear.
 ══════════════════════════════════════════════════════ */
-.shell{min-height:100vh;width:100%;display:grid;grid-template-columns:minmax(0,480px) 1fr;}
-@media (max-width:920px){.shell{grid-template-columns:1fr;}}
-
-/* ── Brand panel ── */
-.brand{
-  position:relative;overflow:hidden;
-  background:linear-gradient(165deg,var(--navy) 0%,var(--navy2) 55%,var(--navy3) 100%);
-  color:#fff;display:flex;flex-direction:column;
-  padding:44px 44px 40px;
-}
-@media (max-width:920px){.brand{padding:28px 24px 120px;min-height:280px;}}
-@media (max-width:560px){.brand{padding:24px 20px 96px;min-height:230px;}}
-
-.brand-top{display:flex;align-items:center;gap:11px;position:relative;z-index:3;}
-.brand-mark{
-  width:36px;height:36px;border-radius:10px;flex-shrink:0;
-  background:linear-gradient(135deg,var(--accent) 0%,#173a8c 100%);
+.desktop-bg{
+  height:100%;width:100%;
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 14px rgba(37,84,199,.45);
+  overflow:hidden;
 }
-.brand-mark i{font-size:17px;color:#fff;}
-.brand-name{font-family:var(--display);font-size:16px;font-weight:800;letter-spacing:-.01em;line-height:1.1;}
-.brand-sub{font-size:10.5px;color:rgba(255,255,255,.5);letter-spacing:.08em;text-transform:uppercase;margin-top:2px;}
-
-.brand-mid{position:relative;z-index:3;margin-top:auto;padding-top:40px;}
-.brand-headline{font-family:var(--display);font-size:27px;font-weight:800;line-height:1.28;letter-spacing:-.015em;max-width:360px;}
-.brand-headline .accent{color:#8fb2ff;}
-.brand-copy{font-size:13.5px;color:rgba(255,255,255,.62);line-height:1.65;margin-top:14px;max-width:340px;}
-
-.brand-stats{display:flex;gap:28px;margin-top:32px;position:relative;z-index:3;}
-.bstat-num{font-family:var(--display);font-size:19px;font-weight:800;color:#fff;}
-.bstat-label{font-size:10.5px;color:rgba(255,255,255,.48);letter-spacing:.05em;text-transform:uppercase;margin-top:2px;}
-
-.brand-foot{position:relative;z-index:3;margin-top:36px;font-size:11.5px;color:rgba(255,255,255,.4);}
-
-/* ── Signature element: animated dispatch route across a map grid ── */
-.brand-scene{position:absolute;inset:0;z-index:1;pointer-events:none;}
-.brand-scene::before{
-  content:'';position:absolute;inset:0;
-  background-image:linear-gradient(var(--brand-line) 1px,transparent 1px),linear-gradient(90deg,var(--brand-line) 1px,transparent 1px);
-  background-size:38px 38px;
-  mask-image:radial-gradient(ellipse 90% 70% at 30% 60%, black 30%, transparent 78%);
+.mac-window{
+  width:min(1180px,96vw);height:min(720px,94vh);flex-shrink:0;
+  background:var(--paper2);
+  border-radius:12px;
+  box-shadow:0 40px 100px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08);
+  overflow:hidden;
+  display:flex;flex-direction:column;
 }
-.route-svg{position:absolute;left:-6%;right:-6%;bottom:6%;height:58%;z-index:2;}
-.route-path{fill:none;stroke:url(#routeGrad);stroke-width:2.4;stroke-linecap:round;stroke-dasharray:6 7;opacity:.55;}
-.route-node{fill:#0a1424;stroke:#8fb2ff;stroke-width:2;}
-.route-node.active{fill:#8fb2ff;}
-.route-dot{fill:#ffffff;filter:drop-shadow(0 0 6px rgba(143,178,255,.9));}
-@keyframes travel{ to{ offset-distance:100%; } }
-.route-dot-anim{offset-path:path('M8,150 C70,150 90,60 160,60 S 250,150 320,110 S 420,20 480,50');offset-rotate:0deg;animation:travel 9s linear infinite;}
-@media (prefers-reduced-motion:reduce){.route-dot-anim{animation:none;offset-distance:35%;}}
-
-/* ── Content panel (right) ── */
-.content{
+.mac-titlebar{
+  height:36px;flex-shrink:0;position:relative;
   display:flex;align-items:center;justify-content:center;
-  padding:32px 24px;background:var(--paper2);
+  background:linear-gradient(180deg,#3c3c3e 0%,#2b2b2d 100%);
+  border-bottom:1px solid rgba(0,0,0,.35);
+  user-select:none;
 }
-.panel-inner{width:100%;max-width:380px;}
+.mac-title{
+  font-family:var(--font);font-size:12.5px;font-weight:600;
+  color:rgba(255,255,255,.75);letter-spacing:.01em;
+}
+.mac-body{flex:1;min-height:0;position:relative;overflow:hidden;}
 
-.mobile-brand{display:none;align-items:center;gap:10px;margin-bottom:26px;}
-.mobile-brand .brand-mark{width:32px;height:32px;}
-.mobile-brand .brand-mark i{font-size:15px;}
-.mobile-brand span{font-family:var(--display);font-size:15px;font-weight:800;color:var(--ink);}
-@media (max-width:920px){.mobile-brand{display:flex;}}
+/* ══════════════════════════════════════════════════════
+   AUTH STAGE — single centered card, no split panel
+══════════════════════════════════════════════════════ */
+.auth-stage{
+  height:100%;width:100%;
+  display:flex;align-items:center;justify-content:center;
+  padding:clamp(16px,4vh,32px) clamp(16px,4vw,24px);
+  /* ── PLACEHOLDER BACKGROUND — swap the url() below for your company image ── */
+  background:
+    linear-gradient(160deg, rgba(15,30,55,.55) 0%, rgba(15,30,55,.25) 60%, rgba(15,30,55,.6) 100%),
+    url('https://picsum.photos/seed/fleetflow-window/1600/900') center/cover no-repeat;
+}
 
 .card{
+  width:100%;max-width:360px;
   background:var(--paper);border:1px solid var(--border);border-radius:var(--radius);
-  padding:32px 30px 28px;box-shadow:var(--shadow-card);
+  padding:clamp(28px,5vh,40px) clamp(26px,5vw,36px) clamp(22px,4vh,32px);
+  box-shadow:0 8px 24px rgba(0,0,0,.18), 0 24px 60px rgba(0,0,0,.35);
+  text-align:center;
   animation:cardIn .45s cubic-bezier(.22,1,.36,1) both;
 }
 @keyframes cardIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
-@media (max-width:400px){.card{padding:26px 20px 22px;}}
 
-.card-eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
-.card-title{font-family:var(--display);font-size:22px;font-weight:800;color:var(--ink);letter-spacing:-.015em;}
-.card-desc{font-size:13px;color:var(--ink2);line-height:1.6;margin-top:8px;margin-bottom:26px;}
-.card-desc strong{color:var(--ink);font-weight:600;}
+.brand-badge{
+  width:48px;height:48px;border-radius:12px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent) 0%,#173a8c 100%);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 6px 16px rgba(37,84,199,.35);
+  margin:0 auto clamp(14px,2.5vh,20px);
+}
+.brand-badge i{font-size:21px;color:#fff;}
 
-/* ── Google button ── */
-.btn-google{
-  width:100%;height:48px;
-  display:flex;align-items:center;justify-content:center;gap:10px;
-  border-radius:10px;border:1px solid var(--border2);
-  background:#fff;color:var(--ink);
-  font-family:var(--font);font-size:14px;font-weight:600;
+.card-title{font-family:var(--display);font-size:clamp(18px,3vh,21px);font-weight:800;color:var(--ink);letter-spacing:-.015em;}
+.card-desc{font-size:13px;color:var(--ink2);line-height:1.5;margin-top:clamp(6px,1.2vh,8px);margin-bottom:clamp(18px,3.5vh,28px);}
+
+.btn-primary{
+  width:100%;height:clamp(42px,6.5vh,48px);
+  display:flex;align-items:center;justify-content:center;
+  border-radius:10px;border:none;
+  background:var(--accent);color:#fff;
+  font-family:var(--font);font-size:14.5px;font-weight:700;
   cursor:pointer;transition:all .15s;position:relative;overflow:hidden;
 }
-.btn-google:hover:not(:disabled){border-color:var(--ink3);box-shadow:0 1px 2px rgba(16,24,40,.05),0 0 0 4px var(--accent-dim);}
-.btn-google:active:not(:disabled){transform:translateY(1px);}
-.btn-google:disabled{opacity:.5;cursor:not-allowed;}
-.g-icon{width:19px;height:19px;flex-shrink:0;}
+.btn-primary:hover:not(:disabled){background:#1e46ab;}
+.btn-primary:active:not(:disabled){transform:translateY(1px);}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;}
 
-#google-button-container{margin-top:12px;display:none;flex-direction:column;gap:8px;}
+#google-button-container{margin-top:12px;display:none;flex-direction:column;gap:8px;align-items:center;}
 #google-button-container.show{display:flex;}
 #google-button-container p{font-size:11.5px;color:var(--ink3);text-align:center;}
 
-.security-note{
-  display:flex;gap:9px;align-items:flex-start;margin-top:18px;
-  padding:12px 13px;border-radius:10px;
-  background:var(--paper2);border:1px solid var(--border);
-}
-.security-note i{font-size:14px;color:var(--ink3);flex-shrink:0;margin-top:1px;}
-.security-note p{font-size:11.5px;color:var(--ink2);line-height:1.55;}
-
-.card-footer{margin-top:22px;padding-top:16px;border-top:1px solid var(--border);}
+.card-footer{margin-top:clamp(14px,2.5vh,22px);padding-top:clamp(10px,1.8vh,16px);border-top:1px solid var(--border);}
 .card-footer p{font-size:11.5px;color:var(--ink3);line-height:1.6;text-align:center;}
 .card-footer a{color:var(--accent);text-decoration:none;font-weight:600;}
 .card-footer a:hover{text-decoration:underline;}
 
 /* Generic click ripple */
 .ripple-btn{position:relative;overflow:hidden;}
-.ink-ripple{position:absolute;border-radius:50%;background:rgba(37,84,199,.14);transform:scale(0);pointer-events:none;animation:inkRipple .55s ease-out forwards;}
+.ink-ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.35);transform:scale(0);pointer-events:none;animation:inkRipple .55s ease-out forwards;}
 @keyframes inkRipple{to{transform:scale(2.6);opacity:0;}}
 
 /* ══════════════════════════════════════════════════════
-   VERIFY VIEW — linear progress + step row (replaces panel)
+   VERIFY VIEW — simple centered spinner, no exposed steps
 ══════════════════════════════════════════════════════ */
 .verify-view{display:none;}
-.verify-view.show{display:block;animation:panelIn .3s cubic-bezier(.22,1,.36,1) both;}
+.verify-view.show{display:flex;flex-direction:column;align-items:center;animation:panelIn .3s cubic-bezier(.22,1,.36,1) both;}
 @keyframes panelIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
 
-.verify-head{display:flex;align-items:center;gap:11px;margin-bottom:20px;}
 .verify-spinner{
-  width:34px;height:34px;border-radius:50%;flex-shrink:0;
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;
   border:3px solid var(--accent-dim);border-top-color:var(--accent);
   animation:spin .85s linear infinite;
+  margin-bottom:16px;
 }
 .verify-spinner.success{border:none;background:var(--success-dim);display:flex;align-items:center;justify-content:center;animation:none;}
 .verify-spinner.success i{color:var(--success);font-size:18px;}
@@ -199,27 +179,7 @@ body{background:var(--paper2);}
 @keyframes spin{to{transform:rotate(360deg);}}
 
 .verify-title{font-family:var(--display);font-size:15px;font-weight:700;color:var(--ink);}
-.verify-sub{font-size:12.5px;color:var(--ink2);margin-top:2px;line-height:1.5;}
-
-.progress-track{width:100%;height:6px;border-radius:99px;background:var(--border);overflow:hidden;margin-bottom:18px;}
-.progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent) 0%,var(--accent-line) 100%);width:0%;transition:width .5s cubic-bezier(.22,1,.36,1);}
-.progress-fill.error{background:var(--danger);}
-.progress-fill.success{background:var(--success);}
-
-.step-row{display:flex;justify-content:space-between;gap:4px;}
-.step{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;}
-.step-dot{
-  width:22px;height:22px;border-radius:50%;
-  background:var(--paper2);border:1.5px solid var(--border2);
-  display:flex;align-items:center;justify-content:center;
-  font-size:10px;font-weight:700;color:var(--ink3);
-  transition:all .2s;
-}
-.step-dot.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
-.step-dot.done{background:var(--success-dim);border-color:var(--success);color:var(--success);}
-.step-dot.fail{background:var(--danger-dim);border-color:var(--danger);color:var(--danger);}
-.step-label{font-size:9.5px;color:var(--ink3);font-weight:600;letter-spacing:.01em;line-height:1.3;}
-.step-dot.active + .step-label,.step-dot.done + .step-label{color:var(--ink2);}
+.verify-sub{font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.5;}
 
 .verify-cancel{
   display:block;margin:20px auto 0;background:none;border:none;
@@ -232,7 +192,7 @@ body{background:var(--paper2);}
    OVERLAYS — Access Denied / Access Requested
 ══════════════════════════════════════════════════════ */
 .overlay{
-  position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+  position:absolute;inset:0;display:none;align-items:center;justify-content:center;
   background:rgba(16,24,40,.55);backdrop-filter:blur(3px);z-index:1000;padding:20px;
 }
 .overlay.show{display:flex;}
@@ -263,142 +223,63 @@ body{background:var(--paper2);}
 
 @media (prefers-reduced-motion:reduce){
   .verify-spinner{animation:none;}
-  .progress-fill{transition:none;}
 }
+
+/* ── Graceful degradation on very short / cramped viewports ──
+   Ensures nothing ever needs to scroll: less essential content
+   is hidden before anything could overflow. */
+@media (max-height:480px){
+  .mac-titlebar{height:28px;}
+  .mac-title{font-size:11px;}
+  .brand-badge{width:38px;height:38px;margin-bottom:10px;}
+  .brand-badge i{font-size:17px;}
+}
+@media (max-height:380px){
+  .card-footer{display:none;}
+}
+
 </style>
 </head>
 <body>
 
-<div class="shell">
+<div class="desktop-bg">
+<div class="mac-window" id="mac-window">
+  <div class="mac-titlebar">
+    <div class="mac-title">FleetFlow Pro — Sign In</div>
+  </div>
+  <div class="mac-body">
 
-  <!-- BRAND PANEL -->
-  <aside class="brand">
-    <div class="brand-scene">
-      <svg class="route-svg" viewBox="0 0 480 170" preserveAspectRatio="none" aria-hidden="true">
-        <defs>
-          <linearGradient id="routeGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="#8fb2ff"/>
-            <stop offset="100%" stop-color="#12b5a6"/>
-          </linearGradient>
-        </defs>
-        <path class="route-path" d="M8,150 C70,150 90,60 160,60 S 250,150 320,110 S 420,20 480,50"/>
-        <circle class="route-node active" cx="8" cy="150" r="5"/>
-        <circle class="route-node" cx="160" cy="60" r="5"/>
-        <circle class="route-node" cx="320" cy="110" r="5"/>
-        <circle class="route-node" cx="480" cy="50" r="5"/>
-        <circle class="route-dot route-dot-anim" r="4.5"/>
-      </svg>
-    </div>
-
-    <div class="brand-top">
-      <div class="brand-mark"><i class="ti ti-route-2"></i></div>
-      <div>
-        <div class="brand-name">FleetFlow Pro</div>
-        <div class="brand-sub">HR &amp; Fleet Operations</div>
-      </div>
-    </div>
-
-    <div class="brand-mid">
-      <div class="brand-headline">One platform to run your <span class="accent">people</span> and your <span class="accent">fleet</span>.</div>
-      <p class="brand-copy">Sign in with your company Google account to reach live dispatch data, driver records, and approvals in one place.</p>
-      <div class="brand-stats">
-        <div>
-          <div class="bstat-num">24/7</div>
-          <div class="bstat-label">Live Visibility</div>
-        </div>
-        <div>
-          <div class="bstat-num">SSO</div>
-          <div class="bstat-label">Single Sign-On</div>
-        </div>
-        <div>
-          <div class="bstat-num">100%</div>
-          <div class="bstat-label">Access Logged</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="brand-foot">&copy; <span id="year"></span> FleetFlow Pro. All access attempts are recorded.</div>
-  </aside>
-
-  <!-- CONTENT PANEL -->
-  <main class="content">
-    <div class="panel-inner">
-
-      <div class="mobile-brand">
-        <div class="brand-mark"><i class="ti ti-route-2"></i></div>
-        <span>FleetFlow Pro</span>
-      </div>
+<div class="auth-stage">
 
       <div class="card" id="login-card">
 
         <!-- SIGN-IN VIEW -->
         <div id="signin-view">
-          <div class="card-eyebrow">Fleet Operations Access</div>
-          <div class="card-title">Sign in to your account</div>
-          <p class="card-desc">Use your <strong>company Google account</strong> to continue. Access is limited to approved accounts and verified automatically after sign-in.</p>
+          <div class="brand-badge"><i class="ti ti-route-2"></i></div>
+          <div class="card-title">Sign in to FleetFlow Pro</div>
+          <p class="card-desc">Sign in to access your workspace.</p>
 
-          <button class="btn-google ripple-btn" id="btn-google" onclick="startGoogleLogin()">
-            <svg class="g-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-            Continue with Google
-          </button>
+          <button class="btn-primary ripple-btn" id="btn-google" onclick="startGoogleLogin()">Sign In</button>
 
           <div id="google-button-container">
-            <p>One-tap isn't available in this browser — use the button below:</p>
+            <p>Continue using the button below:</p>
             <div id="g-btn-render"></div>
           </div>
 
-          <div class="security-note">
-            <i class="ti ti-shield-lock"></i>
-            <p>Not approved yet? Signing in still works — your request is logged automatically and an administrator will review it. No separate request form needed.</p>
-          </div>
-
           <div class="card-footer">
-            <p>Trouble signing in? <a href="mailto:support@fleetflowpro.example">Contact your administrator</a></p>
+            <p>Need help? <a href="mailto:support@fleetflowpro.example">Contact support</a></p>
           </div>
         </div>
 
         <!-- VERIFY VIEW — shown during the sign-in flow -->
         <div class="verify-view" id="verify-view">
-          <div class="verify-head">
-            <div class="verify-spinner" id="verify-spinner"></div>
-            <div>
-              <div class="verify-title" id="verify-title">Connecting to Google</div>
-              <div class="verify-sub" id="verify-sub">Loading the sign-in library…</div>
-            </div>
-          </div>
-
-          <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
-
-          <div class="step-row">
-            <div class="step">
-              <div class="step-dot" data-step="1"><i class="ti ti-plug-connected"></i></div>
-              <div class="step-label">Connect</div>
-            </div>
-            <div class="step">
-              <div class="step-dot" data-step="2"><i class="ti ti-user-check"></i></div>
-              <div class="step-label">Authenticate</div>
-            </div>
-            <div class="step">
-              <div class="step-dot" data-step="3"><i class="ti ti-server-2"></i></div>
-              <div class="step-label">Verify Access</div>
-            </div>
-            <div class="step">
-              <div class="step-dot" data-step="4"><i class="ti ti-rocket"></i></div>
-              <div class="step-label">Launch</div>
-            </div>
-          </div>
-
-          <button class="verify-cancel" id="verify-cancel" onclick="cancelFlow()">Cancel and go back</button>
+          <div class="verify-spinner" id="verify-spinner"></div>
+          <div class="verify-title" id="verify-title">Signing in</div>
+          <div class="verify-sub" id="verify-sub">Please wait a moment…</div>
+          <button class="verify-cancel" id="verify-cancel" onclick="cancelFlow()">Cancel</button>
         </div>
 
       </div>
-    </div>
-  </main>
 
 </div>
 
@@ -427,7 +308,7 @@ body{background:var(--paper2);}
     <div class="overlay-chip-wrap">
       <span class="overlay-chip" id="pending-chip"></span>
     </div>
-    <div class="overlay-msg" id="pending-msg">We've logged your sign-in attempt and notified an administrator. You'll be able to sign in as soon as your account is approved.</div>
+    <div class="overlay-msg" id="pending-msg">Your access request has been submitted. You'll be able to sign in once it's approved.</div>
     <div class="overlay-actions">
       <button class="btn-solid" onclick="recheckLogin()">
         <i class="ti ti-refresh"></i> Check Approval Again
@@ -439,9 +320,14 @@ body{background:var(--paper2);}
   </div>
 </div>
 
+  </div><!-- /.mac-body -->
+</div><!-- /.mac-window -->
+</div><!-- /.desktop-bg -->
+
 <script>
 'use strict';
-document.getElementById('year').textContent = new Date().getFullYear();
+const _yearEl = document.getElementById('year');
+if (_yearEl) _yearEl.textContent = new Date().getFullYear();
 
 /* ═══════════════════════════════════════════════════
    CONFIG — single source of truth
@@ -568,7 +454,7 @@ function _showFallbackButton(onCredential) {
 
   container.classList.add('show');
   cancelFlow();
-  setVerifySub('One-tap sign-in is not available in this browser. Use the Google button below to continue.');
+  setVerifySub('Please use the button below to continue.');
 }
 
 /* ═══════════════════════════════════════════════════
@@ -668,7 +554,7 @@ function showDenied(email, msg, title, iconClass) {
   const chip  = document.getElementById('denied-chip');
   if (iconI) iconI.className = 'ti ' + (iconClass || 'ti-shield-x');
   if (t) t.textContent = title || 'Access Denied';
-  if (m) m.textContent = msg   || 'Contact your administrator.';
+  if (m) m.textContent = msg   || 'Contact support.';
   if (cw) cw.style.display = email ? 'block' : 'none';
   if (chip && email) chip.textContent = email;
   document.getElementById('denied-overlay').classList.add('show');
@@ -676,7 +562,7 @@ function showDenied(email, msg, title, iconClass) {
 
 function showPending(email, msg) {
   document.getElementById('pending-chip').textContent = email || '';
-  document.getElementById('pending-msg').textContent  = msg || 'We\u2019ve logged your sign-in attempt and notified an administrator. You\u2019ll be able to sign in as soon as your account is approved.';
+  document.getElementById('pending-msg').textContent  = msg || 'Your access request has been submitted. You\u2019ll be able to sign in once it\u2019s approved.';
   document.getElementById('pending-overlay').classList.add('show');
 }
 
@@ -727,26 +613,19 @@ async function startGoogleLogin() {
   if (btn) btn.disabled = true;
   resetProgress(); showVerify();
 
-  setStep(1, 'active');
-  setVerifyStatus('Connecting to Google', 'Loading the sign-in library…');
-  setProgress(12);
+  setVerifyStatus('Signing in', 'Please wait a moment…');
 
   try {
     await loadGSI();
   } catch (e) {
     if (myToken !== flowToken) return;
-    setStep(1, 'fail');
-    setVerifyStatus('Connection Failed', e.message || 'Could not load Google Sign-In. Check your internet connection and try again.', 'error');
-    setProgress(12, 'error');
+    setVerifyStatus('Connection Failed', 'Please check your internet connection and try again.', 'error');
     if (btn) btn.disabled = false;
     return;
   }
   if (myToken !== flowToken) return;
-  setStep(1, 'done'); setProgress(25);
 
-  setStep(2, 'active');
-  setVerifyStatus('Retrieving Your Account', 'Waiting for your Google credential…');
-  setProgress(40);
+  setVerifyStatus('Signing in', 'Waiting for confirmation…');
   let idToken = null;
 
   try {
@@ -754,9 +633,7 @@ async function startGoogleLogin() {
   } catch (e) {
     if (myToken !== flowToken) return;
     if (e && e.type === 'user_cancel') { resetToSignIn(); return; }
-    setStep(2, 'fail');
-    setVerifyStatus('Sign-In Failed', (e && e.message) || 'Google sign-in failed. Please try again.', 'error');
-    setProgress(40, 'error');
+    setVerifyStatus('Sign-In Failed', 'Please try again.', 'error');
     if (btn) btn.disabled = false;
     return;
   }
@@ -764,38 +641,27 @@ async function startGoogleLogin() {
 
   const fbCont = document.getElementById('google-button-container');
   if (fbCont) fbCont.classList.remove('show');
-  setStep(2, 'done'); setProgress(55);
 
-  setStep(3, 'active');
-  setVerifyStatus('Checking Access', 'Verifying with FleetFlow servers…');
-  setProgress(70);
+  setVerifyStatus('Verifying', 'Checking your account…');
   let result = null;
 
   try {
     result = await verifyWithAppsScript(idToken);
   } catch (e) {
     if (myToken !== flowToken) return;
-    setStep(3, 'fail');
-    setVerifyStatus('Server Error', (e && e.message) || 'Could not reach the verification server. Please try again.', 'error');
-    setProgress(70, 'error');
+    setVerifyStatus('Something Went Wrong', 'Please try again.', 'error');
     if (btn) btn.disabled = false;
     return;
   }
   if (myToken !== flowToken) return;
-  setStep(3, 'done'); setProgress(82);
-
-  setStep(4, 'active');
   await sleep(250);
   if (myToken !== flowToken) return;
 
   const status = result && result.status;
 
   if (!result || !result.allowed) {
-    setStep(4, 'fail');
-
     if (status === 'pending') {
-      setVerifyStatus('Request Logged', 'Awaiting administrator approval…');
-      setProgress(82, 'error');
+      setVerifyStatus('Request Submitted', 'Awaiting approval…');
       await sleep(300);
       if (myToken !== flowToken) return;
       hideVerify();
@@ -805,34 +671,25 @@ async function startGoogleLogin() {
     }
 
     setVerifyStatus('Access Denied', 'This account is not authorised.', 'error');
-    setProgress(82, 'error');
     await sleep(300);
     if (myToken !== flowToken) return;
     hideVerify();
     showDenied(
       result && result.email  ? result.email  : null,
-      result && result.reason ? result.reason : 'Your account is not authorised to access FleetFlow Pro. Contact your administrator.',
+      result && result.reason ? result.reason : 'Your account is not authorised to access FleetFlow Pro. Contact support.',
       result && result.title  ? result.title  : 'Access Denied',
       status === 'inactive' ? 'ti-user-off' : 'ti-shield-x'
     );
     if (btn) btn.disabled = false;
     return;
   }
-  setStep(4, 'done'); setProgress(92);
 
-  setVerifyStatus('Access Granted', 'Opening FleetFlow Pro…', 'success');
-  setProgress(100, 'success');
+  setVerifyStatus('Access Granted', 'Opening your workspace…', 'success');
   await sleep(450);
   if (myToken !== flowToken) return;
 
   if (!result.sessionId || !result.token || !result.email) {
-    setVerifyStatus('Session Error',
-      'Server response is missing required fields: ' +
-      (!result.sessionId ? 'sessionId ' : '') +
-      (!result.token     ? 'token '     : '') +
-      (!result.email     ? 'email'      : '') +
-      '. Please contact your administrator.', 'error');
-    setProgress(100, 'error');
+    setVerifyStatus('Something Went Wrong', 'Please try again or contact support.', 'error');
     if (btn) btn.disabled = false;
     return;
   }
@@ -853,13 +710,12 @@ async function startGoogleLogin() {
   }
 
   if (!sessionCreated) {
-    setVerifyStatus('Session Error', 'Could not create a local session. Try using a different browser or disable private/incognito mode (sessionStorage must be available).', 'error');
-    setProgress(100, 'error');
+    setVerifyStatus('Something Went Wrong', 'Please try again or contact support.', 'error');
     if (btn) btn.disabled = false;
     return;
   }
 
-  setVerifyStatus('Preparing Portal', 'Loading your workspace…');
+  setVerifyStatus('Almost There', 'Loading your workspace…');
   await sleep(250);
 
   try {
@@ -870,7 +726,6 @@ async function startGoogleLogin() {
     console.warn('[Login] fetchPermissions failed — will retry on index.html');
   }
 
-  setVerifySub('Pre-loading data…');
   if (window.AdminPro && typeof window.AdminPro.warmIfEmpty === 'function') {
     try {
       await AdminPro.warmIfEmpty();
