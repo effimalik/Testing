@@ -155,7 +155,7 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   --red:#f85149;--red-dim:rgba(248,81,73,.12);
   --purple:#a371f7;--purple-dim:rgba(163,113,247,.12);
   --orange:#f0883e;--orange-dim:rgba(240,136,62,.12);
-  --icon-bar-w:56px;--sub-bar-w:220px;--icon-bar-h:68px;
+  --icon-bar-w:56px;--sub-bar-w:220px;--sub-bar-w-collapsed:60px;--icon-bar-h:68px;
   --topbar-h:52px;
   --radius:8px;--radius-lg:12px;
   --font:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
@@ -523,15 +523,22 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   display:flex;flex-direction:row;align-items:stretch;justify-content:center;
   padding:6px 10px;gap:4px;
   flex-shrink:0;z-index:110;position:relative;
-  overflow-x:auto;overflow-y:hidden;
-  scrollbar-width:none;
   margin:0;
   border-radius:0;
   transition:background .2s,border-color .2s;
 }
-#icon-bar::-webkit-scrollbar{display:none;}
+/* Scrollable group of primary items — this is the part that scrolls when
+   items overflow; the bar itself (and the pinned Admin button) never move */
+.ib-scroll{
+  flex:1;min-width:0;
+  display:flex;flex-direction:row;align-items:stretch;justify-content:center;
+  gap:4px;
+  overflow-x:auto;overflow-y:hidden;
+  scrollbar-width:none;
+}
+.ib-scroll::-webkit-scrollbar{display:none;}
 .ib-divider{display:none;}
-.ib-spacer{flex:0 0 18px;}
+.ib-spacer{display:none;}
 .ib-btn{
   position:relative;
   min-width:56px;
@@ -544,6 +551,14 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 }
 .ib-btn:hover{background:var(--surface);color:var(--text);}
 .ib-btn.active{background:var(--accent-dim);color:var(--accent);}
+/* Admin — always pinned to the right edge of the bar, outside the
+   scrollable group, with a divider to set it apart */
+.ib-btn.ib-pinned{
+  flex-shrink:0;
+  margin-left:6px;padding-left:14px;
+  border-left:1px solid var(--border);
+  border-radius:0 12px 12px 0;
+}
 .ib-tip{
   position:static;
   transform:none;
@@ -567,8 +582,9 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 }
 
 /* ─── SUB MENU — docked left sidebar (Apple-style, e.g. Mail / Finder) ───
-   Part of normal layout flow, sits beside the main content area and
-   collapses (width → 0) rather than floating over anything. */
+   Part of normal layout flow, sits beside the main content area. Instead
+   of disappearing, "collapsed" shrinks it down to an icon-only rail
+   (same idea as macOS's collapsed Finder sidebar) so items stay reachable. */
 #sub-bar{
   width:var(--sub-bar-w);
   min-width:var(--sub-bar-w);
@@ -579,18 +595,28 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   display:flex;flex-direction:column;
   overflow:hidden;
   flex-shrink:0;z-index:110;position:relative;
-  transition:width .18s ease,min-width .18s ease,opacity .15s ease,border-color .18s ease;
+  transition:width .18s ease,min-width .18s ease,max-width .18s ease,border-color .18s ease;
 }
 #sub-bar.collapsed{
-  width:0;min-width:0;max-width:0;
-  opacity:0;border-right-color:transparent;pointer-events:none;
+  width:var(--sub-bar-w-collapsed);
+  min-width:var(--sub-bar-w-collapsed);
+  max-width:var(--sub-bar-w-collapsed);
 }
+#sub-bar.collapsed .sb2-header{justify-content:center;padding:12px 4px;}
+#sub-bar.collapsed .sb2-header span,
+#sub-bar.collapsed .sb2-section,
+#sub-bar.collapsed .sb2-item-label,
+#sub-bar.collapsed .sb2-badge{display:none;}
+#sub-bar.collapsed .sb2-nav{padding:8px 6px;}
+#sub-bar.collapsed .sb2-item{justify-content:center;padding:10px 0;gap:0;}
+#sub-bar.collapsed .sb2-item i{font-size:17px;}
 .sb2-header{
   padding:12px 10px 12px 16px;
   font-size:13px;font-weight:700;
   color:var(--text);
   border-bottom:1px solid var(--border);flex-shrink:0;white-space:nowrap;
   display:flex;align-items:center;gap:9px;
+  transition:padding .18s ease,justify-content .18s ease;
 }
 .sb2-header i{font-size:16px;color:var(--accent);flex-shrink:0;}
 .sb2-header span{flex:1;overflow:hidden;text-overflow:ellipsis;}
@@ -601,7 +627,7 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   font-size:14px;cursor:pointer;transition:all .15s;
 }
 .sb2-close:hover{background:var(--surface2);color:var(--text);}
-.sb2-nav{overflow-y:auto;padding:8px;min-height:0;flex:1;}
+.sb2-nav{overflow-y:auto;padding:8px;min-height:0;flex:1;transition:padding .18s ease;}
 .sb2-nav::-webkit-scrollbar{width:3px;}
 .sb2-nav::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
 .sb2-section{
@@ -646,18 +672,18 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 @media(max-width:720px){
   .tb-app{display:none;}
 }
-/* Below this width, the docked sidebar becomes an overlay (like Apple Mail
-   on a compact width) instead of squeezing the content area */
+/* Below this width, the *expanded* sidebar becomes an overlay (like Apple
+   Mail on a compact width) instead of squeezing the content area; the
+   collapsed icon-only rail stays docked in-flow since it's already slim */
 @media(max-width:640px){
   .body-row{position:relative;}
-  #sub-bar{
+  #sub-bar:not(.collapsed){
     position:absolute;top:0;left:0;bottom:0;
     width:min(var(--sub-bar-w),calc(100vw - 40px));
     min-width:0;max-width:none;
     box-shadow:var(--shadow-lg);
     z-index:200;
   }
-  #sub-bar.collapsed{box-shadow:none;}
 }
 @media(max-width:520px){
   :root{--icon-bar-w:44px;--topbar-h:44px;--icon-bar-h:60px;}
@@ -1134,8 +1160,8 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
       <div class="sb2-header">
         <i class="ti ti-users" id="sb2-icon"></i>
         <span id="sb2-title">Employees</span>
-        <button class="sb2-close" onclick="toggleSidebar()" title="Collapse" aria-label="Collapse menu">
-          <i class="ti ti-chevron-left"></i>
+        <button class="sb2-close" id="sb2-close-btn" onclick="toggleSidebar()" title="Collapse" aria-label="Collapse menu">
+          <i class="ti ti-chevron-left" id="sb2-close-icon"></i>
         </button>
       </div>
       <div class="sb2-nav" id="sb2-nav"></div>
@@ -1150,9 +1176,12 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 
   </div>
 
-  <!-- BOTTOM TAB BAR — main menu, iOS/macOS dock style, never hides, always scrollable -->
+  <!-- BOTTOM TAB BAR — main menu, iOS/macOS dock style, never hides.
+       Primary items scroll if they overflow; Admin stays pinned to the
+       right edge at all times. -->
   <nav id="icon-bar" aria-label="Navigation">
 
+    <div class="ib-scroll" id="ib-scroll">
 		<button class="ib-btn active" id="ib-emp" onclick="ibOpen('ib-emp',this)" title="Employees">
         <i class="ti ti-users"></i><span class="ib-tip">Employees</span>
       </button>
@@ -1176,12 +1205,11 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
       <button class="ib-btn" id="ib-payroll" onclick="ibOpen('ib-payroll',this)" title="Payroll">
         <i class="ti ti-report-money"></i><span class="ib-tip">Payroll</span>
       </button>
+    </div>
 
-      <div class="ib-spacer"></div>
-
-      <button class="ib-btn" id="ib-admin" onclick="ibOpen('ib-admin',this)" title="Admin">
-        <i class="ti ti-settings"></i><span class="ib-tip">Admin</span>
-      </button>
+    <button class="ib-btn ib-pinned" id="ib-admin" onclick="ibOpen('ib-admin',this)" title="Admin">
+      <i class="ti ti-settings"></i><span class="ib-tip">Admin</span>
+    </button>
   </nav>
 </div>
 
@@ -1606,25 +1634,33 @@ function _applyPermissions() {
   return firstAllowed;
 }
 
-/* ── Sidebar toggle — collapses/expands the docked left sub-menu ── */
+/* ── Sidebar toggle — collapses the docked left sub-menu down to an
+   icon-only rail (like a collapsed macOS Finder sidebar), or expands
+   it back to full width with labels. Never fully hides it. ── */
 function toggleSidebar() {
   sidebarVisible = !sidebarVisible;
   const sb = document.getElementById('sub-bar');
   const appZone = document.getElementById('tb-app-zone');
+  const closeIcon = document.getElementById('sb2-close-icon');
+  const closeBtn = document.getElementById('sb2-close-btn');
   if (sidebarVisible) {
     sb.classList.remove('collapsed');
     sb.setAttribute('aria-hidden', 'false');
     appZone.classList.remove('collapsed');
+    if (closeIcon) closeIcon.className = 'ti ti-chevron-left';
+    if (closeBtn) closeBtn.title = 'Collapse';
   } else {
     sb.classList.add('collapsed');
-    sb.setAttribute('aria-hidden', 'true');
+    sb.setAttribute('aria-hidden', 'false');
     appZone.classList.add('collapsed');
+    if (closeIcon) closeIcon.className = 'ti ti-chevron-right';
+    if (closeBtn) closeBtn.title = 'Expand';
   }
 }
 
-/* On very small screens the sidebar overlays the content (see CSS); clicking
-   outside it while it's open in that mode should close it, same as any
-   Apple-style compact-width sidebar/sheet. */
+/* On very small screens the expanded sidebar overlays the content (see
+   CSS); clicking outside it while expanded in that mode collapses it
+   back to the icon-only rail, same as any Apple-style compact sidebar. */
 function _onSidebarOutsideClick(e) {
   if (window.innerWidth > 640) return;
   const sb = document.getElementById('sub-bar');
@@ -1664,8 +1700,8 @@ function ibOpen(id, btn) {
     return `
       <div class="sb2-section">${g.label}</div>
       ${visibleItems.map(item => `
-        <div class="sb2-item" onclick="loadPage('${item.file}',this,'${item.label}','${item.icon||sec.icon}','${item.sub}','${sec.pillBg.replace(/'/g,'"')}','${sec.pillColor}')">
-          <i class="ti ${item.icon}"></i>${item.label}
+        <div class="sb2-item" title="${item.label}" onclick="loadPage('${item.file}',this,'${item.label}','${item.icon||sec.icon}','${item.sub}','${sec.pillBg.replace(/'/g,'"')}','${sec.pillColor}')">
+          <i class="ti ${item.icon}"></i><span class="sb2-item-label">${item.label}</span>
           ${item.badge ? '<span class="sb2-badge">!</span>' : ''}
         </div>`).join('')}
     `;
