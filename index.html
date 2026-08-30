@@ -247,7 +247,6 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   height:100dvh;
   width:100%;
   inset:0; 
-  padding-right:var(--icon-rail-w);
 }
 	
 
@@ -512,33 +511,34 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 /* ═══ BODY ROW ═══ */
 .body-row{flex:1;display:flex;overflow:hidden;min-height:0;}
 
-/* ─── VERTICAL ICON RAIL — its own fixed column pinned to the right edge,
-   full viewport height, always on top (z-index above topbar/content so
-   it's never covered). Still a genuine floating dock pill inside that
-   column (no full-bar background) — just rotated to vertical. ─── */
+/* ─── BOTTOM ICON DOCK — a fixed overlay pinned to the bottom of the
+   viewport. Being position:fixed with no height contribution to .shell's
+   flex flow, it never shrinks or shifts the topbar/sidebar/content —
+   those keep exactly the size/position they'd have without it. No
+   background, no border, no wrapping "pill" box — just bare floating
+   icons. The outer row is pointer-events:none (fully transparent, clicks
+   pass straight through to the content underneath); only the icons
+   themselves re-enable pointer-events so they stay clickable. ─── */
 #icon-bar{
-  position:fixed;top:0;right:0;bottom:0;
-  width:var(--icon-rail-w);min-width:var(--icon-rail-w);
-  height:100%;
+  position:fixed;left:0;right:0;bottom:0;
+  width:100%;
   background:transparent;border:none;
   display:flex;align-items:center;justify-content:center;
-  padding:16px 10px;gap:10px;
+  padding:0 0 14px;gap:10px;
   z-index:400;
   margin:0;
+  pointer-events:none;
 }
-/* The actual floating dock pill — only this has a background. Spans
-   almost the full column height (a long vertical dock) but keeps a
-   margin top/bottom so it visually floats rather than touching edges. */
 .ib-scroll{
-  display:flex;flex-direction:column;align-items:center;
-  gap:8px;padding:12px 8px;
-  background:var(--bg2);
-  border:1px solid var(--border);
-  border-radius:24px;
-  box-shadow:var(--shadow-lg);
-  width:100%;height:100%;
-  overflow:visible;
+  display:flex;flex-direction:row;align-items:center;
+  gap:8px;padding:0;
+  background:transparent;border:none;box-shadow:none;border-radius:0;
+  max-width:100%;min-width:0;
+  overflow-x:auto;overflow-y:visible;
+  scrollbar-width:none;
+  pointer-events:auto;
 }
+.ib-scroll::-webkit-scrollbar{display:none;}
 .ib-divider{display:none;}
 .ib-spacer{display:none;}
 .ib-btn{
@@ -549,10 +549,11 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   cursor:pointer;
   display:flex;align-items:center;justify-content:center;
   font-size:21px;
+  box-shadow:var(--shadow-md);
   transition:transform .15s ease,background .15s,color .15s,box-shadow .15s;
 }
-.ib-btn:hover{background:var(--ib-color-dim,var(--surface));color:var(--ib-color,var(--text));transform:translateX(-5px) scale(1.07);box-shadow:var(--shadow-md);}
-.ib-btn.active{background:var(--ib-color-dim,var(--accent-dim));color:var(--ib-color,var(--accent));box-shadow:0 0 0 1px var(--ib-color,var(--accent)) inset;}
+.ib-btn:hover{background:var(--ib-color-dim,var(--surface));color:var(--ib-color,var(--text));transform:translateY(-5px) scale(1.07);box-shadow:var(--shadow-lg);}
+.ib-btn.active{background:var(--ib-color-dim,var(--accent-dim));color:var(--ib-color,var(--accent));box-shadow:0 0 0 1px var(--ib-color,var(--accent)) inset,var(--shadow-md);}
 /* Per-icon accent colors — a more colorful, "attractive" dock instead of
    a single flat tone for every button */
 #ib-emp{--ib-color:var(--accent);--ib-color-dim:var(--accent-dim);}
@@ -561,11 +562,10 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 #ib-adv{--ib-color:var(--amber);--ib-color-dim:var(--amber-dim);}
 #ib-docs{--ib-color:var(--orange);--ib-color-dim:var(--orange-dim);}
 #ib-payroll{--ib-color:var(--red);--ib-color-dim:var(--red-dim);}
-/* Tooltip label — appears to the LEFT of the icon (rail is on the right
-   edge, so tips must open inward, toward the page) */
+/* Tooltip label — appears ABOVE the icon, like a real mac dock */
 .ib-tip{
-  position:absolute;right:calc(100% + 10px);top:50%;
-  transform:translateY(-50%);
+  position:absolute;bottom:calc(100% + 10px);left:50%;
+  transform:translateX(-50%);
   background:var(--surface2);color:var(--text);
   font-size:11px;font-weight:600;padding:4px 9px;border-radius:6px;
   white-space:nowrap;pointer-events:none;opacity:0;
@@ -576,41 +576,41 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 
 /* icon-bar adaptive: shrink when very tight */
 @media(max-width:520px){
-  :root,[data-theme]{--icon-rail-w:60px;}
+  #icon-bar{padding:0 0 10px;}
   .ib-btn{width:40px;height:40px;font-size:17px;border-radius:11px;}
 }
 @media(max-height:420px){
-  .ib-scroll{gap:5px;padding:8px 6px;}
+  #icon-bar{padding:0 0 6px;}
   .ib-btn{width:36px;height:36px;font-size:16px;}
   .ib-tip{display:none;}
 }
 
-/* ─── ADMIN — lives inside the same vertical dock as the last item,
-   pinned to the bottom of the column via margin-top:auto. Its item list
-   is hidden by default and only unfolds while hovering this button/panel,
-   auto-hiding again 5s after the hover leaves. ─── */
+/* ─── ADMIN — the last item in the same floating dock (no separate
+   pinned corner button anymore). Its item list is hidden by default and
+   only unfolds while hovering this button/panel, auto-hiding again 5s
+   after the hover leaves. ─── */
 .admin-dock-wrap{
-  margin-top:auto;position:relative;
+  position:relative;
   display:flex;flex-direction:column;align-items:center;
 }
 .admin-fab{--ib-color:var(--text2);--ib-color-dim:var(--surface2);}
 .admin-fab.active{--ib-color:var(--accent);--ib-color-dim:var(--accent-dim);}
 /* List — hidden by default, revealed only while hovering the corner area,
-   auto-hides again after the hover-out delay (handled in JS). Opens to
-   the LEFT since the dock now sits flush against the right edge. */
+   auto-hides again after the hover-out delay (handled in JS). Opens
+   upward, above the gear icon. */
 .admin-flyout{
-  position:absolute;right:calc(100% + 12px);bottom:0;
+  position:absolute;right:0;bottom:calc(100% + 12px);
   width:210px;max-height:min(60vh,420px);
   background:var(--bg2);border:1px solid var(--border);
   border-radius:14px;box-shadow:var(--shadow-lg);
   overflow:hidden;display:flex;flex-direction:column;
   opacity:0;visibility:hidden;pointer-events:none;
-  transform:translateX(8px) scale(.97);transform-origin:bottom right;
+  transform:translateY(8px) scale(.97);transform-origin:bottom right;
   transition:opacity .16s ease,transform .16s ease,visibility 0s linear .16s;
 }
 .admin-flyout.open{
   opacity:1;visibility:visible;pointer-events:auto;
-  transform:translateX(0) scale(1);
+  transform:translateY(0) scale(1);
   transition:opacity .16s ease,transform .16s ease;
 }
 .admin-flyout-header{
@@ -1219,9 +1219,10 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 
   </div>
 
-  <!-- VERTICAL ICON RAIL — main menu, genuine macOS-dock style: a fixed
-       full-height column on the right edge, always on top of the page,
-       with a floating pill of icons (no full-bar background). -->
+  <!-- BOTTOM ICON DOCK — main menu, fixed overlay pinned to the bottom of
+       the viewport. Floats over the page without taking layout space, so
+       it never shifts or shrinks the topbar/sidebar/content. No
+       background/border box around it — just bare floating icons. -->
   <nav id="icon-bar" aria-label="Navigation">
 
     <div class="ib-scroll" id="ib-scroll">
@@ -1249,12 +1250,11 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
         <i class="ti ti-report-money"></i><span class="ib-tip">Payroll</span>
       </button>
 
-      <!-- ADMIN — pinned to the bottom of this same vertical dock via
-           margin-top:auto. Its item list is hidden by default and only
-           unfolds while hovering this button/panel (auto-hides again a
-           few seconds after the hover leaves). Clicking the gear still
-           opens the Admin section into the main sidebar + content frame
-           as before. -->
+      <!-- ADMIN — last item in this same floating dock. Its item list is
+           hidden by default and only unfolds while hovering this
+           button/panel (auto-hides again a few seconds after the hover
+           leaves). Clicking the gear still opens the Admin section into
+           the main sidebar + content frame as before. -->
       <div class="admin-dock-wrap" id="admin-dock-wrap">
         <div class="admin-flyout" id="admin-flyout" role="menu" aria-hidden="true">
           <div class="admin-flyout-header"><i class="ti ti-settings"></i> Admin</div>
