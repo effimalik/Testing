@@ -113,7 +113,11 @@ body{
 
 .card{
   width:100%;max-width:360px;
-  background:var(--paper);border:1px solid var(--border);border-radius:var(--radius);
+  background:rgba(255,255,255,.62);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);
+  backdrop-filter:blur(18px) saturate(140%);
+  border:1px solid rgba(255,255,255,.4);
+  border-radius:var(--radius);
   padding:clamp(28px,5vh,40px) clamp(26px,5vw,36px) clamp(22px,4vh,32px);
   box-shadow:0 8px 24px rgba(0,0,0,.18), 0 24px 60px rgba(0,0,0,.35);
   text-align:center;
@@ -153,6 +157,16 @@ body{
 .card-footer p{font-size:11.5px;color:var(--ink3);line-height:1.6;text-align:center;}
 .card-footer a{color:var(--accent);text-decoration:none;font-weight:600;}
 .card-footer a:hover{text-decoration:underline;}
+.footer-label{font-size:11.5px;color:var(--ink3);margin-bottom:10px;}
+.footer-icons{display:flex;justify-content:center;gap:14px;}
+.icon-btn{
+  width:38px;height:38px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.55);border:1px solid var(--border2);
+  color:var(--accent);font-size:17px;text-decoration:none;
+  transition:all .15s;
+}
+.icon-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent);transform:translateY(-1px);}
 .card-copyright{font-size:9px;color:var(--ink3);text-align:center;margin-top:8px;letter-spacing:.01em;opacity:.75;}
 
 /* Generic click ripple */
@@ -268,7 +282,15 @@ body{
           </div>
 
           <div class="card-footer">
-            <p>Need help? <a href="tel:+971509517012">+971 50 951 7012</a> &middot; <a href="mailto:afanhaidarzia@gmail.com">afanhaidarzia@gmail.com</a></p>
+            <p class="footer-label">Need help?</p>
+            <div class="footer-icons">
+              <a href="mailto:afanhaidarzia@gmail.com" class="icon-btn" aria-label="Email us" title="Email us">
+                <i class="ti ti-brand-gmail"></i>
+              </a>
+              <a href="tel:+971509517012" class="icon-btn" aria-label="Call us" title="Call us">
+                <i class="ti ti-phone"></i>
+              </a>
+            </div>
             <p class="card-copyright">All Rights Reserved by FleetFlow Pro Owner</p>
           </div>
         </div>
