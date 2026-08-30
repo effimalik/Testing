@@ -511,32 +511,31 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 /* ═══ BODY ROW ═══ */
 .body-row{flex:1;display:flex;overflow:hidden;min-height:0;}
 
-/* ─── BOTTOM ICON DOCK — a fixed overlay pinned to the bottom of the
-   viewport. Being position:fixed with no height contribution to .shell's
-   flex flow, it never shrinks or shifts the topbar/sidebar/content —
-   those keep exactly the size/position they'd have without it. No
-   background, no border, no wrapping "pill" box — just bare floating
-   icons. The outer row is pointer-events:none (fully transparent, clicks
-   pass straight through to the content underneath); only the icons
-   themselves re-enable pointer-events so they stay clickable. ─── */
+/* ─── BOTTOM NOTCH DOCK — a solid, opaque "notch" that hangs off the
+   bottom edge of the viewport: flush with bottom (no gap, no border on
+   that edge so it reads as one continuous piece with the screen edge),
+   rounded only on the top two corners, and sized to exactly hug its
+   icons (not full width). position:fixed with an intrinsic width means
+   it takes no space in .shell's flex flow — the topbar/sidebar/content
+   keep their full natural size, unaffected by its presence. ─── */
 #icon-bar{
-  position:fixed;left:0;right:0;bottom:0;
-  width:100%;
+  position:fixed;left:50%;bottom:0;
+  transform:translateX(-50%);
+  width:max-content;
   background:transparent;border:none;
-  display:flex;align-items:center;justify-content:center;
-  padding:0 0 14px;gap:10px;
   z-index:400;
   margin:0;
-  pointer-events:none;
 }
 .ib-scroll{
   display:flex;flex-direction:row;align-items:center;
-  gap:8px;padding:0;
-  background:transparent;border:none;box-shadow:none;border-radius:0;
-  max-width:100%;min-width:0;
+  gap:8px;padding:11px 16px 15px;
+  background:var(--bg2);
+  border:1px solid var(--border);border-bottom:none;
+  border-radius:22px 22px 0 0;
+  box-shadow:var(--shadow-lg);
+  max-width:calc(100vw - 24px);
   overflow-x:auto;overflow-y:visible;
   scrollbar-width:none;
-  pointer-events:auto;
 }
 .ib-scroll::-webkit-scrollbar{display:none;}
 .ib-divider{display:none;}
@@ -549,11 +548,10 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   cursor:pointer;
   display:flex;align-items:center;justify-content:center;
   font-size:21px;
-  box-shadow:var(--shadow-md);
   transition:transform .15s ease,background .15s,color .15s,box-shadow .15s;
 }
-.ib-btn:hover{background:var(--ib-color-dim,var(--surface));color:var(--ib-color,var(--text));transform:translateY(-5px) scale(1.07);box-shadow:var(--shadow-lg);}
-.ib-btn.active{background:var(--ib-color-dim,var(--accent-dim));color:var(--ib-color,var(--accent));box-shadow:0 0 0 1px var(--ib-color,var(--accent)) inset,var(--shadow-md);}
+.ib-btn:hover{background:var(--ib-color-dim,var(--surface));color:var(--ib-color,var(--text));transform:translateY(-5px) scale(1.07);box-shadow:var(--shadow-md);}
+.ib-btn.active{background:var(--ib-color-dim,var(--accent-dim));color:var(--ib-color,var(--accent));box-shadow:0 0 0 1px var(--ib-color,var(--accent)) inset;}
 /* Per-icon accent colors — a more colorful, "attractive" dock instead of
    a single flat tone for every button */
 #ib-emp{--ib-color:var(--accent);--ib-color-dim:var(--accent-dim);}
@@ -576,19 +574,19 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 
 /* icon-bar adaptive: shrink when very tight */
 @media(max-width:520px){
-  #icon-bar{padding:0 0 10px;}
+  .ib-scroll{padding:8px 10px 12px;gap:6px;}
   .ib-btn{width:40px;height:40px;font-size:17px;border-radius:11px;}
 }
 @media(max-height:420px){
-  #icon-bar{padding:0 0 6px;}
+  .ib-scroll{padding:6px 8px 8px;gap:5px;}
   .ib-btn{width:36px;height:36px;font-size:16px;}
   .ib-tip{display:none;}
 }
 
-/* ─── ADMIN — the last item in the same floating dock (no separate
-   pinned corner button anymore). Its item list is hidden by default and
-   only unfolds while hovering this button/panel, auto-hiding again 5s
-   after the hover leaves. ─── */
+/* ─── ADMIN — the last item in the same notch dock (no separate pinned
+   corner button). Its item list is hidden by default and only unfolds
+   while hovering this button/panel, auto-hiding again 5s after the
+   hover leaves. ─── */
 .admin-dock-wrap{
   position:relative;
   display:flex;flex-direction:column;align-items:center;
@@ -638,7 +636,7 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   display:flex;flex-direction:column;
   overflow:hidden;
   flex-shrink:0;z-index:110;position:relative;
-  transition:width .18s ease,min-width .18s ease,max-width .18s ease,border-color .18s ease;
+  transition:width .24s cubic-bezier(.4,0,.2,1),min-width .24s cubic-bezier(.4,0,.2,1),max-width .24s cubic-bezier(.4,0,.2,1),border-color .24s ease;
 }
 #sub-bar.collapsed{
   width:var(--sub-bar-w-collapsed);
@@ -649,19 +647,30 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 #sub-bar.collapsed .sb2-header span,
 #sub-bar.collapsed .sb2-section,
 #sub-bar.collapsed .sb2-item-label,
-#sub-bar.collapsed .sb2-badge{display:none;}
+#sub-bar.collapsed .sb2-badge{
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .12s ease,visibility 0s linear .12s;
+}
 #sub-bar.collapsed .sb2-nav{padding:8px 6px;}
 #sub-bar.collapsed .sb2-item{justify-content:center;padding:10px 0;gap:0;}
 #sub-bar.collapsed .sb2-item i{font-size:17px;}
+#sub-bar.collapsed .sb2-close i{transform:rotate(180deg);}
 .sb2-header{
   padding:12px 10px 12px 16px;
   font-size:13px;font-weight:700;
   color:var(--text);
   border-bottom:1px solid var(--border);flex-shrink:0;white-space:nowrap;
   display:flex;align-items:center;gap:9px;
-  transition:padding .18s ease,justify-content .18s ease;
+  transition:padding .24s cubic-bezier(.4,0,.2,1),justify-content .24s cubic-bezier(.4,0,.2,1);
 }
 .sb2-header i{font-size:16px;color:var(--accent);flex-shrink:0;}
+.sb2-header span,
+.sb2-section,
+.sb2-item-label,
+.sb2-badge{
+  opacity:1;visibility:visible;
+  transition:opacity .18s ease .06s,visibility 0s linear 0s;
+}
 .sb2-header span{flex:1;overflow:hidden;text-overflow:ellipsis;}
 .sb2-close{
   flex-shrink:0;width:24px;height:24px;border-radius:7px;
@@ -670,7 +679,8 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   font-size:14px;cursor:pointer;transition:all .15s;
 }
 .sb2-close:hover{background:var(--surface2);color:var(--text);}
-.sb2-nav{overflow-y:auto;padding:8px;min-height:0;flex:1;transition:padding .18s ease;}
+.sb2-close i{transition:transform .24s cubic-bezier(.4,0,.2,1);}
+.sb2-nav{overflow-y:auto;padding:8px;min-height:0;flex:1;transition:padding .24s cubic-bezier(.4,0,.2,1);}
 .sb2-nav::-webkit-scrollbar{width:3px;}
 .sb2-nav::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
 .sb2-section{
@@ -682,7 +692,8 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   display:flex;align-items:center;gap:10px;
   padding:9px 11px;border-radius:var(--radius);
   cursor:pointer;font-size:12.5px;color:var(--text2);
-  transition:all .15s;user-select:none;white-space:nowrap;
+  transition:background .15s ease,color .15s ease,border-color .15s ease,padding .24s cubic-bezier(.4,0,.2,1),gap .24s cubic-bezier(.4,0,.2,1),justify-content .24s cubic-bezier(.4,0,.2,1);
+  user-select:none;white-space:nowrap;
   border:1px solid transparent;margin-bottom:2px;
 }
 .sb2-item i{font-size:15px;flex-shrink:0;}
@@ -1219,10 +1230,10 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 
   </div>
 
-  <!-- BOTTOM ICON DOCK — main menu, fixed overlay pinned to the bottom of
-       the viewport. Floats over the page without taking layout space, so
-       it never shifts or shrinks the topbar/sidebar/content. No
-       background/border box around it — just bare floating icons. -->
+  <!-- BOTTOM NOTCH DOCK — main menu, an opaque "notch" hanging off the
+       bottom edge, sized to fit its icons, rounded top corners only, no
+       gap from the screen edge. Fixed positioning means it floats over
+       the page without ever shifting the topbar/sidebar/content. -->
   <nav id="icon-bar" aria-label="Navigation">
 
     <div class="ib-scroll" id="ib-scroll">
@@ -1711,20 +1722,17 @@ function toggleSidebar() {
   sidebarVisible = !sidebarVisible;
   const sb = document.getElementById('sub-bar');
   const appZone = document.getElementById('tb-app-zone');
-  const closeIcon = document.getElementById('sb2-close-icon');
   const closeBtn = document.getElementById('sb2-close-btn');
   if (sidebarVisible) {
     sb.classList.remove('collapsed');
     sb.setAttribute('aria-hidden', 'false');
     appZone.classList.remove('collapsed');
-    if (closeIcon) closeIcon.className = 'ti ti-chevron-left';
     if (closeBtn) closeBtn.title = 'Collapse';
     _scheduleSubBarFold();
   } else {
     sb.classList.add('collapsed');
     sb.setAttribute('aria-hidden', 'false');
     appZone.classList.add('collapsed');
-    if (closeIcon) closeIcon.className = 'ti ti-chevron-right';
     if (closeBtn) closeBtn.title = 'Expand';
     _cancelSubBarFold();
   }
@@ -1851,8 +1859,6 @@ function ibOpen(id, btn) {
   sb.classList.remove('collapsed');
   sb.setAttribute('aria-hidden', 'false');
   document.getElementById('tb-app-zone').classList.remove('collapsed');
-  const _closeIcon = document.getElementById('sb2-close-icon');
-  if (_closeIcon) _closeIcon.className = 'ti ti-chevron-left';
   _scheduleSubBarFold();
 
   // Auto-load the first item of the first group into the main frame
