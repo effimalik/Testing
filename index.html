@@ -567,18 +567,23 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 }
 #ib-wave-path{
   fill:none;
-  stroke:var(--ib-color,var(--accent));
+  stroke:var(--red);
   stroke-width:3.5px;
   stroke-linecap:round;
-  transition:d .4s cubic-bezier(.34,1.56,.64,1),stroke .25s;
-  filter:drop-shadow(0 0 5px var(--ib-color-dim,var(--accent-glow)));
+  transition:d .4s cubic-bezier(.34,1.56,.64,1);
+  filter:drop-shadow(0 0 5px var(--red-dim));
+}
+#ib-wave-dot{
+  fill:var(--red);
+  transition:cx .4s cubic-bezier(.34,1.56,.64,1);
+  filter:drop-shadow(0 0 4px var(--red-dim));
 }
 .ib-scroll{
   position:relative;
   display:flex;flex-direction:row;align-items:center;
   gap:6px;padding:16px 14px 11px;
   background:var(--bg2);
-  border:1px solid var(--border);
+  border:1px solid var(--red);
   border-radius:999px;
   box-shadow:var(--shadow-lg);
   max-width:calc(100vw - 24px);
@@ -593,16 +598,16 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
    than a rounded square. */
 .ib-btn{
   position:relative;flex-shrink:0;z-index:2;
-  width:46px;height:46px;
-  border-radius:50%;border:none;
+  width:56px;height:auto;min-height:52px;padding:5px 2px 6px;
+  border-radius:14px;border:none;
   background:transparent;color:var(--ib-color,var(--text2));
   cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  font-size:20px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  font-size:19px;
   transition:transform .35s cubic-bezier(.34,1.56,.64,1),color .2s,background .15s;
 }
 .ib-btn:hover:not(.active){background:var(--surface);color:var(--ib-color,var(--text));}
-.ib-btn.active{color:var(--ib-color,var(--accent));transform:translateY(-4px);}
+.ib-btn.active{color:var(--text);transform:translateY(-4px);}
 /* Per-icon accent colors — a more colorful, "attractive" dock instead of
    a single flat tone for every button */
 #ib-emp{--ib-color:var(--accent);--ib-color-dim:var(--accent-dim);}
@@ -611,27 +616,25 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 #ib-adv{--ib-color:var(--amber);--ib-color-dim:var(--amber-dim);}
 #ib-docs{--ib-color:var(--orange);--ib-color-dim:var(--orange-dim);}
 #ib-payroll{--ib-color:var(--red);--ib-color-dim:var(--red-dim);}
-/* Tooltip label — appears ABOVE the icon on hover, like a real mac dock */
-.ib-tip{
-  position:absolute;bottom:calc(100% + 10px);left:50%;
-  transform:translateX(-50%);
-  background:var(--surface2);color:var(--text);
-  font-size:11px;font-weight:600;padding:4px 9px;border-radius:6px;
-  white-space:nowrap;pointer-events:none;opacity:0;
-  transition:opacity .15s;border:1px solid var(--border2);
-  z-index:400;font-family:var(--font);
+/* Persistent label under each icon (replaces the old hover-only tooltip) */
+.ib-label{
+  font-size:9px;font-weight:600;color:var(--text3);
+  white-space:normal;line-height:1.1;font-family:var(--font);
+  text-align:center;max-width:56px;
+  transition:color .2s;
 }
-.ib-btn:hover .ib-tip{opacity:1;}
+.ib-btn.active .ib-label{color:var(--red);}
 
 /* icon-bar adaptive: shrink when very tight */
 @media(max-width:520px){
   .ib-scroll{padding:14px 10px 9px;gap:3px;}
-  .ib-btn{width:40px;height:40px;font-size:17px;border-radius:50%;}
+  .ib-btn{width:46px;height:46px;font-size:16px;border-radius:12px;}
+  .ib-label{font-size:9px;}
 }
 @media(max-height:420px){
   .ib-scroll{padding:8px;gap:3px;}
-  .ib-btn{width:36px;height:36px;font-size:16px;border-radius:50%;}
-  .ib-tip{display:none;}
+  .ib-btn{width:36px;height:36px;font-size:16px;border-radius:10px;}
+  .ib-label{display:none;}
   .ib-wave{display:none;}
 }
 
@@ -672,7 +675,7 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 .admin-flyout-header i{color:var(--accent);font-size:14px;}
 .admin-flyout-nav{overflow-y:auto;padding:8px;min-height:0;}
 @media(max-width:520px){
-  .admin-fab{width:40px;height:40px;border-radius:50%;font-size:17px;}
+  .admin-fab{width:46px;height:46px;border-radius:12px;font-size:16px;}
 }
 
 /* ─── SUB MENU — docked left sidebar (Apple-style, e.g. Mail / Finder) ───
@@ -1315,31 +1318,32 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 
     <svg class="ib-wave" id="ib-wave" aria-hidden="true">
       <path id="ib-wave-path" d=""></path>
+      <circle id="ib-wave-dot" r="3"></circle>
     </svg>
 
     <div class="ib-scroll" id="ib-scroll">
 		<button class="ib-btn active" id="ib-emp" onclick="ibOpen('ib-emp',this)" title="Employees">
-        <i class="ti ti-users"></i><span class="ib-tip">Employees</span>
+        <i class="ti ti-users"></i><span class="ib-label">Employees</span>
       </button>
       
 		<button class="ib-btn" id="ib-bike" onclick="ibOpen('ib-bike',this)" title="Bike Fleet">
-        <i class="ti ti-motorbike"></i><span class="ib-tip">Bike Fleet</span>
+        <i class="ti ti-motorbike"></i><span class="ib-label">Bike Fleet</span>
       </button>
       
 		<button class="ib-btn" id="ib-sim" onclick="ibOpen('ib-sim',this)" title="SIM Cards">
-       <i class="ti ti-device-sim"></i><span class="ib-tip">SIM Cards</span>
+       <i class="ti ti-device-sim"></i><span class="ib-label">SIM Cards</span>
       </button>
 		
       <button class="ib-btn" id="ib-adv" onclick="ibOpen('ib-adv',this)" title="Advance Salary">
-        <i class="ti ti-cash"></i><span class="ib-tip">Advance Salary</span>
+        <i class="ti ti-cash"></i><span class="ib-label">Advance Salary</span>
       </button>
 		
       <button class="ib-btn" id="ib-docs" onclick="ibOpen('ib-docs',this)" title="Document">
-        <i class="ti ti-file-description"></i><span class="ib-tip">Document</span>
+        <i class="ti ti-file-description"></i><span class="ib-label">Document</span>
       </button>
 
       <button class="ib-btn" id="ib-payroll" onclick="ibOpen('ib-payroll',this)" title="Payroll">
-        <i class="ti ti-report-money"></i><span class="ib-tip">Payroll</span>
+        <i class="ti ti-report-money"></i><span class="ib-label">Payroll</span>
       </button>
 
       <!-- ADMIN — last item in this same floating dock. Its item list is
@@ -1353,7 +1357,7 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
           <div class="admin-flyout-nav" id="admin-flyout-nav"></div>
         </div>
         <button class="ib-btn admin-fab" id="ib-admin" onclick="ibOpen('ib-admin',this)" title="Admin">
-          <i class="ti ti-settings"></i><span class="ib-tip">Admin</span>
+          <i class="ti ti-settings"></i><span class="ib-label">Admin</span>
         </button>
       </div>
     </div>
@@ -1835,6 +1839,7 @@ function updateIbWave() {
   const scroll = document.getElementById('ib-scroll');
   const svg    = document.getElementById('ib-wave');
   const path   = document.getElementById('ib-wave-path');
+  const dot    = document.getElementById('ib-wave-dot');
   if (!scroll || !svg || !path) return;
 
   const w = Math.max(scroll.scrollWidth, scroll.clientWidth); // full scrollable content width —
@@ -1852,6 +1857,7 @@ function updateIbWave() {
   const activeBtn = scroll.querySelector('.ib-btn.active');
   if (!activeBtn) {
     path.setAttribute('d', `M0,${base} L${w},${base}`);
+    if (dot) dot.style.display = 'none';
     return;
   }
 
@@ -1867,9 +1873,14 @@ function updateIbWave() {
     `A${hw},${ry} 0 0 1 ${cx + hw},${base} ` +
     `L${w},${base}`
   );
-  // Tint the curve with the active tab's own accent color (each item has
-  // its own --ib-color, see CSS), so the wave and the lifted icon match.
-  path.style.stroke = getComputedStyle(activeBtn).color;
+
+  // Small marker dot centered inside the loop, roughly level with the
+  // pill's own top edge (y=0) — sits above the icon, below the arc's peak.
+  if (dot) {
+    dot.style.display = '';
+    dot.setAttribute('cx', cx);
+    dot.setAttribute('cy', 0);
+  }
 }
 (function initIbWave() {
   const scroll = document.getElementById('ib-scroll');
