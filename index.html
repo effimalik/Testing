@@ -555,10 +555,14 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 /* Sits inside .ib-scroll, at the top of the pill's own padding box —
    it never extends past the pill's rounded border, so the hill reads
    as an indicator drawn on the bar itself, not a shape floating above
-   it. */
+   it. It's taller than the padding above the icons on purpose — its
+   base sits low, near icon height, so the dome it draws visibly
+   rounds over/around the active icon instead of just skimming above
+   it (see updateIbWave() in JS, which draws it as a true elliptical
+   arc, not just a bezier hill). */
 .ib-wave{
   position:absolute;left:0;top:0;
-  height:24px;width:100%;
+  height:34px;width:100%;
   overflow:hidden;pointer-events:none;
   z-index:1;
 }
@@ -585,10 +589,13 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 .ib-scroll::-webkit-scrollbar{display:none;}
 .ib-divider{display:none;}
 .ib-spacer{display:none;}
+/* Perfect circular pill — equal width/height with border-radius:50%,
+   so every tab (icon-only, no label) reads as a round button rather
+   than a rounded square. */
 .ib-btn{
   position:relative;flex-shrink:0;z-index:2;
   width:46px;height:46px;
-  border-radius:14px;border:none;
+  border-radius:50%;border:none;
   background:transparent;color:var(--ib-color,var(--text2));
   cursor:pointer;
   display:flex;align-items:center;justify-content:center;
@@ -620,11 +627,11 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 /* icon-bar adaptive: shrink when very tight */
 @media(max-width:520px){
   .ib-scroll{padding:14px 10px 9px;gap:3px;}
-  .ib-btn{width:40px;height:40px;font-size:17px;border-radius:11px;}
+  .ib-btn{width:40px;height:40px;font-size:17px;border-radius:50%;}
 }
 @media(max-height:420px){
   .ib-scroll{padding:8px;gap:3px;}
-  .ib-btn{width:36px;height:36px;font-size:16px;}
+  .ib-btn{width:36px;height:36px;font-size:16px;border-radius:50%;}
   .ib-tip{display:none;}
   .ib-wave{display:none;}
 }
@@ -666,7 +673,7 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 .admin-flyout-header i{color:var(--accent);font-size:14px;}
 .admin-flyout-nav{overflow-y:auto;padding:8px;min-height:0;}
 @media(max-width:520px){
-  .admin-fab{width:40px;height:40px;border-radius:11px;font-size:17px;}
+  .admin-fab{width:40px;height:40px;border-radius:50%;font-size:17px;}
 }
 
 /* ─── SUB MENU — docked left sidebar (Apple-style, e.g. Mail / Finder) ───
@@ -1816,11 +1823,15 @@ function updateDockOffset() {
 window.addEventListener('resize', updateDockOffset);
 
 /* ── Active-tab wave indicator — draws the curved line that runs flat
-   along the top of the pill dock and arcs up into a smooth hill right
-   over the currently-active tab (see .ib-wave / #ib-wave-path in CSS).
-   Recomputed whenever the active tab changes, the dock is resized, or
-   its content scrolls horizontally, so the hill always tracks the
-   real on-screen position of the active button. ── */
+   along the pill's inside top and rises into a rounded arc that
+   wraps up and over the currently-active tab (see .ib-wave /
+   #ib-wave-path in CSS). The arc's baseline sits low, near the icon
+   itself (not near the very top of the pill), so it visibly rounds
+   around the active icon rather than just skimming above it, and is
+   drawn as a true SVG elliptical arc (not a bezier bump) for a clean,
+   properly round dome shape. Recomputed whenever the active tab
+   changes or the dock is resized, so it always tracks the active
+   button's real on-screen position. ── */
 function updateIbWave() {
   const scroll = document.getElementById('ib-scroll');
   const svg    = document.getElementById('ib-wave');
@@ -1830,11 +1841,13 @@ function updateIbWave() {
   const w = Math.max(scroll.scrollWidth, scroll.clientWidth); // full scrollable content width —
                                   // safe now that buttons are fixed-size icons with no
                                   // overflowing label text to inflate this measurement.
-  svg.setAttribute('viewBox', `0 0 ${w} 24`);
+  const boxH = 34;
+  svg.setAttribute('viewBox', `0 0 ${w} ${boxH}`);
   svg.style.width = w + 'px';
 
-  const base = 19;   // y of the flat baseline (sits just above the icons, inside the pill)
-  const peak = 3;    // y of the top of the hill — still fully inside the pill's own box
+  const base = 30;   // y of the flat baseline — low, near icon height, so the arc
+                      // that rises from it visibly rounds around the active icon
+  const peak = 4;     // y of the top of the arc — still fully inside the pill's own box
 
   const activeBtn = scroll.querySelector('.ib-btn.active');
   if (!activeBtn) {
@@ -1842,16 +1855,15 @@ function updateIbWave() {
     return;
   }
 
-  // Hump half-width tracks the active button's own size so a wide tab
-  // (e.g. "Advance Salary") gets a proportionally wider hill than a
-  // narrow one (e.g. "Admin").
-  const hw = Math.max(26, Math.min(60, activeBtn.offsetWidth / 2 + 8));
+  // Arc radius tracks the active button's own size so a wider tab gets a
+  // proportionally wider dome than a narrower one.
+  const hw = Math.max(24, Math.min(50, activeBtn.offsetWidth / 2 + 10));
   const cx = Math.max(hw, Math.min(w - hw, activeBtn.offsetLeft + activeBtn.offsetWidth / 2));
+  const ry = base - peak; // vertical radius of the arc
   path.setAttribute(
     'd',
     `M0,${base} L${cx - hw},${base} ` +
-    `C${cx - hw + 16},${base} ${cx - 15},${peak} ${cx},${peak} ` +
-    `C${cx + 15},${peak} ${cx + hw - 16},${base} ${cx + hw},${base} ` +
+    `A${hw},${ry} 0 0 1 ${cx + hw},${base} ` +
     `L${w},${base}`
   );
   // Tint the curve with the active tab's own accent color (each item has
