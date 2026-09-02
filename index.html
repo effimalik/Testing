@@ -588,7 +588,8 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 .ib-spacer{display:none;}
 .ib-btn{
   position:relative;flex-shrink:0;z-index:2;
-  width:58px;height:44px;
+  width:auto;min-width:44px;height:44px;
+  padding:0 10px;
   border-radius:14px;border:none;
   background:transparent;color:var(--ib-color,var(--text2));
   cursor:pointer;
@@ -607,7 +608,9 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 #ib-docs{--ib-color:var(--orange);--ib-color-dim:var(--orange-dim);}
 #ib-payroll{--ib-color:var(--red);--ib-color-dim:var(--red-dim);}
 /* Always-visible label under each icon (replaces the old hover-only
-   tooltip, to match a labeled floating tab-bar) */
+   tooltip, to match a labeled floating tab-bar). Each button sizes to
+   fit its own label (see .ib-btn width:auto above), so longer labels
+   like "Advance Salary" never overlap their neighbors. */
 .ib-label{
   font-size:10px;font-weight:600;letter-spacing:.1px;
   font-family:var(--font);line-height:1;
@@ -617,12 +620,12 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 /* icon-bar adaptive: shrink when very tight */
 @media(max-width:520px){
   .ib-scroll{padding:8px 10px;gap:0;}
-  .ib-btn{width:48px;height:40px;font-size:17px;border-radius:11px;}
-  .ib-label{font-size:9px;}
+  .ib-btn{min-width:40px;height:40px;padding:0 7px;font-size:17px;border-radius:11px;}
+  .ib-label{font-size:8.5px;}
 }
 @media(max-height:420px){
   .ib-scroll{padding:6px 8px;gap:0;}
-  .ib-btn{width:42px;height:36px;font-size:16px;}
+  .ib-btn{min-width:38px;height:36px;padding:0 6px;font-size:16px;}
   .ib-label{display:none;}
   .ib-wave{display:none;}
 }
@@ -1823,27 +1826,32 @@ function updateIbWave() {
   const path   = document.getElementById('ib-wave-path');
   if (!scroll || !svg || !path) return;
 
-  const totalWidth = Math.max(scroll.scrollWidth, scroll.clientWidth);
-  svg.setAttribute('viewBox', `0 0 ${totalWidth} 36`);
-  svg.style.width = totalWidth + 'px';
+  const w = scroll.clientWidth; // pill's own visible width — NOT scrollWidth, which can be
+                                  // inflated by any nowrap text that visually overflows a
+                                  // button, desyncing the wave from the pill's real size.
+  svg.setAttribute('viewBox', `0 0 ${w} 36`);
+  svg.style.width = w + 'px';
 
   const base = 26;   // y of the flat baseline (aligns with the pill's top edge)
   const peak = 4;    // y of the top of the hill
-  const hw   = 30;   // half-width of the hill
 
   const activeBtn = scroll.querySelector('.ib-btn.active');
   if (!activeBtn) {
-    path.setAttribute('d', `M0,${base} L${totalWidth},${base}`);
+    path.setAttribute('d', `M0,${base} L${w},${base}`);
     return;
   }
 
-  const cx = Math.max(hw, Math.min(totalWidth - hw, activeBtn.offsetLeft + activeBtn.offsetWidth / 2));
+  // Hump half-width tracks the active button's own size so a wide tab
+  // (e.g. "Advance Salary") gets a proportionally wider hill than a
+  // narrow one (e.g. "Admin").
+  const hw = Math.max(26, Math.min(60, activeBtn.offsetWidth / 2 + 8));
+  const cx = Math.max(hw, Math.min(w - hw, activeBtn.offsetLeft + activeBtn.offsetWidth / 2));
   path.setAttribute(
     'd',
     `M0,${base} L${cx - hw},${base} ` +
     `C${cx - hw + 16},${base} ${cx - 15},${peak} ${cx},${peak} ` +
     `C${cx + 15},${peak} ${cx + hw - 16},${base} ${cx + hw},${base} ` +
-    `L${totalWidth},${base}`
+    `L${w},${base}`
   );
   // Tint the curve with the active tab's own accent color (each item has
   // its own --ib-color, see CSS), so the wave and the lifted icon match.
@@ -1861,6 +1869,14 @@ function updateIbWave() {
   });
   window.addEventListener('resize', updateIbWave);
   updateIbWave();
+  // Icon/label webfonts (Tabler icons, Sora) load asynchronously and can
+  // reflow button widths after the first paint — resync once they're
+  // ready, plus a short fallback timer for browsers without the Font
+  // Loading API.
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(updateIbWave).catch(() => {});
+  }
+  setTimeout(updateIbWave, 350);
 })();
 
 function toggleSidebar() {
