@@ -552,27 +552,26 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   margin:0;
   transition:left .24s cubic-bezier(.4,0,.2,1);
 }
-/* Sits inside .ib-scroll, at the top of the pill's own padding box —
-   it never extends past the pill's rounded border, so the hill reads
-   as an indicator drawn on the bar itself, not a shape floating above
-   it. It's taller than the padding above the icons on purpose — its
-   base sits low, near icon height, so the dome it draws visibly
-   rounds over/around the active icon instead of just skimming above
-   it (see updateIbWave() in JS, which draws it as a true elliptical
-   arc, not just a bezier hill). */
+/* Sits inside .ib-scroll, anchored to the top of the pill's padding
+   box. Its base runs flat near icon height, but the arc's peak is
+   drawn above y=0 on purpose — overflow:visible lets that loop poke
+   up past the pill's own rounded border, so it reads as a raised
+   ring around the active icon rather than a hill contained inside
+   the bar (see updateIbWave() in JS, which draws it as a true
+   elliptical arc, not just a bezier hill). */
 .ib-wave{
   position:absolute;left:0;top:0;
   height:34px;width:100%;
-  overflow:hidden;pointer-events:none;
+  overflow:visible;pointer-events:none;
   z-index:1;
 }
 #ib-wave-path{
   fill:none;
   stroke:var(--ib-color,var(--accent));
-  stroke-width:2.5px;
+  stroke-width:3.5px;
   stroke-linecap:round;
   transition:d .4s cubic-bezier(.34,1.56,.64,1),stroke .25s;
-  filter:drop-shadow(0 0 4px var(--ib-color-dim,var(--accent-glow)));
+  filter:drop-shadow(0 0 5px var(--ib-color-dim,var(--accent-glow)));
 }
 .ib-scroll{
   position:relative;
@@ -1847,7 +1846,8 @@ function updateIbWave() {
 
   const base = 30;   // y of the flat baseline — low, near icon height, so the arc
                       // that rises from it visibly rounds around the active icon
-  const peak = 4;     // y of the top of the arc — still fully inside the pill's own box
+  const peak = -20;   // y of the top of the arc — negative, so the loop pokes up
+                       // past the pill's own top edge (svg overflow is visible)
 
   const activeBtn = scroll.querySelector('.ib-btn.active');
   if (!activeBtn) {
@@ -1856,8 +1856,9 @@ function updateIbWave() {
   }
 
   // Arc radius tracks the active button's own size so a wider tab gets a
-  // proportionally wider dome than a narrower one.
-  const hw = Math.max(24, Math.min(50, activeBtn.offsetWidth / 2 + 10));
+  // proportionally wider dome than a narrower one. Kept close to ry so the
+  // loop reads as a round bump rather than a flat oval hill.
+  const hw = Math.max(34, Math.min(54, activeBtn.offsetWidth / 2 + 24));
   const cx = Math.max(hw, Math.min(w - hw, activeBtn.offsetLeft + activeBtn.offsetWidth / 2));
   const ry = base - peak; // vertical radius of the arc
   path.setAttribute(
