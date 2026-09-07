@@ -318,7 +318,7 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 /* ═══════════════════════════════════════════════════════
  *  SHEETS URL — same backend as before
  * ═══════════════════════════════════════════════════════ */
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyZN-UJkP51kEKqXMzHY_TYcdfi8fPSCl86aN6jimothSlwVDMG8S2cOQeoz5s8ERG5/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyt9sLbebD-FjUZDrm-v2JdCZYKW87MeCY7Lnyd3HNGiS2YeVvggBDalaCHzuzU5xcc/exec';
 const SHEETS_ON  = SHEETS_URL.startsWith('https://script.google.com/');
 
 /* ═══════════════════════════════════════════════════════
@@ -486,10 +486,19 @@ function parseDocLogExpiry(raw){
   if(!isNaN(dt.getTime())) return dt.toISOString().slice(0,10);
   return '';
 }
-/* Parse a "dd/mm/yyyy hh:mm[:ss]" (or any Date-parsable) string into epoch ms */
+/* Parse a raw timestamp into epoch ms.
+   Supports:
+     - Unix epoch in seconds (10-digit, e.g. 1788907860) or ms (13-digit)
+     - "dd/mm/yyyy hh:mm[:ss]" formatted strings
+     - anything else Date() can natively parse                          */
 function parseDocLogDateTime(raw){
   const s = _s(raw);
   if(!s) return 0;
+  if(/^\d{9,13}$/.test(s)){                 // pure digits -> epoch
+    const num = Number(s);
+    const ms  = s.length <= 10 ? num*1000 : num;   // seconds vs ms
+    return isNaN(ms) ? 0 : ms;
+  }
   const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})[ ,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
   if(m){
     const [,dd,mm,yyyy,hh,mi,ss] = m;
