@@ -126,6 +126,8 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 .btn-icon{width:32px;height:32px;border-radius:var(--radius);border:1.5px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .15s;flex-shrink:0;}
 .btn-icon:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
 .btn-icon.active{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+.date-filter-select{padding:6px 10px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;max-width:180px;}
+.date-filter-select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
 .search-wrap{position:relative;display:flex;align-items:center;}
 .search-box{display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:50;}
 .search-box.open{display:block;}
@@ -261,6 +263,10 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
         <button class="tab-btn" id="filter-onboarding" title="Onboarding" onclick="setPortalFilter('onboarding')"><i class="ti ti-user-plus"></i></button>
       </div>
 
+      <select id="date-filter" class="date-filter-select" title="Filter by date" onchange="setDateFilter(this.value)">
+        <option value="all">All Dates</option>
+      </select>
+
       <div class="search-wrap" id="search-wrap">
         <button class="btn-icon" id="search-toggle" title="Search" onclick="toggleSearch()"><i class="ti ti-search"></i></button>
         <div class="search-box" id="search-box">
@@ -279,7 +285,7 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
       <table class="doc-table">
         <thead><tr>
           <th class="chk-col"></th>
-          <th>Txn ID</th>
+          <th>Date &amp; Time</th>
           <th>Portal</th>
           <th>Entity</th>
           <th>Documents</th>
@@ -432,6 +438,7 @@ let logRows   = [];
 let transactions = []; // logRows grouped by txnId
 
 let portalFilter  = 'all';   // all | transaction | onboarding
+let dateFilter    = 'all';   // all | 'YYYY-MM-DD'
 let selectedTxnId = null;
 
 const _s = v => (v!==null&&v!==undefined&&v!=='') ? String(v).trim() : '';
@@ -481,6 +488,26 @@ function parseDocLogExpiry(raw){
   if(!isNaN(dt.getTime())) return dt.toISOString().slice(0,10);
   return '';
 }
+/* Parse a "dd/mm/yyyy hh:mm[:ss]" (or any Date-parsable) string into epoch ms */
+function parseDocLogDateTime(raw){
+  const s = _s(raw);
+  if(!s) return 0;
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})[ ,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if(m){
+    const [,dd,mm,yyyy,hh,mi,ss] = m;
+    const d = new Date(+yyyy,+mm-1,+dd,+hh,+mi,+(ss||0));
+    return isNaN(d.getTime()) ? 0 : d.getTime();
+  }
+  const dt = new Date(s);
+  return isNaN(dt.getTime()) ? 0 : dt.getTime();
+}
+/* Format epoch ms as "DD/MM/YYYY HH:MM:SS" — used as the displayed Transaction ID */
+function fmtTxnDateTime(ts){
+  if(!ts) return '';
+  const d = new Date(ts);
+  const p = n=>String(n).padStart(2,'0');
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
 function _cleanDocLink(raw){
   const v = _s(raw);
   return (v.toLowerCase()==='view file' || !v) ? '' : v;
@@ -495,32 +522,37 @@ function _portalFromRaw(raw){
 function normaliseLogRow(r, recTs){
   if(!r) return null;
   if(Array.isArray(r)){
+    const col0raw = _s(r[0]);
     const col1raw = _s(r[1]);
     if(col1raw.toLowerCase()==='portal'||col1raw.toLowerCase()==='portal type') return null; // header row
+    if(col0raw.toLowerCase()==='date'||col0raw.toLowerCase()==='date time'||col0raw.toLowerCase()==='timestamp') return null; // header row
     if(!col1raw) return null;
     const portal = _portalFromRaw(col1raw);
     if(!portal) return null;
     const entityId = _s(r[2]); if(!entityId) return null;
+    const dtTs = parseDocLogDateTime(col0raw);
     return {
-      txnId:    _s(r[0]) || ('LOG-'+Math.random().toString(36).slice(2,8).toUpperCase()),
+      txnId:    fmtTxnDateTime(dtTs) || col0raw || ('LOG-'+Math.random().toString(36).slice(2,8).toUpperCase()),
       portal, entityId,
       docType:  _s(r[3]),
       docLink:  _cleanDocLink(r[4]),
       expiry:   parseDocLogExpiry(_s(r[5])),
-      ts:       recTs || 0,
+      ts:       dtTs || recTs || 0,
     };
   }
   const portal = _portalFromRaw(r['Portal']||r['portal']||'');
   if(!portal) return null;
   const eId = _s(r['ID']||r['entityId']||r['Emp ID']||r['Bike ID']||'');
   if(!eId) return null;
+  const rawDt = r['Date']||r['Date Time']||r['DateTime']||r['Timestamp']||'';
+  const dtTs = parseDocLogDateTime(rawDt);
   return {
-    txnId:    _s(r['Transaction ID']||r['txnId'])||('LOG-'+Math.random().toString(36).slice(2,8).toUpperCase()),
+    txnId:    fmtTxnDateTime(dtTs) || _s(r['Transaction ID']||r['txnId'])||('LOG-'+Math.random().toString(36).slice(2,8).toUpperCase()),
     portal, entityId: eId,
     docType:  _s(r['Doc Type']||r['docType']||''),
     docLink:  _cleanDocLink(r['Doc Link']||r['docLink']||r['File Link']||''),
     expiry:   parseDocLogExpiry(_s(r['Exp Date']||r['expiry']||'')),
-    ts:       recTs || 0,
+    ts:       dtTs || recTs || 0,
   };
 }
 
@@ -536,6 +568,7 @@ function buildTransactions(){
     if(r.ts > t.ts) t.ts = r.ts;
   });
   transactions = [...map.values()].sort((a,b)=>b.ts-a.ts);
+  buildDateFilterOptions();
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -695,12 +728,55 @@ function setPortalFilter(p){
 }
 
 /* ═══════════════════════════════════════════════════════
+ *  DATE FILTER (dropdown, only dates that actually have records)
+ * ═══════════════════════════════════════════════════════ */
+function dateKeyFromTs(ts){
+  if(!ts) return '';
+  const d = new Date(ts);
+  const p = n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+function dateLabelFromKey(key){
+  const [y,m,d] = key.split('-');
+  return `${d}/${m}/${y}`;
+}
+function buildDateFilterOptions(){
+  const sel = document.getElementById('date-filter');
+  if(!sel) return;
+  const counts = new Map();
+  transactions.forEach(t=>{
+    const k = dateKeyFromTs(t.ts);
+    if(!k) return;
+    counts.set(k, (counts.get(k)||0)+1);
+  });
+  const keys = [...counts.keys()].sort((a,b)=>b.localeCompare(a)); // newest first
+  const prevValue = sel.value || dateFilter || 'all';
+  sel.innerHTML = `<option value="all">All Dates (${transactions.length})</option>` +
+    keys.map(k=>`<option value="${k}">${dateLabelFromKey(k)} (${counts.get(k)})</option>`).join('');
+  if(prevValue!=='all' && counts.has(prevValue)){
+    sel.value = prevValue;
+    dateFilter = prevValue;
+  } else {
+    sel.value = 'all';
+    dateFilter = 'all';
+  }
+}
+function setDateFilter(v){
+  dateFilter = v;
+  renderTable();
+}
+
+/* ═══════════════════════════════════════════════════════
  *  TABLE RENDER
  * ═══════════════════════════════════════════════════════ */
+function docsWithFile(t){ return t.docs.filter(d=>d.docLink); }
+function hasAnyDoc(t){ return t.docs.some(d=>d.docLink); }
+
 function docsBadge(t){
-  const n = t.docs.length;
-  if(!n) return `<span class="doc-tick-badge none"><i class="ti ti-file-off"></i> 0</span>`;
-  const typeList = [...new Set(t.docs.map(d=>docTypeLabel(t.portal,d.docType)))].join(', ');
+  const docs = docsWithFile(t);
+  const n = docs.length;
+  if(!n) return `<span class="doc-tick-badge none">0</span>`;
+  const typeList = [...new Set(docs.map(d=>docTypeLabel(t.portal,d.docType)))].join(', ');
   const ticks = Array.from({length:Math.min(n,3)}).map(()=>'<i class="ti ti-check"></i>').join('');
   return `<span class="doc-tick-badge" title="${typeList}">${ticks}${n>3?` +${n-3}`:''} ${n}</span>`;
 }
@@ -712,6 +788,7 @@ function renderTable(){
 
   let rows = transactions.filter(t=>{
     if(portalFilter!=='all' && t.portal!==portalFilter) return false;
+    if(dateFilter!=='all' && dateKeyFromTs(t.ts)!==dateFilter) return false;
     if(q && !String(t.txnId).toLowerCase().includes(q) && !String(t.entityId).toLowerCase().includes(q)) return false;
     return true;
   });
@@ -728,6 +805,9 @@ function renderTable(){
     const portalBadge = `<span class="portal-badge ${t.portal}"><i class="ti ${t.portal==='onboarding'?'ti-user-plus':'ti-receipt'}" style="font-size:9px;"></i> ${t.portal==='onboarding'?'Onboarding':'Transaction'}</span>`;
     const checked = selectedTxnId===t.txnId ? 'checked' : '';
     const selCls  = selectedTxnId===t.txnId ? 'selected' : '';
+    const viewBtn = hasAnyDoc(t)
+      ? `<button class="btn btn-ghost btn-sm" style="padding:4px 8px;" onclick="event.stopPropagation();openViewPanel('${t.txnId}')" title="View documents"><i class="ti ti-eye" style="font-size:13px;"></i></button>`
+      : '';
     return `<tr class="${selCls}" data-txn="${t.txnId}" onclick="rowClicked(event,'${t.txnId}')">
       <td class="chk-col"><input type="checkbox" ${checked} onclick="event.stopPropagation();toggleSelect('${t.txnId}')"/></td>
       <td><span class="txn-mono">${t.txnId}</span></td>
@@ -735,7 +815,7 @@ function renderTable(){
       <td><span style="font-family:var(--mono);font-size:11px;">${t.entityId}</span>${name?` <span style="color:var(--text3);">· ${name}</span>`:''}</td>
       <td>${docsBadge(t)}</td>
       <td style="color:var(--text3);font-size:10.5px;white-space:nowrap;">${fmtTs(t.ts)}</td>
-      <td><button class="btn btn-ghost btn-sm" style="padding:4px 8px;" onclick="event.stopPropagation();openViewPanel('${t.txnId}')" title="View documents"><i class="ti ti-eye" style="font-size:13px;"></i></button></td>
+      <td>${viewBtn}</td>
     </tr>`;
   }).join('');
 
@@ -775,28 +855,30 @@ function closePanel(){
 function openViewPanel(txnId){
   const t = transactions.find(x=>x.txnId===txnId);
   if(!t){ toast('Transaction not found','error'); return; }
+  if(!hasAnyDoc(t)){ toast('No documents to view','error'); return; }
   openPanel('ti-eye','View Documents');
   renderViewList(t);
 }
 
 function renderViewList(t){
   const body = document.getElementById('dp-body');
-  if(!t.docs.length){
+  const docs = docsWithFile(t);
+  if(!docs.length){
     body.innerHTML = `<div style="text-align:center;padding:28px 0;color:var(--text3);font-size:12px;"><i class="ti ti-file-off" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>No documents yet for this transaction</div>`;
     return;
   }
   body.innerHTML = `
     <div class="doc-type-choice" style="flex-direction:column;">
-      ${t.docs.map((d,idx)=>`
+      ${docs.map((d,idx)=>`
         <button type="button" class="dtc-btn" style="flex-direction:row;justify-content:flex-start;width:100%;" onclick="previewDoc('${t.txnId}',${idx})">
-          <i class="ti ${d.docLink?'ti-brand-google-drive':'ti-file-unknown'}"></i>${docTypeLabel(t.portal,d.docType)}
+          <i class="ti ti-database"></i>${docTypeLabel(t.portal,d.docType)}
         </button>`).join('')}
     </div>`;
 }
 
 function previewDoc(txnId,idx){
   const t = transactions.find(x=>x.txnId===txnId);
-  const d = t && t.docs[idx];
+  const d = t && docsWithFile(t)[idx];
   if(!d){ toast('Document not found','error'); return; }
   const body = document.getElementById('dp-body');
   let mediaHtml;
