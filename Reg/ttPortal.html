@@ -162,9 +162,11 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 .portal-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:9.5px;font-weight:700;}
 .portal-badge.transaction{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(88,166,255,.25);}
 .portal-badge.onboarding{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(163,113,247,.25);}
-.doc-tick-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:10.5px;font-weight:700;background:var(--teal-dim);color:var(--teal);border:1px solid rgba(57,211,83,.28);cursor:help;}
+.doc-tick-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10.5px;font-weight:700;background:var(--teal-dim);color:var(--teal);border:1px solid rgba(57,211,83,.28);cursor:help;}
 .doc-tick-badge.none{background:var(--bg3);color:var(--text3);border-color:var(--border);}
 .doc-tick-badge i{font-size:11px;}
+.doc-tick-icon{display:inline-flex;}
+.doc-tick-num{margin-left:2px;font-family:var(--mono);min-width:1ch;text-align:left;}
 .table-footer{padding:8px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);display:flex;align-items:center;gap:8px;flex-shrink:0;}
 .empty-row td{text-align:center;padding:40px;color:var(--text3);font-size:12.5px;}
 .empty-row i{font-size:26px;display:block;margin-bottom:8px;opacity:.35;}
@@ -274,7 +276,7 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
         </div>
       </div>
 
-      <button class="btn btn-primary btn-sm" id="btn-upload-selected" style="display:none;" onclick="openUploadFlow(selectedTxnId)"><i class="ti ti-upload"></i> Upload Document</button>
+      <button class="btn btn-primary btn-sm" id="btn-upload-selected" style="display:none;" onclick="openUploadFlow(selectedKey)"><i class="ti ti-upload"></i> Upload Document</button>
     </div>
   </div>
 
@@ -433,11 +435,11 @@ async function _readCache(cacheKey) {
 let employees = [];
 let bikes     = [];
 let logRows   = [];
-let transactions = []; // logRows grouped by txnId
+let transactions = []; // logRows pivoted into one row per Portal+Entity
 
 let portalFilter  = 'all';   // all | transaction | onboarding
 let dateFilter    = 'all';   // all | 'YYYY-MM-DD'
-let selectedTxnId = null;
+let selectedKey   = null;    // "<portal>::<entityId>" of the selected row
 
 const _s = v => (v!==null&&v!==undefined&&v!=='') ? String(v).trim() : '';
 
@@ -473,47 +475,52 @@ function normaliseBike(r,i){
  *  Any other / legacy value (e.g. old 'Employee'/'Bike' rows) is
  *  filtered OUT of this view entirely — not misclassified.
  * ═══════════════════════════════════════════════════════ */
-function parseDocLogExpiry(raw){
-  if(!raw) return '';
-  const s = String(raw).trim();
-  if(s.length >= 8){
-    const dd=s.slice(0,2), mm=s.slice(2,4), yyyy=s.slice(4,8);
-    const d=+dd, mo=+mm, y=+yyyy;
-    if(d>=1&&d<=31&&mo>=1&&mo<=12&&y>=2000&&y<=2099)
-      return `${yyyy}-${mm}-${dd}`;
-  }
-  const dt = new Date(s);
-  if(!isNaN(dt.getTime())) return dt.toISOString().slice(0,10);
-  return '';
-}
-/* Parse a raw timestamp into epoch ms.
+/* Parse ANY raw timestamp (main date col OR expiry col) into epoch ms.
    Supports:
-     - Unix epoch in seconds (10-digit, e.g. 1788907860) or ms (13-digit)
-     - "dd/mm/yyyy hh:mm[:ss]" formatted strings
+     - Unix epoch in seconds (9–10 digit, e.g. 1788907920) or ms (12–13 digit)
+     - compact "ddmmyyyy" (8 digit, no separators)
+     - "dd/mm/yyyy" or "dd/mm/yyyy hh:mm[:ss]" formatted strings
      - anything else Date() can natively parse                          */
 function parseDocLogDateTime(raw){
   const s = _s(raw);
   if(!s) return 0;
-  if(/^\d{9,13}$/.test(s)){                 // pure digits -> epoch
+  if(/^\d{9,13}$/.test(s)){                 // pure digits -> unix epoch
     const num = Number(s);
     const ms  = s.length <= 10 ? num*1000 : num;   // seconds vs ms
     return isNaN(ms) ? 0 : ms;
   }
-  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})[ ,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if(/^\d{8}$/.test(s)){                    // compact ddmmyyyy
+    const dd=+s.slice(0,2), mm=+s.slice(2,4), yyyy=+s.slice(4,8);
+    if(dd>=1&&dd<=31&&mm>=1&&mm<=12&&yyyy>=2000&&yyyy<=2099){
+      const d = new Date(yyyy,mm-1,dd);
+      return isNaN(d.getTime()) ? 0 : d.getTime();
+    }
+  }
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:[ ,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
   if(m){
     const [,dd,mm,yyyy,hh,mi,ss] = m;
-    const d = new Date(+yyyy,+mm-1,+dd,+hh,+mi,+(ss||0));
+    const d = new Date(+yyyy,+mm-1,+dd,+(hh||0),+(mi||0),+(ss||0));
     return isNaN(d.getTime()) ? 0 : d.getTime();
   }
   const dt = new Date(s);
   return isNaN(dt.getTime()) ? 0 : dt.getTime();
 }
-/* Format epoch ms as "DD/MM/YYYY HH:MM:SS" — used as the displayed Transaction ID */
-function fmtTxnDateTime(ts){
-  if(!ts) return '';
-  const d = new Date(ts);
+/* Epoch ms -> epoch SECONDS (10-digit unix, e.g. 1788907920).
+   This is the canonical form we store/use for both Transaction ID
+   and Exp Date, per spec. */
+function toEpochSec(ms){ return ms ? Math.floor(ms/1000) : 0; }
+function nowEpochSec(){ return Math.floor(Date.now()/1000); }
+
+const _MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+/* Human-readable render of a unix-seconds value — used everywhere we
+   need to SHOW a Transaction ID / Exp Date, while the underlying value
+   stays a plain unix-seconds integer. */
+function fmtEpochSec(sec, withTime){
+  if(!sec) return '—';
+  const d = new Date(sec*1000);
   const p = n=>String(n).padStart(2,'0');
-  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  const datePart = `${p(d.getDate())} ${_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  return withTime===false ? datePart : `${datePart}, ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 function _cleanDocLink(raw){
   const v = _s(raw);
@@ -537,13 +544,14 @@ function normaliseLogRow(r, recTs){
     const portal = _portalFromRaw(col1raw);
     if(!portal) return null;
     const entityId = _s(r[2]); if(!entityId) return null;
-    const dtTs = parseDocLogDateTime(col0raw);
+    const dtTs   = parseDocLogDateTime(col0raw);
+    const expMs  = parseDocLogDateTime(_s(r[5]));
     return {
-      txnId:    fmtTxnDateTime(dtTs) || col0raw || ('LOG-'+Math.random().toString(36).slice(2,8).toUpperCase()),
+      txnId:    dtTs ? String(toEpochSec(dtTs)) : (/^\d{9,13}$/.test(col0raw) ? col0raw : ('LOG-'+Math.random().toString(36).slice(2,8).toUpperCase())),
       portal, entityId,
       docType:  _s(r[3]),
       docLink:  _cleanDocLink(r[4]),
-      expiry:   parseDocLogExpiry(_s(r[5])),
+      expiryTs: toEpochSec(expMs),          // unix seconds, e.g. 1788907920
       ts:       dtTs || recTs || 0,
     };
   }
@@ -552,29 +560,37 @@ function normaliseLogRow(r, recTs){
   const eId = _s(r['ID']||r['entityId']||r['Emp ID']||r['Bike ID']||'');
   if(!eId) return null;
   const rawDt = r['Date']||r['Date Time']||r['DateTime']||r['Timestamp']||'';
-  const dtTs = parseDocLogDateTime(rawDt);
+  const dtTs  = parseDocLogDateTime(rawDt);
+  const rawTxn= _s(r['Transaction ID']||r['txnId']);
+  const expMs = parseDocLogDateTime(_s(r['Exp Date']||r['expiry']||''));
   return {
-    txnId:    fmtTxnDateTime(dtTs) || _s(r['Transaction ID']||r['txnId'])||('LOG-'+Math.random().toString(36).slice(2,8).toUpperCase()),
+    txnId:    dtTs ? String(toEpochSec(dtTs)) : (/^\d{9,13}$/.test(rawTxn) ? rawTxn : (rawTxn || ('LOG-'+Math.random().toString(36).slice(2,8).toUpperCase()))),
     portal, entityId: eId,
     docType:  _s(r['Doc Type']||r['docType']||''),
     docLink:  _cleanDocLink(r['Doc Link']||r['docLink']||r['File Link']||''),
-    expiry:   parseDocLogExpiry(_s(r['Exp Date']||r['expiry']||'')),
+    expiryTs: toEpochSec(expMs),
     ts:       dtTs || recTs || 0,
   };
 }
 
-/* Group logRows into one row per Transaction ID */
+/* PIVOT: group logRows so that when Portal + Entity ID are the same,
+   every document uploaded for that entity lands in ONE row, with the
+   Documents column showing a running tick count across all of them. */
+function groupKey(portal,entityId){ return portal+'::'+entityId; }
 function buildTransactions(){
   const map = new Map();
   logRows.forEach(r=>{
-    if(!map.has(r.txnId)){
-      map.set(r.txnId,{txnId:r.txnId,portal:r.portal,entityId:r.entityId,docs:[],ts:0});
+    const key = groupKey(r.portal,r.entityId);
+    if(!map.has(key)){
+      map.set(key,{key,portal:r.portal,entityId:r.entityId,docs:[],ts:0});
     }
-    const t = map.get(r.txnId);
+    const t = map.get(key);
     t.docs.push(r);
     if(r.ts > t.ts) t.ts = r.ts;
   });
-  transactions = [...map.values()].sort((a,b)=>b.ts-a.ts);
+  transactions = [...map.values()];
+  transactions.forEach(t=>t.docs.sort((a,b)=>b.ts-a.ts)); // newest doc first
+  transactions.sort((a,b)=>b.ts-a.ts);
   buildDateFilterOptions();
 }
 
@@ -582,7 +598,8 @@ function buildTransactions(){
  *  DATE / MISC UTILS
  * ═══════════════════════════════════════════════════════ */
 function fmtDate(d){ if(!d) return '\u2014'; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
-function genTxnId(){ return 'TXN-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase(); }
+/* Transaction ID is a plain unix-seconds timestamp, e.g. 1788907920 */
+function genTxnId(){ return String(nowEpochSec()); }
 function fileToBase64(f){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>res(e.target.result); r.onerror=()=>rej(new Error('Read failed')); r.readAsDataURL(f); }); }
 function resolveEntityName(id){
   const e=employees.find(x=>String(x.id)===String(id)); if(e) return e.name;
@@ -778,13 +795,42 @@ function setDateFilter(v){
 function docsWithFile(t){ return t.docs.filter(d=>d.docLink); }
 function hasAnyDoc(t){ return t.docs.some(d=>d.docLink); }
 
+/* Documents pivot badge: renders one small icon chip PER document this
+   entity has on file, plus a running count. The chips + number are
+   revealed one tick at a time (animateDocBadge) right after the row
+   is inserted into the DOM, so the count visibly ticks up 0→N and each
+   tick reveals which document it was for. */
 function docsBadge(t){
   const docs = docsWithFile(t);
   const n = docs.length;
-  if(!n) return `<span class="doc-tick-badge none">0</span>`;
-  const typeList = [...new Set(docs.map(d=>docTypeLabel(t.portal,d.docType)))].join(', ');
-  const ticks = Array.from({length:Math.min(n,3)}).map(()=>'<i class="ti ti-check"></i>').join('');
-  return `<span class="doc-tick-badge" title="${typeList}">${ticks}${n>3?` +${n-3}`:''} ${n}</span>`;
+  if(!n) return `<span class="doc-tick-badge none" data-key="${t.key}">0 docs</span>`;
+  const typeList = docs.map(d=>docTypeLabel(t.portal,d.docType)).join(', ');
+  const chips = docs.map((d,i)=>{
+    const info = docTypeInfo(t.portal,d.docType);
+    return `<i class="ti ${info?info.icon:'ti-file'} doc-tick-icon" data-idx="${i}" style="opacity:0;transform:scale(.4);" title="${docTypeLabel(t.portal,d.docType)}"></i>`;
+  }).join('');
+  return `<span class="doc-tick-badge" data-key="${t.key}" data-total="${n}" title="${typeList}">`+
+         `${chips}<span class="doc-tick-num" data-target="${n}">0</span></span>`;
+}
+
+/* Animate every doc-tick-badge currently in the table: count 0→N and
+   fade/pop each document's icon in, one tick at a time. */
+function animateAllTicks(){
+  document.querySelectorAll('.doc-tick-badge[data-total]').forEach(badge=>{
+    const total   = +badge.dataset.total || 0;
+    const numEl   = badge.querySelector('.doc-tick-num');
+    const icons   = [...badge.querySelectorAll('.doc-tick-icon')];
+    if(!total || !numEl) return;
+    let tick = 0;
+    const step = ()=>{
+      tick++;
+      numEl.textContent = String(tick);
+      const ic = icons[tick-1];
+      if(ic){ ic.style.transition='opacity .18s ease,transform .18s cubic-bezier(.34,1.56,.64,1)'; ic.style.opacity=1; ic.style.transform='scale(1)'; }
+      if(tick < total) setTimeout(step, 140);
+    };
+    setTimeout(step, 60);
+  });
 }
 
 function renderTable(){
@@ -795,7 +841,11 @@ function renderTable(){
   let rows = transactions.filter(t=>{
     if(portalFilter!=='all' && t.portal!==portalFilter) return false;
     if(dateFilter!=='all' && dateKeyFromTs(t.ts)!==dateFilter) return false;
-    if(q && !String(t.txnId).toLowerCase().includes(q) && !String(t.entityId).toLowerCase().includes(q)) return false;
+    if(q){
+      const hitEntity = String(t.entityId).toLowerCase().includes(q);
+      const hitTxn = t.docs.some(d=>String(d.txnId).toLowerCase().includes(q));
+      if(!hitEntity && !hitTxn) return false;
+    }
     return true;
   });
 
@@ -809,14 +859,14 @@ function renderTable(){
   tbody.innerHTML = rows.map(t=>{
     const name = resolveEntityName(t.entityId);
     const portalBadge = `<span class="portal-badge ${t.portal}"><i class="ti ${t.portal==='onboarding'?'ti-user-plus':'ti-receipt'}" style="font-size:9px;"></i> ${t.portal==='onboarding'?'Onboarding':'Transaction'}</span>`;
-    const checked = selectedTxnId===t.txnId ? 'checked' : '';
-    const selCls  = selectedTxnId===t.txnId ? 'selected' : '';
+    const checked = selectedKey===t.key ? 'checked' : '';
+    const selCls  = selectedKey===t.key ? 'selected' : '';
     const viewBtn = hasAnyDoc(t)
-      ? `<button class="btn btn-ghost btn-sm" style="padding:4px 8px;" onclick="event.stopPropagation();openViewPanel('${t.txnId}')" title="View documents"><i class="ti ti-eye" style="font-size:13px;"></i></button>`
+      ? `<button class="btn btn-ghost btn-sm" style="padding:4px 8px;" onclick="event.stopPropagation();openViewPanel('${t.key}')" title="View documents"><i class="ti ti-eye" style="font-size:13px;"></i></button>`
       : '';
-    return `<tr class="${selCls}" data-txn="${t.txnId}" onclick="rowClicked(event,'${t.txnId}')">
-      <td class="chk-col"><input type="checkbox" ${checked} onclick="event.stopPropagation();toggleSelect('${t.txnId}')"/></td>
-      <td><span class="txn-mono">${t.txnId}</span></td>
+    return `<tr class="${selCls}" data-key="${t.key}" onclick="rowClicked(event,'${t.key}')">
+      <td class="chk-col"><input type="checkbox" ${checked} onclick="event.stopPropagation();toggleSelect('${t.key}')"/></td>
+      <td><span class="txn-mono">${fmtEpochSec(toEpochSec(t.ts))}</span></td>
       <td>${portalBadge}</td>
       <td><span style="font-family:var(--mono);font-size:11px;">${t.entityId}</span>${name?` <span style="color:var(--text3);">· ${name}</span>`:''}</td>
       <td>${docsBadge(t)}</td>
@@ -824,22 +874,23 @@ function renderTable(){
     </tr>`;
   }).join('');
 
-  footer.innerHTML = `<i class="ti ti-table" style="font-size:13px;"></i> Showing <strong>${rows.length}</strong> of <strong>${transactions.length}</strong> transactions`;
+  footer.innerHTML = `<i class="ti ti-table" style="font-size:13px;"></i> Showing <strong>${rows.length}</strong> of <strong>${transactions.length}</strong> entities`;
   updateSelectionUI();
+  animateAllTicks();
 }
 
-function rowClicked(e,txnId){
-  toggleSelect(txnId);
+function rowClicked(e,key){
+  toggleSelect(key);
 }
 
-function toggleSelect(txnId){
-  selectedTxnId = (selectedTxnId===txnId) ? null : txnId;
+function toggleSelect(key){
+  selectedKey = (selectedKey===key) ? null : key;
   renderTable();
 }
 
 function updateSelectionUI(){
   const btn = document.getElementById('btn-upload-selected');
-  btn.style.display = selectedTxnId ? 'inline-flex' : 'none';
+  btn.style.display = selectedKey ? 'inline-flex' : 'none';
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -856,35 +907,53 @@ function closePanel(){
   document.getElementById('dp-panel').classList.remove('open');
 }
 
-/* ── VIEW: list all docs under a Transaction ID ── */
-function openViewPanel(txnId){
-  const t = transactions.find(x=>x.txnId===txnId);
-  if(!t){ toast('Transaction not found','error'); return; }
+/* ── VIEW: list all docs under a Portal+Entity pivot row ── */
+function openViewPanel(key){
+  const t = transactions.find(x=>x.key===key);
+  if(!t){ toast('Entity not found','error'); return; }
   if(!hasAnyDoc(t)){ toast('No documents to view','error'); return; }
   openPanel('ti-eye','View Documents');
   renderViewList(t);
+}
+
+/* Expiry pill: neutral if none set, teal if still valid, red if past due */
+function expiryPill(expiryTs){
+  if(!expiryTs) return '';
+  const expired = expiryTs*1000 < Date.now();
+  const cls = expired ? 'color:var(--red);' : 'color:var(--teal);';
+  return `<span style="font-size:9.5px;font-family:var(--mono);${cls}"><i class="ti ti-calendar-${expired?'x':'check'}" style="font-size:10px;"></i> Exp ${fmtEpochSec(expiryTs,false)}</span>`;
 }
 
 function renderViewList(t){
   const body = document.getElementById('dp-body');
   const docs = docsWithFile(t);
   if(!docs.length){
-    body.innerHTML = `<div style="text-align:center;padding:28px 0;color:var(--text3);font-size:12px;"><i class="ti ti-file-off" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>No documents yet for this transaction</div>`;
+    body.innerHTML = `<div style="text-align:center;padding:28px 0;color:var(--text3);font-size:12px;"><i class="ti ti-file-off" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>No documents yet for this entity</div>`;
     return;
   }
   body.innerHTML = `
-    <div class="doc-type-choice" style="flex-direction:column;">
-      ${docs.map((d,idx)=>`
-        <button type="button" class="dtc-btn" style="flex-direction:row;justify-content:flex-start;width:100%;" onclick="previewDoc('${t.txnId}',${idx})">
-          <i class="ti ti-database"></i>${docTypeLabel(t.portal,d.docType)}
-        </button>`).join('')}
+    <div class="hist-list">
+      ${docs.map((d,idx)=>{
+        const info = docTypeInfo(t.portal,d.docType);
+        return `
+        <div class="hist-rec" onclick="previewDoc('${t.key}',${idx})">
+          <div class="hist-icon"><i class="ti ${info?info.icon:'ti-file'}"></i></div>
+          <div class="hist-meta">
+            <div class="hist-title">${docTypeLabel(t.portal,d.docType)}</div>
+            <div class="hist-sub"><i class="ti ti-upload" style="font-size:10px;"></i> Uploaded ${fmtEpochSec(+d.txnId)}</div>
+            ${d.expiryTs?`<div class="hist-sub">${expiryPill(d.expiryTs)}</div>`:''}
+          </div>
+          <i class="ti ti-chevron-right" style="color:var(--text3);"></i>
+        </div>`;
+      }).join('')}
     </div>`;
 }
 
-function previewDoc(txnId,idx){
-  const t = transactions.find(x=>x.txnId===txnId);
+function previewDoc(key,idx){
+  const t = transactions.find(x=>x.key===key);
   const d = t && docsWithFile(t)[idx];
   if(!d){ toast('Document not found','error'); return; }
+  const info = docTypeInfo(t.portal,d.docType);
   const body = document.getElementById('dp-body');
   let mediaHtml;
   if(d.docLink && d.docLink.startsWith('http')){
@@ -896,7 +965,13 @@ function previewDoc(txnId,idx){
     mediaHtml = `<div style="padding:36px 16px;text-align:center;color:var(--text3);background:var(--bg3);border-radius:var(--radius-lg);"><i class="ti ti-file-unknown" style="font-size:34px;display:block;margin-bottom:10px;opacity:.35;"></i><div style="font-size:12px;">No preview available</div></div>`;
   }
   body.innerHTML = `
-    <button class="btn btn-ghost btn-sm" onclick="openViewPanel('${txnId}')" style="margin-bottom:12px;"><i class="ti ti-arrow-left"></i> Back to list</button>
+    <button class="btn btn-ghost btn-sm" onclick="openViewPanel('${key}')" style="margin-bottom:12px;"><i class="ti ti-arrow-left"></i> Back to list</button>
+    <div class="preview-meta" style="margin-bottom:12px;">
+      <div class="pmi"><span class="k"><i class="ti ${info?info.icon:'ti-file'}"></i> Doc Type</span><span class="v">${docTypeLabel(t.portal,d.docType)}</span></div>
+      <div class="pmi"><span class="k">Upload Date</span><span class="v">${fmtEpochSec(+d.txnId)}</span></div>
+      <div class="pmi"><span class="k">Txn ID (Unix)</span><span class="v" style="font-size:10px;">${d.txnId}</span></div>
+      ${d.expiryTs?`<div class="pmi"><span class="k">Exp Date</span><span class="v">${fmtEpochSec(d.expiryTs,false)}</span></div>`:''}
+    </div>
     ${mediaHtml}`;
 }
 
@@ -904,12 +979,12 @@ function previewDoc(txnId,idx){
  *  UPLOAD FLOW — Step 1 (form) → Step 2 (confirm) → submit
  *  Always attached to an already-selected transaction row.
  * ═══════════════════════════════════════════════════════ */
-let _uploadState = null; // { txnId, portal, entityId, docType, file }
+let _uploadState = null; // { portal, entityId, docType, file, expiryDate }
 
-function openUploadFlow(txnId){
-  const t = transactions.find(x=>x.txnId===txnId);
-  if(!t){ toast('Select a transaction row first','error'); return; }
-  _uploadState = { txnId:t.txnId, portal:t.portal, entityId:t.entityId, docType:null, file:null };
+function openUploadFlow(key){
+  const t = transactions.find(x=>x.key===key);
+  if(!t){ toast('Select a row first','error'); return; }
+  _uploadState = { portal:t.portal, entityId:t.entityId, docType:null, file:null, expiryDate:'' };
   openPanel('ti-upload','Upload Document');
   renderUploadStep1();
 }
@@ -930,8 +1005,8 @@ function renderUploadStep1(){
   body.innerHTML = `
     <div class="confirm-strip">
       <div>
-        <div class="cn">${s.txnId}</div>
-        <div class="cs">${s.portal==='onboarding'?'Onboarding':'Transaction'} · ${s.entityId}${resolveEntityName(s.entityId)?' · '+resolveEntityName(s.entityId):''}</div>
+        <div class="cn">${s.portal==='onboarding'?'Onboarding':'Transaction'} · ${s.entityId}</div>
+        <div class="cs">${resolveEntityName(s.entityId)||'&nbsp;'}</div>
       </div>
     </div>
     ${docTypePicker}
@@ -943,6 +1018,10 @@ function renderUploadStep1(){
         <p id="upload-file-label">Click or drag &amp; drop<br><span style="font-size:9.5px;opacity:.6;">JPG · PNG · WEBP · PDF · max 8 MB</span></p>
       </div>
     </div>
+    <div class="field" style="margin-bottom:14px;">
+      <label>Exp Date <span style="text-transform:none;font-weight:400;color:var(--text3);">(optional)</span></label>
+      <input type="date" class="date-input" id="upload-expiry" value="${s.expiryDate||''}" onchange="setUploadExpiry(this.value)"/>
+    </div>
     <div class="form-actions">
       <button class="btn btn-ghost btn-sm" onclick="closePanel()"><i class="ti ti-x"></i> Cancel</button>
       <button class="btn btn-primary btn-sm" onclick="goToConfirmStep()"><i class="ti ti-arrow-right"></i> Review Upload</button>
@@ -950,6 +1029,8 @@ function renderUploadStep1(){
 
   initUploadDropZone();
 }
+
+function setUploadExpiry(val){ _uploadState.expiryDate = val; }
 
 function setUploadDocType(key){
   _uploadState.docType = key;
@@ -980,11 +1061,14 @@ function handleUploadFile(input){
 
 function goToConfirmStep(){
   const s=_uploadState;
-  if(s.isNew && !s.entityId){ toast('Entity ID is required','error'); return; }
   if(!s.docType){ toast('Select a document type','error'); return; }
   if(!s.file){ toast('Select a file first','error'); return; }
   const MAX=8*1024*1024;
   if(s.file.size>MAX){ toast(`File too large (${(s.file.size/1024/1024).toFixed(1)} MB) — max 8 MB`,'error'); return; }
+  // Freeze the Transaction ID (unix seconds) at review time so the value
+  // shown to the user is exactly what gets saved.
+  s.txnId = genTxnId();
+  s.expiryTs = s.expiryDate ? toEpochSec(new Date(s.expiryDate+'T00:00:00').getTime()) : 0;
   renderConfirmStep();
 }
 
@@ -995,7 +1079,7 @@ function renderConfirmStep(){
   const body = document.getElementById('dp-body');
   body.innerHTML = `
     <div style="text-align:center;padding:6px 0 14px;">
-      <i class="ti ti-file-check" style="font-size:36px;color:var(--accent);"></i>
+      <i class="ti ${dtInfo.icon}" style="font-size:36px;color:var(--accent);"></i>
       <div style="font-size:13px;font-weight:700;margin-top:8px;">Confirm this upload?</div>
     </div>
     <div class="preview-meta">
@@ -1003,7 +1087,9 @@ function renderConfirmStep(){
       <div class="pmi"><span class="k">Entity</span><span class="v">${s.entityId}${name?' · '+name:''}</span></div>
       <div class="pmi"><span class="k">Doc Type</span><span class="v">${dtInfo.label}</span></div>
       <div class="pmi"><span class="k">File</span><span class="v" style="font-size:10.5px;">${s.file.name}</span></div>
-      ${s.txnId?`<div class="pmi"><span class="k">Txn ID</span><span class="v" style="font-size:9.5px;">${s.txnId}</span></div>`:''}
+      <div class="pmi"><span class="k">Txn ID (Unix)</span><span class="v" style="font-size:10px;">${s.txnId}</span></div>
+      <div class="pmi"><span class="k">Upload Date</span><span class="v">${fmtEpochSec(+s.txnId)}</span></div>
+      ${s.expiryTs?`<div class="pmi"><span class="k">Exp Date</span><span class="v">${fmtEpochSec(s.expiryTs,false)} <span style="color:var(--text3);">(${s.expiryTs})</span></span></div>`:''}
     </div>
     <div id="upload-gs-status"></div>
     <div class="form-actions">
@@ -1023,7 +1109,7 @@ async function submitUpload(){
   let base64, txnId;
   try{
     base64 = await fileToBase64(s.file);
-    txnId = s.txnId || genTxnId();
+    txnId = s.txnId || genTxnId();     // unix seconds, e.g. 1788907920
   }catch(err){
     gs.className='gs-status error';
     gs.innerHTML=`<i class="ti ti-alert-circle"></i> File read failed: ${err.message}`;
@@ -1041,8 +1127,8 @@ async function submitUpload(){
     await syncToSheets({
       txnId, portal:s.portal, entityId:s.entityId, docType:s.docType,
       fileName:s.file.name, fileType:s.file.type==='application/pdf'?'pdf':'image',
-      mimeType:s.file.type, fileData:base64, expiry:'',
-      uploadedAt:new Date().toISOString(),
+      mimeType:s.file.type, fileData:base64, expiry:s.expiryTs||'',
+      uploadedAt:txnId,
     });
     gs.className='gs-status success';
     gs.innerHTML=`<i class="ti ti-circle-check"></i> Saved · TXN: ${txnId}`;
@@ -1050,7 +1136,7 @@ async function submitUpload(){
     setTimeout(async()=>{
       await loadDocLog();
       buildTransactions();
-      selectedTxnId = txnId;
+      selectedKey = groupKey(s.portal,s.entityId);
       _updateCacheStatus();
       renderTable();
       closePanel();
