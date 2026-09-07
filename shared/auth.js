@@ -39,7 +39,7 @@
   const SERVER_CHECK_INT = 5  * 60 * 1000;    // server ping every 5 min
   const ALLOWED_ORIGIN   = 'https://effimalik.github.io/Testing/';
  // const API_BASE = 'https://script.google.com/macros/s/AKfycbwrHCi1-Ur0L3Rns8sAPNVLkRH4UIXAxt3t6tQB-rnjtBDIMZPzGf5PNCOwaDMZYClI/exec';
-   const API_BASE = 'https://script.google.com/macros/s/AKfycbxYFAhv4ov32IF5yWczp6x9SDcBfirkoTzT803iYJGSfFa0gAoFmD8CbV5lv0ntF5Sg/exec';
+   const API_BASE = 'https://script.google.com/macros/s/AKfycbyzx-c1WwyesfX6smNRIiuQeU2ZjIdFO2tnxHgyVUJE0q6SwVx7TwvOlNlEqzG67Bh5/exec';
 
      
 
