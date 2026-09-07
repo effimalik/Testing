@@ -113,8 +113,6 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 #cache-status{display:inline-flex;align-items:center;cursor:default;padding:4px;gap:6px;font-size:11px;color:var(--text3);}
 
 /* ═══ TOOLBAR / SELECTOR BAR ═══ */
-.selector-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:10px 14px;flex-shrink:0;box-shadow:var(--shadow);}
-.toolbar-left,.toolbar-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .field{display:flex;flex-direction:column;gap:5px;}
 .field label{font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;}
 .field label span.req{color:var(--red);}
@@ -125,11 +123,14 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 .tab-btn.active{background:var(--accent);color:#fff;box-shadow:0 0 10px var(--accent-glow);}
 .tab-btn:not(.active):hover{background:var(--surface2);color:var(--text);}
 
-.sdw{position:relative;}
-.sdw input{width:100%;padding:8px 30px 8px 11px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:12.5px;transition:border .15s,box-shadow .15s;}
-.sdw input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
-.sdw input::placeholder{color:var(--text3);}
-.sdw i.search-ic{position:absolute;right:9px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px;pointer-events:none;}
+.btn-icon{width:32px;height:32px;border-radius:var(--radius);border:1.5px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .15s;flex-shrink:0;}
+.btn-icon:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+.btn-icon.active{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+.search-wrap{position:relative;display:flex;align-items:center;}
+.search-box{display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:50;}
+.search-box.open{display:block;}
+.search-box input{width:220px;padding:8px 11px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:12.5px;box-shadow:var(--shadow-md);}
+.search-box input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
 
 /* ═══ BUTTONS ═══ */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);border:1.5px solid;font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .18s;white-space:nowrap;line-height:1;}
@@ -233,9 +234,7 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 
 @media(max-width:760px){
   .portal-wrap{padding:8px;gap:7px;}
-  .tab-btn span{display:none;}
   .tab-btn{padding:8px 10px;}
-  .selector-bar{gap:8px;padding:10px 12px;}
   .doc-table td:nth-child(6),.doc-table th:nth-child(6){display:none;}
   .dp-panel{width:100%;max-width:100%;}
 }
@@ -255,28 +254,22 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
         <div class="cache-dot loading" id="cache-dot"></div>
         <span id="cache-status-text"></span>
       </div>
-    </div>
-  </div>
 
-  <!-- TOOLBAR -->
-  <div class="selector-bar">
-    <div class="toolbar-left">
       <div class="tab-nav">
-        <button class="tab-btn active" id="filter-all" onclick="setPortalFilter('all')"><i class="ti ti-stack-2"></i><span>All</span></button>
-        <button class="tab-btn" id="filter-transaction" onclick="setPortalFilter('transaction')"><i class="ti ti-receipt"></i><span>Transaction</span></button>
-        <button class="tab-btn" id="filter-onboarding" onclick="setPortalFilter('onboarding')"><i class="ti ti-user-plus"></i><span>Onboarding</span></button>
+        <button class="tab-btn active" id="filter-all" title="All" onclick="setPortalFilter('all')"><i class="ti ti-stack-2"></i></button>
+        <button class="tab-btn" id="filter-transaction" title="Transaction" onclick="setPortalFilter('transaction')"><i class="ti ti-receipt"></i></button>
+        <button class="tab-btn" id="filter-onboarding" title="Onboarding" onclick="setPortalFilter('onboarding')"><i class="ti ti-user-plus"></i></button>
       </div>
-      <div class="field">
-        <div class="sdw" style="width:220px;">
-          <input id="search-input" type="text" placeholder="Search Txn ID or Entity ID…" autocomplete="off" oninput="renderTable()"/>
-          <i class="ti ti-search search-ic"></i>
+
+      <div class="search-wrap" id="search-wrap">
+        <button class="btn-icon" id="search-toggle" title="Search" onclick="toggleSearch()"><i class="ti ti-search"></i></button>
+        <div class="search-box" id="search-box">
+          <input id="search-input" type="text" placeholder="Search Txn ID or Entity ID…" autocomplete="off"
+            oninput="renderTable()" onblur="setTimeout(closeSearchIfEmpty,150)"/>
         </div>
       </div>
-    </div>
-    <div class="toolbar-right">
+
       <button class="btn btn-primary btn-sm" id="btn-upload-selected" style="display:none;" onclick="openUploadFlow(selectedTxnId)"><i class="ti ti-upload"></i> Upload Document</button>
-      <button class="btn btn-ghost btn-sm" onclick="openUploadFlow(null)"><i class="ti ti-plus"></i> New Transaction</button>
-      <button class="btn btn-ghost btn-sm" onclick="refreshPortal()" title="Refresh"><i class="ti ti-refresh"></i></button>
     </div>
   </div>
 
@@ -330,11 +323,15 @@ const SHEETS_ON  = SHEETS_URL.startsWith('https://script.google.com/');
  *  Onboarding   → ID or Visa
  * ═══════════════════════════════════════════════════════ */
 const TRANSACTION_DOC_TYPES = [
-  {key:'receipt', label:'Receipt', icon:'ti-receipt',      expiryRequired:false},
+  {key:'receipt', label:'Receipt',     icon:'ti-receipt'},
+  {key:'edd',     label:'EDD',         icon:'ti-shield-check'},
+  {key:'source',  label:'Source',      icon:'ti-file-text'},
 ];
 const ONBOARDING_DOC_TYPES = [
-  {key:'id',      label:'ID',      icon:'ti-id-badge-2',   expiryRequired:true},
-  {key:'visa',    label:'Visa',    icon:'ti-globe',        expiryRequired:true},
+  {key:'eid',        label:'EID',         icon:'ti-id-badge-2'},
+  {key:'passport',   label:'Passport',    icon:'ti-passport'},
+  {key:'visa',       label:'Visa',        icon:'ti-globe'},
+  {key:'icp_status', label:'ICP Status',  icon:'ti-file-certificate'},
 ];
 function docTypesFor(portal){ return portal==='onboarding' ? ONBOARDING_DOC_TYPES : TRANSACTION_DOC_TYPES; }
 function docTypeInfo(portal,key){ return docTypesFor(portal).find(d=>d.key===key); }
@@ -608,15 +605,6 @@ async function loadInitialData(){
   renderTable();
 }
 
-async function refreshPortal(){
-  toast('Refreshing…');
-  await loadDocLog();
-  buildTransactions();
-  _updateCacheStatus();
-  renderTable();
-  toast('Doc Portal refreshed');
-}
-
 /* Silent refresh on cache change (push / poll) */
 async function _applyFromIDB(){
   try{
@@ -678,6 +666,24 @@ window.addEventListener('message', (e) => {
 [_AP2_CACHE_KEY_EMP, _AP2_CACHE_KEY_BIKE, _AP2_CACHE_KEY_LOG].forEach(key => {
   try { window.parent.postMessage({ type: 'ap-cache-request', key }, '*'); } catch (e) {}
 });
+
+/* ═══════════════════════════════════════════════════════
+ *  SEARCH TOGGLE
+ * ═══════════════════════════════════════════════════════ */
+function toggleSearch(){
+  const box = document.getElementById('search-box');
+  const btn = document.getElementById('search-toggle');
+  const open = box.classList.toggle('open');
+  btn.classList.toggle('active', open);
+  if(open) document.getElementById('search-input').focus();
+}
+function closeSearchIfEmpty(){
+  const input = document.getElementById('search-input');
+  if(!input.value.trim()){
+    document.getElementById('search-box').classList.remove('open');
+    document.getElementById('search-toggle').classList.remove('active');
+  }
+}
 
 /* ═══════════════════════════════════════════════════════
  *  PORTAL FILTER
@@ -775,28 +781,16 @@ function openViewPanel(txnId){
 
 function renderViewList(t){
   const body = document.getElementById('dp-body');
-  const name = resolveEntityName(t.entityId);
   if(!t.docs.length){
-    body.innerHTML = `<div class="preview-meta"><div class="pmi"><span class="k">Txn ID</span><span class="v">${t.txnId}</span></div><div class="pmi"><span class="k">Portal</span><span class="v">${t.portal}</span></div><div class="pmi"><span class="k">Entity</span><span class="v">${t.entityId}${name?' · '+name:''}</span></div></div>
-      <div style="text-align:center;padding:28px 0;color:var(--text3);font-size:12px;"><i class="ti ti-file-off" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>No documents yet for this transaction</div>`;
+    body.innerHTML = `<div style="text-align:center;padding:28px 0;color:var(--text3);font-size:12px;"><i class="ti ti-file-off" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>No documents yet for this transaction</div>`;
     return;
   }
   body.innerHTML = `
-    <div class="preview-meta">
-      <div class="pmi"><span class="k">Txn ID</span><span class="v" style="font-size:9.5px;">${t.txnId}</span></div>
-      <div class="pmi"><span class="k">Portal</span><span class="v">${t.portal==='onboarding'?'Onboarding':'Transaction'}</span></div>
-      <div class="pmi"><span class="k">Entity</span><span class="v">${t.entityId}${name?' · '+name:''}</span></div>
-    </div>
-    <div class="hist-list" style="margin-top:12px;">
+    <div class="doc-type-choice" style="flex-direction:column;">
       ${t.docs.map((d,idx)=>`
-        <div class="hist-rec" onclick="previewDoc('${t.txnId}',${idx})">
-          <div class="hist-icon"><i class="ti ${d.docLink?'ti-brand-google-drive':'ti-file-unknown'}"></i></div>
-          <div class="hist-meta">
-            <div class="hist-title">${docTypeLabel(t.portal,d.docType)}</div>
-            <div class="hist-sub">${d.expiry?('Expires '+fmtDate(d.expiry)):'No expiry'} · ${fmtTs(d.ts)}</div>
-          </div>
-          <i class="ti ti-chevron-right" style="color:var(--text3);"></i>
-        </div>`).join('')}
+        <button type="button" class="dtc-btn" style="flex-direction:row;justify-content:flex-start;width:100%;" onclick="previewDoc('${t.txnId}',${idx})">
+          <i class="ti ${d.docLink?'ti-brand-google-drive':'ti-file-unknown'}"></i>${docTypeLabel(t.portal,d.docType)}
+        </button>`).join('')}
     </div>`;
 }
 
@@ -816,28 +810,19 @@ function previewDoc(txnId,idx){
   }
   body.innerHTML = `
     <button class="btn btn-ghost btn-sm" onclick="openViewPanel('${txnId}')" style="margin-bottom:12px;"><i class="ti ti-arrow-left"></i> Back to list</button>
-    ${mediaHtml}
-    <div class="preview-meta" style="margin-top:12px;">
-      <div class="pmi"><span class="k">Doc Type</span><span class="v">${docTypeLabel(t.portal,d.docType)}</span></div>
-      <div class="pmi"><span class="k">Expiry</span><span class="v">${d.expiry?fmtDate(d.expiry):'—'}</span></div>
-      <div class="pmi"><span class="k">Uploaded</span><span class="v" style="font-size:9.5px;">${fmtTs(d.ts)}</span></div>
-    </div>
-    ${d.docLink&&d.docLink.startsWith('http')?`<a class="btn btn-ghost btn-sm btn-block" href="${d.docLink}" target="_blank" rel="noopener" style="margin-top:10px;"><i class="ti ti-external-link"></i> Open in Drive</a>`:''}`;
+    ${mediaHtml}`;
 }
 
 /* ═══════════════════════════════════════════════════════
  *  UPLOAD FLOW — Step 1 (form) → Step 2 (confirm) → submit
+ *  Always attached to an already-selected transaction row.
  * ═══════════════════════════════════════════════════════ */
-let _uploadState = null; // { isNew, txnId, portal, entityId, docType, file, expiry }
+let _uploadState = null; // { txnId, portal, entityId, docType, file }
 
 function openUploadFlow(txnId){
-  if(txnId){
-    const t = transactions.find(x=>x.txnId===txnId);
-    if(!t){ toast('Transaction not found','error'); return; }
-    _uploadState = { isNew:false, txnId:t.txnId, portal:t.portal, entityId:t.entityId, docType:null, file:null, expiry:'' };
-  } else {
-    _uploadState = { isNew:true, txnId:null, portal:'transaction', entityId:'', docType:null, file:null, expiry:'' };
-  }
+  const t = transactions.find(x=>x.txnId===txnId);
+  if(!t){ toast('Select a transaction row first','error'); return; }
+  _uploadState = { txnId:t.txnId, portal:t.portal, entityId:t.entityId, docType:null, file:null };
   openPanel('ti-upload','Upload Document');
   renderUploadStep1();
 }
@@ -845,26 +830,6 @@ function openUploadFlow(txnId){
 function renderUploadStep1(){
   const s = _uploadState;
   const body = document.getElementById('dp-body');
-
-  const portalPicker = s.isNew ? `
-    <div class="field" style="margin-bottom:14px;">
-      <label>Portal <span class="req">*</span></label>
-      <div class="doc-type-choice">
-        <button type="button" class="dtc-btn ${s.portal==='transaction'?'selected':''}" onclick="setUploadPortal('transaction')"><i class="ti ti-receipt"></i>Transaction</button>
-        <button type="button" class="dtc-btn ${s.portal==='onboarding'?'selected':''}" onclick="setUploadPortal('onboarding')"><i class="ti ti-user-plus"></i>Onboarding</button>
-      </div>
-    </div>
-    <div class="field" style="margin-bottom:14px;">
-      <label>Entity ID <span class="req">*</span></label>
-      <input type="text" class="text-input" id="entity-id-input" placeholder="Employee ID / Bike ID / reference…" value="${s.entityId}" oninput="onEntityIdInput(this.value)"/>
-      <div class="entity-hint" id="entity-hint"></div>
-    </div>` : `
-    <div class="confirm-strip">
-      <div>
-        <div class="cn">${s.txnId}</div>
-        <div class="cs">${s.portal==='onboarding'?'Onboarding':'Transaction'} · ${s.entityId}${resolveEntityName(s.entityId)?' · '+resolveEntityName(s.entityId):''}</div>
-      </div>
-    </div>`;
 
   const types = docTypesFor(s.portal);
   const docTypePicker = `
@@ -875,15 +840,13 @@ function renderUploadStep1(){
       </div>
     </div>`;
 
-  const dtInfo = s.docType ? docTypeInfo(s.portal,s.docType) : null;
-  const expiryField = `
-    <div class="field" style="margin-bottom:14px;">
-      <label>Expiry Date ${dtInfo&&dtInfo.expiryRequired?'<span class="req">*</span>':'<span style="font-size:9px;color:var(--text3);font-weight:400;">(optional)</span>'}</label>
-      <input type="date" class="date-input" id="upload-exp-date" value="${s.expiry}" oninput="_uploadState.expiry=this.value"/>
-    </div>`;
-
   body.innerHTML = `
-    ${portalPicker}
+    <div class="confirm-strip">
+      <div>
+        <div class="cn">${s.txnId}</div>
+        <div class="cs">${s.portal==='onboarding'?'Onboarding':'Transaction'} · ${s.entityId}${resolveEntityName(s.entityId)?' · '+resolveEntityName(s.entityId):''}</div>
+      </div>
+    </div>
     ${docTypePicker}
     <div class="field" style="margin-bottom:14px;">
       <label>File — Image or PDF <span class="req">*</span></label>
@@ -893,7 +856,6 @@ function renderUploadStep1(){
         <p id="upload-file-label">Click or drag &amp; drop<br><span style="font-size:9.5px;opacity:.6;">JPG · PNG · WEBP · PDF · max 8 MB</span></p>
       </div>
     </div>
-    ${expiryField}
     <div class="form-actions">
       <button class="btn btn-ghost btn-sm" onclick="closePanel()"><i class="ti ti-x"></i> Cancel</button>
       <button class="btn btn-primary btn-sm" onclick="goToConfirmStep()"><i class="ti ti-arrow-right"></i> Review Upload</button>
@@ -902,11 +864,6 @@ function renderUploadStep1(){
   initUploadDropZone();
 }
 
-function setUploadPortal(p){
-  _uploadState.portal = p;
-  _uploadState.docType = null;
-  renderUploadStep1();
-}
 function setUploadDocType(key){
   _uploadState.docType = key;
   renderUploadStep1();
@@ -915,12 +872,6 @@ function setUploadDocType(key){
     const z=document.getElementById('upload-file-zone'), l=document.getElementById('upload-file-label');
     if(z&&l){ z.classList.add('has-file'); l.innerHTML=`<strong style="font-size:12px;">${_uploadState.file.name}</strong>`; }
   }
-}
-function onEntityIdInput(v){
-  _uploadState.entityId = v.trim();
-  const hint = document.getElementById('entity-hint');
-  const name = resolveEntityName(_uploadState.entityId);
-  if(hint){ hint.textContent = name ? `Matched: ${name}` : ''; hint.classList.toggle('found', !!name); }
 }
 function initUploadDropZone(){
   const z=document.getElementById('upload-file-zone'); if(!z) return;
@@ -945,8 +896,6 @@ function goToConfirmStep(){
   if(s.isNew && !s.entityId){ toast('Entity ID is required','error'); return; }
   if(!s.docType){ toast('Select a document type','error'); return; }
   if(!s.file){ toast('Select a file first','error'); return; }
-  const dtInfo = docTypeInfo(s.portal,s.docType);
-  if(dtInfo.expiryRequired && !s.expiry){ toast('Expiry date is required for '+dtInfo.label,'error'); return; }
   const MAX=8*1024*1024;
   if(s.file.size>MAX){ toast(`File too large (${(s.file.size/1024/1024).toFixed(1)} MB) — max 8 MB`,'error'); return; }
   renderConfirmStep();
@@ -967,7 +916,6 @@ function renderConfirmStep(){
       <div class="pmi"><span class="k">Entity</span><span class="v">${s.entityId}${name?' · '+name:''}</span></div>
       <div class="pmi"><span class="k">Doc Type</span><span class="v">${dtInfo.label}</span></div>
       <div class="pmi"><span class="k">File</span><span class="v" style="font-size:10.5px;">${s.file.name}</span></div>
-      <div class="pmi"><span class="k">Expiry</span><span class="v">${s.expiry?fmtDate(s.expiry):'—'}</span></div>
       ${s.txnId?`<div class="pmi"><span class="k">Txn ID</span><span class="v" style="font-size:9.5px;">${s.txnId}</span></div>`:''}
     </div>
     <div id="upload-gs-status"></div>
@@ -1006,7 +954,7 @@ async function submitUpload(){
     await syncToSheets({
       txnId, portal:s.portal, entityId:s.entityId, docType:s.docType,
       fileName:s.file.name, fileType:s.file.type==='application/pdf'?'pdf':'image',
-      mimeType:s.file.type, fileData:base64, expiry:s.expiry,
+      mimeType:s.file.type, fileData:base64, expiry:'',
       uploadedAt:new Date().toISOString(),
     });
     gs.className='gs-status success';
