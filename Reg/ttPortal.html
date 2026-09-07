@@ -237,7 +237,6 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 @media(max-width:760px){
   .portal-wrap{padding:8px;gap:7px;}
   .tab-btn{padding:8px 10px;}
-  .doc-table td:nth-child(6),.doc-table th:nth-child(6){display:none;}
   .dp-panel{width:100%;max-width:100%;}
 }
 </style>
@@ -289,11 +288,10 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
           <th>Portal</th>
           <th>Entity</th>
           <th>Documents</th>
-          <th>Updated</th>
           <th></th>
         </tr></thead>
         <tbody id="table-body">
-          <tr class="empty-row"><td colspan="7"><i class="ti ti-loader spinner"></i> Loading…</td></tr>
+          <tr class="empty-row"><td colspan="6"><i class="ti ti-loader spinner"></i> Loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -575,7 +573,6 @@ function buildTransactions(){
  *  DATE / MISC UTILS
  * ═══════════════════════════════════════════════════════ */
 function fmtDate(d){ if(!d) return '\u2014'; return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
-function fmtTs(ts){ if(!ts) return '\u2014'; return new Date(ts).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
 function genTxnId(){ return 'TXN-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase(); }
 function fileToBase64(f){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>res(e.target.result); r.onerror=()=>rej(new Error('Read failed')); r.readAsDataURL(f); }); }
 function resolveEntityName(id){
@@ -794,7 +791,7 @@ function renderTable(){
   });
 
   if(!rows.length){
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="7"><i class="ti ti-search-off"></i>No transactions match the current filters</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="6"><i class="ti ti-search-off"></i>No transactions match the current filters</td></tr>`;
     footer.textContent='';
     updateSelectionUI();
     return;
@@ -814,7 +811,6 @@ function renderTable(){
       <td>${portalBadge}</td>
       <td><span style="font-family:var(--mono);font-size:11px;">${t.entityId}</span>${name?` <span style="color:var(--text3);">· ${name}</span>`:''}</td>
       <td>${docsBadge(t)}</td>
-      <td style="color:var(--text3);font-size:10.5px;white-space:nowrap;">${fmtTs(t.ts)}</td>
       <td>${viewBtn}</td>
     </tr>`;
   }).join('');
