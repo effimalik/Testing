@@ -576,13 +576,16 @@ function normaliseLogRow(r, recTs){
     const portal = _portalFromRaw(col1raw);
     if(!portal) return null;
     const entityId = _s(r[2]); if(!entityId) return null;
+    const docType  = _s(r[3]);
+    const docLink  = _cleanDocLink(r[4]);
+    if(!docType && !docLink) return null; // empty/placeholder row — no actual document, skip it
     const dtTs   = parseDocLogDateTime(col0raw);
     const expMs  = parseDocLogDateTime(_s(r[5]));
     return {
       txnId:    dtTs ? String(toEpochSec(dtTs)) : (/^\d{9,13}$/.test(col0raw) ? col0raw : ('LOG-'+Math.random().toString(36).slice(2,8).toUpperCase())),
       portal, entityId,
-      docType:  _s(r[3]),
-      docLink:  _cleanDocLink(r[4]),
+      docType,
+      docLink,
       expiryTs: toEpochSec(expMs),          // unix seconds, e.g. 1788907920
       ts:       dtTs || recTs || 0,
     };
@@ -591,6 +594,9 @@ function normaliseLogRow(r, recTs){
   if(!portal) return null;
   const eId = _s(r['ID']||r['entityId']||r['Emp ID']||r['Bike ID']||'');
   if(!eId) return null;
+  const docType = _s(r['Doc Type']||r['docType']||'');
+  const docLink = _cleanDocLink(r['Doc Link']||r['docLink']||r['File Link']||'');
+  if(!docType && !docLink) return null; // empty/placeholder row — no actual document, skip it
   const rawDt = r['Date']||r['Date Time']||r['DateTime']||r['Timestamp']||'';
   const dtTs  = parseDocLogDateTime(rawDt);
   const rawTxn= _s(r['Transaction ID']||r['txnId']);
@@ -598,8 +604,8 @@ function normaliseLogRow(r, recTs){
   return {
     txnId:    dtTs ? String(toEpochSec(dtTs)) : (/^\d{9,13}$/.test(rawTxn) ? rawTxn : (rawTxn || ('LOG-'+Math.random().toString(36).slice(2,8).toUpperCase()))),
     portal, entityId: eId,
-    docType:  _s(r['Doc Type']||r['docType']||''),
-    docLink:  _cleanDocLink(r['Doc Link']||r['docLink']||r['File Link']||''),
+    docType,
+    docLink,
     expiryTs: toEpochSec(expMs),
     ts:       dtTs || recTs || 0,
   };
@@ -1027,12 +1033,12 @@ function renderDocGallery(key,activeIdx){
  *  UPLOAD FLOW — Step 1 (form) → Step 2 (confirm) → submit
  *  Always attached to an already-selected transaction row.
  * ═══════════════════════════════════════════════════════ */
-let _uploadState = null; // { portal, entityId, docType, file, expiryDate }
+let _uploadState = null; // { portal, entityId, docType, file }
 
 function openUploadFlow(key){
   const t = transactions.find(x=>x.key===key);
   if(!t){ toast('Select a row first','error'); return; }
-  _uploadState = { portal:t.portal, entityId:t.entityId, docType:null, file:null, expiryDate:'' };
+  _uploadState = { portal:t.portal, entityId:t.entityId, docType:null, file:null };
   openPanel('ti-upload','Upload Document');
   renderUploadStep1();
 }
@@ -1066,10 +1072,6 @@ function renderUploadStep1(){
         <p id="upload-file-label">Click or drag &amp; drop<br><span style="font-size:9.5px;opacity:.6;">JPG · PNG · WEBP · PDF · max 8 MB</span></p>
       </div>
     </div>
-    <div class="field" style="margin-bottom:14px;">
-      <label>Exp Date <span style="text-transform:none;font-weight:400;color:var(--text3);">(optional)</span></label>
-      <input type="date" class="date-input" id="upload-expiry" value="${s.expiryDate||''}" onchange="setUploadExpiry(this.value)"/>
-    </div>
     <div class="form-actions">
       <button class="btn btn-ghost btn-sm" onclick="closePanel()"><i class="ti ti-x"></i> Cancel</button>
       <button class="btn btn-primary btn-sm" onclick="goToConfirmStep()"><i class="ti ti-arrow-right"></i> Review Upload</button>
@@ -1077,8 +1079,6 @@ function renderUploadStep1(){
 
   initUploadDropZone();
 }
-
-function setUploadExpiry(val){ _uploadState.expiryDate = val; }
 
 function setUploadDocType(key){
   _uploadState.docType = key;
@@ -1116,7 +1116,10 @@ function goToConfirmStep(){
   // Freeze the Transaction ID (unix seconds) at review time so the value
   // shown to the user is exactly what gets saved.
   s.txnId = genTxnId();
-  s.expiryTs = s.expiryDate ? toEpochSec(new Date(s.expiryDate+'T00:00:00').getTime()) : 0;
+  // Exp Date is captured automatically (today's date) — no manual input, not shown in the UI.
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  s.expiryTs = toEpochSec(today.getTime());
   renderConfirmStep();
 }
 
@@ -1137,7 +1140,6 @@ function renderConfirmStep(){
       <div class="pmi"><span class="k">File</span><span class="v" style="font-size:10.5px;">${s.file.name}</span></div>
       <div class="pmi"><span class="k">Txn ID (Unix)</span><span class="v" style="font-size:10px;">${s.txnId}</span></div>
       <div class="pmi"><span class="k">Upload Date</span><span class="v">${fmtEpochSec(+s.txnId)}</span></div>
-      ${s.expiryTs?`<div class="pmi"><span class="k">Exp Date</span><span class="v">${fmtEpochSec(s.expiryTs,false)} <span style="color:var(--text3);">(${s.expiryTs})</span></span></div>`:''}
     </div>
     <div id="upload-gs-status"></div>
     <div class="form-actions">
