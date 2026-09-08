@@ -375,13 +375,12 @@ function docTypesFor(portal){ return portal==='onboarding' ? ONBOARDING_DOC_TYPE
 function docTypeInfo(portal,key){ return docTypesFor(portal).find(d=>d.key===key); }
 function docTypeLabel(portal,key){ const f=docTypeInfo(portal,key); return f?f.label:(key||'—'); }
 
-/* Sheet name each portal writes to on the backend.
-   NOTE: adjust these two strings to whatever Code.gs / the sheet is
-   actually named for Transaction vs Onboarding docs — placeholder for now. */
-const SHEET_NAME_BY_PORTAL = {
-  transaction: 'TransactionDocuments',
-  onboarding:  'OnboardingDocuments',
-};
+/* Both portals (Onboarding + Transaction) write into the SAME backend
+   sheet — a single flat "docLog" sheet, exactly like the one shown:
+     Transaction ID | Portal | ID | Doc Type | Doc Link | Exp Date
+   The Portal column value ('Onboarding'/'Transaction') is what
+   distinguishes rows on read-back — there's no separate tab per portal. */
+const DOC_LOG_SHEET_NAME = 'docLog';
 
 /* ═══════════════════════════════════════════════════════
  *  CACHE — via shared cacheWatcher.js, with a safe fallback
@@ -1209,7 +1208,7 @@ async function syncToSheets(rec){
     sessionId:session.sessionId||'',
     token:    session.token||'',
     portal:   rec.portal==='onboarding'?'Onboarding':'Transaction',
-    sheetName:SHEET_NAME_BY_PORTAL[rec.portal],
+    sheetName:DOC_LOG_SHEET_NAME,
     txnId:    rec.txnId,
     entityId: String(rec.entityId),
     docType:  rec.docType,
