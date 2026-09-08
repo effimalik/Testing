@@ -375,12 +375,9 @@ function docTypesFor(portal){ return portal==='onboarding' ? ONBOARDING_DOC_TYPE
 function docTypeInfo(portal,key){ return docTypesFor(portal).find(d=>d.key===key); }
 function docTypeLabel(portal,key){ const f=docTypeInfo(portal,key); return f?f.label:(key||'—'); }
 
-/* Both portals (Onboarding + Transaction) write into the SAME backend
-   sheet — a single flat "docLog" sheet, exactly like the one shown:
-     Transaction ID | Portal | ID | Doc Type | Doc Link | Exp Date
-   The Portal column value ('Onboarding'/'Transaction') is what
-   distinguishes rows on read-back — there's no separate tab per portal. */
-const DOC_LOG_SHEET_NAME = 'docLog';
+/* Sheet routing: which physical tab a doc row is written to is
+   resolved per-entity in entitySheetName() below (EmpDocuments vs
+   BikeDocuments — same tabs docPortal.html already writes into). */
 
 /* ═══════════════════════════════════════════════════════
  *  CACHE — via shared cacheWatcher.js, with a safe fallback
@@ -642,6 +639,17 @@ function resolveEntityName(id){
   const e=employees.find(x=>String(x.id)===String(id)); if(e) return e.name;
   const b=bikes.find(x=>String(x.id)===String(id)); if(b) return b.plate||b.id;
   return '';
+}
+/* Same EmpDocuments/BikeDocuments sheet routing docPortal uses — the
+   physical tab is chosen by whether the entity is an employee or a bike,
+   not by the Onboarding/Transaction portal (that stays in the Portal
+   column so read-back still works the same as before). */
+function entitySheetName(id){
+  const isEmp = employees.some(x=>String(x.id)===String(id));
+  if(isEmp) return 'EmpDocuments';
+  const isBike = bikes.some(x=>String(x.id)===String(id));
+  if(isBike) return 'BikeDocuments';
+  return 'EmpDocuments'; // fallback if entity type can't be resolved
 }
 
 let _tt;
@@ -1208,7 +1216,7 @@ async function syncToSheets(rec){
     sessionId:session.sessionId||'',
     token:    session.token||'',
     portal:   rec.portal==='onboarding'?'Onboarding':'Transaction',
-    sheetName:DOC_LOG_SHEET_NAME,
+    sheetName:entitySheetName(rec.entityId),
     txnId:    rec.txnId,
     entityId: String(rec.entityId),
     docType:  rec.docType,
