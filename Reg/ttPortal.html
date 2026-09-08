@@ -184,6 +184,22 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 .dp-close:hover{background:var(--red-dim);color:var(--red);border-color:var(--red);}
 .dp-body{flex:1;overflow-y:auto;padding:16px;}
 
+/* Meta strip attached under dp-head — inline row on desktop,
+   collapsible dropdown on small screens. */
+#dp-head-meta:empty{display:none;}
+.dp-meta-drop{border-bottom:1px solid var(--border);background:var(--bg3);flex-shrink:0;}
+.dp-meta-summary{display:none;align-items:center;gap:6px;cursor:pointer;padding:9px 16px;font-size:10.5px;font-weight:700;color:var(--text2);list-style:none;user-select:none;}
+.dp-meta-summary::-webkit-details-marker{display:none;}
+.dp-meta-summary i.ti-chevron-down{margin-left:auto;transition:transform .18s;font-size:13px;}
+.dp-meta-drop[open] .dp-meta-summary i.ti-chevron-down{transform:rotate(180deg);}
+.dp-meta-drop .preview-meta{margin:0;border:none;border-radius:0;background:transparent;padding:10px 16px;}
+@media(max-width:760px){
+  .dp-meta-summary{display:flex;}
+}
+@media(min-width:761px){
+  .dp-meta-drop .preview-meta{display:flex !important;}
+}
+
 .confirm-strip{display:flex;align-items:center;gap:8px;background:var(--accent-dim);border:1px solid rgba(88,166,255,.25);border-radius:var(--radius-lg);padding:8px 11px;margin-bottom:12px;}
 .confirm-strip .cn{font-size:12.5px;font-weight:700;color:var(--text);}
 .confirm-strip .cs{font-size:10.5px;color:var(--text3);font-family:var(--mono);}
@@ -309,6 +325,7 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 <div class="dp-overlay" id="dp-overlay" onclick="closePanel()"></div>
 <div class="dp-panel" id="dp-panel">
   <div class="dp-head"><h3><i class="ti ti-files" id="dp-icon"></i><span id="dp-title">Panel</span></h3><button class="dp-close" onclick="closePanel()"><i class="ti ti-x"></i></button></div>
+  <div id="dp-head-meta"></div>
   <div class="dp-body" id="dp-body"></div>
 </div>
 
@@ -903,16 +920,28 @@ function openPanel(iconClass,title,wide){
   document.getElementById('dp-icon').className = 'ti ' + iconClass;
   document.getElementById('dp-title').textContent = title;
   setPanelWide(!!wide);
+  clearHeadMeta();
   document.getElementById('dp-overlay').classList.add('open');
   document.getElementById('dp-panel').classList.add('open');
 }
 function setPanelWide(on){
   document.getElementById('dp-panel').classList.toggle('dp-panel-wide', !!on);
 }
+function setHeadMeta(rowsHtml){
+  document.getElementById('dp-head-meta').innerHTML = `
+    <details class="dp-meta-drop">
+      <summary class="dp-meta-summary"><i class="ti ti-info-circle"></i> Details<i class="ti ti-chevron-down"></i></summary>
+      <div class="preview-meta">${rowsHtml}</div>
+    </details>`;
+}
+function clearHeadMeta(){
+  document.getElementById('dp-head-meta').innerHTML='';
+}
 function closePanel(){
   document.getElementById('dp-overlay').classList.remove('open');
   document.getElementById('dp-panel').classList.remove('open');
   setPanelWide(false);
+  clearHeadMeta();
 }
 
 /* ── VIEW: list all docs under a Portal+Entity pivot row ── */
@@ -986,13 +1015,12 @@ function previewDoc(key,idx){
       <button class="btn btn-ghost btn-sm" onclick="openViewPanel('${key}')"><i class="ti ti-arrow-left"></i> Back to list</button>
       ${canPopOut?`<button class="btn btn-ghost btn-sm" onclick="openDocFullWindow('${previewUrl.replace(/'/g,"\\'")}')" title="Open full size in a new window"><i class="ti ti-arrows-maximize"></i> Full size</button>`:''}
     </div>
-    <div class="preview-meta" style="margin-bottom:12px;">
+    <div class="ppb">${mediaHtml}</div>`;
+  setHeadMeta(`
       <div class="pmi"><span class="k"><i class="ti ${info?info.icon:'ti-file'}"></i> Doc Type</span><span class="v">${docTypeLabel(t.portal,d.docType)}</span></div>
       <div class="pmi"><span class="k">Upload Date</span><span class="v" style="font-size:10px;">${d.txnId}</span></div>
       <div class="pmi"><span class="k">Date Creation</span><span class="v">${fmtEpochSec(+d.txnId)}</span></div>
-      ${d.expiryTs?`<div class="pmi"><span class="k">Exp Date</span><span class="v">${fmtEpochSec(d.expiryTs,false)}</span></div>`:''}
-    </div>
-    <div class="ppb">${mediaHtml}</div>`;
+      ${d.expiryTs?`<div class="pmi"><span class="k">Exp Date</span><span class="v">${fmtEpochSec(d.expiryTs,false)}</span></div>`:''}`);
 }
 
 /* ═══════════════════════════════════════════════════════
