@@ -174,7 +174,8 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 /* ═══ SLIDE PANEL (view + upload share this) ═══ */
 .dp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:299;display:none;}
 .dp-overlay.open{display:block;}
-.dp-panel{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:94vw;background:var(--surface);border-left:1px solid var(--border);box-shadow:var(--shadow-lg);z-index:300;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .26s cubic-bezier(.4,0,.2,1);}
+.dp-panel{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:94vw;background:var(--surface);border-left:1px solid var(--border);box-shadow:var(--shadow-lg);z-index:300;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .26s cubic-bezier(.4,0,.2,1),width .22s ease;}
+.dp-panel.dp-panel-wide{width:min(62vw,980px);}
 .dp-panel.open{transform:translateX(0);}
 .dp-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;flex-shrink:0;}
 .dp-head h3{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:7px;}
@@ -223,7 +224,9 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 .hist-title{font-size:12px;font-weight:700;color:var(--text);}
 .hist-sub{font-size:10.5px;color:var(--text3);margin-top:2px;}
 .ppb img.pi{max-width:100%;border-radius:var(--radius-lg);display:block;margin:0 auto;}
-.ppb iframe.pf{width:100%;height:280px;border:none;border-radius:var(--radius-lg);}
+.ppb iframe.pf{width:100%;height:60vh;min-height:320px;border:none;border-radius:var(--radius-lg);background:var(--bg3);}
+.dp-panel-wide .ppb iframe.pf{height:74vh;}
+.preview-toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;}
 
 .form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--border);}
 
@@ -896,15 +899,20 @@ function updateSelectionUI(){
 /* ═══════════════════════════════════════════════════════
  *  SLIDE PANEL — shared shell for View + Upload
  * ═══════════════════════════════════════════════════════ */
-function openPanel(iconClass,title){
+function openPanel(iconClass,title,wide){
   document.getElementById('dp-icon').className = 'ti ' + iconClass;
   document.getElementById('dp-title').textContent = title;
+  setPanelWide(!!wide);
   document.getElementById('dp-overlay').classList.add('open');
   document.getElementById('dp-panel').classList.add('open');
+}
+function setPanelWide(on){
+  document.getElementById('dp-panel').classList.toggle('dp-panel-wide', !!on);
 }
 function closePanel(){
   document.getElementById('dp-overlay').classList.remove('open');
   document.getElementById('dp-panel').classList.remove('open');
+  setPanelWide(false);
 }
 
 /* ── VIEW: list all docs under a Portal+Entity pivot row ── */
@@ -925,6 +933,7 @@ function expiryPill(expiryTs){
 }
 
 function renderViewList(t){
+  setPanelWide(false);
   const body = document.getElementById('dp-body');
   const docs = docsWithFile(t);
   if(!docs.length){
@@ -940,7 +949,7 @@ function renderViewList(t){
           <div class="hist-icon"><i class="ti ${info?info.icon:'ti-file'}"></i></div>
           <div class="hist-meta">
             <div class="hist-title">${docTypeLabel(t.portal,d.docType)}</div>
-            <div class="hist-sub"><i class="ti ti-upload" style="font-size:10px;"></i> Uploaded ${fmtEpochSec(+d.txnId)}</div>
+            <div class="hist-sub"><i class="ti ti-calendar-event" style="font-size:10px;"></i> Created ${fmtEpochSec(+d.txnId)}</div>
             ${d.expiryTs?`<div class="hist-sub">${expiryPill(d.expiryTs)}</div>`:''}
           </div>
           <i class="ti ti-chevron-right" style="color:var(--text3);"></i>
@@ -949,30 +958,41 @@ function renderViewList(t){
     </div>`;
 }
 
+function openDocFullWindow(url){
+  if(!url) return;
+  const w = window.open(url,'docPreviewPopup','width=1080,height=920,noopener,noreferrer');
+  if(w) w.focus();
+}
+
 function previewDoc(key,idx){
   const t = transactions.find(x=>x.key===key);
   const d = t && docsWithFile(t)[idx];
   if(!d){ toast('Document not found','error'); return; }
   const info = docTypeInfo(t.portal,d.docType);
+  setPanelWide(true);
   const body = document.getElementById('dp-body');
-  let mediaHtml;
+  let previewUrl = '', mediaHtml, canPopOut = false;
   if(d.docLink && d.docLink.startsWith('http')){
-    let previewUrl = d.docLink;
+    previewUrl = d.docLink;
     const m = d.docLink.match(/\/file\/d\/([^/?]+)/);
     if(m) previewUrl = `https://drive.google.com/file/d/${m[1]}/preview`;
     mediaHtml = `<iframe class="pf" src="${previewUrl}" title="Document" allow="autoplay"></iframe>`;
+    canPopOut = true;
   } else {
     mediaHtml = `<div style="padding:36px 16px;text-align:center;color:var(--text3);background:var(--bg3);border-radius:var(--radius-lg);"><i class="ti ti-file-unknown" style="font-size:34px;display:block;margin-bottom:10px;opacity:.35;"></i><div style="font-size:12px;">No preview available</div></div>`;
   }
   body.innerHTML = `
-    <button class="btn btn-ghost btn-sm" onclick="openViewPanel('${key}')" style="margin-bottom:12px;"><i class="ti ti-arrow-left"></i> Back to list</button>
+    <div class="preview-toolbar">
+      <button class="btn btn-ghost btn-sm" onclick="openViewPanel('${key}')"><i class="ti ti-arrow-left"></i> Back to list</button>
+      ${canPopOut?`<button class="btn btn-ghost btn-sm" onclick="openDocFullWindow('${previewUrl.replace(/'/g,"\\'")}')" title="Open full size in a new window"><i class="ti ti-arrows-maximize"></i> Full size</button>`:''}
+    </div>
     <div class="preview-meta" style="margin-bottom:12px;">
       <div class="pmi"><span class="k"><i class="ti ${info?info.icon:'ti-file'}"></i> Doc Type</span><span class="v">${docTypeLabel(t.portal,d.docType)}</span></div>
-      <div class="pmi"><span class="k">Upload Date</span><span class="v">${fmtEpochSec(+d.txnId)}</span></div>
-      <div class="pmi"><span class="k">Txn ID (Unix)</span><span class="v" style="font-size:10px;">${d.txnId}</span></div>
+      <div class="pmi"><span class="k">Upload Date</span><span class="v" style="font-size:10px;">${d.txnId}</span></div>
+      <div class="pmi"><span class="k">Date Creation</span><span class="v">${fmtEpochSec(+d.txnId)}</span></div>
       ${d.expiryTs?`<div class="pmi"><span class="k">Exp Date</span><span class="v">${fmtEpochSec(d.expiryTs,false)}</span></div>`:''}
     </div>
-    ${mediaHtml}`;
+    <div class="ppb">${mediaHtml}</div>`;
 }
 
 /* ═══════════════════════════════════════════════════════
