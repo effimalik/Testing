@@ -527,19 +527,14 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 /* ═══ BODY ROW ═══ */
 .body-row{flex:1;display:flex;overflow:hidden;min-height:0;}
 
-/* ─── FLOATING PILL DOCK — a fully-rounded, floating bottom nav bar
-   (not flush with the screen edge — it hovers above it with a gap on
-   every side, like a real floating pill/tab-bar). Sized to hug its
-   icons, not full width. position:fixed with an intrinsic width means
-   it takes no space in .shell's flex flow — the topbar/sidebar/content
-   keep their full natural size, unaffected by its presence.
-
-   The currently active tab is marked by an SVG "wave" — a thin
-   stroked line that runs flat along the inside top of the pill and
-   rises into a smooth hill over the active tab (see #ib-wave-path
-   below and updateIbWave() in JS). The wave lives fully inside the
-   pill's own box (never above/outside its rounded edge), and the
-   active icon lifts a touch to sit right under that hill. ─── */
+/* ─── FLOATING DOCK — macOS-style floating bottom nav bar (not flush
+   with the screen edge — it hovers above it with a gap on every
+   side). Sized to hug its icons, not full width. position:fixed with
+   an intrinsic width means it takes no space in .shell's flex flow —
+   the topbar/sidebar/content keep their full natural size, unaffected
+   by its presence. Each icon is its own colored rounded "app tile"
+   (see .dock-item); the active tile is marked by a small dot under
+   it (see .dock-item.active::after) rather than the old SVG wave. ─── */
 #icon-bar{
   position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));
   /* Center over the content area (to the right of the sidebar), not the
@@ -552,39 +547,13 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   margin:0;
   transition:left .24s cubic-bezier(.4,0,.2,1);
 }
-/* Sits inside .ib-scroll, anchored to the top of the pill's padding
-   box. Its base runs flat near icon height, but the arc's peak is
-   drawn above y=0 on purpose — overflow:visible lets that loop poke
-   up past the pill's own rounded border, so it reads as a raised
-   ring around the active icon rather than a hill contained inside
-   the bar (see updateIbWave() in JS, which draws it as a true
-   elliptical arc, not just a bezier hill). */
-.ib-wave{
-  position:absolute;left:0;top:0;
-  height:34px;width:100%;
-  overflow:visible;pointer-events:none;
-  z-index:1;
-}
-#ib-wave-path{
-  fill:none;
-  stroke:var(--red);
-  stroke-width:3.5px;
-  stroke-linecap:round;
-  transition:d .4s cubic-bezier(.34,1.56,.64,1);
-  filter:drop-shadow(0 0 5px var(--red-dim));
-}
-#ib-wave-dot{
-  fill:var(--red);
-  transition:cx .4s cubic-bezier(.34,1.56,.64,1);
-  filter:drop-shadow(0 0 4px var(--red-dim));
-}
 .ib-scroll{
   position:relative;
-  display:flex;flex-direction:row;align-items:center;
-  gap:6px;padding:16px 14px 11px;
+  display:flex;flex-direction:row;align-items:flex-end;
+  gap:6px;padding:8px 10px;
   background:var(--bg2);
-  border:1px solid var(--red);
-  border-radius:999px;
+  border:1px solid var(--border);
+  border-radius:22px;
   box-shadow:var(--shadow-lg);
   max-width:calc(100vw - 24px);
   overflow-x:auto;overflow-y:hidden;
@@ -593,49 +562,37 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 .ib-scroll::-webkit-scrollbar{display:none;}
 .ib-divider{display:none;}
 .ib-spacer{display:none;}
-/* Perfect circular pill — equal width/height with border-radius:50%,
-   so every tab (icon-only, no label) reads as a round button rather
-   than a rounded square. */
-.ib-btn{
-  position:relative;flex-shrink:0;z-index:2;
-  width:56px;height:auto;min-height:52px;padding:5px 2px 6px;
-  border-radius:14px;border:none;
-  background:transparent;color:var(--ib-color,var(--text2));
-  cursor:pointer;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-  font-size:19px;
-  transition:transform .35s cubic-bezier(.34,1.56,.64,1),color .2s,background .15s;
+/* Rounded "app tile" dock buttons — colored square-ish icons like a
+   macOS dock, each with a hover-revealed tooltip label. */
+.dock-item{
+  position:relative;flex-shrink:0;width:52px;height:52px;border-radius:14px;
+  border:none;color:#fff;font-size:22px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .16s cubic-bezier(.2,.9,.3,1.3);
 }
-.ib-btn:hover:not(.active){background:var(--surface);color:var(--ib-color,var(--text));}
-.ib-btn.active{color:var(--text);transform:translateY(-4px);}
-/* Per-icon accent colors — a more colorful, "attractive" dock instead of
-   a single flat tone for every button */
-#ib-emp{--ib-color:var(--accent);--ib-color-dim:var(--accent-dim);}
-#ib-bike{--ib-color:var(--teal);--ib-color-dim:var(--teal-dim);}
-#ib-sim{--ib-color:var(--purple);--ib-color-dim:var(--purple-dim);}
-#ib-adv{--ib-color:var(--amber);--ib-color-dim:var(--amber-dim);}
-#ib-docs{--ib-color:var(--orange);--ib-color-dim:var(--orange-dim);}
-#ib-payroll{--ib-color:var(--red);--ib-color-dim:var(--red-dim);}
-/* Persistent label under each icon (replaces the old hover-only tooltip) */
-.ib-label{
-  font-size:9px;font-weight:600;color:var(--text3);
-  white-space:normal;line-height:1.1;font-family:var(--font);
-  text-align:center;max-width:56px;
-  transition:color .2s;
+.dock-item:hover{transform:translateY(-9px) scale(1.08);}
+.dock-item::after{
+  content:'';position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);
+  width:4px;height:4px;border-radius:50%;background:var(--accent);opacity:0;
 }
-.ib-btn.active .ib-label{color:var(--red);}
+.dock-item.active::after{opacity:1;}
+.dock-sep{width:1px;align-self:stretch;margin:8px 4px;background:var(--border);}
+.dock-tip{
+  position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);
+  background:var(--text);color:var(--bg2);font-size:10.5px;font-weight:600;
+  padding:4px 9px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;
+  transition:opacity .12s;z-index:2;
+}
+.dock-item:hover .dock-tip{opacity:1;}
 
 /* icon-bar adaptive: shrink when very tight */
 @media(max-width:520px){
-  .ib-scroll{padding:14px 10px 9px;gap:3px;}
-  .ib-btn{width:46px;height:46px;font-size:16px;border-radius:12px;}
-  .ib-label{font-size:9px;}
+  .ib-scroll{padding:6px 8px;gap:4px;}
+  .dock-item{width:44px;height:44px;font-size:18px;border-radius:12px;}
 }
 @media(max-height:420px){
-  .ib-scroll{padding:8px;gap:3px;}
-  .ib-btn{width:36px;height:36px;font-size:16px;border-radius:10px;}
-  .ib-label{display:none;}
-  .ib-wave{display:none;}
+  .ib-scroll{padding:6px 8px;gap:4px;}
+  .dock-item{width:38px;height:38px;font-size:17px;border-radius:10px;}
 }
 
 
@@ -647,8 +604,6 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
   position:relative;
   display:flex;flex-direction:column;align-items:center;
 }
-.admin-fab{--ib-color:var(--text2);--ib-color-dim:var(--surface2);}
-.admin-fab.active{--ib-color:var(--accent);--ib-color-dim:var(--accent-dim);}
 /* List — hidden by default, revealed only while hovering the corner area,
    auto-hides again after the hover-out delay (handled in JS). Opens
    upward, above the gear icon. */
@@ -1307,44 +1262,41 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
 
   </div>
 
-  <!-- FLOATING PILL DOCK — main menu, a fully-rounded floating bottom
-       nav bar that hovers clear of the screen edge, sized to fit its
-       icons. Fixed positioning means it floats over the page without
-       ever shifting the topbar/sidebar/content. The active tab is
-       marked by a curved SVG line (#ib-wave-path), drawn inside the
-       pill's own top edge, that arcs over whichever button is active
-       — see updateIbWave() in JS. -->
+  <!-- FLOATING DOCK — main menu, a macOS-style floating bottom dock that
+       hovers clear of the screen edge, sized to fit its icons. Fixed
+       positioning means it floats over the page without ever shifting
+       the topbar/sidebar/content. Each icon is its own colored "app
+       tile" (see .dock-item); the active tile is marked with a small
+       dot underneath (see .dock-item.active::after). Clicking any icon
+       opens that section's items into the left #sub-bar (see ibOpen()
+       in JS) — same behavior as before, just a different look. -->
   <nav id="icon-bar" aria-label="Navigation">
-
-    <svg class="ib-wave" id="ib-wave" aria-hidden="true">
-      <path id="ib-wave-path" d=""></path>
-      <circle id="ib-wave-dot" r="3"></circle>
-    </svg>
-
     <div class="ib-scroll" id="ib-scroll">
-		<button class="ib-btn active" id="ib-emp" onclick="ibOpen('ib-emp',this)" title="Employees">
-        <i class="ti ti-users"></i><span class="ib-label">Employees</span>
-      </button>
-      
-		<button class="ib-btn" id="ib-bike" onclick="ibOpen('ib-bike',this)" title="Bike Fleet">
-        <i class="ti ti-motorbike"></i><span class="ib-label">Bike Fleet</span>
-      </button>
-      
-		<button class="ib-btn" id="ib-sim" onclick="ibOpen('ib-sim',this)" title="SIM Cards">
-       <i class="ti ti-device-sim"></i><span class="ib-label">SIM Cards</span>
-      </button>
-		
-      <button class="ib-btn" id="ib-adv" onclick="ibOpen('ib-adv',this)" title="Advance Salary">
-        <i class="ti ti-cash"></i><span class="ib-label">Advance Salary</span>
-      </button>
-		
-      <button class="ib-btn" id="ib-docs" onclick="ibOpen('ib-docs',this)" title="Document">
-        <i class="ti ti-file-description"></i><span class="ib-label">Document</span>
+      <button class="dock-item active" id="ib-emp" style="background:var(--accent);" onclick="ibOpen('ib-emp',this)" title="Employees">
+        <i class="ti ti-users"></i><span class="dock-tip">Employees</span>
       </button>
 
-      <button class="ib-btn" id="ib-payroll" onclick="ibOpen('ib-payroll',this)" title="Payroll">
-        <i class="ti ti-report-money"></i><span class="ib-label">Payroll</span>
+      <button class="dock-item" id="ib-bike" style="background:var(--teal);" onclick="ibOpen('ib-bike',this)" title="Bike Fleet">
+        <i class="ti ti-motorbike"></i><span class="dock-tip">Bike Fleet</span>
       </button>
+
+      <button class="dock-item" id="ib-sim" style="background:var(--purple);" onclick="ibOpen('ib-sim',this)" title="SIM Cards">
+        <i class="ti ti-device-sim"></i><span class="dock-tip">SIM Cards</span>
+      </button>
+
+      <button class="dock-item" id="ib-adv" style="background:var(--amber);" onclick="ibOpen('ib-adv',this)" title="Advance Salary">
+        <i class="ti ti-cash"></i><span class="dock-tip">Advance Salary</span>
+      </button>
+
+      <button class="dock-item" id="ib-docs" style="background:var(--orange);" onclick="ibOpen('ib-docs',this)" title="Document">
+        <i class="ti ti-file-description"></i><span class="dock-tip">Document</span>
+      </button>
+
+      <button class="dock-item" id="ib-payroll" style="background:var(--red);" onclick="ibOpen('ib-payroll',this)" title="Payroll">
+        <i class="ti ti-report-money"></i><span class="dock-tip">Payroll</span>
+      </button>
+
+      <div class="dock-sep"></div>
 
       <!-- ADMIN — last item in this same floating dock. Its item list is
            hidden by default and only unfolds while hovering this
@@ -1356,8 +1308,8 @@ console.log('[AP2] IDB bridge ready — all data served from IndexedDB via Admin
           <div class="admin-flyout-header"><i class="ti ti-settings"></i> Admin</div>
           <div class="admin-flyout-nav" id="admin-flyout-nav"></div>
         </div>
-        <button class="ib-btn admin-fab" id="ib-admin" onclick="ibOpen('ib-admin',this)" title="Admin">
-          <i class="ti ti-settings"></i><span class="ib-label">Admin</span>
+        <button class="dock-item admin-fab" id="ib-admin" style="background:linear-gradient(135deg,var(--text2),var(--text3));" onclick="ibOpen('ib-admin',this)" title="Admin">
+          <i class="ti ti-settings"></i><span class="dock-tip">Admin</span>
         </button>
       </div>
     </div>
@@ -1821,81 +1773,8 @@ function updateDockOffset() {
     w = isOverlayMode ? collapsedW : expandedW;
   }
   document.documentElement.style.setProperty('--cur-sidebar-w', w + 'px');
-  if (typeof updateIbWave === 'function') updateIbWave();
 }
 window.addEventListener('resize', updateDockOffset);
-
-/* ── Active-tab wave indicator — draws the curved line that runs flat
-   along the pill's inside top and rises into a rounded arc that
-   wraps up and over the currently-active tab (see .ib-wave /
-   #ib-wave-path in CSS). The arc's baseline sits low, near the icon
-   itself (not near the very top of the pill), so it visibly rounds
-   around the active icon rather than just skimming above it, and is
-   drawn as a true SVG elliptical arc (not a bezier bump) for a clean,
-   properly round dome shape. Recomputed whenever the active tab
-   changes or the dock is resized, so it always tracks the active
-   button's real on-screen position. ── */
-function updateIbWave() {
-  const scroll = document.getElementById('ib-scroll');
-  const svg    = document.getElementById('ib-wave');
-  const path   = document.getElementById('ib-wave-path');
-  const dot    = document.getElementById('ib-wave-dot');
-  if (!scroll || !svg || !path) return;
-
-  const w = Math.max(scroll.scrollWidth, scroll.clientWidth); // full scrollable content width —
-                                  // safe now that buttons are fixed-size icons with no
-                                  // overflowing label text to inflate this measurement.
-  const boxH = 34;
-  svg.setAttribute('viewBox', `0 0 ${w} ${boxH}`);
-  svg.style.width = w + 'px';
-
-  const base = 30;   // y of the flat baseline — low, near icon height, so the arc
-                      // that rises from it visibly rounds around the active icon
-  const peak = -20;   // y of the top of the arc — negative, so the loop pokes up
-                       // past the pill's own top edge (svg overflow is visible)
-
-  const activeBtn = scroll.querySelector('.ib-btn.active');
-  if (!activeBtn) {
-    path.setAttribute('d', `M0,${base} L${w},${base}`);
-    if (dot) dot.style.display = 'none';
-    return;
-  }
-
-  // Arc radius tracks the active button's own size so a wider tab gets a
-  // proportionally wider dome than a narrower one. Kept close to ry so the
-  // loop reads as a round bump rather than a flat oval hill.
-  const hw = Math.max(34, Math.min(54, activeBtn.offsetWidth / 2 + 24));
-  const cx = Math.max(hw, Math.min(w - hw, activeBtn.offsetLeft + activeBtn.offsetWidth / 2));
-  const ry = base - peak; // vertical radius of the arc
-  path.setAttribute(
-    'd',
-    `M0,${base} L${cx - hw},${base} ` +
-    `A${hw},${ry} 0 0 1 ${cx + hw},${base} ` +
-    `L${w},${base}`
-  );
-
-  // Small marker dot centered inside the loop, roughly level with the
-  // pill's own top edge (y=0) — sits above the icon, below the arc's peak.
-  if (dot) {
-    dot.style.display = '';
-    dot.setAttribute('cx', cx);
-    dot.setAttribute('cy', 0);
-  }
-}
-(function initIbWave() {
-  const scroll = document.getElementById('ib-scroll');
-  if (!scroll) return;
-  window.addEventListener('resize', updateIbWave);
-  updateIbWave();
-  // Icon/label webfonts (Tabler icons, Sora) load asynchronously and can
-  // reflow button widths after the first paint — resync once they're
-  // ready, plus a short fallback timer for browsers without the Font
-  // Loading API.
-  if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(updateIbWave).catch(() => {});
-  }
-  setTimeout(updateIbWave, 350);
-})();
 
 function toggleSidebar() {
   sidebarVisible = !sidebarVisible;
@@ -1969,7 +1848,7 @@ function _buildAdminFlyoutContent() {
     return `
       <div class="sb2-section">${g.label}</div>
       ${visibleItems.map(item => `
-        <div class="sb2-item" title="${item.label}" onclick="loadPage('${item.file}',this,'${item.label}','${item.icon||sec.icon}','${item.sub}','${sec.pillBg.replace(/'/g,'"')}','${sec.pillColor}');activeSection='ib-admin';document.querySelectorAll('.ib-btn').forEach(b=>b.classList.remove('active'));document.getElementById('ib-admin').classList.add('active');">
+        <div class="sb2-item" title="${item.label}" onclick="loadPage('${item.file}',this,'${item.label}','${item.icon||sec.icon}','${item.sub}','${sec.pillBg.replace(/'/g,'"')}','${sec.pillColor}');activeSection='ib-admin';document.querySelectorAll('.dock-item').forEach(b=>b.classList.remove('active'));document.getElementById('ib-admin').classList.add('active');">
           <i class="ti ${item.icon}"></i><span class="sb2-item-label">${item.label}</span>
           ${item.badge ? '<span class="sb2-badge">!</span>' : ''}
         </div>`).join('')}
@@ -2013,9 +1892,8 @@ function ibOpen(id, btn) {
     return;
   }
 
-  document.querySelectorAll('.ib-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.dock-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  updateIbWave();
 
   document.getElementById('sb2-icon').className = 'ti ' + sec.icon;
   document.getElementById('sb2-title').textContent = sec.label;
