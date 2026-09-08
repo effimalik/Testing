@@ -307,6 +307,7 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
         </div>
       </div>
 
+      <button class="btn btn-danger-ghost btn-sm" id="btn-clear-cache" onclick="handleClearCache()" title="Clear documents saved via the local cache (does not touch HARDCODED_DOC_LOG)"><i class="ti ti-trash"></i> Clear Cached Uploads</button>
       <button class="btn btn-primary btn-sm" id="btn-upload-selected" style="display:none;" onclick="openUploadFlow(selectedKey)"><i class="ti ti-upload"></i> Upload Document</button>
     </div>
   </div>
@@ -350,12 +351,6 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 'use strict';
 
 /* ═══════════════════════════════════════════════════════
- *  SHEETS URL — same backend as before
- * ═══════════════════════════════════════════════════════ */
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyt9sLbebD-FjUZDrm-v2JdCZYKW87MeCY7Lnyd3HNGiS2YeVvggBDalaCHzuzU5xcc/exec';
-const SHEETS_ON  = SHEETS_URL.startsWith('https://script.google.com/');
-
-/* ═══════════════════════════════════════════════════════
  *  DOC TYPE DEFINITIONS
  *  Transaction  → Receipt
  *  Onboarding   → ID or Visa
@@ -380,12 +375,88 @@ function docTypeLabel(portal,key){ const f=docTypeInfo(portal,key); return f?f.l
    BikeDocuments — same tabs docPortal.html already writes into). */
 
 /* ═══════════════════════════════════════════════════════
+ *  HARDCODED DOC LOG DATA
+ *  This is the dataset baked directly into the page — no network
+ *  call, no Google Sheets round-trip needed to see the portal work.
+ *  Each row matches the sheet's original column order exactly:
+ *  [ Transaction ID, Portal, ID, Doc Type, Doc Link, Exp Date ]
+ * ═══════════════════════════════════════════════════════ */
+const HARDCODED_DOC_LOG = [
+  ['1788907980','Onboarding','2','ID','https://drive.google.com/file/d/1M6zHZz4hTcLA6ZkVgpaOJnnzeKtS4Dx_/view?usp=drivesdk','1788907860'],
+  ['1788907860','Transaction','2','Receipt','',''],
+  ['1788907920','Transaction','2','Receipt','https://drive.google.com/file/d/1IFFE-TR_f__qZTwpwNlqbqT75I9AbC23/view?usp=drivesdk','1788907860'],
+  ['1788908040','Onboarding','2','Visa','https://drive.google.com/file/d/1M6zHZz4hTcLA6ZkVgpaOJnnzeKtS4Dx_/view?usp=drivesdk','1788907860'],
+  ['1788908100','Transaction','260515265325','Receipt','',''],
+  ['1788908160','Transaction','260515265326','Receipt','',''],
+  ['1788908220','Onboarding','96211809','ID','',''],
+  ['1788908280','Onboarding','84166772','Visa','https://drive.google.com/file/d/1M6zHZz4hTcLA6ZkVgpaOJnnzeKtS4Dx_/view?usp=drivesdk','1788907860'],
+  ['1788908340','Transaction','260515265329','Receipt','https://drive.google.com/file/d/1M6zHZz4hTcLA6ZkVgpaOJnnzeKtS4Dx_/view?usp=drivesdk','1788907860'],
+  ['1788908400','Transaction','260515265330','Receipt','','1788907860'],
+  ['1788908460','Onboarding','30545112','ID','','1788907860'],
+  ['1788908520','Onboarding','42269976','Visa','','1788907860'],
+  ['1788908580','Transaction','260515265333','Receipt','','1788907860'],
+  ['1788908640','Transaction','260515265334','Receipt','','1788907860'],
+  ['1788908700','Onboarding','37249783','ID','','1788907860'],
+  ['1788908760','Onboarding','87387731','Visa','https://drive.google.com/file/d/1M6zHZz4hTcLA6ZkVgpaOJnnzeKtS4Dx_/view?usp=drivesdk','1788907860'],
+  ['1788908820','Onboarding','87387731','ID','https://drive.google.com/file/d/1M6zHZz4hTcLA6ZkVgpaOJnnzeKtS4Dx_/view?usp=drivesdk','1788907860'],
+  ['1788908880','Onboarding','87387731','Passport','https://drive.google.com/file/d/1M6zHZz4hTcLA6ZkVgpaOJnnzeKtS4Dx_/view?usp=drivesdk','1788907860'],
+];
+
+/* ═══════════════════════════════════════════════════════
+ *  PRACTICAL CACHE LAYER — localStorage
+ *  This is the real, working replacement for the old "POST to a
+ *  Google Apps Script → write to a Sheet → re-fetch" flow.
+ *  New uploads are appended to this cache the moment the user
+ *  clicks "Confirm Upload" (see submitUpload below), and are read
+ *  back on every load — merged on top of HARDCODED_DOC_LOG.
+ *  This is a genuine browser cache (survives refresh/reopen), not
+ *  a simulated one: open devtools → Application → Local Storage
+ *  → look for LOCAL_CACHE_KEY to see it for yourself.
+ * ═══════════════════════════════════════════════════════ */
+const LOCAL_CACHE_KEY = 'ttportal_doclog_local_cache_v1';
+
+function loadLocalCacheRows(){
+  try{
+    const raw = localStorage.getItem(LOCAL_CACHE_KEY);
+    const rows = raw ? JSON.parse(raw) : [];
+    return Array.isArray(rows) ? rows : [];
+  }catch(e){
+    console.warn('[docPortal] local cache read failed:', e.message);
+    return [];
+  }
+}
+function saveLocalCacheRows(rows){
+  try{
+    localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(rows));
+    return true;
+  }catch(e){
+    console.warn('[docPortal] local cache write failed:', e.message);
+    return false;
+  }
+}
+/* Appends one row and persists it. If storage quota is exceeded
+   (large embedded file), it retries once with the file data
+   stripped from that row so the upload still succeeds and shows
+   up in the table — only the preview is lost, not the record. */
+function addRowToLocalCache(row){
+  const rows = loadLocalCacheRows();
+  rows.push(row);
+  if(saveLocalCacheRows(rows)) return true;
+  rows[rows.length-1] = [row[0],row[1],row[2],row[3],'',row[5]];
+  return saveLocalCacheRows(rows);
+}
+function clearLocalCache(){
+  try{ localStorage.removeItem(LOCAL_CACHE_KEY); return true; }
+  catch(e){ console.warn('[docPortal] local cache clear failed:', e.message); return false; }
+}
+
+/* ═══════════════════════════════════════════════════════
  *  CACHE — via shared cacheWatcher.js, with a safe fallback
- *  Store: 'datasets'  Keys: ap2_employee | ap2_bike | ap2_docLog
+ *  Used only for employee/bike name lookups now.
+ *  Store: 'datasets'  Keys: ap2_employee | ap2_bike
  * ═══════════════════════════════════════════════════════ */
 const _AP2_CACHE_KEY_EMP  = 'ap2_employee';
 const _AP2_CACHE_KEY_BIKE = 'ap2_bike';
-const _AP2_CACHE_KEY_LOG  = 'ap2_docLog';
 
 const _IDB_NAME  = 'ap2_fleet_cache';
 const _IDB_STORE = 'datasets';
@@ -679,14 +750,13 @@ function _updateCacheStatus(){
 }
 
 async function loadDocLog(){
-  try{
-    const rec = await _readCache(_AP2_CACHE_KEY_LOG);
-    if(!rec){ logRows=[]; return; }
-    logRows = rec.data.map(r=>normaliseLogRow(r, rec.ts)).filter(Boolean);
-  }catch(e){
-    console.warn('[docPortal] docLog cache:',e.message);
-    logRows=[];
-  }
+  // HARDCODED_DOC_LOG ships with the page; anything uploaded through
+  // the UI lives in the localStorage cache on top of it. No network
+  // call, no Google Sheets round-trip — this is instant and works
+  // completely offline.
+  const now = Date.now();
+  const rows = [...HARDCODED_DOC_LOG, ...loadLocalCacheRows()];
+  logRows = rows.map(r=>normaliseLogRow(r, now)).filter(Boolean);
 }
 
 async function loadInitialData(){
@@ -737,9 +807,6 @@ function _applyPushedDataset(key, data, ts){
   } else if(key === _AP2_CACHE_KEY_BIKE){
     const fresh = data.map((r,i)=>normaliseBike(r,i)).filter(Boolean);
     if(fresh.length) bikes = fresh;
-  } else if(key === _AP2_CACHE_KEY_LOG){
-    const fresh = data.map(r=>normaliseLogRow(r, ts || Date.now())).filter(Boolean);
-    logRows = fresh;
   }
   buildTransactions();
   _updateCacheStatus();
@@ -751,7 +818,6 @@ window.addEventListener('message', (e) => {
   if (e.data.type === 'ap-cache-preload' && e.data.datasets) {
     _applyPushedDataset(_AP2_CACHE_KEY_EMP,  e.data.datasets[_AP2_CACHE_KEY_EMP],  e.data.ts);
     _applyPushedDataset(_AP2_CACHE_KEY_BIKE, e.data.datasets[_AP2_CACHE_KEY_BIKE], e.data.ts);
-    _applyPushedDataset(_AP2_CACHE_KEY_LOG,  e.data.datasets[_AP2_CACHE_KEY_LOG],  e.data.ts);
   }
   if (e.data.type === 'ap-cache-ready' && e.data.key){
     _applyPushedDataset(e.data.key, e.data.data, e.data.ts);
@@ -764,7 +830,7 @@ window.addEventListener('message', (e) => {
   }
 });
 
-[_AP2_CACHE_KEY_EMP, _AP2_CACHE_KEY_BIKE, _AP2_CACHE_KEY_LOG].forEach(key => {
+[_AP2_CACHE_KEY_EMP, _AP2_CACHE_KEY_BIKE].forEach(key => {
   try { window.parent.postMessage({ type: 'ap-cache-request', key }, '*'); } catch (e) {}
 });
 
@@ -1021,6 +1087,11 @@ function renderDocGallery(key,activeIdx){
     const m = d.docLink.match(/\/file\/d\/([^/?]+)/);
     if(m) previewUrl = `https://drive.google.com/file/d/${m[1]}/preview`;
     mediaHtml = `<iframe class="pf" src="${previewUrl}" title="Document" allow="autoplay"></iframe>`;
+  } else if(d.docLink && d.docLink.startsWith('data:application/pdf')){
+    // Uploaded straight from the local cache — no Drive link involved.
+    mediaHtml = `<iframe class="pf" src="${d.docLink}" title="Document"></iframe>`;
+  } else if(d.docLink && d.docLink.startsWith('data:image')){
+    mediaHtml = `<img class="pi" src="${d.docLink}" alt="Document preview"/>`;
   } else {
     mediaHtml = `<div style="padding:36px 16px;text-align:center;color:var(--text3);background:var(--bg3);border-radius:var(--radius-lg);"><i class="ti ti-file-unknown" style="font-size:34px;display:block;margin-bottom:10px;opacity:.35;"></i><div style="font-size:12px;">No preview available</div></div>`;
   }
@@ -1155,6 +1226,30 @@ function renderConfirmStep(){
     </div>`;
 }
 
+/* Demo control: clears everything written to the local cache by
+   submitUpload(), leaving only HARDCODED_DOC_LOG. Shows the full
+   round trip — write on click, read on load, clear on click. */
+async function handleClearCache(){
+  clearLocalCache();
+  await loadDocLog();
+  buildTransactions();
+  _updateCacheStatus();
+  renderTable();
+  toast('Cached uploads cleared');
+}
+
+/* ═══════════════════════════════════════════════════════
+ *  SUBMIT — practical "save to cache on button click" example.
+ *  Clicking "Confirm Upload" does three real, observable things,
+ *  synchronously in this order:
+ *    1. Reads the picked file into a base64 data URL.
+ *    2. Builds one docLog row and appends it to LOCAL_CACHE_KEY
+ *       in localStorage via addRowToLocalCache() — a genuine
+ *       browser cache write, not a simulated network call.
+ *    3. Reloads logRows from HARDCODED_DOC_LOG + the cache, so the
+ *       table and the document viewer immediately reflect it.
+ *  There is no server round-trip: this is the whole write path.
+ * ═══════════════════════════════════════════════════════ */
 async function submitUpload(){
   const s=_uploadState;
   const gs=document.getElementById('upload-gs-status');
@@ -1173,84 +1268,37 @@ async function submitUpload(){
     confirmBtn.disabled=false; return;
   }
 
-  if(!SHEETS_ON){
+  gs.innerHTML=`<i class="ti ti-loader spinner"></i> Saving to cache…`;
+
+  // Row shape matches HARDCODED_DOC_LOG exactly:
+  // [ Transaction ID, Portal, ID, Doc Type, Doc Link, Exp Date ]
+  const row = [
+    String(txnId),
+    s.portal==='onboarding' ? 'Onboarding' : 'Transaction',
+    String(s.entityId),
+    s.docType,
+    base64,                       // the file itself, stored + previewed straight from cache
+    String(s.expiryTs||''),
+  ];
+
+  const saved = addRowToLocalCache(row);
+  if(!saved){
     gs.className='gs-status error';
-    gs.innerHTML=`<i class="ti ti-alert-circle"></i> Sheets URL not configured — document not saved`;
+    gs.innerHTML=`<i class="ti ti-alert-circle"></i> Could not write to cache (storage blocked or full)`;
     confirmBtn.disabled=false; return;
   }
 
-  gs.innerHTML=`<i class="ti ti-loader spinner"></i> Uploading to Google Sheets…`;
-  try{
-    await syncToSheets({
-      txnId, portal:s.portal, entityId:s.entityId, docType:s.docType,
-      fileName:s.file.name, fileType:s.file.type==='application/pdf'?'pdf':'image',
-      mimeType:s.file.type, fileData:base64, expiry:s.expiryTs||'',
-      uploadedAt:txnId,
-    });
-    gs.className='gs-status success';
-    gs.innerHTML=`<i class="ti ti-circle-check"></i> Saved · TXN: ${txnId}`;
-    toast('Document uploaded successfully');
-    setTimeout(async()=>{
-      await loadDocLog();
-      buildTransactions();
-      selectedKey = groupKey(s.portal,s.entityId);
-      _updateCacheStatus();
-      renderTable();
-      closePanel();
-    },1400);
-  }catch(err){
-    gs.className='gs-status error';
-    gs.innerHTML=`<i class="ti ti-alert-circle"></i> Upload failed: ${err.message}`;
-    console.error('[docPortal] sheets sync:',err);
-    confirmBtn.disabled=false;
-  }
-}
-
-async function syncToSheets(rec){
-  let session={};
-  try{ session=JSON.parse(sessionStorage.getItem('ap_session')||'{}'); }catch(_){}
-
-  const debugPayload={
-    action:'saveDoc',
-    type:     'docLog',
-    sessionId:session.sessionId||'',
-    token:    session.token||'',
-    portal:   rec.portal==='onboarding'?'Onboarding':'Transaction',
-    sheetName:entitySheetName(rec.entityId),
-    txnId:    rec.txnId,
-    entityId: String(rec.entityId),
-    docType:  rec.docType,
-    fileName: rec.fileName,
-    fileType: rec.fileType,
-    mimeType: rec.mimeType,
-    expiry:   rec.expiry||'',
-    uploadedAt:rec.uploadedAt,
-  };
-  console.log('[docPortal] syncToSheets payload (no fileData):', {...debugPayload, sessionId:debugPayload.sessionId?'[set]':'[missing]', token:debugPayload.token?'[set]':'[missing]'});
-
-  const payload={...debugPayload, fileData:rec.fileData};
-
-  let res, rawText;
-  try{
-    res = await fetch(SHEETS_URL,{
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify(payload),
-    });
-    rawText = await res.text();
-    console.log('[docPortal] Apps Script raw response:', rawText);
-  }catch(netErr){
-    throw new Error('Network error — '+netErr.message);
-  }
-
-  if(!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}: ${rawText.slice(0,200)}`);
-
-  let data;
-  try{ data = JSON.parse(rawText); }
-  catch(e){ throw new Error('Apps Script returned non-JSON: '+rawText.slice(0,300)); }
-
-  if(data.status!=='ok') throw new Error(data.message || data.error || JSON.stringify(data));
-  return data;
+  gs.className='gs-status success';
+  gs.innerHTML=`<i class="ti ti-circle-check"></i> Saved to cache · TXN: ${txnId}`;
+  toast('Document saved to cache');
+  setTimeout(async()=>{
+    await loadDocLog();
+    buildTransactions();
+    selectedKey = groupKey(s.portal,s.entityId);
+    _updateCacheStatus();
+    renderTable();
+    closePanel();
+  },900);
 }
 
 /* ═══════════════════════════════════════════════════════
