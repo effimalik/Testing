@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://effimalik.github.io/Testing/shared/apiConfig.js"></script>
+<script src="Reg/shared/apiConfig.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root,[data-theme="dark"]{
@@ -1354,14 +1354,21 @@ async function saveBatch() {
   const amount = valid.filter(r => typeof r.amount === 'number').reduce((s,r) => s+r.amount, 0);
   const uploadedAt = nowStr();
 
+  // Batch ID is mandatory — every row in this save must carry one. Normally
+  // set when the file was first loaded (see line ~747); this is just a
+  // safety net in case saveBatch() is ever reached without it.
+  if (!DB.currentBatchId) {
+    DB.currentBatchId = 'BATCH-' + DB.currentMonth.replace(/\s/g,'-').toUpperCase() + '-' + String(Date.now()).slice(-4);
+  }
+
   // Rows payload — must match the dedLog sheet's 8 fixed columns exactly:
   // Batch ID | Emp ID | Ded ID | Type | Amount | Month | Requested At | Requested By.
-  // "Batch ID" is each row's own per-row Trans ID (same value used to fill
-  // DedID when it's missing from the source sheet) — not a shared batch id.
-  // "Requested At" / "Requested By" replace the old Batch/Uploaded By/
-  // Approved By/DateTime columns now that there's no separate approval step.
+  // "Batch ID" is now ONE shared id per upload (DB.currentBatchId, generated
+  // once when the file was loaded) — every row in this save carries the
+  // same value, so the whole batch can be traced/grouped by it. Ded ID
+  // stays per-row (falls back to that row's own Trans ID when missing).
   const rows = valid.map(r => [
-    r.transId,
+    DB.currentBatchId,
     r.empId,
     r.dedId,
     r.dedType,
