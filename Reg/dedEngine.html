@@ -1350,14 +1350,12 @@ async function saveBatch() {
   const amount = valid.filter(r => typeof r.amount === 'number').reduce((s,r) => s+r.amount, 0);
   const uploadedAt = nowStr();
 
-  // Rows payload — must match the dedLog sheet's 10 fixed columns exactly,
-  // same structure the old portal always wrote (see approveBatch in the
-  // previous version): Trans ID | EmpID | DedID | Type | Amount | Month |
-  // Batch | Uploaded By | Approved By | DateTime.
-  // This flow has no separate approval step anymore (Save is final), so
-  // "Approved By" is auto-filled with the same user as "Uploaded By" —
-  // never left blank, so every row still lands with all 10 cells and
-  // nothing downstream (DateTime, etc.) shifts into the wrong column.
+  // Rows payload — must match the dedLog sheet's 8 fixed columns exactly:
+  // Batch ID | Emp ID | Ded ID | Type | Amount | Month | Requested At | Requested By.
+  // "Batch ID" is each row's own per-row Trans ID (same value used to fill
+  // DedID when it's missing from the source sheet) — not a shared batch id.
+  // "Requested At" / "Requested By" replace the old Batch/Uploaded By/
+  // Approved By/DateTime columns now that there's no separate approval step.
   const rows = valid.map(r => [
     r.transId,
     r.empId,
@@ -1366,9 +1364,7 @@ async function saveBatch() {
     typeof r.amount === 'number' ? r.amount : parseFloat(String(r.amount).replace(/,/g,'')) || 0,
     r.month || DB.currentMonth,
     uploadedAt,
-    DB.currentUser,
-    DB.currentUser,
-    transMsToDateTime(r.transId)
+    DB.currentUser
   ]);
 
   let session = {};
