@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="Reg/shared/apiConfig.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root,[data-theme="dark"]{
@@ -1329,10 +1330,13 @@ function parseRow(cells, headers, rowNum) {
 // SAVE — one window, one click: validates, saves, and pushes straight to
 // Google Sheets (dedLog) in a single call. No separate approval step.
 // ═══════════════════════════════════════════════
+// webAppUrl now comes from the shared Reg/shared/apiConfig.js constant —
+// the single file every page includes, so all pages point at the same
+// deployment and only need updating in one place when it's redeployed.
 const GS = {
   SHEET_ID:   '1rloK0PsZUHVQeUIcPOmYETUuQrX-Y4g-OiGX_wkxgVk',
   SHEET_NAME: 'dedLog',
-  webAppUrl:  'https://script.google.com/macros/s/AKfycbwjcvYO34_0T2k-qYD4oRJt2e1sGpxEZX-fYVAeYPXGsGeN2E0rLDystisjkm4h9xHu/exec'
+  webAppUrl:  API_URL
 };
 
 async function saveBatch() {
