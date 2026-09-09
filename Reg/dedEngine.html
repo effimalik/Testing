@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://effimalik.github.io/Testing/shared/apiConfig.js"></script>
+<script src="Reg/shared/apiConfig.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root,[data-theme="dark"]{
@@ -744,7 +744,7 @@ function handleFiles(files) {
 
   const uid     = 'UP-'  + String(Date.now()).slice(-6);
   const fvid    = 'FV-'  + String(Date.now()+1).slice(-5);
-  const batchId = 'BATCH-' + DB.currentMonth.replace(/\s/g,'-').toUpperCase() + '-' + String(Date.now()).slice(-4);
+  const batchId = 'BATCH-' + batchMonthYear() + '-' + String(Date.now()).slice(-4);
 
   const queueItem = {
     uid, fvid, batchId,
@@ -1358,7 +1358,7 @@ async function saveBatch() {
   // set when the file was first loaded (see line ~747); this is just a
   // safety net in case saveBatch() is ever reached without it.
   if (!DB.currentBatchId) {
-    DB.currentBatchId = 'BATCH-' + DB.currentMonth.replace(/\s/g,'-').toUpperCase() + '-' + String(Date.now()).slice(-4);
+    DB.currentBatchId = 'BATCH-' + batchMonthYear() + '-' + String(Date.now()).slice(-4);
   }
 
   // Rows payload — must match the dedLog sheet's 8 fixed columns exactly:
@@ -1565,6 +1565,14 @@ function esc(s)      { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'
 function fmt(n, d=2) { return Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}); }
 function fmtSize(b)  { return b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB'; }
 function nowStr()    { return new Date().toLocaleString('en-GB',{hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).replace(',',''); }
+// Batch ID uses TODAY's actual month/year (when the batch is created),
+// never the selected deduction-period month (DB.currentMonth, e.g. the
+// payroll month the deductions apply to) — those two can differ.
+function batchMonthYear() {
+  const MONTHS = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+  const d = new Date();
+  return MONTHS[d.getMonth()] + '-' + d.getFullYear();
+}
 function dl(content, filename, type) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([content instanceof ArrayBuffer ? content : [content]], { type }));
