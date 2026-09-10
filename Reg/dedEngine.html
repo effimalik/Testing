@@ -358,14 +358,20 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
 <!-- MODAL: Batch Detail — all dedLog rows for one Batch ID -->
 <div class="modal-backdrop" id="batch-detail-modal">
   <div class="modal" style="max-width:760px;">
-    <div class="modal-hdr">
-      <h2><span id="bd-modal-title">Batch Detail</span></h2>
-      <button class="btn sm" onclick="closeModal('batch-detail-modal')">✕</button>
+    <div class="modal-hdr" style="flex-direction:column;align-items:stretch;gap:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <h2><span id="bd-modal-title">Batch Detail</span></h2>
+        <button class="btn sm" onclick="closeModal('batch-detail-modal')">✕</button>
+      </div>
+      <div class="dg2">
+        <div class="dr"><div class="dr-lbl">Requested At</div><div class="dr-val" id="bd-meta-at">—</div></div>
+        <div class="dr"><div class="dr-lbl">Requested By</div><div class="dr-val" id="bd-meta-by">—</div></div>
+      </div>
     </div>
     <div class="modal-body">
       <div class="tbl-wrap" style="max-height:420px;overflow-y:auto;">
         <table class="tbl">
-          <thead><tr><th>Emp ID</th><th>Ded ID</th><th>Type</th><th>Amount</th><th>Month</th><th>Requested At</th><th>Requested By</th></tr></thead>
+          <thead><tr><th>Emp ID</th><th>Ded ID</th><th>Type</th><th>Amount</th><th>Month</th></tr></thead>
           <tbody id="bd-modal-body"></tbody>
         </table>
       </div>
@@ -782,8 +788,12 @@ function openBatchDetail(batchId) {
   const b = _lastBatchMap[batchId];
   const tbody = document.getElementById('bd-modal-body');
   document.getElementById('bd-modal-title').textContent = 'Batch Detail — ' + batchId;
+  // Requested At / Requested By are batch-level (same for every row in the batch),
+  // so they live once in the modal header instead of repeating as table columns.
+  document.getElementById('bd-meta-at').textContent = (b && (b.uploadedAt || (b.detailRows[0] && b.detailRows[0].requestedAt))) || '—';
+  document.getElementById('bd-meta-by').textContent = (b && (b.uploadedBy || (b.detailRows[0] && b.detailRows[0].requestedBy))) || '—';
   if (!b || !b.detailRows.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">No rows found for this batch.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px;">No rows found for this batch.</td></tr>';
   } else {
     tbody.innerHTML = b.detailRows.map(r => `
       <tr>
@@ -792,8 +802,6 @@ function openBatchDetail(batchId) {
         <td>${esc(r.type)}</td>
         <td class="mono">${fmt(r.amount, 2)}</td>
         <td>${esc(r.month)}</td>
-        <td class="mono">${esc(r.requestedAt)}</td>
-        <td>${esc(r.requestedBy)}</td>
       </tr>`).join('');
   }
   openModal('batch-detail-modal');
