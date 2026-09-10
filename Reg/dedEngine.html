@@ -390,41 +390,6 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
 <!-- TOAST -->
 <div class="toast" id="toast"><span id="toast-ico"></span><span id="toast-msg"></span></div>
 
-<!-- HEADER -->
-<div class="header">
-  <div class="brand">
-    <div class="brand-icon">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-    </div>
-    <div>
-      <div>Deduction Engine</div>
-      <div class="brand-sub">Upload · Map · Preview · Save</div>
-    </div>
-  </div>
-  <div class="header-meta">
-    <div class="hbadge"><div class="live-dot"></div><span id="hdr-user">HR Admin</span></div>
-    <!-- <span id="snav-approve" style="font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap;">Saved Batches</span> -->
-    <button class="snav-add" id="btn-nav-add" onclick="openIngestModal()" title="Upload a new deduction file">+</button>
-    <div class="snav-dl-wrap" id="snav-dl-wrap">
-      <button class="btn sm" id="btn-nav-download" onclick="toggleDlMenu(event)" title="Download the deduction upload template">
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-        Download
-        <svg class="snav-dl-chevron" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-      </button>
-      <div class="snav-dl-menu" id="snav-dl-menu">
-        <button onclick="downloadTemplate('xlsx');closeDlMenu();">
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-          XLSX Template
-        </button>
-        <button onclick="downloadTemplate('csv');closeDlMenu();">
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-          CSV Template
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- CONTENT -->
 <div class="content">
 
@@ -442,7 +407,30 @@ html,body{min-height:100%;font-family:var(--font);background:var(--bg);color:var
   <div class="sep"></div>
 
   <div class="card">
-    <div class="card-hdr"><div class="card-title">Batches</div></div>
+    <div class="card-hdr">
+      <div class="card-title">Batches</div>
+      <div class="header-meta">
+        <div class="hbadge"><div class="live-dot"></div><span id="hdr-user">HR Admin</span></div>
+        <button class="snav-add" id="btn-nav-add" onclick="openIngestModal()" title="Upload a new deduction file">+</button>
+        <div class="snav-dl-wrap" id="snav-dl-wrap">
+          <button class="btn sm" id="btn-nav-download" onclick="toggleDlMenu(event)" title="Download the deduction upload template">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Download
+            <svg class="snav-dl-chevron" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="snav-dl-menu" id="snav-dl-menu">
+            <button onclick="downloadTemplate('xlsx');closeDlMenu();">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              XLSX Template
+            </button>
+            <button onclick="downloadTemplate('csv');closeDlMenu();">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              CSV Template
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
     <div id="approve-list" class="card-body batches-grid"></div>
   </div>
 </div>
