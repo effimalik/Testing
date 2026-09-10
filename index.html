@@ -1638,12 +1638,11 @@ const SECTIONS = {
     permKey: 'ap2_dedLog',
     groups:[
       { label:'Payroll', items:[
-        { label:'Salik',       file:'Reg/salik.html',    icon:'ti-road',       sub:'Toll charges'        },
-        { label:'Bike Fine',   file:'Reg/accLog.html', icon:'ti-ticket',     sub:'Traffic fines'       },
-		{ label:'Salik Reconciliation', file:'Reg/salik.html', icon:'ti-users',     sub:'Visa · EID · Labour', badge:true, permKey:'ap2_employee' },
-
-        { label:'Deductions',  file:'Reg/dedEngine.html', icon:'ti-wallet-off', sub:'Salary deductions'  },
-		{ label:'Deduction Report',  file:'Reg/dedPivot.html', icon:'ti-device-sim', sub:'Deduction Pivot Report', badge:true, permKey:'ap2_loginData'  },
+        { label:'Salik',       file:'Reg/salik.html',    icon:'ti-road',       		sub:'Toll charges', 			permKey:'ap2_employee'},
+        { label:'Bike Fine',   file:'Reg/accLog.html', icon:'ti-ticket',     		sub:'Traffic fines' , 			permKey:'ap2_employee'},
+		{ label:'Salik Reconciliation', file:'Reg/salik.html', icon:'ti-users',     sub:'Visa · EID · Labour', 		badge:true, permKey:'ap2_employee' },
+        { label:'Deductions',  file:'Reg/dedEngine.html', icon:'ti-wallet-off', 	sub:'Salary deductions' , 		permKey:'ap2_employee'},
+		{ label:'Deduction Report',  file:'Reg/dedPivot.html', icon:'ti-device-sim',sub:'Deduction Pivot Report', 	badge:true, permKey:'ap2_loginData'  },
       ]},
     ],
   },
