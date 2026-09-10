@@ -649,7 +649,6 @@ const DB = {
 };
 document.getElementById('hdr-user').textContent = DB.currentUser;
 renderApproveQueue();
-loadDedLogCache();
 
 // ═══════════════════════════════════════════════
 // SINGLE-WINDOW INGEST MODAL — Upload → Map → Preview & Save all in one window
@@ -1736,6 +1735,11 @@ function dl(content, filename, type) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+
+// Loaded here (end of script) since it references the DEDLOG const/functions
+// declared further up in this same script — calling it any earlier would
+// hit them before their declarations run.
+loadDedLogCache();
 
 /* Listen for messages from parent index.html */
 window.addEventListener('message', (e) => {
