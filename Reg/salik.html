@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Salik Reconciliation</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Salik</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
@@ -84,30 +84,42 @@
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+html,body{min-height:100%;-webkit-text-size-adjust:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;}
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
 
 /* ═══ LAYOUT ═══ */
-body{display:flex;flex-direction:column;}
+body{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;overflow-x:hidden;}
 .portal-wrap{display:flex;flex-direction:column;flex:1;min-height:0;width:100%;max-width:1400px;margin:0 auto;padding:14px;gap:14px;}
 
 /* ═══ VIEW BAR ═══ */
 .view-bar{position:relative;display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0;padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);}
 .vb-brand{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:var(--radius-lg);background:var(--accent-dim);color:var(--accent);border:1px solid var(--border);font-size:16px;}
-.vb-title{display:flex;flex-direction:column;gap:1px;}
-.vb-title strong{font-size:13.5px;font-weight:700;}
-.vb-title span{font-size:11px;color:var(--text3);}
 .vb-spacer{flex:1;}
 .ib{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:var(--radius-lg);background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:15px;line-height:1;cursor:pointer;transition:color .15s,border-color .15s,background .15s;}
 .ib:hover{border-color:var(--accent);color:var(--accent);}
 
 /* cache status indicator */
-#cache-status{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;cursor:pointer;border-radius:var(--radius-lg);background:var(--bg3);border:1px solid var(--border);color:var(--text2);transition:color .2s,border-color .2s,background .2s;}
+#cache-status{padding:0;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;cursor:pointer;border-radius:var(--radius-lg);background:var(--bg3);border:1px solid var(--border);color:var(--text2);transition:color .2s,border-color .2s,background .2s;}
 #cache-status i{font-size:15px;line-height:1;}
-#cache-status:hover{color:var(--accent);border-color:var(--accent);}
-#cache-status[data-mode="loading"]{cursor:progress;pointer-events:none;}
+#cache-status:not(:disabled):hover{color:var(--accent);border-color:var(--accent);}
+#cache-status:disabled{cursor:not-allowed;opacity:.45;}
+#cache-status[data-mode="checking"],#cache-status[data-mode="loading"]{cursor:progress;opacity:.8;}
+#cache-status.ready{color:#fff;background:var(--accent);border-color:var(--accent);box-shadow:0 0 10px var(--accent-glow);}
+#cache-status.ready:hover{color:#fff;filter:brightness(1.12);}
+#cache-status:focus-visible,.ib:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* info popover (subtitle, cache status, Salik account) */
+.vb-actions{position:relative;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.info-pop{position:absolute;top:calc(100% + 8px);right:0;z-index:300;width:min(340px,calc(100vw - 28px));display:none;flex-direction:column;gap:12px;padding:14px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);}
+.info-pop.show{display:flex;}
+.info-row{display:flex;flex-direction:column;gap:3px;}
+.info-row .k{font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;}
+.info-row .v{font-size:12px;color:var(--text2);word-break:break-word;}
+.info-row .v.ok{color:var(--teal);}
+.info-row .v.warn{color:var(--amber);}
+.ib[aria-expanded="true"]{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
 #cache-status i.spin{animation:spin 1s linear infinite;}
 #cache-status.ok{color:var(--teal);border-color:rgba(57,211,83,.35);background:var(--teal-dim);}
 #cache-status.bad{color:var(--red);border-color:rgba(248,81,73,.35);background:var(--red-dim);}
@@ -122,33 +134,6 @@ body{display:flex;flex-direction:column;}
 .config-row .field{gap:2px;}
 .config-row .field label{font-size:9.5px;}
 .config-row .field select{padding:5px 8px;font-size:12px;}
-
-/* ═══ FLOW STEPS (module-specific) ═══ */
-.flow-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;}
-.flow-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-xl);padding:16px;box-shadow:var(--shadow);position:relative;transition:border-color .2s;}
-.flow-card.done{border-color:var(--teal);}
-.flow-num{font-family:var(--mono);font-size:10.5px;color:var(--accent);letter-spacing:.08em;font-weight:700;}
-.flow-card h3{font-size:14.5px;font-weight:700;margin:6px 0 4px;display:flex;align-items:center;gap:7px;}
-.flow-card h3 i{color:var(--accent);font-size:17px;}
-.flow-card.done h3 i{color:var(--teal);}
-.flow-card p{font-size:12px;color:var(--text3);margin-bottom:10px;}
-.flow-status{margin-top:8px;}
-
-.status-chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-family:var(--mono);padding:4px 10px;border-radius:20px;background:var(--bg3);color:var(--text2);}
-.status-chip.ok{background:var(--teal-dim);color:var(--teal);}
-.status-chip.warn{background:var(--amber-dim);color:var(--amber);}
-.status-chip.bad{background:var(--red-dim);color:var(--red);}
-.dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
-
-/* "+" upload zone — appears once the fleet log cache has loaded */
-.file-upload-zone{border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:18px 14px;text-align:center;cursor:pointer;transition:all .18s;background:var(--bg3);position:relative;display:block;}
-.file-upload-zone:hover,.file-upload-zone.dragover{border-color:var(--accent);background:var(--accent-dim);}
-.file-upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
-.file-upload-zone .plus{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;font-size:20px;margin-bottom:8px;box-shadow:0 0 10px var(--accent-glow);}
-.file-upload-zone p{font-size:11.5px;color:var(--text2);}
-.file-upload-zone.has-file{border-color:var(--teal);background:var(--teal-dim);}
-.file-upload-zone.has-file .plus{background:var(--teal);box-shadow:none;}
-.file-upload-zone.has-file p{color:var(--teal);}
 
 /* ═══ BUTTONS / BADGES ═══ */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);border:1.5px solid;font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .18s;white-space:nowrap;line-height:1;}
@@ -177,8 +162,9 @@ body{display:flex;flex-direction:column;}
 .panel-toolbar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap;}
 .panel-toolbar .search-input{font-family:var(--mono);font-size:12px;border:1.5px solid var(--border2);border-radius:var(--radius);padding:7px 11px;width:220px;background:var(--surface2);color:var(--text);}
 .panel-toolbar .search-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
+.toolbar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .panel-toolbar .label{font-size:12px;color:var(--text3);}
-.table-scroll{max-height:480px;overflow:auto;}
+.table-scroll{max-height:max(320px,calc(100vh - 260px));max-height:max(320px,calc(100dvh - 260px));overflow:auto;}
 
 .log-table{width:100%;border-collapse:collapse;font-size:12.5px;}
 .log-table th{padding:9px 14px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border);background:var(--bg3);cursor:pointer;white-space:nowrap;position:sticky;top:0;z-index:2;}
@@ -200,19 +186,59 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 .toast.error{background:var(--red-dim);color:var(--red);border-color:rgba(248,81,73,.25);}
 .spinner{animation:spin 1s linear infinite;display:inline-flex;}
 
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:1280px){
+  /* row 1: brand … info + "+"   ·   row 2: options   ·   row 3: tabs */
+  .view-bar{gap:8px;padding:8px max(10px,env(safe-area-inset-right)) 8px max(10px,env(safe-area-inset-left));padding-top:max(8px,env(safe-area-inset-top));}
+  .vb-brand{order:1;}
+  .vb-spacer{order:2;}
+  .vb-actions{order:3;}
+  .config-row{order:6;flex:1 1 100%;}
+  .config-row .field{flex:1 1 110px;min-width:0;}
+  .config-row .field select{width:100%;}
+  .config-row .field label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tab-nav{order:5;flex:1 1 100%;width:100%;overflow-x:auto;scrollbar-width:none;}
+  .tab-nav::-webkit-scrollbar{display:none;}
+  .tab-btn{flex:1 0 auto;}
+}
 @media(max-width:700px){
-  .portal-wrap{padding:8px;gap:10px;}
-  .panel-toolbar .search-input{width:100%;}
+  .portal-wrap{padding:8px max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));gap:10px;}
+  .panel-toolbar{padding:10px 12px;}
+  .panel-toolbar .search-input{width:100%;flex:1 1 100%;}
+  .toolbar-actions{width:100%;}
+  .toolbar-actions .label{flex:1 1 100%;}
+  .toolbar-actions .btn{flex:1;justify-content:center;}
+  .table-scroll{max-height:65vh;max-height:65dvh;}
+  .log-table th,.log-table td{padding:7px 10px;}
+  footer.meta{flex-direction:column;}
+  .toast{left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));max-width:none;}
+}
+@media(max-width:520px){
+  .config-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .config-row .field:last-child{grid-column:1/-1;}
+  .tab-btn{padding:7px 10px;}
+  .empty-state{padding:40px 14px;}
+}
+/* touch screens: bigger targets, and 16px inputs so iOS doesn't zoom on focus */
+@media(pointer:coarse){
+  .ib,#cache-status,.vb-brand{width:40px;height:40px;}
+  .field select,.field input[type=text],.panel-toolbar .search-input,.config-row .field select{font-size:16px;padding:8px 10px;}
+  .tab-btn{padding:9px 14px;}
+  .btn-sm{padding:9px 12px;}
 }
 </style>
 </head>
 <body>
 
 <div class="view-bar">
-  <div class="vb-brand" title="Salik Reconciliation"><i class="ti ti-road"></i></div>
-  <div class="vb-title">
-    <strong>Salik Reconciliation</strong>
-    <span>Toll trips &times; fleet check-in / check-out log</span>
+  <div class="vb-brand"><i class="ti ti-road"></i></div>
+  <!-- tabs — shown once the fleet log cache has loaded -->
+  <div class="tab-nav" id="tabNav" style="display:none;">
+    <button class="tab-btn active" data-tab="log">Fleet Log <span class="count" id="cntLog">0</span></button>
+    <button class="tab-btn" data-tab="summary">Summary <span class="count" id="cntSummary">0</span></button>
+    <button class="tab-btn" data-tab="details">Trip Details <span class="count" id="cntDetails">0</span></button>
+    <button class="tab-btn" data-tab="exceptions">Exceptions <span class="count" id="cntExceptions">0</span></button>
+    <button class="tab-btn" data-tab="sessions">Checkout Sessions <span class="count" id="cntSessions">0</span></button>
   </div>
 
   <!-- options — visible once a PDF is loaded; changing them re-runs reconciliation automatically -->
@@ -247,55 +273,30 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
     </div>
   </div>
 
-  <!-- result tabs — visible once reconciliation has run -->
-  <div class="tab-nav" id="tabNav" style="display:none;">
-    <button class="tab-btn active" data-tab="summary">Summary <span class="count" id="cntSummary">0</span></button>
-    <button class="tab-btn" data-tab="details">Trip Details <span class="count" id="cntDetails">0</span></button>
-    <button class="tab-btn" data-tab="exceptions">Exceptions <span class="count" id="cntExceptions">0</span></button>
-    <button class="tab-btn" data-tab="sessions">Checkout Sessions <span class="count" id="cntSessions">0</span></button>
-  </div>
-
   <div class="vb-spacer"></div>
-  <div id="acctBadge" class="badge purple" style="display:none;"></div>
-  <!-- "+" : loads the fleet log cache; step 2 follows once it has loaded -->
-  <div id="cache-status" data-mode="idle" title="Load fleet log cache" onclick="retryCacheLoad()"><i class="ti ti-plus"></i></div>
+
+  <div class="vb-actions">
+  <button type="button" class="ib" id="btnInfo" title="Information" aria-label="Information" aria-expanded="false"><i class="ti ti-info-circle"></i></button>
+  <!-- "+" : inactive until the fleet log cache is available; then active — press to load it, step 2 follows -->
+  <button type="button" id="cache-status" data-mode="checking" title="Checking for cache&hellip;" aria-label="Add Salik PDF" onclick="onPlusClick()" disabled><i class="ti ti-loader spin"></i></button>
+
+  <div class="info-pop" id="infoPop" role="dialog" aria-label="Information">
+    <div class="info-row"><span class="k">About</span><span class="v" id="vbSub">Toll trips &times; fleet check-in / check-out log</span></div>
+    <div class="info-row"><span class="k">Fleet log cache</span><span class="v" id="infoCache">Checking for cache&hellip;</span></div>
+    <div class="info-row" id="pdfRow" style="display:none;"><span class="k">Salik PDF</span><span class="v" id="infoPdf"></span></div>
+    <div class="info-row" id="acctRow" style="display:none;"><span class="k">Salik account</span><span id="acctBadge" class="badge purple" style="align-self:flex-start;"></span></div>
+  </div>
+  </div>
 </div>
 
 <div class="portal-wrap">
-
-  <div class="flow-grid">
-
-    <!-- STEP 1: read fleet log from IndexedDB -->
-    <div class="flow-card" id="cioCard">
-      <div class="flow-num">01 &middot; FLEET LOG</div>
-      <h3><i class="ti ti-database"></i> Check-in / check-out cache</h3>
-      <p>Reads <strong>ap2_cioLog</strong> straight from this browser's cache. Use this tab in the same browser/profile as the fleet app.</p>
-      <div id="cioStatus" class="flow-status">
-        <span class="status-chip"><span class="dot"></span>Press + (top right) to load the cache</span>
-      </div>
-    </div>
-
-    <!-- STEP 2: appears once step 1 succeeds — "+" upload for the Salik PDF -->
-    <div class="flow-card" id="pdfCard" style="display:none;">
-      <div class="flow-num">02 &middot; SALIK PDF</div>
-      <h3><i class="ti ti-file-type-pdf"></i> Trips report</h3>
-      <p>Add the Salik <em>ViewTrips</em> PDF export. Parsed entirely in your browser — reconciliation then runs automatically.</p>
-      <label class="file-upload-zone" id="pdfDrop">
-        <input type="file" id="pdfInput" accept="application/pdf">
-        <span class="plus"><i class="ti ti-plus"></i></span>
-        <p id="pdfDropLabel">Click or drop the Salik PDF here</p>
-      </label>
-      <div id="pdfStatus" class="flow-status"></div>
-    </div>
-
-  </div>
 
   <!-- STEP 3 (automatic): results -->
   <div id="resultsArea" style="display:none;flex-direction:column;gap:10px;">
     <div class="results-panel">
       <div class="panel-toolbar">
         <input type="text" class="search-input" id="searchBox" placeholder="Filter rows&hellip;">
-        <div style="display:flex;gap:8px;align-items:center;">
+        <div class="toolbar-actions">
           <span class="label" id="rowCountLabel"></span>
           <button class="btn btn-ghost btn-sm" id="btnExportCsv"><i class="ti ti-file-type-csv"></i> Export CSV</button>
           <button class="btn btn-primary btn-sm" id="btnExportXlsx"><i class="ti ti-file-spreadsheet"></i> Export Excel</button>
@@ -311,11 +312,12 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 
   <div id="emptyResults" class="empty-state">
     <i class="ti ti-circle-dashed"></i>
-    Press + to load the fleet log, then add a Salik PDF — results appear here automatically.
+    <span id="emptyMsg">Checking for the fleet log cache&hellip;</span>
   </div>
 
 </div>
 
+<input type="file" id="pdfInput" accept="application/pdf" hidden>
 <div class="toast" id="toast" role="alert">
   <i id="toast-icon" class="ti ti-circle-check"></i>
   <span id="toast-msg">Saved</span>
@@ -375,22 +377,23 @@ if (typeof window.AP2CacheWatcher === 'undefined') {
 /* ===================== STATE ===================== */
 const state = {
   cioRaw: null,
+  logRows: [],
+  loading: false,
+  addMode: 'checking',
+  watcherInit: false,
+  probeTimer: null,
   subscribed: false,
   sessions: [],
   salikRows: [],
   pdfMeta: {},
-  results: { summary: [], details: [], exceptions: [], sessions: [] },
-  sort: {},
-  activeTab: 'summary'
+  results: { log: [], summary: [], details: [], exceptions: [], sessions: [] },
+  sort: { log: { key: 'ts', dir: 'desc' } },
+  activeTab: 'log'
 };
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-function setFlowStatus(el, html, cls){
-  el.innerHTML = `<span class="status-chip ${cls||''}"><span class="dot"></span>${html}</span>`;
-}
-function markDone(cardEl){ cardEl.classList.add('done'); }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function showToast(msg, type){
@@ -402,16 +405,20 @@ function showToast(msg, type){
   showToast._t = setTimeout(() => { t.classList.remove('show'); }, 2800);
 }
 
-function setCacheStatus(mode, title){
+// "+" : inactive (spinner / greyed) until the fleet log cache is loaded; then active — press to pick the Salik PDF
+function setCacheStatus(mode, info){
   const el = $('#cache-status');
+  state.addMode = mode;
   el.dataset.mode = mode;
-  el.className = mode === 'ok' ? 'ok' : mode === 'bad' ? 'bad' : '';
-  el.title = title || '';
-  el.innerHTML = mode === 'loading'
-    ? '<i class="ti ti-loader spin"></i>'
-    : mode === 'bad'
-      ? '<i class="ti ti-alert-circle"></i>'
-      : '<i class="ti ti-plus"></i>';   // idle + loaded: the "+" button
+  el.className = mode === 'ok' ? 'ready' : '';
+  el.disabled = mode !== 'ok';
+  el.title = mode === 'ok' ? 'Add Salik PDF' : mode === 'off' ? 'Waiting for the fleet log cache' : 'Loading fleet log cache\u2026';
+  el.innerHTML = (mode === 'checking' || mode === 'loading') ? '<i class="ti ti-loader spin"></i>' : '<i class="ti ti-plus"></i>';
+  const ic = $('#infoCache');
+  ic.textContent = info || '';
+  ic.className = 'v ' + (mode === 'ok' ? 'ok' : mode === 'off' ? 'warn' : '');
+  const em = $('#emptyMsg');
+  if (em && mode !== 'ok') em.textContent = mode === 'off' ? 'Fleet log cache not available yet \u2014 open the fleet app in this browser. This page keeps checking.' : 'Checking for the fleet log cache\u2026';
 }
 
 /* ===================== STEP 1: fleet log cache ===================== */
@@ -448,49 +455,61 @@ async function scanAllStoresForCio(){
   });
 }
 
-async function attemptCacheLoad(){
-  setCacheStatus('loading', 'Loading cache…');
-  setFlowStatus($('#cioStatus'), 'Reading cache&hellip;', '');
-  try{
+async function readCioRaw(){
+  if (!state.watcherInit){
     if (typeof AP2CacheWatcher.init === 'function') AP2CacheWatcher.init();
-    let raw = await AP2CacheWatcher.readKey('ap2_cioLog');
-    let sourceLabel = 'shared cache watcher';
-    if (!raw){
-      const found = await scanAllStoresForCio();
-      raw = found.value;
-      sourceLabel = 'store "' + found.store + '"';
-    }
-    const arr = normalizeCioValue(raw);
+    state.watcherInit = true;
+  }
+  let raw = await AP2CacheWatcher.readKey('ap2_cioLog');
+  let sourceLabel = 'shared cache watcher';
+  if (!raw){
+    const found = await scanAllStoresForCio();
+    raw = found.value;
+    sourceLabel = 'store "' + found.store + '"';
+  }
+  return { arr: normalizeCioValue(raw), sourceLabel };
+}
+
+// Checked on open, then every 5 s while the cache is missing. Once found it loads automatically and "+" turns active.
+async function probeCache(){
+  if (state.addMode !== 'checking' && state.addMode !== 'off') return;
+  return loadCache();
+}
+
+async function loadCache(){
+  if (state.loading) return;
+  state.loading = true;
+  clearTimeout(state.probeTimer);
+  if (state.addMode !== 'off') setCacheStatus('loading', 'Reading cache\u2026');
+  try{
+    const { arr, sourceLabel } = await readCioRaw();
     state.cioRaw = arr;
-    onCioLoaded(arr, sourceLabel);
+    onCioLoaded(arr, sourceLabel, false);
     if (typeof AP2CacheWatcher.subscribe === 'function' && !state.subscribed){
       state.subscribed = true;
       AP2CacheWatcher.subscribe('ap2_cioLog', (updated) => {
-        try{
-          const upArr = normalizeCioValue(updated);
-          state.cioRaw = upArr;
-          onCioLoaded(upArr, 'live update');
-          maybeAutoRun();
-        }catch(e){ /* ignore malformed live updates */ }
+        try{ const upArr = normalizeCioValue(updated); state.cioRaw = upArr; onCioLoaded(upArr, 'live update', true); }
+        catch(e){ /* ignore malformed live updates */ }
       });
     }
   }catch(err){
-    setCacheStatus('bad', err.message);
-    setFlowStatus($('#cioStatus'), escapeHtml(err.message), 'bad');
-    showToast('Could not read fleet log cache — press + to retry.', 'error');
-  }
+    setCacheStatus('off', 'Cache not available \u2014 ' + err.message);
+    state.probeTimer = setTimeout(probeCache, 5000);
+  }finally{ state.loading = false; }
 }
-// the + button: loads (or reloads) the fleet log cache
-function retryCacheLoad(){ if ($('#cache-status').dataset.mode !== 'loading') attemptCacheLoad(); }
 
-function onCioLoaded(arr, sourceLabel){
+// the + button: opens the file picker for the Salik PDF
+function onPlusClick(){ if (state.addMode === 'ok') $('#pdfInput').click(); }
+
+function onCioLoaded(arr, sourceLabel, quiet){
   state.sessions = buildSessions(arr);
-  const bikes = new Set(arr.map(r => r[5])).size;
-  setFlowStatus($('#cioStatus'), arr.length + ' log entries (' + sourceLabel + ') &middot; ' + state.sessions.length + ' checkout sessions', 'ok');
-  markDone($('#cioCard'));
-  setCacheStatus('ok', arr.length + ' entries loaded');
-  $('#pdfCard').style.display = 'block';
-  showToast('Fleet log loaded — add the Salik PDF to continue.', 'success');
+  state.logRows = arr
+    .filter(r => Array.isArray(r) && r.length >= 6 && r[0])
+    .map(r => ({ ts: new Date(r[0]).getTime(), ref: r[1], riderId: r[2], action: r[3], itemType: r[4], itemId: r[5] }))
+    .filter(r => !isNaN(r.ts));
+  setCacheStatus('ok', arr.length + ' log entries (' + sourceLabel + ') \u00b7 ' + state.sessions.length + ' checkout sessions');
+  recompute();
+  if (!quiet) showToast('Fleet log loaded \u2014 press + to add the Salik PDF.', 'success');
 }
 
 /* Log row: [isoTimestamp, ref, riderId, action ("Check In"|"Check Out"), itemType, itemId] */
@@ -600,18 +619,14 @@ function parseSalikDateTime(dateStr, timeStr){
   return new Date(parseInt(y,10), months[monStr], parseInt(d,10), hh, parseInt(mm,10), parseInt(ss,10));
 }
 
-/* ===================== STEP 3: reconciliation — runs automatically ===================== */
-function maybeAutoRun(){
-  if (state.sessions.length > 0 && state.salikRows.length > 0){
-    runReconciliation();
-  }
-}
-
-function runReconciliation(){
+/* ===================== reconciliation + views ===================== */
+function recompute(){
+  if (!state.cioRaw) return;
   const graceBefore = parseInt($('#graceBefore').value, 10) * 60000;
   const graceAfter = parseInt($('#graceAfter').value, 10) * 60000;
   const itemTypeFilter = $('#itemTypeFilter').value;
   state.results = reconcile(state.sessions, state.salikRows, { graceBefore, graceAfter, itemTypeFilter });
+  state.results.log = state.logRows.filter(r => itemTypeFilter === 'ALL' || r.itemType === itemTypeFilter);
   renderResults();
 }
 
@@ -680,6 +695,11 @@ function reconcile(allSessions, salikRows, opts){
 
 /* ===================== RENDERING ===================== */
 const TAB_DEFS = {
+  log: { sheet: 'Fleet log', cols: [
+    {key:'ts', label:'Time', fmt: v => fmtTs(v)}, {key:'ref', label:'Ref'}, {key:'riderId', label:'Rider ID'},
+    {key:'action', label:'Action', badge: v => v === 'Check Out' ? 'warn' : 'ok'},
+    {key:'itemType', label:'Type'}, {key:'itemId', label:'Item ID'}
+  ]},
   summary: { cols: [
     {key:'riderId', label:'Rider ID'}, {key:'plate', label:'Plate'},
     {key:'count', label:'Salik (Count)', num:true},
@@ -715,15 +735,16 @@ function renderResults(){
   $('#emptyResults').style.display = 'none';
   $('#resultsArea').style.display = 'flex';
   $('#tabNav').style.display = 'flex';
-  $('#cntSummary').textContent = state.results.summary.length;
-  $('#cntDetails').textContent = state.results.details.length;
-  $('#cntExceptions').textContent = state.results.exceptions.length;
-  $('#cntSessions').textContent = state.results.sessions.length;
-  renderTable(state.activeTab, $('#searchBox') ? $('#searchBox').value : '');
+  $('#configRow').style.display = '';
+  [['Log','log'],['Summary','summary'],['Details','details'],['Exceptions','exceptions'],['Sessions','sessions']]
+    .forEach(([id,k]) => { $('#cnt' + id).textContent = state.results[k].length; });
+  renderTable(state.activeTab, $('#searchBox').value);
 
-  $('#metaLeft').textContent = state.salikRows.length + ' trips parsed from PDF \u00b7 ' + state.results.details.length + ' matched \u00b7 ' + state.results.exceptions.length + ' exceptions';
-  $('#metaRight').textContent = 'Reconciled ' + new Date().toLocaleString();
-  showToast('Reconciled automatically — ' + state.results.details.length + ' matched, ' + state.results.exceptions.length + ' exceptions.', 'success');
+  const hasPdf = state.salikRows.length > 0;
+  $('#metaLeft').textContent = state.logRows.length + ' fleet log entries \u00b7 ' + state.sessions.length + ' checkout sessions' +
+    (hasPdf ? ' \u00b7 ' + state.salikRows.length + ' trips from PDF \u00b7 ' + state.results.details.length + ' matched \u00b7 ' + state.results.exceptions.length + ' exceptions' : '');
+  $('#metaRight').textContent = 'Updated ' + new Date().toLocaleString();
+  if (hasPdf) showToast('Reconciled \u2014 ' + state.results.details.length + ' matched, ' + state.results.exceptions.length + ' exceptions.', 'success');
 }
 
 function renderTable(tabName, searchTerm){
@@ -732,7 +753,7 @@ function renderTable(tabName, searchTerm){
 
   if (searchTerm){
     const s = searchTerm.toLowerCase();
-    rows = rows.filter(r => def.cols.some(c => String(r[c.key]).toLowerCase().includes(s)));
+    rows = rows.filter(r => def.cols.some(c => String(c.fmt ? c.fmt(r[c.key]) : r[c.key]).toLowerCase().includes(s)));
   }
 
   const sortState = state.sort[tabName];
@@ -749,7 +770,8 @@ function renderTable(tabName, searchTerm){
   $('#rowCountLabel').textContent = rows.length + ' row' + (rows.length===1?'':'s');
 
   if (rows.length === 0){
-    $('#tableHost').innerHTML = '<div class="empty-state"><i class="ti ti-mood-empty"></i>No rows' + (searchTerm ? ' match "' + escapeHtml(searchTerm) + '"' : ' yet') + '.</div>';
+    const needPdf = !searchTerm && state.salikRows.length === 0 && ['summary','details','exceptions'].includes(tabName);
+    $('#tableHost').innerHTML = '<div class="empty-state"><i class="ti ti-mood-empty"></i>' + (needPdf ? 'Press + to add the Salik PDF.' : 'No rows' + (searchTerm ? ' match "' + escapeHtml(searchTerm) + '"' : ' yet') + '.') + '</div>';
     return;
   }
 
@@ -826,13 +848,13 @@ function dateStamp(){
 
 function exportAllXlsx(){
   const wb = XLSX.utils.book_new();
-  ['summary','details','exceptions','sessions'].forEach(tab => {
+  ['summary','details','exceptions','sessions','log'].forEach(tab => {
     const def = TAB_DEFS[tab];
     const rows = state.results[tab];
     const aoa = [def.cols.map(c => c.label)];
     rows.forEach(r => { aoa.push(def.cols.map(c => { let v = r[c.key]; if (c.fmt) v = c.fmt(v); return v; })); });
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    XLSX.utils.book_append_sheet(wb, ws, tab.charAt(0).toUpperCase()+tab.slice(1));
+    XLSX.utils.book_append_sheet(wb, ws, def.sheet || tab.charAt(0).toUpperCase()+tab.slice(1));
   });
   XLSX.writeFile(wb, 'salik_reconciliation_' + dateStamp() + '.xlsx');
   showToast('Exported salik_reconciliation_' + dateStamp() + '.xlsx', 'success');
@@ -841,53 +863,66 @@ function exportAllXlsx(){
 /* ===================== EVENTS ===================== */
 $('#pdfInput').addEventListener('change', async (e) => {
   const file = e.target.files[0];
+  e.target.value = ''; // lets the same file be picked again
   if (!file) return;
-  setFlowStatus($('#pdfStatus'), 'Parsing PDF&hellip; this can take a few seconds for large reports.', '');
+  showToast('Parsing PDF\u2026 this can take a few seconds for large reports.');
   try{
     const { rows, meta } = await parsePdf(file);
     state.salikRows = rows;
     state.pdfMeta = meta;
-    $('#pdfDrop').classList.add('has-file');
-    $('#pdfDropLabel').textContent = file.name;
-    setFlowStatus($('#pdfStatus'), rows.length + ' trips parsed' + (meta.totalTrips ? ' (PDF reports ' + meta.totalTrips + ')' : ''), rows.length === meta.totalTrips ? 'ok' : 'warn');
-    markDone($('#pdfCard'));
+    $('#pdfRow').style.display = 'flex';
+    const ip = $('#infoPdf');
+    ip.textContent = file.name + ' \u2014 ' + rows.length + ' trips parsed' + (meta.totalTrips ? ' (PDF reports ' + meta.totalTrips + ')' : '');
+    ip.className = 'v ' + (rows.length === meta.totalTrips ? 'ok' : 'warn');
     if (meta.accountNo){
-      $('#acctBadge').style.display = 'inline-block';
+      $('#acctRow').style.display = 'flex';
       $('#acctBadge').textContent = 'Acct ' + meta.accountNo + (meta.periodFrom ? ' \u00b7 ' + meta.periodFrom + '\u2013' + meta.periodTo : '');
     }
-    $('#configRow').style.display = 'flex';
-    showToast(rows.length + ' trips parsed — reconciling automatically\u2026', 'success');
-    maybeAutoRun(); // STEP 3 runs automatically as soon as both sources are in
+    activateTab('summary');
+    recompute();
   }catch(err){
-    setFlowStatus($('#pdfStatus'), 'Could not parse PDF: ' + escapeHtml(err.message), 'bad');
     showToast('Could not parse PDF: ' + err.message, 'error');
   }
 });
 
 // changing the reconciliation options re-runs automatically too
 ['#graceBefore', '#graceAfter', '#itemTypeFilter'].forEach(sel => {
-  $(sel).addEventListener('change', () => { if (state.salikRows.length > 0) runReconciliation(); });
+  $(sel).addEventListener('change', recompute);
 });
 
-$$('.tab-btn').forEach(tab => {
-  tab.addEventListener('click', () => {
-    $$('.tab-btn').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    state.activeTab = tab.dataset.tab;
-    $('#searchBox').value = '';
-    renderTable(state.activeTab, '');
-  });
-});
+function activateTab(name){
+  state.activeTab = name;
+  $$('.tab-btn').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  $('#searchBox').value = '';
+  renderTable(name, '');
+}
+$$('.tab-btn').forEach(tab => tab.addEventListener('click', () => activateTab(tab.dataset.tab)));
 
 $('#searchBox').addEventListener('input', (e) => { renderTable(state.activeTab, e.target.value); });
 $('#btnExportCsv').addEventListener('click', exportActiveTabCsv);
 $('#btnExportXlsx').addEventListener('click', exportAllXlsx);
 
+/* re-check for the cache when the user comes back to this tab */
+window.addEventListener('focus', () => { if (state.addMode === 'off') probeCache(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && state.addMode === 'off') probeCache(); });
+
+/* info popover */
+const infoBtn = $('#btnInfo'), infoPop = $('#infoPop');
+function toggleInfo(force){
+  const show = force !== undefined ? force : !infoPop.classList.contains('show');
+  infoPop.classList.toggle('show', show);
+  infoBtn.setAttribute('aria-expanded', String(show));
+}
+infoBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleInfo(); });
+document.addEventListener('click', (e) => { if (!infoPop.contains(e.target)) toggleInfo(false); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleInfo(false); });
+
 /* ═══════════════════════════════════════════════════════
  *  INIT
  * ═══════════════════════════════════════════════════════ */
 async function init(){
-  setCacheStatus('idle', 'Load fleet log cache'); // cache loads when the + button is pressed
+  setCacheStatus('checking', 'Checking for cache…');
+  await probeCache(); // "+" becomes active once the cache is available; pressing it loads the cache
 }
 document.addEventListener('DOMContentLoaded', init);
 </script>
