@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Salik Reconciliation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
+<script src="https://effimalik.github.io/Testing/shared/cacheWatcher.js?v=1"></script>
+<script src="https://effimalik.github.io/Testing/shared/code.js"></script>
+<script src="https://effimalik.github.io/Testing/shared/cioView.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+/* ═══ THEME — kept identical to the shared module chrome ═══ */
+:root,[data-theme="dark"]{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2333;
+  --surface:#21262d;--surface2:#2d333b;
+  --border:#30363d;--border2:#444c56;
+  --text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
+  --accent:#58a6ff;--accent-dim:rgba(88,166,255,.12);--accent-glow:rgba(88,166,255,.28);
+  --teal:#39d353;--teal-dim:rgba(57,211,83,.12);
+  --amber:#e3b341;--amber-dim:rgba(227,179,65,.12);
+  --red:#f85149;--red-dim:rgba(248,81,73,.12);
+  --purple:#a371f7;--purple-dim:rgba(163,113,247,.12);
+  --orange:#f0883e;--orange-dim:rgba(240,136,62,.12);
+  --radius:8px;--radius-lg:12px;--radius-xl:16px;
+  --font:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
+  --shadow:0 1px 3px rgba(0,0,0,.4);--shadow-md:0 4px 16px rgba(0,0,0,.5);--shadow-lg:0 8px 32px rgba(0,0,0,.6);
+}
+[data-theme="light"]{
+  --bg:#f0f2f5;--bg2:#fff;--bg3:#e8ecf0;
+  --surface:#fff;--surface2:#e2e7ed;
+  --border:#c8d0d9;--border2:#9aa5b1;
+  --text:#0d1117;--text2:#3d454f;--text3:#5a6370;
+  --accent:#0550ae;--accent-dim:rgba(5,80,174,.12);--accent-glow:rgba(5,80,174,.22);
+  --teal:#116329;--teal-dim:rgba(17,99,41,.13);
+  --amber:#7d4e00;--amber-dim:rgba(125,78,0,.13);
+  --red:#a8111b;--red-dim:rgba(168,17,27,.11);
+  --purple:#6639c8;--purple-dim:rgba(102,57,200,.13);
+  --orange:#953800;--orange-dim:rgba(149,56,0,.13);
+  --shadow:0 1px 3px rgba(0,0,0,.10);--shadow-md:0 4px 16px rgba(0,0,0,.12);--shadow-lg:0 8px 32px rgba(0,0,0,.15);
+}
+[data-theme="purple"]{
+  --bg:#0f0b1e;--bg2:#17112e;--bg3:#1e1840;
+  --surface:#221a3a;--surface2:#2c2250;
+  --border:#3a2e5e;--border2:#5a4890;
+  --text:#e8e0ff;--text2:#a899d4;--text3:#7a6ca8;
+  --accent:#c084fc;--accent-dim:rgba(192,132,252,.14);--accent-glow:rgba(192,132,252,.3);
+  --teal:#4ade80;--teal-dim:rgba(74,222,128,.12);
+  --amber:#fbbf24;--amber-dim:rgba(251,191,36,.12);
+  --red:#f87171;--red-dim:rgba(248,113,113,.12);
+  --purple:#c084fc;--purple-dim:rgba(192,132,252,.14);
+  --orange:#fb923c;--orange-dim:rgba(251,146,60,.12);
+  --shadow:0 1px 3px rgba(0,0,0,.5);--shadow-md:0 4px 16px rgba(0,0,0,.6);--shadow-lg:0 8px 32px rgba(0,0,0,.7);
+}
+[data-theme="ocean"]{
+  --bg:#071520;--bg2:#0d2035;--bg3:#112840;
+  --surface:#143050;--surface2:#1a3d60;
+  --border:#1e4a72;--border2:#2e6a9e;
+  --text:#d6eeff;--text2:#7db8e8;--text3:#4a87b8;
+  --accent:#38bdf8;--accent-dim:rgba(56,189,248,.14);--accent-glow:rgba(56,189,248,.3);
+  --teal:#34d399;--teal-dim:rgba(52,211,153,.12);
+  --amber:#fbbf24;--amber-dim:rgba(251,191,36,.12);
+  --red:#f87171;--red-dim:rgba(248,113,113,.12);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,.12);
+  --orange:#fb923c;--orange-dim:rgba(251,146,60,.12);
+  --shadow:0 1px 3px rgba(0,0,0,.5);--shadow-md:0 4px 16px rgba(0,0,0,.55);--shadow-lg:0 8px 32px rgba(0,0,0,.65);
+}
+[data-theme="slate"]{
+  --bg:#0e1117;--bg2:#1a1f28;--bg3:#222836;
+  --surface:#28303e;--surface2:#313c4e;
+  --border:#3a4556;--border2:#556070;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  --accent:#60a5fa;--accent-dim:rgba(96,165,250,.13);--accent-glow:rgba(96,165,250,.28);
+  --teal:#4ade80;--teal-dim:rgba(74,222,128,.12);
+  --amber:#fbbf24;--amber-dim:rgba(251,191,36,.12);
+  --red:#f87171;--red-dim:rgba(248,113,113,.12);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,.12);
+  --orange:#fb923c;--orange-dim:rgba(251,146,60,.12);
+  --shadow:0 1px 3px rgba(0,0,0,.45);--shadow-md:0 4px 16px rgba(0,0,0,.5);--shadow-lg:0 8px 32px rgba(0,0,0,.6);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+
+/* ═══ LAYOUT ═══ */
+body{display:flex;flex-direction:column;}
+.portal-wrap{display:flex;flex-direction:column;flex:1;min-height:0;width:100%;max-width:1400px;margin:0 auto;padding:14px;gap:14px;}
+
+/* ═══ VIEW BAR ═══ */
+.view-bar{position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);}
+.vb-brand{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:var(--radius-lg);background:var(--accent-dim);color:var(--accent);border:1px solid var(--border);font-size:16px;}
+.vb-title{display:flex;flex-direction:column;gap:1px;}
+.vb-title strong{font-size:13.5px;font-weight:700;}
+.vb-title span{font-size:11px;color:var(--text3);}
+.vb-spacer{flex:1;}
+.ib{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:var(--radius-lg);background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:15px;line-height:1;cursor:pointer;transition:color .15s,border-color .15s,background .15s;}
+.ib:hover{border-color:var(--accent);color:var(--accent);}
+
+/* cache status indicator */
+#cache-status{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;cursor:pointer;border-radius:var(--radius-lg);background:var(--bg3);border:1px solid var(--border);color:var(--text2);transition:color .2s,border-color .2s,background .2s;}
+#cache-status i{font-size:15px;line-height:1;}
+#cache-status i.spin{animation:spin 1s linear infinite;}
+#cache-status.ok{color:var(--teal);border-color:rgba(57,211,83,.35);background:var(--teal-dim);}
+#cache-status.bad{color:var(--red);border-color:rgba(248,81,73,.35);background:var(--red-dim);}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ═══ FIELD / FORM ═══ */
+.field{display:flex;flex-direction:column;gap:5px;}
+.field label{font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;}
+.field select,.field input[type=text]{padding:8px 11px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:12.5px;}
+.field select:focus,.field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
+.config-row{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 16px;box-shadow:var(--shadow);}
+.config-spacer{flex:1;}
+.config-hint{font-size:11.5px;color:var(--text3);}
+
+/* ═══ FLOW STEPS (module-specific) ═══ */
+.flow-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;}
+.flow-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-xl);padding:16px;box-shadow:var(--shadow);position:relative;transition:border-color .2s;}
+.flow-card.done{border-color:var(--teal);}
+.flow-num{font-family:var(--mono);font-size:10.5px;color:var(--accent);letter-spacing:.08em;font-weight:700;}
+.flow-card h3{font-size:14.5px;font-weight:700;margin:6px 0 4px;display:flex;align-items:center;gap:7px;}
+.flow-card h3 i{color:var(--accent);font-size:17px;}
+.flow-card.done h3 i{color:var(--teal);}
+.flow-card p{font-size:12px;color:var(--text3);margin-bottom:10px;}
+.flow-status{margin-top:8px;}
+
+.status-chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-family:var(--mono);padding:4px 10px;border-radius:20px;background:var(--bg3);color:var(--text2);}
+.status-chip.ok{background:var(--teal-dim);color:var(--teal);}
+.status-chip.warn{background:var(--amber-dim);color:var(--amber);}
+.status-chip.bad{background:var(--red-dim);color:var(--red);}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+
+/* "+" upload zone — appears once the fleet log cache has loaded */
+.file-upload-zone{border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:18px 14px;text-align:center;cursor:pointer;transition:all .18s;background:var(--bg3);position:relative;display:block;}
+.file-upload-zone:hover,.file-upload-zone.dragover{border-color:var(--accent);background:var(--accent-dim);}
+.file-upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.file-upload-zone .plus{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;font-size:20px;margin-bottom:8px;box-shadow:0 0 10px var(--accent-glow);}
+.file-upload-zone p{font-size:11.5px;color:var(--text2);}
+.file-upload-zone.has-file{border-color:var(--teal);background:var(--teal-dim);}
+.file-upload-zone.has-file .plus{background:var(--teal);box-shadow:none;}
+.file-upload-zone.has-file p{color:var(--teal);}
+
+/* ═══ BUTTONS / BADGES ═══ */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);border:1.5px solid;font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .18s;white-space:nowrap;line-height:1;}
+.btn i{font-size:15px;flex-shrink:0;}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 0 10px var(--accent-glow);}
+.btn-primary:hover{filter:brightness(1.1);}
+.btn-ghost{background:transparent;color:var(--text2);border-color:var(--border2);}
+.btn-ghost:hover{background:var(--surface2);color:var(--text);}
+.btn-sm{padding:5px 10px;font-size:11.5px;}
+.btn:disabled{opacity:.5;cursor:not-allowed;pointer-events:none;}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;}
+.badge.purple{background:rgba(163,113,247,.18);color:#a371f7;border:1px solid rgba(163,113,247,.3);}
+.badge.ok{background:var(--teal-dim);color:var(--teal);}
+.badge.warn{background:var(--amber-dim);color:var(--amber);}
+.badge.bad{background:var(--red-dim);color:var(--red);}
+
+/* ═══ RESULTS: tabs + flat table ═══ */
+.tab-nav{display:flex;gap:3px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:3px;width:fit-content;}
+.tab-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:none;background:transparent;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;white-space:nowrap;}
+.tab-btn .count{font-family:var(--mono);font-weight:500;font-size:10.5px;background:var(--surface2);border-radius:20px;padding:1px 7px;}
+.tab-btn.active{background:var(--accent);color:#fff;box-shadow:0 0 10px var(--accent-glow);}
+.tab-btn.active .count{background:rgba(255,255,255,.25);color:#fff;}
+.tab-btn:not(.active):hover{background:var(--surface2);color:var(--text);}
+
+.results-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);overflow:hidden;}
+.panel-toolbar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap;}
+.panel-toolbar .search-input{font-family:var(--mono);font-size:12px;border:1.5px solid var(--border2);border-radius:var(--radius);padding:7px 11px;width:220px;background:var(--surface2);color:var(--text);}
+.panel-toolbar .search-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
+.panel-toolbar .label{font-size:12px;color:var(--text3);}
+.table-scroll{max-height:480px;overflow:auto;}
+
+.log-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.log-table th{padding:9px 14px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border);background:var(--bg3);cursor:pointer;white-space:nowrap;position:sticky;top:0;z-index:2;}
+.log-table th:hover{color:var(--accent);}
+.log-table th .arrow{opacity:.5;margin-left:3px;}
+.log-table td{padding:8px 14px;border-bottom:1px solid var(--border);vertical-align:middle;font-family:var(--mono);white-space:nowrap;}
+.log-table tbody tr:hover{background:var(--surface2);}
+.log-table td.num{text-align:right;}
+
+.empty-state{padding:60px 20px;text-align:center;color:var(--text3);font-size:13px;}
+.empty-state i{font-size:32px;display:block;margin-bottom:10px;opacity:.4;}
+
+footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--text3);padding:0 4px;flex-wrap:wrap;gap:8px;}
+
+/* ═══ MODAL ═══ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:400;}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:22px;max-width:480px;width:90%;box-shadow:var(--shadow-lg);}
+.modal h3{font-size:14.5px;margin:0 0 8px;}
+.modal p{font-size:11.5px;color:var(--text3);margin-bottom:10px;}
+.modal textarea{width:100%;height:160px;font-family:var(--mono);font-size:11.5px;border:1.5px solid var(--border2);border-radius:var(--radius);padding:9px;background:var(--surface2);color:var(--text);}
+.modal .row-gap{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;}
+
+/* ═══ TOAST ═══ */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);padding:10px 16px;border-radius:var(--radius-lg);font-size:12.5px;font-weight:500;z-index:999;opacity:0;transform:translateY(10px);transition:all .25s cubic-bezier(.34,1.56,.64,1);pointer-events:none;display:flex;align-items:center;gap:9px;box-shadow:var(--shadow-lg);max-width:340px;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.success{background:var(--teal-dim);color:var(--teal);border-color:rgba(57,211,83,.25);}
+.toast.error{background:var(--red-dim);color:var(--red);border-color:rgba(248,81,73,.25);}
+.spinner{animation:spin 1s linear infinite;display:inline-flex;}
+
+@media(max-width:700px){
+  .portal-wrap{padding:8px;gap:10px;}
+  .panel-toolbar .search-input{width:100%;}
+}
+</style>
+</head>
+<body>
+
+<div class="view-bar">
+  <div class="vb-brand" title="Salik Reconciliation"><i class="ti ti-road"></i></div>
+  <div class="vb-title">
+    <strong>Salik Reconciliation</strong>
+    <span>Toll trips &times; fleet check-in / check-out log</span>
+  </div>
+  <div class="vb-spacer"></div>
+  <div id="acctBadge" class="badge purple" style="display:none;"></div>
+  <div id="cache-status" title="Loading cache&hellip;" onclick="retryCacheLoad()"><i class="ti ti-loader spin"></i></div>
+</div>
+
+<div class="portal-wrap">
+
+  <div class="flow-grid">
+
+    <!-- STEP 1: read fleet log from IndexedDB -->
+    <div class="flow-card" id="cioCard">
+      <div class="flow-num">01 &middot; FLEET LOG</div>
+      <h3><i class="ti ti-database"></i> Check-in / check-out cache</h3>
+      <p>Reads <strong>ap2_cioLog</strong> straight from this browser's cache. Use this tab in the same browser/profile as the fleet app.</p>
+      <div id="cioStatus" class="flow-status">
+        <span class="status-chip"><span class="dot"></span>Loading&hellip;</span>
+      </div>
+      <div style="margin-top:10px;">
+        <button class="btn btn-ghost btn-sm" id="btnPasteJson"><i class="ti ti-clipboard-text"></i> Paste JSON instead</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: appears once step 1 succeeds — "+" upload for the Salik PDF -->
+    <div class="flow-card" id="pdfCard" style="display:none;">
+      <div class="flow-num">02 &middot; SALIK PDF</div>
+      <h3><i class="ti ti-file-type-pdf"></i> Trips report</h3>
+      <p>Add the Salik <em>ViewTrips</em> PDF export. Parsed entirely in your browser — reconciliation then runs automatically.</p>
+      <label class="file-upload-zone" id="pdfDrop">
+        <input type="file" id="pdfInput" accept="application/pdf">
+        <span class="plus"><i class="ti ti-plus"></i></span>
+        <p id="pdfDropLabel">Click or drop the Salik PDF here</p>
+      </label>
+      <div id="pdfStatus" class="flow-status"></div>
+    </div>
+
+  </div>
+
+  <!-- config — visible once a PDF is loaded; changing these re-runs reconciliation automatically -->
+  <div class="config-row" id="configRow" style="display:none;">
+    <div class="field">
+      <label>Grace before checkout</label>
+      <select id="graceBefore">
+        <option value="0">0 min</option>
+        <option value="5">5 min</option>
+        <option value="10" selected>10 min</option>
+        <option value="15">15 min</option>
+        <option value="30">30 min</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Grace after check-in</label>
+      <select id="graceAfter">
+        <option value="0">0 min</option>
+        <option value="5">5 min</option>
+        <option value="10" selected>10 min</option>
+        <option value="15">15 min</option>
+        <option value="30">30 min</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Item type</label>
+      <select id="itemTypeFilter">
+        <option value="Bike" selected>Bike</option>
+        <option value="Car">Car</option>
+        <option value="ALL">All vehicle types</option>
+      </select>
+    </div>
+    <div class="config-spacer"></div>
+    <span class="config-hint" id="configHint"><i class="ti ti-bolt"></i> Reconciles automatically</span>
+  </div>
+
+  <!-- STEP 3 (automatic): results -->
+  <div id="resultsArea" style="display:none;flex-direction:column;gap:10px;">
+    <div class="tab-nav">
+      <button class="tab-btn active" data-tab="summary">Summary <span class="count" id="cntSummary">0</span></button>
+      <button class="tab-btn" data-tab="details">Trip Details <span class="count" id="cntDetails">0</span></button>
+      <button class="tab-btn" data-tab="exceptions">Exceptions <span class="count" id="cntExceptions">0</span></button>
+      <button class="tab-btn" data-tab="sessions">Checkout Sessions <span class="count" id="cntSessions">0</span></button>
+    </div>
+    <div class="results-panel">
+      <div class="panel-toolbar">
+        <input type="text" class="search-input" id="searchBox" placeholder="Filter rows&hellip;">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="label" id="rowCountLabel"></span>
+          <button class="btn btn-ghost btn-sm" id="btnExportCsv"><i class="ti ti-file-type-csv"></i> Export CSV</button>
+          <button class="btn btn-primary btn-sm" id="btnExportXlsx"><i class="ti ti-file-spreadsheet"></i> Export Excel</button>
+        </div>
+      </div>
+      <div class="table-scroll" id="tableHost"></div>
+    </div>
+    <footer class="meta">
+      <span id="metaLeft"></span>
+      <span id="metaRight"></span>
+    </footer>
+  </div>
+
+  <div id="emptyResults" class="empty-state">
+    <i class="ti ti-circle-dashed"></i>
+    Load the fleet log and a Salik PDF — results appear here automatically.
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="pasteModal">
+  <div class="modal">
+    <h3>Paste ap2_cioLog JSON</h3>
+    <p>Paste the raw array value (the <code>data</code> array, or the full cache object) copied from DevTools.</p>
+    <textarea id="pasteArea" placeholder='[["2026-06-02T22:28:58.113Z","REF-...",2,"Check Out","Bike","BIKE-2026-0005"], ...]'></textarea>
+    <div class="row-gap">
+      <button class="btn btn-ghost btn-sm" id="btnPasteCancel">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="btnPasteConfirm">Load</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="alert">
+  <i id="toast-icon" class="ti ti-circle-check"></i>
+  <span id="toast-msg">Saved</span>
+</div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════════
+ *  Cache layer: shared watcher with safe local fallback.
+ *  Copied unmodified from the shared module structure —
+ *  guarantees AP2CacheWatcher.readKey(key) always works,
+ *  whether or not the shared cacheWatcher.js actually loaded.
+ * ═══════════════════════════════════════════════════════ */
+const _IDB_NAME  = 'ap2_fleet_cache';
+const _IDB_STORE = 'datasets';
+
+if (typeof window.AP2CacheWatcher === 'undefined') {
+  console.warn('[salik] cacheWatcher.js did not load — using local fallback');
+  window.AP2CacheWatcher = (function () {
+    let _conn = null;
+    function _open() {
+      if (_conn) return Promise.resolve(_conn);
+      return new Promise((res, rej) => {
+        let done = false;
+        const req = indexedDB.open(_IDB_NAME);
+        const t = setTimeout(() => { if (!done) { done = true; rej(new Error('idb-open-timeout')); } }, 2000);
+        req.onsuccess = e => { if (!done) { done = true; clearTimeout(t); _conn = e.target.result; res(_conn); } };
+        req.onerror   = e => { if (!done) { done = true; clearTimeout(t); rej(e.target.error); } };
+      });
+    }
+    return {
+      init() {},
+      subscribe() { return () => {}; },
+      notifyNow() {},
+      getStatus() { return { healthy: false, mode: 'local-fallback', lastError: 'cacheWatcher.js not loaded' }; },
+      async readKey(key) {
+        try {
+          const db  = await _open();
+          if (!db.objectStoreNames.contains(_IDB_STORE)) return null;
+          const rec = await new Promise((res, rej) => {
+            const r = db.transaction(_IDB_STORE, 'readonly').objectStore(_IDB_STORE).get(key);
+            r.onsuccess = () => res(r.result || null);
+            r.onerror   = () => rej(r.error);
+          });
+          return (rec && rec.data) ? rec.data : null;
+        } catch (e) {
+          if (e && e.name === 'NotFoundError') return null;
+          console.warn('[salik] fallback read failed:', e.message);
+          return null;
+        }
+      }
+    };
+  })();
+}
+
+/* ===================== STATE ===================== */
+const state = {
+  cioRaw: null,
+  sessions: [],
+  salikRows: [],
+  pdfMeta: {},
+  results: { summary: [], details: [], exceptions: [], sessions: [] },
+  sort: {},
+  activeTab: 'summary'
+};
+
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+function setFlowStatus(el, html, cls){
+  el.innerHTML = `<span class="status-chip ${cls||''}"><span class="dot"></span>${html}</span>`;
+}
+function markDone(cardEl){ cardEl.classList.add('done'); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function showToast(msg, type){
+  const t = $('#toast'), icon = $('#toast-icon'), label = $('#toast-msg');
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  icon.className = 'ti ' + (type === 'error' ? 'ti-alert-circle' : type === 'success' ? 'ti-circle-check' : 'ti-info-circle');
+  label.textContent = msg;
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => { t.classList.remove('show'); }, 2800);
+}
+
+function setCacheStatus(mode, title){
+  const el = $('#cache-status');
+  el.className = mode === 'ok' ? 'ok' : mode === 'bad' ? 'bad' : '';
+  el.title = title || '';
+  el.innerHTML = mode === 'loading'
+    ? '<i class="ti ti-loader spin"></i>'
+    : mode === 'ok'
+      ? '<i class="ti ti-circle-check"></i>'
+      : '<i class="ti ti-alert-circle"></i>';
+}
+
+/* ===================== STEP 1: fleet log cache ===================== */
+function normalizeCioValue(val){
+  let arr = null;
+  if (Array.isArray(val)) arr = val;
+  else if (val && Array.isArray(val.data)) arr = val.data;
+  else if (val && val.value && Array.isArray(val.value.data)) arr = val.value.data;
+  if (!arr) throw new Error('Unrecognized ap2_cioLog shape — expected an array of log rows or {data:[...]}.');
+  return arr;
+}
+
+// Secondary fallback: scan every object store in ap2_fleet_cache for the key,
+// in case the shared watcher's single-store assumption doesn't match this browser.
+async function scanAllStoresForCio(){
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(_IDB_NAME);
+    req.onerror = () => reject(new Error('Could not open IndexedDB "' + _IDB_NAME + '".'));
+    req.onsuccess = (e) => {
+      const db = e.target.result;
+      const storeNames = Array.from(db.objectStoreNames);
+      if (storeNames.length === 0){ db.close(); reject(new Error('Database exists but has no object stores.')); return; }
+      let found = null, remaining = storeNames.length;
+      const tx = db.transaction(storeNames, 'readonly');
+      storeNames.forEach(storeName => {
+        const getReq = tx.objectStore(storeName).get('ap2_cioLog');
+        getReq.onsuccess = () => {
+          if (getReq.result !== undefined && found === null) found = { store: storeName, value: getReq.result };
+          if (--remaining === 0){ db.close(); found ? resolve(found) : reject(new Error('No object store contained key "ap2_cioLog". Checked: ' + storeNames.join(', '))); }
+        };
+        getReq.onerror = () => { if (--remaining === 0){ db.close(); found ? resolve(found) : reject(new Error('Error reading object stores.')); } };
+      });
+    };
+  });
+}
+
+async function attemptCacheLoad(){
+  setCacheStatus('loading', 'Loading cache…');
+  setFlowStatus($('#cioStatus'), 'Reading cache&hellip;', '');
+  try{
+    if (typeof AP2CacheWatcher.init === 'function') AP2CacheWatcher.init();
+    let raw = await AP2CacheWatcher.readKey('ap2_cioLog');
+    let sourceLabel = 'shared cache watcher';
+    if (!raw){
+      const found = await scanAllStoresForCio();
+      raw = found.value;
+      sourceLabel = 'store "' + found.store + '"';
+    }
+    const arr = normalizeCioValue(raw);
+    state.cioRaw = arr;
+    onCioLoaded(arr, sourceLabel);
+    if (typeof AP2CacheWatcher.subscribe === 'function'){
+      AP2CacheWatcher.subscribe('ap2_cioLog', (updated) => {
+        try{
+          const upArr = normalizeCioValue(updated);
+          state.cioRaw = upArr;
+          onCioLoaded(upArr, 'live update');
+          maybeAutoRun();
+        }catch(e){ /* ignore malformed live updates */ }
+      });
+    }
+  }catch(err){
+    setCacheStatus('bad', err.message);
+    setFlowStatus($('#cioStatus'), escapeHtml(err.message), 'bad');
+    showToast('Could not read fleet log cache — use "Paste JSON instead".', 'error');
+  }
+}
+function retryCacheLoad(){ if ($('#cache-status').classList.contains('bad')) attemptCacheLoad(); }
+
+function onCioLoaded(arr, sourceLabel){
+  state.sessions = buildSessions(arr);
+  const bikes = new Set(arr.map(r => r[5])).size;
+  setFlowStatus($('#cioStatus'), arr.length + ' log entries (' + sourceLabel + ') &middot; ' + state.sessions.length + ' checkout sessions', 'ok');
+  markDone($('#cioCard'));
+  setCacheStatus('ok', arr.length + ' entries loaded');
+  $('#pdfCard').style.display = 'block';
+  showToast('Fleet log loaded — add the Salik PDF to continue.', 'success');
+}
+
+/* paste fallback */
+function openPasteModal(){ $('#pasteModal').classList.add('show'); }
+function closePasteModal(){ $('#pasteModal').classList.remove('show'); }
+function handlePasteConfirm(){
+  const raw = $('#pasteArea').value.trim();
+  if (!raw){ closePasteModal(); return; }
+  try{
+    const arr = normalizeCioValue(JSON.parse(raw));
+    state.cioRaw = arr;
+    onCioLoaded(arr, 'pasted JSON');
+    closePasteModal();
+  }catch(err){
+    showToast('Could not parse that as JSON: ' + err.message, 'error');
+  }
+}
+
+/* Log row: [isoTimestamp, ref, riderId, action ("Check In"|"Check Out"), itemType, itemId] */
+function buildSessions(rows){
+  const clean = rows
+    .filter(r => Array.isArray(r) && r.length >= 6 && r[0])
+    .map(r => ({ ts: new Date(r[0]).getTime(), ref: r[1], riderId: r[2], action: r[3], itemType: r[4], itemId: r[5] }))
+    .filter(r => !isNaN(r.ts))
+    .sort((a,b) => a.ts - b.ts);
+
+  const byItem = {};
+  clean.forEach(r => { const key = String(r.itemId); (byItem[key] = byItem[key] || []).push(r); });
+
+  const sessions = [];
+  let lastKnownTs = 0;
+  clean.forEach(r => { if (r.ts > lastKnownTs) lastKnownTs = r.ts; });
+
+  Object.keys(byItem).forEach(itemId => {
+    const events = byItem[itemId];
+    let openCheckout = null;
+    events.forEach(ev => {
+      if (ev.action === 'Check Out'){
+        if (openCheckout){
+          sessions.push({ itemId, itemType: openCheckout.itemType, riderId: openCheckout.riderId,
+            checkOutTs: openCheckout.ts, checkInTs: ev.ts, open: false,
+            checkOutRef: openCheckout.ref, checkInRef: ev.ref, note: 'closed by next checkout (no explicit check-in found)' });
+        }
+        openCheckout = ev;
+      } else if (ev.action === 'Check In'){
+        if (openCheckout){
+          sessions.push({ itemId, itemType: openCheckout.itemType, riderId: openCheckout.riderId,
+            checkOutTs: openCheckout.ts, checkInTs: ev.ts, open: false,
+            checkOutRef: openCheckout.ref, checkInRef: ev.ref, note: '' });
+          openCheckout = null;
+        }
+      }
+    });
+    if (openCheckout){
+      sessions.push({ itemId, itemType: openCheckout.itemType, riderId: openCheckout.riderId,
+        checkOutTs: openCheckout.ts, checkInTs: lastKnownTs, open: true,
+        checkOutRef: openCheckout.ref, checkInRef: null, note: 'still checked out — window extended to last log entry' });
+    }
+  });
+
+  return sessions;
+}
+
+/* ===================== STEP 2: PDF parsing ===================== */
+async function parsePdf(file){
+  const buf = await file.arrayBuffer();
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+
+  let fullText = '';
+  let meta = { accountNo: null, periodFrom: null, periodTo: null, totalTrips: null, totalAmount: null };
+
+  for (let p = 1; p <= pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    const items = content.items.map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5] }));
+    const lines = {};
+    items.forEach(it => { const key = Math.round(it.y); (lines[key] = lines[key] || []).push(it); });
+    const sortedYs = Object.keys(lines).map(Number).sort((a,b) => b - a);
+    sortedYs.forEach(y => {
+      const lineItems = lines[y].sort((a,b) => a.x - b.x);
+      const lineText = lineItems.map(li => li.str).join(' ').replace(/\s+/g,' ').trim();
+      if (lineText) fullText += lineText + '\n';
+    });
+
+    if (p === 1){
+      const accMatch = fullText.match(/Account No:\s*(\d+)/);
+      if (accMatch) meta.accountNo = accMatch[1];
+      const periodMatch = fullText.match(/From\s+(\d{2}-\d{2}-\d{4})\s+To\s+(\d{2}-\d{2}-\d{4})/);
+      if (periodMatch){ meta.periodFrom = periodMatch[1]; meta.periodTo = periodMatch[2]; }
+    }
+  }
+
+  const totalsMatch = fullText.match(/TotalTrips:\s*([\d,]+)\s+TotalAmount\(AED\):\s*([\d,.]+)/);
+  if (totalsMatch){
+    meta.totalTrips = parseInt(totalsMatch[1].replace(/,/g,''), 10);
+    meta.totalAmount = parseFloat(totalsMatch[2].replace(/,/g,''));
+  }
+
+  const rowRe = /(\d{11})\s+(\d{2} \w{3} \d{4})\s+(\d{2}:\d{2}:\d{2} [AP]M)\s+(\d{2} \w{3} \d{4})\s+(.+?)\s+(\d+)\s+(\S+)\s+([\d.]+)(?=\s|$)/g;
+  const rows = [];
+  let m;
+  while ((m = rowRe.exec(fullText)) !== null){
+    const [_, txId, tripDateStr, tripTimeStr, postDateStr, location, tagNumber, plate, amountStr] = m;
+    const tripDt = parseSalikDateTime(tripDateStr, tripTimeStr);
+    rows.push({ transactionId: txId, tripDateStr, tripTimeStr, tripTs: tripDt.getTime(), postDateStr,
+      location: location.trim(), tagNumber, plate: plate.trim(), amount: parseFloat(amountStr) });
+  }
+
+  const seen = new Set();
+  const deduped = rows.filter(r => { if (seen.has(r.transactionId)) return false; seen.add(r.transactionId); return true; });
+
+  return { rows: deduped, meta };
+}
+
+function parseSalikDateTime(dateStr, timeStr){
+  const months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+  const [d, monStr, y] = dateStr.split(' ');
+  const tm = timeStr.match(/(\d{2}):(\d{2}):(\d{2}) ([AP]M)/);
+  let [_, hh, mm, ss, ap] = tm;
+  hh = parseInt(hh, 10);
+  if (ap === 'AM'){ if (hh === 12) hh = 0; } else { if (hh !== 12) hh += 12; }
+  return new Date(parseInt(y,10), months[monStr], parseInt(d,10), hh, parseInt(mm,10), parseInt(ss,10));
+}
+
+/* ===================== STEP 3: reconciliation — runs automatically ===================== */
+function maybeAutoRun(){
+  if (state.sessions.length > 0 && state.salikRows.length > 0){
+    runReconciliation();
+  }
+}
+
+function runReconciliation(){
+  const graceBefore = parseInt($('#graceBefore').value, 10) * 60000;
+  const graceAfter = parseInt($('#graceAfter').value, 10) * 60000;
+  const itemTypeFilter = $('#itemTypeFilter').value;
+  state.results = reconcile(state.sessions, state.salikRows, { graceBefore, graceAfter, itemTypeFilter });
+  renderResults();
+}
+
+// Pure function: given sessions + salik trips + options, returns {summary, details, exceptions, sessions}.
+function reconcile(allSessions, salikRows, opts){
+  const graceBefore = opts.graceBefore || 0;
+  const graceAfter = opts.graceAfter || 0;
+  const itemTypeFilter = opts.itemTypeFilter || 'ALL';
+
+  let sessions = allSessions.slice();
+  if (itemTypeFilter !== 'ALL') sessions = sessions.filter(s => s.itemType === itemTypeFilter);
+
+  const sessionsByPlate = {};
+  sessions.forEach(s => { const key = String(s.itemId).trim(); (sessionsByPlate[key] = sessionsByPlate[key] || []).push(s); });
+  const tripsByPlate = {};
+  salikRows.forEach(t => { (tripsByPlate[t.plate] = tripsByPlate[t.plate] || []).push(t); });
+
+  const seenTxIds = new Set();
+  const details = [];
+  const sessionTripCounts = new Map();
+
+  sessions.forEach(s => {
+    const candidates = tripsByPlate[String(s.itemId).trim()] || [];
+    const winStart = s.checkOutTs - graceBefore;
+    const winEnd = s.checkInTs + graceAfter;
+    candidates.forEach(trip => {
+      if (seenTxIds.has(trip.transactionId)) return;
+      if (trip.tripTs >= winStart && trip.tripTs <= winEnd){
+        seenTxIds.add(trip.transactionId);
+        const sKey = s.checkOutRef + '|' + s.itemId;
+        sessionTripCounts.set(sKey, (sessionTripCounts.get(sKey)||0) + 1);
+        details.push({ riderId: s.riderId, plate: trip.plate, itemId: s.itemId, transactionId: trip.transactionId,
+          tripDateStr: trip.tripDateStr, tripTimeStr: trip.tripTimeStr, amount: trip.amount, location: trip.location,
+          checkOutTs: s.checkOutTs, checkInTs: s.checkInTs, sessionOpen: s.open });
+      }
+    });
+  });
+
+  const exceptions = [];
+  salikRows.forEach(trip => {
+    if (!seenTxIds.has(trip.transactionId)){
+      const hadAnySessionForPlate = !!sessionsByPlate[trip.plate];
+      exceptions.push({ type: hadAnySessionForPlate ? 'Outside any checkout window' : 'No checkout session for this plate',
+        transactionId: trip.transactionId, plate: trip.plate, tripDateStr: trip.tripDateStr, tripTimeStr: trip.tripTimeStr,
+        amount: trip.amount, location: trip.location });
+    }
+  });
+
+  const summaryMap = new Map();
+  details.forEach(d => {
+    const key = d.riderId + '|' + d.plate;
+    if (!summaryMap.has(key)) summaryMap.set(key, { riderId: d.riderId, plate: d.plate, count: 0, totalAmount: 0 });
+    const row = summaryMap.get(key);
+    row.count += 1; row.totalAmount += d.amount;
+  });
+  const summary = Array.from(summaryMap.values()).sort((a,b) => b.count - a.count);
+
+  const sessionRows = sessions.map(s => {
+    const sKey = s.checkOutRef + '|' + s.itemId;
+    return { itemId: s.itemId, itemType: s.itemType, riderId: s.riderId, checkOutTs: s.checkOutTs, checkInTs: s.checkInTs,
+      open: s.open, tripsMatched: sessionTripCounts.get(sKey) || 0, note: s.note };
+  }).sort((a,b) => b.checkOutTs - a.checkOutTs);
+
+  return { summary, details, exceptions, sessions: sessionRows };
+}
+
+/* ===================== RENDERING ===================== */
+const TAB_DEFS = {
+  summary: { cols: [
+    {key:'riderId', label:'Rider ID'}, {key:'plate', label:'Plate'},
+    {key:'count', label:'Salik (Count)', num:true},
+    {key:'totalAmount', label:'Amount (AED)', num:true, fmt: v => v.toFixed(2)}
+  ]},
+  details: { cols: [
+    {key:'riderId', label:'Rider ID'}, {key:'plate', label:'Plate'}, {key:'itemId', label:'Item ID'},
+    {key:'transactionId', label:'Transaction ID'}, {key:'tripDateStr', label:'Trip Date'}, {key:'tripTimeStr', label:'Trip Time'},
+    {key:'amount', label:'Amount (AED)', num:true, fmt: v => v.toFixed(2)}, {key:'location', label:'Location'},
+    {key:'sessionOpen', label:'Session', fmt: v => v ? 'open' : 'closed', badge: v => v ? 'warn' : 'ok'}
+  ]},
+  exceptions: { cols: [
+    {key:'type', label:'Reason', badge: v => v.startsWith('No checkout') ? 'bad' : 'warn'},
+    {key:'transactionId', label:'Transaction ID'}, {key:'plate', label:'Plate'},
+    {key:'tripDateStr', label:'Trip Date'}, {key:'tripTimeStr', label:'Trip Time'},
+    {key:'amount', label:'Amount (AED)', num:true, fmt: v => v.toFixed(2)}, {key:'location', label:'Location'}
+  ]},
+  sessions: { cols: [
+    {key:'itemId', label:'Item ID'}, {key:'itemType', label:'Type'}, {key:'riderId', label:'Rider ID'},
+    {key:'checkOutTs', label:'Check Out', fmt: v => fmtTs(v)}, {key:'checkInTs', label:'Check In', fmt: v => fmtTs(v)},
+    {key:'tripsMatched', label:'Salik Trips', num:true},
+    {key:'open', label:'Status', fmt: v => v ? 'still out' : 'closed', badge: v => v ? 'warn' : 'ok'}
+  ]}
+};
+
+function fmtTs(ts){
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2,'0');
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+function renderResults(){
+  $('#emptyResults').style.display = 'none';
+  $('#resultsArea').style.display = 'flex';
+  $('#cntSummary').textContent = state.results.summary.length;
+  $('#cntDetails').textContent = state.results.details.length;
+  $('#cntExceptions').textContent = state.results.exceptions.length;
+  $('#cntSessions').textContent = state.results.sessions.length;
+  renderTable(state.activeTab, $('#searchBox') ? $('#searchBox').value : '');
+
+  $('#metaLeft').textContent = state.salikRows.length + ' trips parsed from PDF \u00b7 ' + state.results.details.length + ' matched \u00b7 ' + state.results.exceptions.length + ' exceptions';
+  $('#metaRight').textContent = 'Reconciled ' + new Date().toLocaleString();
+  showToast('Reconciled automatically — ' + state.results.details.length + ' matched, ' + state.results.exceptions.length + ' exceptions.', 'success');
+}
+
+function renderTable(tabName, searchTerm){
+  const def = TAB_DEFS[tabName];
+  let rows = state.results[tabName].slice();
+
+  if (searchTerm){
+    const s = searchTerm.toLowerCase();
+    rows = rows.filter(r => def.cols.some(c => String(r[c.key]).toLowerCase().includes(s)));
+  }
+
+  const sortState = state.sort[tabName];
+  if (sortState){
+    rows.sort((a,b) => {
+      const av = a[sortState.key], bv = b[sortState.key];
+      let cmp;
+      if (typeof av === 'number' && typeof bv === 'number') cmp = av - bv;
+      else cmp = String(av).localeCompare(String(bv));
+      return sortState.dir === 'asc' ? cmp : -cmp;
+    });
+  }
+
+  $('#rowCountLabel').textContent = rows.length + ' row' + (rows.length===1?'':'s');
+
+  if (rows.length === 0){
+    $('#tableHost').innerHTML = '<div class="empty-state"><i class="ti ti-mood-empty"></i>No rows' + (searchTerm ? ' match "' + escapeHtml(searchTerm) + '"' : ' yet') + '.</div>';
+    return;
+  }
+
+  let html = '<table class="log-table"><thead><tr>';
+  def.cols.forEach(c => {
+    let arrow = '';
+    if (sortState && sortState.key === c.key) arrow = sortState.dir === 'asc' ? '&uarr;' : '&darr;';
+    html += `<th data-key="${c.key}" data-tab="${tabName}">${c.label}<span class="arrow">${arrow}</span></th>`;
+  });
+  html += '</tr></thead><tbody>';
+  rows.forEach(r => {
+    html += '<tr>';
+    def.cols.forEach(c => {
+      let v = r[c.key];
+      let display = c.fmt ? c.fmt(v) : v;
+      if (c.badge){
+        html += `<td><span class="badge ${c.badge(v)}">${escapeHtml(String(display))}</span></td>`;
+      } else {
+        html += `<td class="${c.num?'num':''}">${escapeHtml(String(display ?? ''))}</td>`;
+      }
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  $('#tableHost').innerHTML = html;
+
+  $$('#tableHost thead th').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.key, tab = th.dataset.tab;
+      const cur = state.sort[tab];
+      let dir = 'asc';
+      if (cur && cur.key === key && cur.dir === 'asc') dir = 'desc';
+      state.sort[tab] = { key, dir };
+      renderTable(tab, $('#searchBox').value);
+    });
+  });
+}
+
+/* ===================== EXPORT ===================== */
+function toCsv(rows, cols){
+  const header = cols.map(c => c.label).join(',');
+  const lines = rows.map(r => cols.map(c => {
+    let v = r[c.key];
+    if (c.fmt) v = c.fmt(v);
+    v = String(v ?? '');
+    if (v.includes(',') || v.includes('"')) v = '"' + v.replace(/"/g,'""') + '"';
+    return v;
+  }).join(','));
+  return [header, ...lines].join('\n');
+}
+
+function downloadFile(filename, content, mime){
+  const blob = new Blob([content], {type: mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportActiveTabCsv(){
+  const tab = state.activeTab;
+  const def = TAB_DEFS[tab];
+  const csv = toCsv(state.results[tab], def.cols);
+  downloadFile('salik_' + tab + '_' + dateStamp() + '.csv', csv, 'text/csv');
+  showToast('Exported ' + tab + '.csv', 'success');
+}
+
+function dateStamp(){
+  const d = new Date();
+  return d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+}
+
+function exportAllXlsx(){
+  const wb = XLSX.utils.book_new();
+  ['summary','details','exceptions','sessions'].forEach(tab => {
+    const def = TAB_DEFS[tab];
+    const rows = state.results[tab];
+    const aoa = [def.cols.map(c => c.label)];
+    rows.forEach(r => { aoa.push(def.cols.map(c => { let v = r[c.key]; if (c.fmt) v = c.fmt(v); return v; })); });
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    XLSX.utils.book_append_sheet(wb, ws, tab.charAt(0).toUpperCase()+tab.slice(1));
+  });
+  XLSX.writeFile(wb, 'salik_reconciliation_' + dateStamp() + '.xlsx');
+  showToast('Exported salik_reconciliation_' + dateStamp() + '.xlsx', 'success');
+}
+
+/* ===================== EVENTS ===================== */
+$('#btnPasteJson').addEventListener('click', openPasteModal);
+$('#btnPasteCancel').addEventListener('click', closePasteModal);
+$('#btnPasteConfirm').addEventListener('click', handlePasteConfirm);
+
+$('#pdfInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  setFlowStatus($('#pdfStatus'), 'Parsing PDF&hellip; this can take a few seconds for large reports.', '');
+  try{
+    const { rows, meta } = await parsePdf(file);
+    state.salikRows = rows;
+    state.pdfMeta = meta;
+    $('#pdfDrop').classList.add('has-file');
+    $('#pdfDropLabel').textContent = file.name;
+    setFlowStatus($('#pdfStatus'), rows.length + ' trips parsed' + (meta.totalTrips ? ' (PDF reports ' + meta.totalTrips + ')' : ''), rows.length === meta.totalTrips ? 'ok' : 'warn');
+    markDone($('#pdfCard'));
+    if (meta.accountNo){
+      $('#acctBadge').style.display = 'inline-block';
+      $('#acctBadge').textContent = 'Acct ' + meta.accountNo + (meta.periodFrom ? ' \u00b7 ' + meta.periodFrom + '\u2013' + meta.periodTo : '');
+    }
+    $('#configRow').style.display = 'flex';
+    showToast(rows.length + ' trips parsed — reconciling automatically\u2026', 'success');
+    maybeAutoRun(); // STEP 3 runs automatically as soon as both sources are in
+  }catch(err){
+    setFlowStatus($('#pdfStatus'), 'Could not parse PDF: ' + escapeHtml(err.message), 'bad');
+    showToast('Could not parse PDF: ' + err.message, 'error');
+  }
+});
+
+// changing the reconciliation options re-runs automatically too
+['#graceBefore', '#graceAfter', '#itemTypeFilter'].forEach(sel => {
+  $(sel).addEventListener('change', () => { if (state.salikRows.length > 0) runReconciliation(); });
+});
+
+$$('.tab-btn').forEach(tab => {
+  tab.addEventListener('click', () => {
+    $$('.tab-btn').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    state.activeTab = tab.dataset.tab;
+    $('#searchBox').value = '';
+    renderTable(state.activeTab, '');
+  });
+});
+
+$('#searchBox').addEventListener('input', (e) => { renderTable(state.activeTab, e.target.value); });
+$('#btnExportCsv').addEventListener('click', exportActiveTabCsv);
+$('#btnExportXlsx').addEventListener('click', exportAllXlsx);
+
+/* ═══════════════════════════════════════════════════════
+ *  INIT
+ * ═══════════════════════════════════════════════════════ */
+async function init(){
+  await attemptCacheLoad(); // step 1 fires on load; step 2's "+" appears once this succeeds
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
