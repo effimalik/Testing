@@ -94,21 +94,27 @@ body{display:flex;flex-direction:column;}
 .portal-wrap{display:flex;flex-direction:column;flex:1;min-height:0;width:100%;max-width:1400px;margin:0 auto;padding:14px;gap:14px;}
 
 /* ═══ VIEW BAR ═══ */
-.view-bar{position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);}
+.view-bar{position:relative;display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0;padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);}
 .vb-brand{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:var(--radius-lg);background:var(--accent-dim);color:var(--accent);border:1px solid var(--border);font-size:16px;}
 .vb-title{display:flex;flex-direction:column;gap:1px;}
 .vb-title strong{font-size:13.5px;font-weight:700;}
 .vb-title span{font-size:11px;color:var(--text3);}
+.vb-title span.ok{color:var(--teal);}
+.vb-title span.warn{color:var(--amber);}
+.vb-title span.bad{color:var(--red);}
 .vb-spacer{flex:1;}
 .ib{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:var(--radius-lg);background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:15px;line-height:1;cursor:pointer;transition:color .15s,border-color .15s,background .15s;}
 .ib:hover{border-color:var(--accent);color:var(--accent);}
 
-/* cache status indicator */
-#cache-status{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;cursor:pointer;border-radius:var(--radius-lg);background:var(--bg3);border:1px solid var(--border);color:var(--text2);transition:color .2s,border-color .2s,background .2s;}
-#cache-status i{font-size:15px;line-height:1;}
-#cache-status i.spin{animation:spin 1s linear infinite;}
-#cache-status.ok{color:var(--teal);border-color:rgba(57,211,83,.35);background:var(--teal-dim);}
-#cache-status.bad{color:var(--red);border-color:rgba(248,81,73,.35);background:var(--red-dim);}
+/* "+" button — far right of the view-bar. Loading = cache is being read; ready = cache loaded, click adds the Salik PDF */
+.add-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;flex-shrink:0;padding:0;cursor:pointer;border-radius:50%;background:var(--bg3);border:1.5px solid var(--border2);color:var(--text2);font-family:var(--font);transition:color .2s,border-color .2s,background .2s,box-shadow .2s,transform .15s;}
+.add-btn i{font-size:18px;line-height:1;}
+.add-btn i.spin{animation:spin 1s linear infinite;}
+.add-btn:disabled{cursor:progress;opacity:.75;}
+.add-btn.ok{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 10px var(--accent-glow);}
+.add-btn.ok:hover{filter:brightness(1.12);transform:scale(1.06);}
+.add-btn.bad{color:var(--red);border-color:rgba(248,81,73,.45);background:var(--red-dim);}
+.add-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
 /* ═══ FIELD / FORM ═══ */
@@ -116,36 +122,10 @@ body{display:flex;flex-direction:column;}
 .field label{font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;}
 .field select,.field input[type=text]{padding:8px 11px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:12.5px;}
 .field select:focus,.field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
-.config-row{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 16px;box-shadow:var(--shadow);}
-.config-spacer{flex:1;}
-.config-hint{font-size:11.5px;color:var(--text3);}
-
-/* ═══ FLOW STEPS (module-specific) ═══ */
-.flow-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;}
-.flow-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-xl);padding:16px;box-shadow:var(--shadow);position:relative;transition:border-color .2s;}
-.flow-card.done{border-color:var(--teal);}
-.flow-num{font-family:var(--mono);font-size:10.5px;color:var(--accent);letter-spacing:.08em;font-weight:700;}
-.flow-card h3{font-size:14.5px;font-weight:700;margin:6px 0 4px;display:flex;align-items:center;gap:7px;}
-.flow-card h3 i{color:var(--accent);font-size:17px;}
-.flow-card.done h3 i{color:var(--teal);}
-.flow-card p{font-size:12px;color:var(--text3);margin-bottom:10px;}
-.flow-status{margin-top:8px;}
-
-.status-chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-family:var(--mono);padding:4px 10px;border-radius:20px;background:var(--bg3);color:var(--text2);}
-.status-chip.ok{background:var(--teal-dim);color:var(--teal);}
-.status-chip.warn{background:var(--amber-dim);color:var(--amber);}
-.status-chip.bad{background:var(--red-dim);color:var(--red);}
-.dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
-
-/* "+" upload zone — appears once the fleet log cache has loaded */
-.file-upload-zone{border:2px dashed var(--border2);border-radius:var(--radius-lg);padding:18px 14px;text-align:center;cursor:pointer;transition:all .18s;background:var(--bg3);position:relative;display:block;}
-.file-upload-zone:hover,.file-upload-zone.dragover{border-color:var(--accent);background:var(--accent-dim);}
-.file-upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
-.file-upload-zone .plus{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;font-size:20px;margin-bottom:8px;box-shadow:0 0 10px var(--accent-glow);}
-.file-upload-zone p{font-size:11.5px;color:var(--text2);}
-.file-upload-zone.has-file{border-color:var(--teal);background:var(--teal-dim);}
-.file-upload-zone.has-file .plus{background:var(--teal);box-shadow:none;}
-.file-upload-zone.has-file p{color:var(--teal);}
+.config-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+.config-row .field{gap:2px;}
+.config-row .field label{font-size:9.5px;}
+.config-row .field select{padding:5px 8px;font-size:12px;}
 
 /* ═══ BUTTONS / BADGES ═══ */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);border:1.5px solid;font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .18s;white-space:nowrap;line-height:1;}
@@ -190,15 +170,6 @@ body{display:flex;flex-direction:column;}
 
 footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--text3);padding:0 4px;flex-wrap:wrap;gap:8px;}
 
-/* ═══ MODAL ═══ */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:400;}
-.modal-overlay.show{display:flex;}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:22px;max-width:480px;width:90%;box-shadow:var(--shadow-lg);}
-.modal h3{font-size:14.5px;margin:0 0 8px;}
-.modal p{font-size:11.5px;color:var(--text3);margin-bottom:10px;}
-.modal textarea{width:100%;height:160px;font-family:var(--mono);font-size:11.5px;border:1.5px solid var(--border2);border-radius:var(--radius);padding:9px;background:var(--surface2);color:var(--text);}
-.modal .row-gap{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;}
-
 /* ═══ TOAST ═══ */
 .toast{position:fixed;bottom:22px;right:22px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);padding:10px 16px;border-radius:var(--radius-lg);font-size:12.5px;font-weight:500;z-index:999;opacity:0;transform:translateY(10px);transition:all .25s cubic-bezier(.34,1.56,.64,1);pointer-events:none;display:flex;align-items:center;gap:9px;box-shadow:var(--shadow-lg);max-width:340px;}
 .toast.show{opacity:1;transform:translateY(0);}
@@ -218,46 +189,10 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
   <div class="vb-brand" title="Salik Reconciliation"><i class="ti ti-road"></i></div>
   <div class="vb-title">
     <strong>Salik Reconciliation</strong>
-    <span>Toll trips &times; fleet check-in / check-out log</span>
-  </div>
-  <div class="vb-spacer"></div>
-  <div id="acctBadge" class="badge purple" style="display:none;"></div>
-  <div id="cache-status" title="Loading cache&hellip;" onclick="retryCacheLoad()"><i class="ti ti-loader spin"></i></div>
-</div>
-
-<div class="portal-wrap">
-
-  <div class="flow-grid">
-
-    <!-- STEP 1: read fleet log from IndexedDB -->
-    <div class="flow-card" id="cioCard">
-      <div class="flow-num">01 &middot; FLEET LOG</div>
-      <h3><i class="ti ti-database"></i> Check-in / check-out cache</h3>
-      <p>Reads <strong>ap2_cioLog</strong> straight from this browser's cache. Use this tab in the same browser/profile as the fleet app.</p>
-      <div id="cioStatus" class="flow-status">
-        <span class="status-chip"><span class="dot"></span>Loading&hellip;</span>
-      </div>
-      <div style="margin-top:10px;">
-        <button class="btn btn-ghost btn-sm" id="btnPasteJson"><i class="ti ti-clipboard-text"></i> Paste JSON instead</button>
-      </div>
-    </div>
-
-    <!-- STEP 2: appears once step 1 succeeds — "+" upload for the Salik PDF -->
-    <div class="flow-card" id="pdfCard" style="display:none;">
-      <div class="flow-num">02 &middot; SALIK PDF</div>
-      <h3><i class="ti ti-file-type-pdf"></i> Trips report</h3>
-      <p>Add the Salik <em>ViewTrips</em> PDF export. Parsed entirely in your browser — reconciliation then runs automatically.</p>
-      <label class="file-upload-zone" id="pdfDrop">
-        <input type="file" id="pdfInput" accept="application/pdf">
-        <span class="plus"><i class="ti ti-plus"></i></span>
-        <p id="pdfDropLabel">Click or drop the Salik PDF here</p>
-      </label>
-      <div id="pdfStatus" class="flow-status"></div>
-    </div>
-
+    <span id="vbSub">Loading fleet log cache&hellip;</span>
   </div>
 
-  <!-- config — visible once a PDF is loaded; changing these re-runs reconciliation automatically -->
+  <!-- options — appear once a PDF is loaded; changing them re-runs reconciliation automatically -->
   <div class="config-row" id="configRow" style="display:none;">
     <div class="field">
       <label>Grace before checkout</label>
@@ -287,18 +222,28 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
         <option value="ALL">All vehicle types</option>
       </select>
     </div>
-    <div class="config-spacer"></div>
-    <span class="config-hint" id="configHint"><i class="ti ti-bolt"></i> Reconciles automatically</span>
   </div>
+
+  <!-- result tabs — appear once reconciliation has run -->
+  <div class="tab-nav" id="tabNav" style="display:none;">
+    <button class="tab-btn active" data-tab="summary">Summary <span class="count" id="cntSummary">0</span></button>
+    <button class="tab-btn" data-tab="details">Trip Details <span class="count" id="cntDetails">0</span></button>
+    <button class="tab-btn" data-tab="exceptions">Exceptions <span class="count" id="cntExceptions">0</span></button>
+    <button class="tab-btn" data-tab="sessions">Checkout Sessions <span class="count" id="cntSessions">0</span></button>
+  </div>
+
+  <div class="vb-spacer"></div>
+  <div id="acctBadge" class="badge purple" style="display:none;"></div>
+
+  <!-- "+" : reads the fleet log cache on load; once loaded, click to add the Salik PDF -->
+  <button type="button" id="btnAdd" class="add-btn" title="Loading cache&hellip;" aria-label="Add Salik PDF" disabled><i class="ti ti-loader spin"></i></button>
+  <input type="file" id="pdfInput" accept="application/pdf" hidden>
+</div>
+
+<div class="portal-wrap">
 
   <!-- STEP 3 (automatic): results -->
   <div id="resultsArea" style="display:none;flex-direction:column;gap:10px;">
-    <div class="tab-nav">
-      <button class="tab-btn active" data-tab="summary">Summary <span class="count" id="cntSummary">0</span></button>
-      <button class="tab-btn" data-tab="details">Trip Details <span class="count" id="cntDetails">0</span></button>
-      <button class="tab-btn" data-tab="exceptions">Exceptions <span class="count" id="cntExceptions">0</span></button>
-      <button class="tab-btn" data-tab="sessions">Checkout Sessions <span class="count" id="cntSessions">0</span></button>
-    </div>
     <div class="results-panel">
       <div class="panel-toolbar">
         <input type="text" class="search-input" id="searchBox" placeholder="Filter rows&hellip;">
@@ -318,21 +263,9 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 
   <div id="emptyResults" class="empty-state">
     <i class="ti ti-circle-dashed"></i>
-    Load the fleet log and a Salik PDF — results appear here automatically.
+    Wait for the fleet log cache to load, then press + to add the Salik PDF — results appear here automatically.
   </div>
 
-</div>
-
-<div class="modal-overlay" id="pasteModal">
-  <div class="modal">
-    <h3>Paste ap2_cioLog JSON</h3>
-    <p>Paste the raw array value (the <code>data</code> array, or the full cache object) copied from DevTools.</p>
-    <textarea id="pasteArea" placeholder='[["2026-06-02T22:28:58.113Z","REF-...",2,"Check Out","Bike","BIKE-2026-0005"], ...]'></textarea>
-    <div class="row-gap">
-      <button class="btn btn-ghost btn-sm" id="btnPasteCancel">Cancel</button>
-      <button class="btn btn-primary btn-sm" id="btnPasteConfirm">Load</button>
-    </div>
-  </div>
 </div>
 
 <div class="toast" id="toast" role="alert">
@@ -394,6 +327,10 @@ if (typeof window.AP2CacheWatcher === 'undefined') {
 /* ===================== STATE ===================== */
 const state = {
   cioRaw: null,
+  cioInfo: '',
+  pdfInfo: '',
+  pdfWarn: false,
+  addMode: 'loading',
   sessions: [],
   salikRows: [],
   pdfMeta: {},
@@ -405,10 +342,17 @@ const state = {
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-function setFlowStatus(el, html, cls){
-  el.innerHTML = `<span class="status-chip ${cls||''}"><span class="dot"></span>${html}</span>`;
+// one-line status under the title (cache + PDF summary, or an error)
+function setStatusLine(text, cls){
+  const el = $('#vbSub');
+  el.textContent = text;
+  el.className = cls || '';
+  el.title = text;
 }
-function markDone(cardEl){ cardEl.classList.add('done'); }
+function refreshStatusLine(){
+  const parts = [state.cioInfo, state.pdfInfo].filter(Boolean);
+  if (parts.length) setStatusLine(parts.join('  ·  '), state.pdfWarn ? 'warn' : 'ok');
+}
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function showToast(msg, type){
@@ -420,15 +364,18 @@ function showToast(msg, type){
   showToast._t = setTimeout(() => { t.classList.remove('show'); }, 2800);
 }
 
+// "+" button states: loading (disabled spinner) · ok (cache loaded → "+" active) · bad (retry)
 function setCacheStatus(mode, title){
-  const el = $('#cache-status');
-  el.className = mode === 'ok' ? 'ok' : mode === 'bad' ? 'bad' : '';
+  const el = $('#btnAdd');
+  state.addMode = mode;
+  el.className = 'add-btn ' + (mode === 'ok' ? 'ok' : mode === 'bad' ? 'bad' : '');
+  el.disabled = (mode === 'loading');
   el.title = title || '';
   el.innerHTML = mode === 'loading'
     ? '<i class="ti ti-loader spin"></i>'
     : mode === 'ok'
-      ? '<i class="ti ti-circle-check"></i>'
-      : '<i class="ti ti-alert-circle"></i>';
+      ? '<i class="ti ti-plus"></i>'
+      : '<i class="ti ti-refresh"></i>';
 }
 
 /* ===================== STEP 1: fleet log cache ===================== */
@@ -467,7 +414,7 @@ async function scanAllStoresForCio(){
 
 async function attemptCacheLoad(){
   setCacheStatus('loading', 'Loading cache…');
-  setFlowStatus($('#cioStatus'), 'Reading cache&hellip;', '');
+  setStatusLine('Loading fleet log cache…', '');
   try{
     if (typeof AP2CacheWatcher.init === 'function') AP2CacheWatcher.init();
     let raw = await AP2CacheWatcher.readKey('ap2_cioLog');
@@ -491,37 +438,20 @@ async function attemptCacheLoad(){
       });
     }
   }catch(err){
-    setCacheStatus('bad', err.message);
-    setFlowStatus($('#cioStatus'), escapeHtml(err.message), 'bad');
-    showToast('Could not read fleet log cache — use "Paste JSON instead".', 'error');
+    setCacheStatus('bad', err.message + ' — click to retry');
+    setStatusLine(err.message, 'bad');
+    showToast('Could not read fleet log cache — click the button to retry.', 'error');
   }
 }
-function retryCacheLoad(){ if ($('#cache-status').classList.contains('bad')) attemptCacheLoad(); }
 
 function onCioLoaded(arr, sourceLabel){
   state.sessions = buildSessions(arr);
   const bikes = new Set(arr.map(r => r[5])).size;
-  setFlowStatus($('#cioStatus'), arr.length + ' log entries (' + sourceLabel + ') &middot; ' + state.sessions.length + ' checkout sessions', 'ok');
-  markDone($('#cioCard'));
-  setCacheStatus('ok', arr.length + ' entries loaded');
-  $('#pdfCard').style.display = 'block';
-  showToast('Fleet log loaded — add the Salik PDF to continue.', 'success');
-}
-
-/* paste fallback */
-function openPasteModal(){ $('#pasteModal').classList.add('show'); }
-function closePasteModal(){ $('#pasteModal').classList.remove('show'); }
-function handlePasteConfirm(){
-  const raw = $('#pasteArea').value.trim();
-  if (!raw){ closePasteModal(); return; }
-  try{
-    const arr = normalizeCioValue(JSON.parse(raw));
-    state.cioRaw = arr;
-    onCioLoaded(arr, 'pasted JSON');
-    closePasteModal();
-  }catch(err){
-    showToast('Could not parse that as JSON: ' + err.message, 'error');
-  }
+  state.cioInfo = arr.length + ' log entries (' + sourceLabel + ') · ' + state.sessions.length + ' sessions';
+  setCacheStatus('ok', 'Add Salik PDF');
+  if (state.salikRows.length) refreshStatusLine();
+  else setStatusLine(state.cioInfo + ' — press + to add the Salik PDF', 'ok');
+  showToast(state.salikRows.length ? 'Fleet log updated.' : 'Fleet log loaded — press + to add the Salik PDF.', 'success');
 }
 
 /* Log row: [isoTimestamp, ref, riderId, action ("Check In"|"Check Out"), itemType, itemId] */
@@ -745,6 +675,7 @@ function fmtTs(ts){
 function renderResults(){
   $('#emptyResults').style.display = 'none';
   $('#resultsArea').style.display = 'flex';
+  $('#tabNav').style.display = 'flex';
   $('#cntSummary').textContent = state.results.summary.length;
   $('#cntDetails').textContent = state.results.details.length;
   $('#cntExceptions').textContent = state.results.exceptions.length;
@@ -869,32 +800,36 @@ function exportAllXlsx(){
 }
 
 /* ===================== EVENTS ===================== */
-$('#btnPasteJson').addEventListener('click', openPasteModal);
-$('#btnPasteCancel').addEventListener('click', closePasteModal);
-$('#btnPasteConfirm').addEventListener('click', handlePasteConfirm);
+// "+" : inactive while the cache loads; once loaded it opens the PDF picker; on failure it retries the cache
+$('#btnAdd').addEventListener('click', () => {
+  if (state.addMode === 'ok'){ $('#pdfInput').value = ''; $('#pdfInput').click(); }
+  else if (state.addMode === 'bad'){ attemptCacheLoad(); }
+});
 
 $('#pdfInput').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  setFlowStatus($('#pdfStatus'), 'Parsing PDF&hellip; this can take a few seconds for large reports.', '');
+  setCacheStatus('loading', 'Parsing PDF…');
+  setStatusLine('Parsing ' + file.name + '… this can take a few seconds for large reports.', '');
   try{
     const { rows, meta } = await parsePdf(file);
     state.salikRows = rows;
     state.pdfMeta = meta;
-    $('#pdfDrop').classList.add('has-file');
-    $('#pdfDropLabel').textContent = file.name;
-    setFlowStatus($('#pdfStatus'), rows.length + ' trips parsed' + (meta.totalTrips ? ' (PDF reports ' + meta.totalTrips + ')' : ''), rows.length === meta.totalTrips ? 'ok' : 'warn');
-    markDone($('#pdfCard'));
+    state.pdfInfo = rows.length + ' trips parsed' + (meta.totalTrips ? ' (PDF reports ' + meta.totalTrips + ')' : '');
+    state.pdfWarn = rows.length !== meta.totalTrips;
+    refreshStatusLine();
     if (meta.accountNo){
       $('#acctBadge').style.display = 'inline-block';
       $('#acctBadge').textContent = 'Acct ' + meta.accountNo + (meta.periodFrom ? ' \u00b7 ' + meta.periodFrom + '\u2013' + meta.periodTo : '');
     }
     $('#configRow').style.display = 'flex';
     showToast(rows.length + ' trips parsed — reconciling automatically\u2026', 'success');
-    maybeAutoRun(); // STEP 3 runs automatically as soon as both sources are in
+    maybeAutoRun(); // reconciliation runs automatically as soon as both sources are in
   }catch(err){
-    setFlowStatus($('#pdfStatus'), 'Could not parse PDF: ' + escapeHtml(err.message), 'bad');
+    setStatusLine('Could not parse PDF: ' + err.message, 'bad');
     showToast('Could not parse PDF: ' + err.message, 'error');
+  }finally{
+    setCacheStatus('ok', 'Add another Salik PDF');
   }
 });
 
@@ -921,7 +856,7 @@ $('#btnExportXlsx').addEventListener('click', exportAllXlsx);
  *  INIT
  * ═══════════════════════════════════════════════════════ */
 async function init(){
-  await attemptCacheLoad(); // step 1 fires on load; step 2's "+" appears once this succeeds
+  await attemptCacheLoad(); // cache loads on page open; the "+" becomes active once it succeeds
 }
 document.addEventListener('DOMContentLoaded', init);
 </script>
