@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Salik Reconciliation</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Salik</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
@@ -84,30 +84,42 @@
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+html,body{min-height:100%;-webkit-text-size-adjust:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;}
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
 
 /* ═══ LAYOUT ═══ */
-body{display:flex;flex-direction:column;}
+body{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;overflow-x:hidden;}
 .portal-wrap{display:flex;flex-direction:column;flex:1;min-height:0;width:100%;max-width:1400px;margin:0 auto;padding:14px;gap:14px;}
 
 /* ═══ VIEW BAR ═══ */
 .view-bar{position:relative;display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0;padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);}
 .vb-brand{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:var(--radius-lg);background:var(--accent-dim);color:var(--accent);border:1px solid var(--border);font-size:16px;}
-.vb-title{display:flex;flex-direction:column;gap:1px;}
-.vb-title strong{font-size:13.5px;font-weight:700;}
-.vb-title span{font-size:11px;color:var(--text3);}
 .vb-spacer{flex:1;}
 .ib{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:var(--radius-lg);background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:15px;line-height:1;cursor:pointer;transition:color .15s,border-color .15s,background .15s;}
 .ib:hover{border-color:var(--accent);color:var(--accent);}
 
 /* cache status indicator */
-#cache-status{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;cursor:pointer;border-radius:var(--radius-lg);background:var(--bg3);border:1px solid var(--border);color:var(--text2);transition:color .2s,border-color .2s,background .2s;}
+#cache-status{padding:0;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;cursor:pointer;border-radius:var(--radius-lg);background:var(--bg3);border:1px solid var(--border);color:var(--text2);transition:color .2s,border-color .2s,background .2s;}
 #cache-status i{font-size:15px;line-height:1;}
-#cache-status:hover{color:var(--accent);border-color:var(--accent);}
-#cache-status[data-mode="loading"]{cursor:progress;pointer-events:none;}
+#cache-status:not(:disabled):hover{color:var(--accent);border-color:var(--accent);}
+#cache-status:disabled{cursor:not-allowed;opacity:.45;}
+#cache-status[data-mode="checking"],#cache-status[data-mode="loading"]{cursor:progress;opacity:.8;}
+#cache-status.ready{color:#fff;background:var(--accent);border-color:var(--accent);box-shadow:0 0 10px var(--accent-glow);}
+#cache-status.ready:hover{color:#fff;filter:brightness(1.12);}
+#cache-status:focus-visible,.ib:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* info popover (subtitle, cache status, Salik account) */
+.vb-actions{position:relative;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.info-pop{position:absolute;top:calc(100% + 8px);right:0;z-index:300;width:min(340px,calc(100vw - 28px));display:none;flex-direction:column;gap:12px;padding:14px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);}
+.info-pop.show{display:flex;}
+.info-row{display:flex;flex-direction:column;gap:3px;}
+.info-row .k{font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;}
+.info-row .v{font-size:12px;color:var(--text2);word-break:break-word;}
+.info-row .v.ok{color:var(--teal);}
+.info-row .v.warn{color:var(--amber);}
+.ib[aria-expanded="true"]{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
 #cache-status i.spin{animation:spin 1s linear infinite;}
 #cache-status.ok{color:var(--teal);border-color:rgba(57,211,83,.35);background:var(--teal-dim);}
 #cache-status.bad{color:var(--red);border-color:rgba(248,81,73,.35);background:var(--red-dim);}
@@ -124,7 +136,7 @@ body{display:flex;flex-direction:column;}
 .config-row .field select{padding:5px 8px;font-size:12px;}
 
 /* ═══ FLOW STEPS (module-specific) ═══ */
-.flow-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;}
+.flow-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:12px;}
 .flow-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-xl);padding:16px;box-shadow:var(--shadow);position:relative;transition:border-color .2s;}
 .flow-card.done{border-color:var(--teal);}
 .flow-num{font-family:var(--mono);font-size:10.5px;color:var(--accent);letter-spacing:.08em;font-weight:700;}
@@ -177,6 +189,7 @@ body{display:flex;flex-direction:column;}
 .panel-toolbar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap;}
 .panel-toolbar .search-input{font-family:var(--mono);font-size:12px;border:1.5px solid var(--border2);border-radius:var(--radius);padding:7px 11px;width:220px;background:var(--surface2);color:var(--text);}
 .panel-toolbar .search-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
+.toolbar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .panel-toolbar .label{font-size:12px;color:var(--text3);}
 .table-scroll{max-height:480px;overflow:auto;}
 
@@ -200,21 +213,53 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 .toast.error{background:var(--red-dim);color:var(--red);border-color:rgba(248,81,73,.25);}
 .spinner{animation:spin 1s linear infinite;display:inline-flex;}
 
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:1120px){
+  /* row 1: brand … info + "+"   ·   row 2: options   ·   row 3: tabs */
+  .view-bar{gap:8px;padding:8px max(10px,env(safe-area-inset-right)) 8px max(10px,env(safe-area-inset-left));padding-top:max(8px,env(safe-area-inset-top));}
+  .vb-brand{order:1;}
+  .vb-spacer{order:2;}
+  .vb-actions{order:3;}
+  .config-row{order:5;flex:1 1 100%;}
+  .config-row .field{flex:1 1 110px;min-width:0;}
+  .config-row .field select{width:100%;}
+  .config-row .field label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tab-nav{order:6;flex:1 1 100%;width:100%;overflow-x:auto;scrollbar-width:none;}
+  .tab-nav::-webkit-scrollbar{display:none;}
+  .tab-btn{flex:1 0 auto;}
+}
 @media(max-width:700px){
-  .portal-wrap{padding:8px;gap:10px;}
-  .panel-toolbar .search-input{width:100%;}
+  .portal-wrap{padding:8px max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));gap:10px;}
+  .flow-card{padding:14px;}
+  .panel-toolbar{padding:10px 12px;}
+  .panel-toolbar .search-input{width:100%;flex:1 1 100%;}
+  .toolbar-actions{width:100%;}
+  .toolbar-actions .label{flex:1 1 100%;}
+  .toolbar-actions .btn{flex:1;justify-content:center;}
+  .table-scroll{max-height:65vh;max-height:65dvh;}
+  .log-table th,.log-table td{padding:7px 10px;}
+  footer.meta{flex-direction:column;}
+  .toast{left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));max-width:none;}
+}
+@media(max-width:520px){
+  .config-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .config-row .field:last-child{grid-column:1/-1;}
+  .tab-btn{padding:7px 10px;}
+  .empty-state{padding:40px 14px;}
+}
+/* touch screens: bigger targets, and 16px inputs so iOS doesn't zoom on focus */
+@media(pointer:coarse){
+  .ib,#cache-status,.vb-brand{width:40px;height:40px;}
+  .field select,.field input[type=text],.panel-toolbar .search-input,.config-row .field select{font-size:16px;padding:8px 10px;}
+  .tab-btn{padding:9px 14px;}
+  .btn-sm{padding:9px 12px;}
 }
 </style>
 </head>
 <body>
 
 <div class="view-bar">
-  <div class="vb-brand" title="Salik Reconciliation"><i class="ti ti-road"></i></div>
-  <div class="vb-title">
-    <strong>Salik Reconciliation</strong>
-    <span>Toll trips &times; fleet check-in / check-out log</span>
-  </div>
-
+  <div class="vb-brand"><i class="ti ti-road"></i></div>
   <!-- options — visible once a PDF is loaded; changing them re-runs reconciliation automatically -->
   <div class="config-row" id="configRow" style="display:none;" title="Reconciles automatically when changed">
     <div class="field">
@@ -256,9 +301,18 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
   </div>
 
   <div class="vb-spacer"></div>
-  <div id="acctBadge" class="badge purple" style="display:none;"></div>
-  <!-- "+" : loads the fleet log cache; step 2 follows once it has loaded -->
-  <div id="cache-status" data-mode="idle" title="Load fleet log cache" onclick="retryCacheLoad()"><i class="ti ti-plus"></i></div>
+
+  <div class="vb-actions">
+  <button type="button" class="ib" id="btnInfo" title="Information" aria-label="Information" aria-expanded="false"><i class="ti ti-info-circle"></i></button>
+  <!-- "+" : inactive until the fleet log cache is available; then active — press to load it, step 2 follows -->
+  <button type="button" id="cache-status" data-mode="checking" title="Checking for cache&hellip;" aria-label="Load fleet log cache" onclick="onPlusClick()" disabled><i class="ti ti-loader spin"></i></button>
+
+  <div class="info-pop" id="infoPop" role="dialog" aria-label="Information">
+    <div class="info-row"><span class="k">About</span><span class="v" id="vbSub">Toll trips &times; fleet check-in / check-out log</span></div>
+    <div class="info-row"><span class="k">Fleet log cache</span><span class="v" id="infoCache">Checking for cache&hellip;</span></div>
+    <div class="info-row" id="acctRow" style="display:none;"><span class="k">Salik account</span><span id="acctBadge" class="badge purple" style="align-self:flex-start;"></span></div>
+  </div>
+  </div>
 </div>
 
 <div class="portal-wrap">
@@ -271,7 +325,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
       <h3><i class="ti ti-database"></i> Check-in / check-out cache</h3>
       <p>Reads <strong>ap2_cioLog</strong> straight from this browser's cache. Use this tab in the same browser/profile as the fleet app.</p>
       <div id="cioStatus" class="flow-status">
-        <span class="status-chip"><span class="dot"></span>Press + (top right) to load the cache</span>
+        <span class="status-chip"><span class="dot"></span>Checking for cache&hellip;</span>
       </div>
     </div>
 
@@ -295,7 +349,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
     <div class="results-panel">
       <div class="panel-toolbar">
         <input type="text" class="search-input" id="searchBox" placeholder="Filter rows&hellip;">
-        <div style="display:flex;gap:8px;align-items:center;">
+        <div class="toolbar-actions">
           <span class="label" id="rowCountLabel"></span>
           <button class="btn btn-ghost btn-sm" id="btnExportCsv"><i class="ti ti-file-type-csv"></i> Export CSV</button>
           <button class="btn btn-primary btn-sm" id="btnExportXlsx"><i class="ti ti-file-spreadsheet"></i> Export Excel</button>
@@ -375,6 +429,9 @@ if (typeof window.AP2CacheWatcher === 'undefined') {
 /* ===================== STATE ===================== */
 const state = {
   cioRaw: null,
+  addMode: 'checking',
+  watcherInit: false,
+  probeTimer: null,
   subscribed: false,
   sessions: [],
   salikRows: [],
@@ -402,16 +459,19 @@ function showToast(msg, type){
   showToast._t = setTimeout(() => { t.classList.remove('show'); }, 2800);
 }
 
+// "+" states: checking / loading = spinner, inactive · off = inactive (no cache yet) · ready = cache available, active · ok = loaded (active, can reload)
 function setCacheStatus(mode, title){
   const el = $('#cache-status');
+  state.addMode = mode;
   el.dataset.mode = mode;
-  el.className = mode === 'ok' ? 'ok' : mode === 'bad' ? 'bad' : '';
+  el.className = mode === 'ready' ? 'ready' : mode === 'ok' ? 'ok' : '';
+  el.disabled = !(mode === 'ready' || mode === 'ok');
   el.title = title || '';
-  el.innerHTML = mode === 'loading'
+  el.innerHTML = (mode === 'checking' || mode === 'loading')
     ? '<i class="ti ti-loader spin"></i>'
-    : mode === 'bad'
-      ? '<i class="ti ti-alert-circle"></i>'
-      : '<i class="ti ti-plus"></i>';   // idle + loaded: the "+" button
+    : '<i class="ti ti-plus"></i>';
+  const ic = $('#infoCache');
+  if (ic){ ic.textContent = title || ''; ic.className = 'v ' + (mode === 'ok' || mode === 'ready' ? 'ok' : mode === 'off' ? 'warn' : ''); }
 }
 
 /* ===================== STEP 1: fleet log cache ===================== */
@@ -448,19 +508,43 @@ async function scanAllStoresForCio(){
   });
 }
 
+async function readCioRaw(){
+  if (!state.watcherInit){
+    if (typeof AP2CacheWatcher.init === 'function') AP2CacheWatcher.init();
+    state.watcherInit = true;
+  }
+  let raw = await AP2CacheWatcher.readKey('ap2_cioLog');
+  let sourceLabel = 'shared cache watcher';
+  if (!raw){
+    const found = await scanAllStoresForCio();
+    raw = found.value;
+    sourceLabel = 'store "' + found.store + '"';
+  }
+  return { arr: normalizeCioValue(raw), sourceLabel };
+}
+
+// Is the fleet log cache there? Checked on open, and again while it is missing — "+" stays inactive until it is.
+async function probeCache(){
+  if (state.addMode !== 'checking' && state.addMode !== 'off') return;
+  clearTimeout(state.probeTimer);
+  try{
+    await readCioRaw();
+    setCacheStatus('ready', 'Cache available — press + to load it');
+    setFlowStatus($('#cioStatus'), 'Cache available &mdash; press + to load it', '');
+  }catch(err){
+    setCacheStatus('off', 'Cache not available — ' + err.message);
+    setFlowStatus($('#cioStatus'), 'Cache not available yet', 'warn');
+    state.probeTimer = setTimeout(probeCache, 5000);
+  }
+}
+
+// the + button: loads (or reloads) the fleet log cache
 async function attemptCacheLoad(){
+  clearTimeout(state.probeTimer);
   setCacheStatus('loading', 'Loading cache…');
   setFlowStatus($('#cioStatus'), 'Reading cache&hellip;', '');
   try{
-    if (typeof AP2CacheWatcher.init === 'function') AP2CacheWatcher.init();
-    let raw = await AP2CacheWatcher.readKey('ap2_cioLog');
-    let sourceLabel = 'shared cache watcher';
-    if (!raw){
-      const found = await scanAllStoresForCio();
-      raw = found.value;
-      sourceLabel = 'store "' + found.store + '"';
-    }
-    const arr = normalizeCioValue(raw);
+    const { arr, sourceLabel } = await readCioRaw();
     state.cioRaw = arr;
     onCioLoaded(arr, sourceLabel);
     if (typeof AP2CacheWatcher.subscribe === 'function' && !state.subscribed){
@@ -475,13 +559,13 @@ async function attemptCacheLoad(){
       });
     }
   }catch(err){
-    setCacheStatus('bad', err.message);
+    setCacheStatus('off', 'Cache not available — ' + err.message);
     setFlowStatus($('#cioStatus'), escapeHtml(err.message), 'bad');
-    showToast('Could not read fleet log cache — press + to retry.', 'error');
+    showToast('Could not read fleet log cache — "+" re-activates when it is available.', 'error');
+    state.probeTimer = setTimeout(probeCache, 5000);
   }
 }
-// the + button: loads (or reloads) the fleet log cache
-function retryCacheLoad(){ if ($('#cache-status').dataset.mode !== 'loading') attemptCacheLoad(); }
+function onPlusClick(){ if (state.addMode === 'ready' || state.addMode === 'ok') attemptCacheLoad(); }
 
 function onCioLoaded(arr, sourceLabel){
   state.sessions = buildSessions(arr);
@@ -852,10 +936,10 @@ $('#pdfInput').addEventListener('change', async (e) => {
     setFlowStatus($('#pdfStatus'), rows.length + ' trips parsed' + (meta.totalTrips ? ' (PDF reports ' + meta.totalTrips + ')' : ''), rows.length === meta.totalTrips ? 'ok' : 'warn');
     markDone($('#pdfCard'));
     if (meta.accountNo){
-      $('#acctBadge').style.display = 'inline-block';
+      $('#acctRow').style.display = 'flex';
       $('#acctBadge').textContent = 'Acct ' + meta.accountNo + (meta.periodFrom ? ' \u00b7 ' + meta.periodFrom + '\u2013' + meta.periodTo : '');
     }
-    $('#configRow').style.display = 'flex';
+    $('#configRow').style.display = '';
     showToast(rows.length + ' trips parsed — reconciling automatically\u2026', 'success');
     maybeAutoRun(); // STEP 3 runs automatically as soon as both sources are in
   }catch(err){
@@ -883,11 +967,27 @@ $('#searchBox').addEventListener('input', (e) => { renderTable(state.activeTab, 
 $('#btnExportCsv').addEventListener('click', exportActiveTabCsv);
 $('#btnExportXlsx').addEventListener('click', exportAllXlsx);
 
+/* re-check for the cache when the user comes back to this tab */
+window.addEventListener('focus', () => { if (state.addMode === 'off') probeCache(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && state.addMode === 'off') probeCache(); });
+
+/* info popover */
+const infoBtn = $('#btnInfo'), infoPop = $('#infoPop');
+function toggleInfo(force){
+  const show = force !== undefined ? force : !infoPop.classList.contains('show');
+  infoPop.classList.toggle('show', show);
+  infoBtn.setAttribute('aria-expanded', String(show));
+}
+infoBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleInfo(); });
+document.addEventListener('click', (e) => { if (!infoPop.contains(e.target)) toggleInfo(false); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleInfo(false); });
+
 /* ═══════════════════════════════════════════════════════
  *  INIT
  * ═══════════════════════════════════════════════════════ */
 async function init(){
-  setCacheStatus('idle', 'Load fleet log cache'); // cache loads when the + button is pressed
+  setCacheStatus('checking', 'Checking for cache…');
+  await probeCache(); // "+" becomes active once the cache is available; pressing it loads the cache
 }
 document.addEventListener('DOMContentLoaded', init);
 </script>
