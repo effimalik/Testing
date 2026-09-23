@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
+<script src="https://effimalik.github.io/Testing/shared/apiConfig.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/cacheWatcher.js?v=1"></script>
 <script src="https://effimalik.github.io/Testing/shared/code.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/cioView.js"></script>
@@ -292,13 +293,6 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
     <div class="info-row"><span class="k">Fleet log cache</span><span class="v" id="infoCache">Checking for cache&hellip;</span></div>
     <div class="info-row" id="pdfRow" style="display:none;"><span class="k">Salik PDF</span><span class="v" id="infoPdf"></span></div>
     <div class="info-row" id="acctRow" style="display:none;"><span class="k">Salik account</span><span id="acctBadge" class="badge purple" style="align-self:flex-start;"></span></div>
-    <div class="info-row">
-      <span class="k">Google Sheet Web App URL</span>
-      <div style="display:flex;gap:6px;">
-        <input type="text" id="sheetUrlInput" placeholder="https://script.google.com/macros/s/.../exec" style="flex:1;min-width:0;padding:6px 8px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-family:var(--mono);font-size:11px;">
-        <button type="button" class="btn btn-ghost btn-sm" id="btnSaveSheetUrl" title="Save URL"><i class="ti ti-device-floppy"></i></button>
-      </div>
-    </div>
   </div>
   </div>
 </div>
@@ -933,43 +927,77 @@ function exportAllXlsx(){
 }
 
 /* ===================== SAVE TO GOOGLE SHEET =====================
- * Posts the active tab's rows (same columns/labels the table shows) to a
- * Google Apps Script Web App that already has doGet/doPost set up.
- * Sent as mode:'no-cors' with a plain-text JSON body \u2014 the standard way to
- * POST to an Apps Script Web App from a static page without triggering a
- * CORS preflight. Because the response is opaque in no-cors mode, this can't
- * confirm the sheet actually received it \u2014 only that the request went out
- * without a network error. doPost(e) should read JSON.parse(e.postData.contents),
- * which looks like: { tab, exportedAt, columns: [...], rows: [{col: val, ...}, ...] }
+ * Same method as dedEngine.html's saveBatch(): session comes from
+ * sessionStorage('ap_session'), the Web App URL comes from the shared
+ * API_URL constant (apiConfig.js), and rows are sent as an array of
+ * arrays matching the target sheet's fixed column order \u2014 not as
+ * column-keyed objects.
+ *
+ * ASSUMPTION \u2014 the 'salikDump' sheet's column order. I don't have that
+ * schema, so this sends:
+ *   Transaction ID | Rider ID | Plate | Item ID | Trip Date/Time | Amount |
+ *   Location | Match Type | Assigned Via | Pushed At | Pushed By
+ * Tell me the real column order for ap2_salikDump and I'll fix this array.
  */
-function getSheetUrl(){ return localStorage.getItem('salik_sheetWebAppUrl') || ''; }
-function setSheetUrl(url){ localStorage.setItem('salik_sheetWebAppUrl', url.trim()); }
+function getSession() {
+  try { return JSON.parse(sessionStorage.getItem('ap_session') || '{}'); } catch (_) { return {}; }
+}
+
+const SALIK_GS = { SHEET_NAME: 'salikDump', webAppUrl: (typeof API_URL !== 'undefined' ? API_URL : '') };
 
 async function saveToSheet(){
-  const url = getSheetUrl();
-  if (!url){ showToast('Add your Google Sheet Web App URL first (Info icon).', 'error'); toggleInfo(true); return; }
+  if (!SALIK_GS.webAppUrl){ showToast('API_URL is not available \u2014 check that apiConfig.js loaded.', 'error'); return; }
+
   const tab = state.activeTab;
-  const def = TAB_DEFS[tab];
   const rows = state.results[tab];
   if (!rows || !rows.length){ showToast('No rows to save.', 'error'); return; }
 
+  const session = getSession();
+  const pushedAt = new Date().toLocaleString('en-GB', { hour12:false, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' }).replace(',', '');
+  const pushedBy = session.email || session.name || '';
+
+  const gridRows = rows.map(r => [
+    r.transactionId || '',
+    r.riderId || '',
+    r.plate || '',
+    r.itemId || '',
+    fmtTripTs(r.tripTs),
+    typeof r.amount === 'number' ? r.amount : parseFloat(r.amount) || 0,
+    r.location || '',
+    r.matchType === 'proper' ? 'Proper' : r.matchType === 'exception' ? 'Exception' : (r.type || ''),
+    r.fillDirection || '',
+    pushedAt,
+    pushedBy
+  ]);
+
   const payload = {
-    tab, exportedAt: new Date().toISOString(), columns: def.cols.map(c => c.label),
-    rows: rows.map(r => {
-      const o = {};
-      def.cols.forEach(c => { let v = r[c.key]; if (c.fmt) v = c.fmt(v); o[c.label] = v; });
-      return o;
-    })
+    action:    'appendRows',
+    type:      SALIK_GS.SHEET_NAME,
+    sheetName: SALIK_GS.SHEET_NAME,
+    sessionId: session.sessionId || '',
+    token:     session.token || '',
+    rows:      gridRows
   };
 
   const btn = $('#btnSaveSheet');
   const origHtml = btn.innerHTML;
   btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader spin"></i> Saving\u2026';
   try{
-    await fetch(url, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-    showToast('Sent ' + payload.rows.length + ' row(s) to Google Sheet \u2014 check the sheet to confirm (response can\u2019t be read cross-origin).', 'success');
+    const res = await fetch(SALIK_GS.webAppUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    const rawText = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}: ${rawText.slice(0,200)}`);
+    let data;
+    try { data = JSON.parse(rawText); }
+    catch (e) { throw new Error('Apps Script returned non-JSON: ' + rawText.slice(0,300)); }
+    if (data.status !== 'ok' && data.success !== true) throw new Error(data.message || data.error || JSON.stringify(data));
+
+    showToast('\u2713 Saved ' + gridRows.length + ' row(s) to Google Sheets (' + tab + ')', 'success');
   }catch(err){
-    showToast('Could not reach the Google Sheet: ' + err.message, 'error');
+    showToast('Save failed: ' + err.message, 'error');
   }finally{
     btn.disabled = false; btn.innerHTML = origHtml;
   }
@@ -1032,13 +1060,6 @@ function toggleInfo(force){
 infoBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleInfo(); });
 document.addEventListener('click', (e) => { if (!infoPop.contains(e.target)) toggleInfo(false); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleInfo(false); });
-
-/* Google Sheet Web App URL \u2014 persisted locally so it only needs entering once */
-$('#sheetUrlInput').value = getSheetUrl();
-$('#btnSaveSheetUrl').addEventListener('click', () => {
-  setSheetUrl($('#sheetUrlInput').value);
-  showToast('Google Sheet URL saved.', 'success');
-});
 
 /* ═══════════════════════════════════════════════════════
  *  INIT
