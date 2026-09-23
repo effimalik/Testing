@@ -245,7 +245,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
   <div class="config-row" id="configRow" style="display:none;" title="Reconciles automatically when changed">
     <div class="field">
       <label>Grace before checkout</label>
-      <select id="graceBefore">
+      <select id="graceBefore" title="Exception window: how long before a rider's check-out to still catch a Salik trip.">
         <option value="0">0 min</option>
         <option value="5">5 min</option>
         <option value="10" selected>10 min</option>
@@ -255,12 +255,19 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
     </div>
     <div class="field">
       <label>Grace after check-in</label>
-      <select id="graceAfter">
+      <select id="graceAfter" title="Exception window: how long after a rider's check-in to still catch a Salik trip.">
         <option value="0">0 min</option>
         <option value="5">5 min</option>
         <option value="10" selected>10 min</option>
         <option value="15">15 min</option>
         <option value="30">30 min</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Assign boundary trips to</label>
+      <select id="exceptionAssignTo" title="A trip inside both grace windows sits between two riders. Fill down assigns it to the check-out person (the rider taking it out next); fill up assigns it to the check-in person (the rider who just returned it).">
+        <option value="checkout" selected>Check-out person</option>
+        <option value="checkin">Check-in person</option>
       </select>
     </div>
     <div class="field">
@@ -625,16 +632,34 @@ function recompute(){
   const graceBefore = parseInt($('#graceBefore').value, 10) * 60000;
   const graceAfter = parseInt($('#graceAfter').value, 10) * 60000;
   const itemTypeFilter = $('#itemTypeFilter').value;
-  state.results = reconcile(state.sessions, state.salikRows, { graceBefore, graceAfter, itemTypeFilter });
+  const assignTo = $('#exceptionAssignTo').value; // 'checkout' = check-out person (fill down) | 'checkin' = check-in person (fill up)
+  state.results = reconcile(state.sessions, state.salikRows, { graceBefore, graceAfter, itemTypeFilter, assignTo });
   state.results.log = state.logRows.filter(r => itemTypeFilter === 'ALL' || r.itemType === itemTypeFilter);
   renderResults();
 }
 
 // Pure function: given sessions + salik trips + options, returns {summary, details, exceptions, sessions}.
+//
+// A session is "PROPER" when a Salik trip falls strictly inside the recorded
+// check-out \u2192 check-in window (no grace) \u2014 it's simply "the data says so".
+//
+// A session is an "EXCEPTION" when a trip only falls inside the grace zone
+// around a check-out or a check-in \u2014 i.e. the item wasn't officially checked
+// out yet (or was already checked back in) when the toll was triggered.
+// These are resolved with fill-up / fill-down, spreadsheet-style:
+//   \u2022 fill down \u2014 the trip is just BEFORE a session's check-out \u2192 brings the
+//     NEXT (coming) rider's ID/plate onto it \u2014 i.e. the check-out person.
+//   \u2022 fill up   \u2014 the trip is just AFTER a session's check-in \u2192 brings the
+//     PREVIOUS rider's ID/plate onto it \u2014 i.e. the check-in person.
+// When a trip sits in both zones at once (a genuine hand-over overlap between
+// two riders), opts.assignTo decides which one wins: 'checkout' (default)
+// prefers the check-out / fill-down person, 'checkin' prefers the check-in /
+// fill-up person.
 function reconcile(allSessions, salikRows, opts){
   const graceBefore = opts.graceBefore || 0;
   const graceAfter = opts.graceAfter || 0;
   const itemTypeFilter = opts.itemTypeFilter || 'ALL';
+  const assignTo = opts.assignTo || 'checkout';
 
   let sessions = allSessions.slice();
   if (itemTypeFilter !== 'ALL') sessions = sessions.filter(s => s.itemType === itemTypeFilter);
@@ -648,20 +673,50 @@ function reconcile(allSessions, salikRows, opts){
   const details = [];
   const sessionTripCounts = new Map();
 
+  function pushDetail(s, trip, matchType, fillDirection){
+    seenTxIds.add(trip.transactionId);
+    const sKey = s.checkOutRef + '|' + s.itemId;
+    sessionTripCounts.set(sKey, (sessionTripCounts.get(sKey)||0) + 1);
+    details.push({ riderId: s.riderId, plate: trip.plate, itemId: s.itemId, transactionId: trip.transactionId,
+      tripTs: trip.tripTs, amount: trip.amount, location: trip.location,
+      checkOutTs: s.checkOutTs, checkInTs: s.checkInTs, sessionOpen: s.open,
+      matchType, fillDirection: fillDirection || '' });
+  }
+
+  // PASS 1 \u2014 Proper: strictly inside the actual check-out\u2192check-in window, no grace.
   sessions.forEach(s => {
     const candidates = tripsByPlate[String(s.itemId).trim()] || [];
-    const winStart = s.checkOutTs - graceBefore;
-    const winEnd = s.checkInTs + graceAfter;
     candidates.forEach(trip => {
       if (seenTxIds.has(trip.transactionId)) return;
-      if (trip.tripTs >= winStart && trip.tripTs <= winEnd){
-        seenTxIds.add(trip.transactionId);
-        const sKey = s.checkOutRef + '|' + s.itemId;
-        sessionTripCounts.set(sKey, (sessionTripCounts.get(sKey)||0) + 1);
-        details.push({ riderId: s.riderId, plate: trip.plate, itemId: s.itemId, transactionId: trip.transactionId,
-          tripDateStr: trip.tripDateStr, tripTimeStr: trip.tripTimeStr, amount: trip.amount, location: trip.location,
-          checkOutTs: s.checkOutTs, checkInTs: s.checkInTs, sessionOpen: s.open });
+      if (trip.tripTs >= s.checkOutTs && trip.tripTs <= s.checkInTs){
+        pushDetail(s, trip, 'proper');
       }
+    });
+  });
+
+  // PASS 2 \u2014 Exception: whatever's left, resolved via the grace-zone fill up/down.
+  const nearestBy = (list, key, ts) => list.slice().sort((a,b) => Math.abs(a[key]-ts) - Math.abs(b[key]-ts))[0];
+  Object.keys(tripsByPlate).forEach(plate => {
+    const plateSessions = sessionsByPlate[plate];
+    if (!plateSessions) return;
+    tripsByPlate[plate].forEach(trip => {
+      if (seenTxIds.has(trip.transactionId)) return;
+      // fill-down candidates: session about to start \u2014 trip is shortly BEFORE its check-out (check-out person)
+      const preCandidates = plateSessions.filter(s => trip.tripTs >= s.checkOutTs - graceBefore && trip.tripTs < s.checkOutTs);
+      // fill-up candidates: session just ended \u2014 trip is shortly AFTER its check-in (check-in person)
+      const postCandidates = plateSessions.filter(s => trip.tripTs > s.checkInTs && trip.tripTs <= s.checkInTs + graceAfter);
+
+      let chosen = null, fillDirection = null;
+      if (preCandidates.length && postCandidates.length){
+        // ambiguous hand-over zone \u2014 defer to the assignTo preference
+        if (assignTo === 'checkin'){ chosen = nearestBy(postCandidates, 'checkInTs', trip.tripTs); fillDirection = 'fill up'; }
+        else { chosen = nearestBy(preCandidates, 'checkOutTs', trip.tripTs); fillDirection = 'fill down'; }
+      } else if (preCandidates.length){
+        chosen = nearestBy(preCandidates, 'checkOutTs', trip.tripTs); fillDirection = 'fill down';
+      } else if (postCandidates.length){
+        chosen = nearestBy(postCandidates, 'checkInTs', trip.tripTs); fillDirection = 'fill up';
+      }
+      if (chosen) pushDetail(chosen, trip, 'exception', fillDirection);
     });
   });
 
@@ -670,7 +725,7 @@ function reconcile(allSessions, salikRows, opts){
     if (!seenTxIds.has(trip.transactionId)){
       const hadAnySessionForPlate = !!sessionsByPlate[trip.plate];
       exceptions.push({ type: hadAnySessionForPlate ? 'Outside any checkout window' : 'No checkout session for this plate',
-        transactionId: trip.transactionId, plate: trip.plate, tripDateStr: trip.tripDateStr, tripTimeStr: trip.tripTimeStr,
+        transactionId: trip.transactionId, plate: trip.plate, tripTs: trip.tripTs,
         amount: trip.amount, location: trip.location });
     }
   });
@@ -707,14 +762,16 @@ const TAB_DEFS = {
   ]},
   details: { cols: [
     {key:'riderId', label:'Rider ID'}, {key:'plate', label:'Plate'}, {key:'itemId', label:'Item ID'},
-    {key:'transactionId', label:'Transaction ID'}, {key:'tripDateStr', label:'Trip Date'}, {key:'tripTimeStr', label:'Trip Time'},
+    {key:'transactionId', label:'Transaction ID'}, {key:'tripTs', label:'Trip Date/Time', fmt: v => fmtTripTs(v)},
     {key:'amount', label:'Amount (AED)', num:true, fmt: v => v.toFixed(2)}, {key:'location', label:'Location'},
+    {key:'matchType', label:'Match', fmt: v => v === 'proper' ? 'Proper' : 'Exception', badge: v => v === 'proper' ? 'ok' : 'warn'},
+    {key:'fillDirection', label:'Assigned via', fmt: v => v === 'fill down' ? 'Fill down \u00b7 check-out person' : v === 'fill up' ? 'Fill up \u00b7 check-in person' : '\u2014'},
     {key:'sessionOpen', label:'Session', fmt: v => v ? 'open' : 'closed', badge: v => v ? 'warn' : 'ok'}
   ]},
   exceptions: { cols: [
     {key:'type', label:'Reason', badge: v => v.startsWith('No checkout') ? 'bad' : 'warn'},
     {key:'transactionId', label:'Transaction ID'}, {key:'plate', label:'Plate'},
-    {key:'tripDateStr', label:'Trip Date'}, {key:'tripTimeStr', label:'Trip Time'},
+    {key:'tripTs', label:'Trip Date/Time', fmt: v => fmtTripTs(v)},
     {key:'amount', label:'Amount (AED)', num:true, fmt: v => v.toFixed(2)}, {key:'location', label:'Location'}
   ]},
   sessions: { cols: [
@@ -729,6 +786,14 @@ function fmtTs(ts){
   const d = new Date(ts);
   const pad = n => String(n).padStart(2,'0');
   return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+// same as fmtTs but keeps seconds \u2014 used for the merged Trip Date/Time column, since the
+// source Salik PDF timestamps are precise to the second.
+function fmtTripTs(ts){
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2,'0');
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
 }
 
 function renderResults(){
@@ -886,7 +951,7 @@ $('#pdfInput').addEventListener('change', async (e) => {
 });
 
 // changing the reconciliation options re-runs automatically too
-['#graceBefore', '#graceAfter', '#itemTypeFilter'].forEach(sel => {
+['#graceBefore', '#graceAfter', '#itemTypeFilter', '#exceptionAssignTo'].forEach(sel => {
   $(sel).addEventListener('change', recompute);
 });
 
