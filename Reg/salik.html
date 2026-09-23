@@ -948,9 +948,10 @@ const SALIK_GS = { SHEET_NAME: 'salikDump', webAppUrl: (typeof API_URL !== 'unde
 async function saveToSheet(){
   if (!SALIK_GS.webAppUrl){ showToast('API_URL is not available \u2014 check that apiConfig.js loaded.', 'error'); return; }
 
-  const tab = state.activeTab;
-  const rows = state.results[tab];
-  if (!rows || !rows.length){ showToast('No rows to save.', 'error'); return; }
+  // salikDump columns match the Trip Details rows, so always save those,
+  // whichever tab is currently open.
+  const rows = state.results.details;
+  if (!rows || !rows.length){ showToast('No Trip Details rows to save \u2014 add the Salik PDF first.', 'error'); return; }
 
   const session = getSession();
   const pushedAt = new Date().toLocaleString('en-GB', { hour12:false, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' }).replace(',', '');
@@ -995,7 +996,7 @@ async function saveToSheet(){
     catch (e) { throw new Error('Apps Script returned non-JSON: ' + rawText.slice(0,300)); }
     if (data.status !== 'ok' && data.success !== true) throw new Error(data.message || data.error || JSON.stringify(data));
 
-    showToast('\u2713 Saved ' + gridRows.length + ' row(s) to Google Sheets (' + tab + ')', 'success');
+    showToast('\u2713 Saved ' + gridRows.length + ' Trip Details row(s) to Google Sheets (salikDump)', 'success');
   }catch(err){
     showToast('Save failed: ' + err.message, 'error');
   }finally{
