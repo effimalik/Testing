@@ -186,6 +186,27 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 .toast.success{background:var(--teal-dim);color:var(--teal);border-color:rgba(57,211,83,.25);}
 .toast.error{background:var(--red-dim);color:var(--red);border-color:rgba(248,81,73,.25);}
 .spinner{animation:spin 1s linear infinite;display:inline-flex;}
+.view-switch{display:flex;gap:3px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:3px;width:fit-content;}
+.vs-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:none;background:transparent;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .18s;}
+.vs-btn.active{background:var(--accent);color:#fff;box-shadow:0 0 10px var(--accent-glow);}
+.vs-btn:not(.active):hover{background:var(--surface2);color:var(--text);}
+.ib:disabled{opacity:.45;cursor:not-allowed;}
+.ib:disabled:hover{border-color:var(--border);color:var(--text2);}
+.ib i.spin{animation:spin 1s linear infinite;}
+.tb-left{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.tb-select{padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:12px;}
+@media(pointer:coarse){.tb-select{font-size:16px;padding:8px 10px;}}
+.modal-back{position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;padding:14px;background:rgba(0,0,0,.55);}
+.modal-back.show{display:flex;}
+.modal{width:min(760px,100%);max-height:calc(100dvh - 28px);display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);overflow:hidden;}
+.modal-head,.modal-foot{display:flex;align-items:center;gap:10px;padding:12px 16px;}
+.modal-head{justify-content:space-between;border-bottom:1px solid var(--border);}
+.modal-head h3{font-size:14px;font-weight:700;}
+.modal-foot{justify-content:flex-end;border-top:1px solid var(--border);}
+.modal-body{display:flex;flex-direction:column;gap:10px;padding:14px 16px;min-height:0;overflow:auto;}
+.modal-note{font-size:12.5px;color:var(--text2);}
+.modal-note b{color:var(--text);}
+.modal-note.warn{color:var(--amber);}
 
 /* ═══ RESPONSIVE ═══ */
 @media(max-width:1280px){
@@ -194,6 +215,8 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
   .vb-brand{order:1;}
   .vb-spacer{order:2;}
   .vb-actions{order:3;}
+  .view-switch{order:4;flex:1 1 100%;width:100%;}
+  .vs-btn{flex:1;}
   .config-row{order:6;flex:1 1 100%;}
   .config-row .field{flex:1 1 110px;min-width:0;}
   .config-row .field select{width:100%;}
@@ -206,6 +229,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
   .portal-wrap{padding:8px max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));gap:10px;}
   .panel-toolbar{padding:10px 12px;}
   .panel-toolbar .search-input{width:100%;flex:1 1 100%;}
+  .tb-left{width:100%;}
   .toolbar-actions{width:100%;}
   .toolbar-actions .label{flex:1 1 100%;}
   .toolbar-actions .btn{flex:1;justify-content:center;}
@@ -233,8 +257,12 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 
 <div class="view-bar">
   <div class="vb-brand"><i class="ti ti-road"></i></div>
+  <div class="view-switch" id="viewSwitch">
+    <button type="button" class="vs-btn active" data-view="load"><i class="ti ti-database"></i>Loading data</button>
+    <button type="button" class="vs-btn" data-view="upload"><i class="ti ti-file-upload"></i>Uploading data</button>
+  </div>
   <!-- tabs — shown once the fleet log cache has loaded -->
-  <div class="tab-nav" id="tabNav" style="display:none;">
+  <div class="tab-nav" id="tabNav">
     <button class="tab-btn active" data-tab="log">Fleet Log <span class="count" id="cntLog">0</span></button>
     <button class="tab-btn" data-tab="summary">Summary <span class="count" id="cntSummary">0</span></button>
     <button class="tab-btn" data-tab="details">Trip Details <span class="count" id="cntDetails">0</span></button>
@@ -242,33 +270,24 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
     <button class="tab-btn" data-tab="sessions">Checkout Sessions <span class="count" id="cntSessions">0</span></button>
   </div>
 
-  <!-- options — visible once a PDF is loaded; changing them re-runs reconciliation automatically -->
+  <!-- options: Uploading view only; changing them re-runs reconciliation automatically -->
   <div class="config-row" id="configRow" style="display:none;" title="Reconciles automatically when changed">
     <div class="field">
-      <label>Grace before checkout</label>
-      <select id="graceBefore" title="Exception window: how long before a rider's check-out to still catch a Salik trip.">
-        <option value="0">0 min</option>
+      <label>Fill method</label>
+      <select id="fillMethod" title="Exception trips (outside any check-out to check-in window) get a rider like Power Query fill. Fill down = old person: the rider of the session that ended just before the trip. Fill up = latest person: the rider of the session that starts just after the trip.">
+        <option value="up" selected>Fill up &middot; latest person</option>
+        <option value="down">Fill down &middot; old person</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Window</label>
+      <select id="fillWindow" title="How far from the check-in (fill down) or check-out (fill up) a trip may be. Whole = no limit. Trips that cannot be filled stay Unclassified.">
         <option value="5">5 min</option>
         <option value="10" selected>10 min</option>
         <option value="15">15 min</option>
         <option value="30">30 min</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>Grace after check-in</label>
-      <select id="graceAfter" title="Exception window: how long after a rider's check-in to still catch a Salik trip.">
-        <option value="0">0 min</option>
-        <option value="5">5 min</option>
-        <option value="10" selected>10 min</option>
-        <option value="15">15 min</option>
-        <option value="30">30 min</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>Assign boundary trips to</label>
-      <select id="exceptionAssignTo" title="A trip inside both grace windows sits between two riders. Fill down assigns it to the check-out person (the rider taking it out next); fill up assigns it to the check-in person (the rider who just returned it).">
-        <option value="checkout" selected>Check-out person</option>
-        <option value="checkin">Check-in person</option>
+        <option value="60">60 min</option>
+        <option value="whole">Whole (no limit)</option>
       </select>
     </div>
     <div class="field">
@@ -287,10 +306,12 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
   <button type="button" class="ib" id="btnInfo" title="Information" aria-label="Information" aria-expanded="false"><i class="ti ti-info-circle"></i></button>
   <!-- "+" : inactive until the fleet log cache is available; then active — press to load it, step 2 follows -->
   <button type="button" id="cache-status" data-mode="checking" title="Checking for cache&hellip;" aria-label="Add Salik PDF" onclick="onPlusClick()" disabled><i class="ti ti-loader spin"></i></button>
+  <button type="button" class="ib" id="btnSaveSheet" title="Save to Sheet" aria-label="Save to Sheet" disabled><i class="ti ti-cloud-upload"></i></button>
 
   <div class="info-pop" id="infoPop" role="dialog" aria-label="Information">
     <div class="info-row"><span class="k">About</span><span class="v" id="vbSub">Toll trips &times; fleet check-in / check-out log</span></div>
     <div class="info-row"><span class="k">Fleet log cache</span><span class="v" id="infoCache">Checking for cache&hellip;</span></div>
+    <div class="info-row"><span class="k">salikDump cache</span><span class="v" id="infoHist">Checking for cache&hellip;</span></div>
     <div class="info-row" id="pdfRow" style="display:none;"><span class="k">Salik PDF</span><span class="v" id="infoPdf"></span></div>
     <div class="info-row" id="acctRow" style="display:none;"><span class="k">Salik account</span><span id="acctBadge" class="badge purple" style="align-self:flex-start;"></span></div>
   </div>
@@ -300,15 +321,21 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 <div class="portal-wrap">
 
   <!-- STEP 3 (automatic): results -->
-  <div id="resultsArea" style="display:none;flex-direction:column;gap:10px;">
+  <div id="resultsArea" style="display:flex;flex-direction:column;gap:10px;">
     <div class="results-panel">
       <div class="panel-toolbar">
-        <input type="text" class="search-input" id="searchBox" placeholder="Filter rows&hellip;">
+        <div class="tb-left">
+          <input type="text" class="search-input" id="searchBox" placeholder="Filter rows&hellip;">
+          <select class="tb-select" id="excFilter" style="display:none;" aria-label="Filter exceptions">
+            <option value="all">All exceptions</option>
+            <option value="Assigned">Assigned (filled)</option>
+            <option value="Unclassified">Unclassified only</option>
+          </select>
+        </div>
         <div class="toolbar-actions">
           <span class="label" id="rowCountLabel"></span>
           <button class="btn btn-ghost btn-sm" id="btnExportCsv"><i class="ti ti-file-type-csv"></i> Export CSV</button>
           <button class="btn btn-primary btn-sm" id="btnExportXlsx"><i class="ti ti-file-spreadsheet"></i> Export Excel</button>
-          <button class="btn btn-ghost btn-sm" id="btnSaveSheet"><i class="ti ti-cloud-upload"></i> Save to Sheet</button>
         </div>
       </div>
       <div class="table-scroll" id="tableHost"></div>
@@ -319,13 +346,25 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
     </footer>
   </div>
 
-  <div id="emptyResults" class="empty-state">
-    <i class="ti ti-circle-dashed"></i>
-    <span id="emptyMsg">Checking for the fleet log cache&hellip;</span>
-  </div>
 
 </div>
 
+<div class="modal-back" id="dupModal" role="dialog" aria-modal="true" aria-labelledby="dupTitle">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="dupTitle">Upload preview</h3>
+      <button type="button" class="ib" id="dupClose" aria-label="Close"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="dupSummary"></div>
+      <div class="table-scroll" id="dupTable" style="max-height:40vh;"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" id="dupCancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="dupConfirm">Upload</button>
+    </div>
+  </div>
+</div>
 <input type="file" id="pdfInput" accept="application/pdf" hidden>
 <div class="toast" id="toast" role="alert">
   <i id="toast-icon" class="ti ti-circle-check"></i>
@@ -396,9 +435,15 @@ const state = {
   salikRows: [],
   pdfMeta: {},
   results: { log: [], summary: [], details: [], exceptions: [], sessions: [] },
-  sort: { log: { key: 'ts', dir: 'desc' } },
-  activeTab: 'log'
+  sort: { log: { key: 'tripTs', dir: 'desc' }, summary: { key: 'month', dir: 'desc' } },
+  activeTab: 'log',
+  view: 'load',            // 'load' = Loading data (salikDump history) | 'upload' = Uploading data (PDF)
+  excFilter: 'all',
+  histCache: [], savedRows: [], hist: [], histMap: new Map(),
+  histLoaded: null, histSub: false, histTimer: null,
+  pendingUpload: null
 };
+const VIEW_TABS = { load: ['log','summary'], upload: ['details','exceptions','sessions'] };
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -426,8 +471,6 @@ function setCacheStatus(mode, info){
   const ic = $('#infoCache');
   ic.textContent = info || '';
   ic.className = 'v ' + (mode === 'ok' ? 'ok' : mode === 'off' ? 'warn' : '');
-  const em = $('#emptyMsg');
-  if (em && mode !== 'ok') em.textContent = mode === 'off' ? 'Fleet log cache not available yet \u2014 open the fleet app in this browser. This page keeps checking.' : 'Checking for the fleet log cache\u2026';
 }
 
 /* ===================== STEP 1: fleet log cache ===================== */
@@ -442,7 +485,7 @@ function normalizeCioValue(val){
 
 // Secondary fallback: scan every object store in ap2_fleet_cache for the key,
 // in case the shared watcher's single-store assumption doesn't match this browser.
-async function scanAllStoresForCio(){
+async function scanAllStoresForKey(key){
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(_IDB_NAME);
     req.onerror = () => reject(new Error('Could not open IndexedDB "' + _IDB_NAME + '".'));
@@ -453,10 +496,10 @@ async function scanAllStoresForCio(){
       let found = null, remaining = storeNames.length;
       const tx = db.transaction(storeNames, 'readonly');
       storeNames.forEach(storeName => {
-        const getReq = tx.objectStore(storeName).get('ap2_cioLog');
+        const getReq = tx.objectStore(storeName).get(key);
         getReq.onsuccess = () => {
           if (getReq.result !== undefined && found === null) found = { store: storeName, value: getReq.result };
-          if (--remaining === 0){ db.close(); found ? resolve(found) : reject(new Error('No object store contained key "ap2_cioLog". Checked: ' + storeNames.join(', '))); }
+          if (--remaining === 0){ db.close(); found ? resolve(found) : reject(new Error('No object store contained key "' + key + '". Checked: ' + storeNames.join(', '))); }
         };
         getReq.onerror = () => { if (--remaining === 0){ db.close(); found ? resolve(found) : reject(new Error('Error reading object stores.')); } };
       });
@@ -472,7 +515,7 @@ async function readCioRaw(){
   let raw = await AP2CacheWatcher.readKey('ap2_cioLog');
   let sourceLabel = 'shared cache watcher';
   if (!raw){
-    const found = await scanAllStoresForCio();
+    const found = await scanAllStoresForKey('ap2_cioLog');
     raw = found.value;
     sourceLabel = 'store "' + found.store + '"';
   }
@@ -518,7 +561,7 @@ function onCioLoaded(arr, sourceLabel, quiet){
     .filter(r => !isNaN(r.ts));
   setCacheStatus('ok', arr.length + ' log entries (' + sourceLabel + ') \u00b7 ' + state.sessions.length + ' checkout sessions');
   recompute();
-  if (!quiet) showToast('Fleet log loaded \u2014 press + to add the Salik PDF.', 'success');
+  if (!quiet && state.view === 'upload') showToast('Fleet log loaded \u2014 press + to add the Salik PDF.', 'success');
 }
 
 /* Log row: [isoTimestamp, ref, riderId, action ("Check In"|"Check Out"), itemType, itemId] */
@@ -564,6 +607,96 @@ function buildSessions(rows){
   });
 
   return sessions;
+}
+
+/* ===================== SALIKDUMP HISTORY (Loading data) ===================== */
+const HIST_COLS = ['Transaction ID','Rider ID','Plate','Item ID','Trip Date/Time','Amount (AED)','Location','Match','Assigned via','Pushed At','Pushed By'];
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// Sheets can turn an 11-digit id into a number and drop a leading zero, so ids are compared without it.
+function txKey(v){ return String(v == null ? '' : v).trim().replace(/^0+/, ''); }
+function monthLabel(v){ const m = /^(\d{4})-(\d{2})$/.exec(v || ''); return m ? MONTH_NAMES[+m[2]-1] + ' ' + m[1] : (v || '\u2014'); }
+function parseHistTs(v){
+  if (v instanceof Date) return v.getTime() || 0;
+  const s = String(v == null ? '' : v).trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (m) return new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +(m[6]||0)).getTime();
+  m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})[ ,]+(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  if (m) return new Date(+m[3], +m[2]-1, +m[1], +m[4], +m[5], +(m[6]||0)).getTime();
+  const t = Date.parse(s);
+  return isNaN(t) ? 0 : t;
+}
+function fmtCell(v){
+  if (v instanceof Date) return v.getTime() ? fmtTripTs(v.getTime()) : '';
+  const s = String(v == null ? '' : v).trim();
+  return /^\d{4}-\d{2}-\d{2}T.*(Z|[+-]\d{2}:?\d{2})$/.test(s) ? fmtTripTs(Date.parse(s)) : s;
+}
+function normalizeArr(val, key){
+  let arr = null;
+  if (Array.isArray(val)) arr = val;
+  else if (val && Array.isArray(val.data)) arr = val.data;
+  else if (val && val.value && Array.isArray(val.value.data)) arr = val.value.data;
+  if (!arr) throw new Error('Unrecognized ' + key + ' shape \u2014 expected an array of rows or {data:[...]}.');
+  return arr;
+}
+// one salikDump row (array in sheet order, or object keyed by header) -> flat object
+function normaliseHistRow(r){
+  const a = Array.isArray(r) ? r : (r && typeof r === 'object' ? HIST_COLS.map(c => r[c]) : null);
+  if (!a) return null;
+  const S = i => String(a[i] == null ? '' : a[i]).trim();
+  const tx = S(0);
+  if (!tx || tx === 'Transaction ID') return null;
+  const ts = parseHistTs(a[4]);
+  const d = new Date(ts);
+  return { transactionId: tx, riderId: S(1), plate: S(2), itemId: S(3), tripTs: ts,
+    month: ts ? d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') : '\u2014',
+    amount: parseFloat(S(5).replace(/,/g,'')) || 0, location: S(6), matchType: S(7), assignedVia: S(8),
+    pushedAt: fmtCell(a[9]), pushedBy: S(10) };
+}
+function setHistStatus(mode, info){
+  const el = $('#infoHist');
+  el.textContent = info || '';
+  el.className = 'v ' + (mode === 'ok' ? 'ok' : mode === 'off' ? 'warn' : '');
+}
+async function loadHist(){
+  clearTimeout(state.histTimer);
+  try{
+    let raw = await AP2CacheWatcher.readKey('ap2_salikDump');
+    if (!raw) raw = (await scanAllStoresForKey('ap2_salikDump')).value;
+    state.histCache = normalizeArr(raw, 'ap2_salikDump').map(normaliseHistRow).filter(Boolean);
+    state.histLoaded = true;
+    setHistStatus('ok', state.histCache.length + ' saved trips');
+    rebuildHist();
+    if (typeof AP2CacheWatcher.subscribe === 'function' && !state.histSub){
+      state.histSub = true;
+      AP2CacheWatcher.subscribe('ap2_salikDump', () => { loadHist(); });
+    }
+  }catch(err){
+    state.histLoaded = false;
+    setHistStatus('off', 'Cache not available \u2014 ' + err.message);
+    rebuildHist();
+    state.histTimer = setTimeout(loadHist, 5000);
+  }
+}
+// cache rows + rows saved from this page that the cache has not caught up with yet
+function rebuildHist(){
+  const seen = new Set(state.histCache.map(r => txKey(r.transactionId)));
+  state.hist = state.histCache.concat(state.savedRows.filter(r => !seen.has(txKey(r.transactionId))));
+  state.histMap = new Map(state.hist.map(r => [txKey(r.transactionId), r]));
+  recompute();
+}
+// month-wise, per rider; a rider with two bikes in a month shows both plates, comma-separated
+function buildHistSummary(rows){
+  const map = new Map();
+  rows.forEach(r => {
+    const k = r.month + '|' + r.riderId;
+    let g = map.get(k);
+    if (!g){ g = { month: r.month, riderId: r.riderId || '\u2014', plateSet: new Set(), count: 0, totalAmount: 0 }; map.set(k, g); }
+    if (r.plate) g.plateSet.add(r.plate);
+    g.count++; g.totalAmount += r.amount;
+  });
+  return Array.from(map.values())
+    .map(g => ({ month: g.month, riderId: g.riderId, plates: Array.from(g.plateSet).sort().join(', '), count: g.count, totalAmount: g.totalAmount }))
+    .sort((a,b) => b.count - a.count);
 }
 
 /* ===================== STEP 2: PDF parsing ===================== */
@@ -630,51 +763,47 @@ function parseSalikDateTime(dateStr, timeStr){
 
 /* ===================== reconciliation + views ===================== */
 function recompute(){
-  if (!state.cioRaw) return;
-  const graceBefore = parseInt($('#graceBefore').value, 10) * 60000;
-  const graceAfter = parseInt($('#graceAfter').value, 10) * 60000;
-  const itemTypeFilter = $('#itemTypeFilter').value;
-  const assignTo = $('#exceptionAssignTo').value; // 'checkout' = check-out person (fill down) | 'checkin' = check-in person (fill up)
-  state.results = reconcile(state.sessions, state.salikRows, { graceBefore, graceAfter, itemTypeFilter, assignTo });
-  state.results.log = state.logRows.filter(r => itemTypeFilter === 'ALL' || r.itemType === itemTypeFilter);
+  if (state.cioRaw){
+    const w = $('#fillWindow').value;
+    const r = reconcile(state.sessions, state.salikRows, {
+      itemTypeFilter: $('#itemTypeFilter').value,
+      fillMethod: $('#fillMethod').value,                       // 'up' = latest person | 'down' = old person
+      windowMs: w === 'whole' ? null : parseInt(w, 10) * 60000  // null = whole (no limit)
+    });
+    r.details.forEach(d => { d.dup = state.histMap.has(txKey(d.transactionId)); });
+    state.results.details = r.details;
+    state.results.exceptions = r.exceptions;
+    state.results.sessions = r.sessions;
+  }
+  state.results.log = state.hist;
+  state.results.summary = buildHistSummary(state.hist);
   renderResults();
 }
+function reconcileNow(){
+  recompute();
+  if (state.salikRows.length) showToast('Reconciled \u2014 ' + state.results.details.length + ' matched, ' + state.results.exceptions.filter(e => e.status === 'Unclassified').length + ' unclassified.', 'success');
+}
 
-// Pure function: given sessions + salik trips + options, returns {summary, details, exceptions, sessions}.
-//
-// A session is "PROPER" when a Salik trip falls strictly inside the recorded
-// check-out \u2192 check-in window (no grace) \u2014 it's simply "the data says so".
-//
-// A session is an "EXCEPTION" when a trip only falls inside the grace zone
-// around a check-out or a check-in \u2014 i.e. the item wasn't officially checked
-// out yet (or was already checked back in) when the toll was triggered.
-// These are resolved with fill-up / fill-down, spreadsheet-style:
-//   \u2022 fill down \u2014 the trip is just BEFORE a session's check-out \u2192 brings the
-//     NEXT (coming) rider's ID/plate onto it \u2014 i.e. the check-out person.
-//   \u2022 fill up   \u2014 the trip is just AFTER a session's check-in \u2192 brings the
-//     PREVIOUS rider's ID/plate onto it \u2014 i.e. the check-in person.
-// When a trip sits in both zones at once (a genuine hand-over overlap between
-// two riders), opts.assignTo decides which one wins: 'checkout' (default)
-// prefers the check-out / fill-down person, 'checkin' prefers the check-in /
-// fill-up person.
+// Pure function: sessions + Salik trips + options -> { details, exceptions, sessions }.
+// PROPER    = trip falls inside a recorded check-out -> check-in window (no grace).
+// EXCEPTION = any other trip on a plate that has sessions. Its rider is filled like Power Query:
+//   fill down = OLD person: rider of the session that ended most recently BEFORE the trip.
+//   fill up   = LATEST person: rider of the session that starts next AFTER the trip.
+// opts.windowMs caps the gap to that check-in (down) / check-out (up); null = whole (no limit).
+// Trips that cannot be filled stay UNCLASSIFIED (listed in Exceptions, not uploaded).
 function reconcile(allSessions, salikRows, opts){
-  const graceBefore = opts.graceBefore || 0;
-  const graceAfter = opts.graceAfter || 0;
   const itemTypeFilter = opts.itemTypeFilter || 'ALL';
-  const assignTo = opts.assignTo || 'checkout';
+  const fillDown = opts.fillMethod === 'down';
+  const windowMs = opts.windowMs == null ? null : opts.windowMs;
 
   let sessions = allSessions.slice();
   if (itemTypeFilter !== 'ALL') sessions = sessions.filter(s => s.itemType === itemTypeFilter);
-
   const sessionsByPlate = {};
   sessions.forEach(s => { const key = String(s.itemId).trim(); (sessionsByPlate[key] = sessionsByPlate[key] || []).push(s); });
   const tripsByPlate = {};
   salikRows.forEach(t => { (tripsByPlate[t.plate] = tripsByPlate[t.plate] || []).push(t); });
 
-  const seenTxIds = new Set();
-  const details = [];
-  const sessionTripCounts = new Map();
-
+  const seenTxIds = new Set(), details = [], sessionTripCounts = new Map();
   function pushDetail(s, trip, matchType, fillDirection){
     seenTxIds.add(trip.transactionId);
     const sKey = s.checkOutRef + '|' + s.itemId;
@@ -685,61 +814,41 @@ function reconcile(allSessions, salikRows, opts){
       matchType, fillDirection: fillDirection || '' });
   }
 
-  // PASS 1 \u2014 Proper: strictly inside the actual check-out\u2192check-in window, no grace.
+  // PASS 1 - Proper
   sessions.forEach(s => {
-    const candidates = tripsByPlate[String(s.itemId).trim()] || [];
-    candidates.forEach(trip => {
+    (tripsByPlate[String(s.itemId).trim()] || []).forEach(trip => {
       if (seenTxIds.has(trip.transactionId)) return;
-      if (trip.tripTs >= s.checkOutTs && trip.tripTs <= s.checkInTs){
-        pushDetail(s, trip, 'proper');
-      }
+      if (trip.tripTs >= s.checkOutTs && trip.tripTs <= s.checkInTs) pushDetail(s, trip, 'proper');
     });
   });
 
-  // PASS 2 \u2014 Exception: whatever's left, resolved via the grace-zone fill up/down.
-  const nearestBy = (list, key, ts) => list.slice().sort((a,b) => Math.abs(a[key]-ts) - Math.abs(b[key]-ts))[0];
-  Object.keys(tripsByPlate).forEach(plate => {
-    const plateSessions = sessionsByPlate[plate];
-    if (!plateSessions) return;
-    tripsByPlate[plate].forEach(trip => {
-      if (seenTxIds.has(trip.transactionId)) return;
-      // fill-down candidates: session about to start \u2014 trip is shortly BEFORE its check-out (check-out person)
-      const preCandidates = plateSessions.filter(s => trip.tripTs >= s.checkOutTs - graceBefore && trip.tripTs < s.checkOutTs);
-      // fill-up candidates: session just ended \u2014 trip is shortly AFTER its check-in (check-in person)
-      const postCandidates = plateSessions.filter(s => trip.tripTs > s.checkInTs && trip.tripTs <= s.checkInTs + graceAfter);
-
-      let chosen = null, fillDirection = null;
-      if (preCandidates.length && postCandidates.length){
-        // ambiguous hand-over zone \u2014 defer to the assignTo preference
-        if (assignTo === 'checkin'){ chosen = nearestBy(postCandidates, 'checkInTs', trip.tripTs); fillDirection = 'fill up'; }
-        else { chosen = nearestBy(preCandidates, 'checkOutTs', trip.tripTs); fillDirection = 'fill down'; }
-      } else if (preCandidates.length){
-        chosen = nearestBy(preCandidates, 'checkOutTs', trip.tripTs); fillDirection = 'fill down';
-      } else if (postCandidates.length){
-        chosen = nearestBy(postCandidates, 'checkInTs', trip.tripTs); fillDirection = 'fill up';
-      }
-      if (chosen) pushDetail(chosen, trip, 'exception', fillDirection);
-    });
-  });
-
+  // PASS 2 - Exceptions: fill down / fill up, else Unclassified
   const exceptions = [];
   salikRows.forEach(trip => {
-    if (!seenTxIds.has(trip.transactionId)){
-      const hadAnySessionForPlate = !!sessionsByPlate[trip.plate];
-      exceptions.push({ type: hadAnySessionForPlate ? 'Outside any checkout window' : 'No checkout session for this plate',
-        transactionId: trip.transactionId, plate: trip.plate, tripTs: trip.tripTs,
-        amount: trip.amount, location: trip.location });
+    if (seenTxIds.has(trip.transactionId)) return;
+    const base = { transactionId: trip.transactionId, plate: trip.plate, tripTs: trip.tripTs, amount: trip.amount, location: trip.location };
+    const list = sessionsByPlate[trip.plate];
+    if (!list){ exceptions.push({ ...base, status: 'Unclassified', riderId: '', fillDirection: '', gapMin: '', reason: 'No checkout session for this plate' }); return; }
+    let chosen = null, gap = 0, reason = '';
+    if (fillDown){
+      list.forEach(s => { if (s.checkInTs < trip.tripTs && (!chosen || s.checkInTs > chosen.checkInTs)) chosen = s; });
+      if (chosen) gap = trip.tripTs - chosen.checkInTs; else reason = 'No earlier check-in to fill down from';
+    } else {
+      list.forEach(s => { if (s.checkOutTs > trip.tripTs && (!chosen || s.checkOutTs < chosen.checkOutTs)) chosen = s; });
+      if (chosen) gap = chosen.checkOutTs - trip.tripTs; else reason = 'No later check-out to fill up from';
+    }
+    if (chosen && windowMs != null && gap > windowMs){
+      reason = 'Outside the ' + Math.round(windowMs/60000) + '-min window (' + Math.round(gap/60000) + ' min gap)';
+      chosen = null;
+    }
+    if (chosen){
+      const dir = fillDown ? 'fill down' : 'fill up';
+      pushDetail(chosen, trip, 'exception', dir);
+      exceptions.push({ ...base, status: 'Assigned', riderId: chosen.riderId, fillDirection: dir, gapMin: Math.round(gap/60000), reason: '' });
+    } else {
+      exceptions.push({ ...base, status: 'Unclassified', riderId: '', fillDirection: '', gapMin: '', reason });
     }
   });
-
-  const summaryMap = new Map();
-  details.forEach(d => {
-    const key = d.riderId + '|' + d.plate;
-    if (!summaryMap.has(key)) summaryMap.set(key, { riderId: d.riderId, plate: d.plate, count: 0, totalAmount: 0 });
-    const row = summaryMap.get(key);
-    row.count += 1; row.totalAmount += d.amount;
-  });
-  const summary = Array.from(summaryMap.values()).sort((a,b) => b.count - a.count);
 
   const sessionRows = sessions.map(s => {
     const sKey = s.checkOutRef + '|' + s.itemId;
@@ -747,18 +856,22 @@ function reconcile(allSessions, salikRows, opts){
       open: s.open, tripsMatched: sessionTripCounts.get(sKey) || 0, note: s.note };
   }).sort((a,b) => b.checkOutTs - a.checkOutTs);
 
-  return { summary, details, exceptions, sessions: sessionRows };
+  return { details, exceptions, sessions: sessionRows };
 }
 
 /* ===================== RENDERING ===================== */
+const fillLabel = v => v === 'fill down' ? 'Fill down \u00b7 old person' : v === 'fill up' ? 'Fill up \u00b7 latest person' : '\u2014';
 const TAB_DEFS = {
-  log: { sheet: 'Fleet log', cols: [
-    {key:'ts', label:'Time', fmt: v => fmtTs(v)}, {key:'ref', label:'Ref'}, {key:'riderId', label:'Rider ID'},
-    {key:'action', label:'Action', badge: v => v === 'Check Out' ? 'warn' : 'ok'},
-    {key:'itemType', label:'Type'}, {key:'itemId', label:'Item ID'}
+  log: { sheet: 'salikDump', cols: [
+    {key:'transactionId', label:'Transaction ID'}, {key:'riderId', label:'Rider ID'}, {key:'plate', label:'Plate'},
+    {key:'itemId', label:'Item ID'}, {key:'tripTs', label:'Trip Date/Time', fmt: v => v ? fmtTripTs(v) : '\u2014'},
+    {key:'amount', label:'Amount (AED)', num:true, fmt: v => v.toFixed(2)}, {key:'location', label:'Location'},
+    {key:'matchType', label:'Match', fmt: v => v || '\u2014', badge: v => v === 'Proper' ? 'ok' : v === 'Exception' ? 'warn' : ''},
+    {key:'assignedVia', label:'Assigned via', fmt: v => v || '\u2014'},
+    {key:'pushedAt', label:'Pushed At'}, {key:'pushedBy', label:'Pushed By'}
   ]},
   summary: { cols: [
-    {key:'riderId', label:'Rider ID'}, {key:'plate', label:'Plate'},
+    {key:'month', label:'Month', fmt: monthLabel}, {key:'riderId', label:'Rider ID'}, {key:'plates', label:'Plate(s)'},
     {key:'count', label:'Salik (Count)', num:true},
     {key:'totalAmount', label:'Amount (AED)', num:true, fmt: v => v.toFixed(2)}
   ]},
@@ -767,13 +880,17 @@ const TAB_DEFS = {
     {key:'transactionId', label:'Transaction ID'}, {key:'tripTs', label:'Trip Date/Time', fmt: v => fmtTripTs(v)},
     {key:'amount', label:'Amount (AED)', num:true, fmt: v => v.toFixed(2)}, {key:'location', label:'Location'},
     {key:'matchType', label:'Match', fmt: v => v === 'proper' ? 'Proper' : 'Exception', badge: v => v === 'proper' ? 'ok' : 'warn'},
-    {key:'fillDirection', label:'Assigned via', fmt: v => v === 'fill down' ? 'Fill down \u00b7 check-out person' : v === 'fill up' ? 'Fill up \u00b7 check-in person' : '\u2014'}
+    {key:'fillDirection', label:'Assigned via', fmt: fillLabel},
+    {key:'dup', label:'Status', fmt: v => v ? 'Duplicate' : 'New', badge: v => v ? 'bad' : 'ok'}
   ]},
   exceptions: { cols: [
-    {key:'type', label:'Reason', badge: v => v.startsWith('No checkout') ? 'bad' : 'warn'},
-    {key:'transactionId', label:'Transaction ID'}, {key:'plate', label:'Plate'},
-    {key:'tripTs', label:'Trip Date/Time', fmt: v => fmtTripTs(v)},
-    {key:'amount', label:'Amount (AED)', num:true, fmt: v => v.toFixed(2)}, {key:'location', label:'Location'}
+    {key:'status', label:'Status', badge: v => v === 'Assigned' ? 'warn' : 'bad'},
+    {key:'riderId', label:'Rider ID', fmt: v => v || '\u2014'}, {key:'plate', label:'Plate'},
+    {key:'transactionId', label:'Transaction ID'}, {key:'tripTs', label:'Trip Date/Time', fmt: v => fmtTripTs(v)},
+    {key:'amount', label:'Amount (AED)', num:true, fmt: v => v.toFixed(2)}, {key:'location', label:'Location'},
+    {key:'fillDirection', label:'Assigned via', fmt: fillLabel},
+    {key:'gapMin', label:'Gap (min)', num:true, fmt: v => v === '' ? '\u2014' : v},
+    {key:'reason', label:'Reason', fmt: v => v || '\u2014'}
   ]},
   sessions: { cols: [
     {key:'itemId', label:'Item ID'}, {key:'itemType', label:'Type'}, {key:'riderId', label:'Rider ID'},
@@ -797,25 +914,30 @@ function fmtTripTs(ts){
   return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
 }
 
+function updateSaveBtn(){ const b = $('#btnSaveSheet'); if (b) b.disabled = !state.results.details.length; }
+
 function renderResults(){
-  $('#emptyResults').style.display = 'none';
-  $('#resultsArea').style.display = 'flex';
-  $('#tabNav').style.display = 'flex';
-  $('#configRow').style.display = '';
   [['Log','log'],['Summary','summary'],['Details','details'],['Exceptions','exceptions'],['Sessions','sessions']]
     .forEach(([id,k]) => { $('#cnt' + id).textContent = state.results[k].length; });
+  $('#excFilter').style.display = state.activeTab === 'exceptions' ? '' : 'none';
+  updateSaveBtn();
   renderTable(state.activeTab, $('#searchBox').value);
 
-  const hasPdf = state.salikRows.length > 0;
-  $('#metaLeft').textContent = state.logRows.length + ' fleet log entries \u00b7 ' + state.sessions.length + ' checkout sessions' +
-    (hasPdf ? ' \u00b7 ' + state.salikRows.length + ' trips from PDF \u00b7 ' + state.results.details.length + ' matched \u00b7 ' + state.results.exceptions.length + ' exceptions' : '');
+  if (state.view === 'load'){
+    $('#metaLeft').textContent = state.hist.length + ' saved trips in salikDump \u00b7 ' + state.results.summary.length + ' rider-month rows';
+  } else {
+    const unc = state.results.exceptions.filter(e => e.status === 'Unclassified').length;
+    const dups = state.results.details.filter(d => d.dup).length;
+    $('#metaLeft').textContent = state.logRows.length + ' fleet log entries \u00b7 ' + state.sessions.length + ' checkout sessions' +
+      (state.salikRows.length ? ' \u00b7 ' + state.salikRows.length + ' trips from PDF \u00b7 ' + state.results.details.length + ' matched \u00b7 ' + unc + ' unclassified \u00b7 ' + dups + ' already in salikDump' : '');
+  }
   $('#metaRight').textContent = 'Updated ' + new Date().toLocaleString();
-  if (hasPdf) showToast('Reconciled \u2014 ' + state.results.details.length + ' matched, ' + state.results.exceptions.length + ' exceptions.', 'success');
 }
 
 function renderTable(tabName, searchTerm){
   const def = TAB_DEFS[tabName];
   let rows = state.results[tabName].slice();
+  if (tabName === 'exceptions' && state.excFilter !== 'all') rows = rows.filter(r => r.status === state.excFilter);
 
   if (searchTerm){
     const s = searchTerm.toLowerCase();
@@ -836,8 +958,13 @@ function renderTable(tabName, searchTerm){
   $('#rowCountLabel').textContent = rows.length + ' row' + (rows.length===1?'':'s');
 
   if (rows.length === 0){
-    const needPdf = !searchTerm && state.salikRows.length === 0 && ['summary','details','exceptions'].includes(tabName);
-    $('#tableHost').innerHTML = '<div class="empty-state"><i class="ti ti-mood-empty"></i>' + (needPdf ? 'Press + to add the Salik PDF.' : 'No rows' + (searchTerm ? ' match "' + escapeHtml(searchTerm) + '"' : ' yet') + '.') + '</div>';
+    let msg;
+    if (searchTerm) msg = 'No rows match "' + escapeHtml(searchTerm) + '".';
+    else if (['log','summary'].includes(tabName) && !state.histLoaded) msg = state.histLoaded === null ? 'Checking for the salikDump cache\u2026' : 'salikDump cache not available yet \u2014 open the fleet app in this browser. This page keeps checking.';
+    else if (['details','exceptions'].includes(tabName) && state.salikRows.length === 0) msg = state.addMode === 'ok' ? 'Press + to add the Salik PDF.' : 'Waiting for the fleet log cache\u2026';
+    else if (tabName === 'exceptions' && state.excFilter !== 'all') msg = 'No ' + state.excFilter.toLowerCase() + ' trips.';
+    else msg = 'No rows yet.';
+    $('#tableHost').innerHTML = '<div class="empty-state"><i class="ti ti-mood-empty"></i>' + msg + '</div>';
     return;
   }
 
@@ -914,7 +1041,7 @@ function dateStamp(){
 
 function exportAllXlsx(){
   const wb = XLSX.utils.book_new();
-  ['summary','details','exceptions','sessions','log'].forEach(tab => {
+  VIEW_TABS[state.view].forEach(tab => {
     const def = TAB_DEFS[tab];
     const rows = state.results[tab];
     const aoa = [def.cols.map(c => c.label)];
@@ -922,22 +1049,19 @@ function exportAllXlsx(){
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     XLSX.utils.book_append_sheet(wb, ws, def.sheet || tab.charAt(0).toUpperCase()+tab.slice(1));
   });
-  XLSX.writeFile(wb, 'salik_reconciliation_' + dateStamp() + '.xlsx');
-  showToast('Exported salik_reconciliation_' + dateStamp() + '.xlsx', 'success');
+  const fname = (state.view === 'upload' ? 'salik_reconciliation_' : 'salik_saved_') + dateStamp() + '.xlsx';
+  XLSX.writeFile(wb, fname);
+  showToast('Exported ' + fname, 'success');
 }
 
 /* ===================== SAVE TO GOOGLE SHEET =====================
- * Same method as dedEngine.html's saveBatch(): session comes from
- * sessionStorage('ap_session'), the Web App URL comes from the shared
- * API_URL constant (apiConfig.js), and rows are sent as an array of
- * arrays matching the target sheet's fixed column order \u2014 not as
- * column-keyed objects.
- *
- * ASSUMPTION \u2014 the 'salikDump' sheet's column order. I don't have that
- * schema, so this sends:
- *   Transaction ID | Rider ID | Plate | Item ID | Trip Date/Time | Amount |
- *   Location | Match Type | Assigned Via | Pushed At | Pushed By
- * Tell me the real column order for ap2_salikDump and I'll fix this array.
+ * Same method as dedEngine.html's saveBatch(): session from sessionStorage('ap_session'),
+ * Web App URL from the shared API_URL (apiConfig.js), rows sent as arrays in the fixed
+ * column order of the 'salikDump' tab:
+ *   Transaction ID | Rider ID | Plate | Item ID | Trip Date/Time | Amount (AED) |
+ *   Location | Match | Assigned via | Pushed At | Pushed By
+ * Trip Details rows whose Transaction ID is already in salikDump are never sent: the
+ * preview dialog lists them and only the new rows are uploaded.
  */
 function getSession() {
   try { return JSON.parse(sessionStorage.getItem('ap_session') || '{}'); } catch (_) { return {}; }
@@ -945,14 +1069,33 @@ function getSession() {
 
 const SALIK_GS = { SHEET_NAME: 'salikDump', webAppUrl: (typeof API_URL !== 'undefined' ? API_URL : '') };
 
-async function saveToSheet(){
+function saveToSheet(){
   if (!SALIK_GS.webAppUrl){ showToast('API_URL is not available \u2014 check that apiConfig.js loaded.', 'error'); return; }
-
-  // salikDump columns match the Trip Details rows, so always save those,
-  // whichever tab is currently open.
   const rows = state.results.details;
-  if (!rows || !rows.length){ showToast('No Trip Details rows to save \u2014 add the Salik PDF first.', 'error'); return; }
+  if (!rows.length){ showToast('No Trip Details rows to save \u2014 add the Salik PDF first.', 'error'); return; }
+  const fresh = rows.filter(r => !r.dup), dups = rows.filter(r => r.dup);
+  if (dups.length || !state.histLoaded){ openUploadPreview(fresh, dups); return; }
+  uploadRows(fresh);
+}
 
+function openUploadPreview(fresh, dups){
+  state.pendingUpload = fresh;
+  $('#dupTitle').textContent = dups.length ? 'Duplicate Transaction IDs found' : 'Upload preview';
+  let note = '<div class="modal-note"><b>' + fresh.length + '</b> new trip(s) will be uploaded' +
+    (dups.length ? ' \u00b7 <b>' + dups.length + '</b> already in salikDump and will be skipped' : '') + '.</div>';
+  if (!state.histLoaded) note += '<div class="modal-note warn">The salikDump cache is not loaded, so duplicates could not be checked against the sheet.</div>';
+  $('#dupSummary').innerHTML = note;
+  $('#dupTable').innerHTML = !dups.length ? '' : '<table class="log-table"><thead><tr><th>Transaction ID</th><th>Plate</th><th>Trip Date/Time</th><th>Amount (AED)</th><th>Saved at</th><th>Saved by</th></tr></thead><tbody>' +
+    dups.map(d => { const h = state.histMap.get(txKey(d.transactionId)) || {};
+      return '<tr><td>' + escapeHtml(d.transactionId) + '</td><td>' + escapeHtml(d.plate) + '</td><td>' + fmtTripTs(d.tripTs) + '</td><td class="num">' + d.amount.toFixed(2) + '</td><td>' + escapeHtml(h.pushedAt || '') + '</td><td>' + escapeHtml(h.pushedBy || '') + '</td></tr>'; }).join('') + '</tbody></table>';
+  const ok = $('#dupConfirm');
+  ok.textContent = fresh.length ? 'Upload ' + fresh.length + ' new row' + (fresh.length === 1 ? '' : 's') : 'Nothing new to upload';
+  ok.disabled = !fresh.length;
+  $('#dupModal').classList.add('show');
+}
+function closeUploadPreview(){ $('#dupModal').classList.remove('show'); state.pendingUpload = null; }
+
+async function uploadRows(rows){
   const session = getSession();
   const pushedAt = new Date().toLocaleString('en-GB', { hour12:false, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' }).replace(',', '');
   const pushedBy = session.email || session.name || '';
@@ -965,8 +1108,8 @@ async function saveToSheet(){
     fmtTripTs(r.tripTs),
     typeof r.amount === 'number' ? r.amount : parseFloat(r.amount) || 0,
     r.location || '',
-    r.matchType === 'proper' ? 'Proper' : r.matchType === 'exception' ? 'Exception' : (r.type || ''),
-    r.fillDirection || '',
+    r.matchType === 'proper' ? 'Proper' : 'Exception',
+    r.fillDirection ? fillLabel(r.fillDirection) : '',
     pushedAt,
     pushedBy
   ]);
@@ -982,7 +1125,7 @@ async function saveToSheet(){
 
   const btn = $('#btnSaveSheet');
   const origHtml = btn.innerHTML;
-  btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader spin"></i> Saving\u2026';
+  btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader spin"></i>';
   try{
     const res = await fetch(SALIK_GS.webAppUrl, {
       method: 'POST',
@@ -996,11 +1139,14 @@ async function saveToSheet(){
     catch (e) { throw new Error('Apps Script returned non-JSON: ' + rawText.slice(0,300)); }
     if (data.status !== 'ok' && data.success !== true) throw new Error(data.message || data.error || JSON.stringify(data));
 
+    // these rows are now in the sheet: show them under Loading data and flag them Duplicate here
+    gridRows.forEach(g => { const h = normaliseHistRow(g); if (h) state.savedRows.push(h); });
+    rebuildHist();
     showToast('\u2713 Saved ' + gridRows.length + ' Trip Details row(s) to Google Sheets (salikDump)', 'success');
   }catch(err){
     showToast('Save failed: ' + err.message, 'error');
   }finally{
-    btn.disabled = false; btn.innerHTML = origHtml;
+    btn.innerHTML = origHtml; updateSaveBtn();
   }
 }
 
@@ -1022,23 +1168,38 @@ $('#pdfInput').addEventListener('change', async (e) => {
       $('#acctRow').style.display = 'flex';
       $('#acctBadge').textContent = 'Acct ' + meta.accountNo + (meta.periodFrom ? ' \u00b7 ' + meta.periodFrom + '\u2013' + meta.periodTo : '');
     }
-    activateTab('summary');
-    recompute();
+    activateTab('details');
+    reconcileNow();
   }catch(err){
     showToast('Could not parse PDF: ' + err.message, 'error');
   }
 });
 
 // changing the reconciliation options re-runs automatically too
-['#graceBefore', '#graceAfter', '#itemTypeFilter', '#exceptionAssignTo'].forEach(sel => {
-  $(sel).addEventListener('change', recompute);
+['#fillMethod', '#fillWindow', '#itemTypeFilter'].forEach(sel => {
+  $(sel).addEventListener('change', reconcileNow);
 });
 
 function activateTab(name){
   state.activeTab = name;
   $$('.tab-btn').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   $('#searchBox').value = '';
+  $('#excFilter').style.display = name === 'exceptions' ? '' : 'none';
   renderTable(name, '');
+}
+function setView(v){
+  state.view = v;
+  const up = v === 'upload';
+  $$('.vs-btn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  $$('.tab-btn').forEach(b => { b.style.display = VIEW_TABS[v].includes(b.dataset.tab) ? '' : 'none'; });
+  $('#configRow').style.display = up ? '' : 'none';
+  $('#cache-status').style.display = up ? '' : 'none';
+  $('#btnSaveSheet').style.display = up ? '' : 'none';
+  if (!VIEW_TABS[v].includes(state.activeTab)) state.activeTab = VIEW_TABS[v][0];
+  $$('.tab-btn').forEach(t => t.classList.toggle('active', t.dataset.tab === state.activeTab));
+  $('#searchBox').value = '';
+  toggleInfo(false);
+  renderResults();
 }
 $$('.tab-btn').forEach(tab => tab.addEventListener('click', () => activateTab(tab.dataset.tab)));
 
@@ -1046,10 +1207,16 @@ $('#searchBox').addEventListener('input', (e) => { renderTable(state.activeTab, 
 $('#btnExportCsv').addEventListener('click', exportActiveTabCsv);
 $('#btnExportXlsx').addEventListener('click', exportAllXlsx);
 $('#btnSaveSheet').addEventListener('click', saveToSheet);
+$$('.vs-btn').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+$('#excFilter').addEventListener('change', (e) => { state.excFilter = e.target.value; renderTable('exceptions', $('#searchBox').value); });
+$('#dupClose').addEventListener('click', closeUploadPreview);
+$('#dupCancel').addEventListener('click', closeUploadPreview);
+$('#dupModal').addEventListener('click', (e) => { if (e.target.id === 'dupModal') closeUploadPreview(); });
+$('#dupConfirm').addEventListener('click', () => { const rows = state.pendingUpload || []; closeUploadPreview(); if (rows.length) uploadRows(rows); });
 
 /* re-check for the cache when the user comes back to this tab */
-window.addEventListener('focus', () => { if (state.addMode === 'off') probeCache(); });
-document.addEventListener('visibilitychange', () => { if (!document.hidden && state.addMode === 'off') probeCache(); });
+window.addEventListener('focus', () => { if (state.addMode === 'off') probeCache(); if (state.histLoaded === false) loadHist(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && state.addMode === 'off') probeCache(); if (!document.hidden && state.histLoaded === false) loadHist(); });
 
 /* info popover */
 const infoBtn = $('#btnInfo'), infoPop = $('#infoPop');
@@ -1060,14 +1227,16 @@ function toggleInfo(force){
 }
 infoBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleInfo(); });
 document.addEventListener('click', (e) => { if (!infoPop.contains(e.target)) toggleInfo(false); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleInfo(false); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape'){ toggleInfo(false); closeUploadPreview(); } });
 
 /* ═══════════════════════════════════════════════════════
  *  INIT
  * ═══════════════════════════════════════════════════════ */
 async function init(){
-  setCacheStatus('checking', 'Checking for cache…');
-  await probeCache(); // "+" becomes active once the cache is available; pressing it loads the cache
+  setCacheStatus('checking', 'Checking for cache\u2026');
+  setView('load');
+  loadHist();
+  await probeCache(); // "+" (Uploading view) becomes active once the fleet log cache is available
 }
 document.addEventListener('DOMContentLoaded', init);
 </script>
