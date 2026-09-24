@@ -161,6 +161,21 @@ body{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;overf
 .panel-toolbar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap;}
 .panel-toolbar .search-input{font-family:var(--mono);font-size:12px;border:1.5px solid var(--border2);border-radius:var(--radius);padding:7px 11px;width:220px;background:var(--surface2);color:var(--text);}
 .panel-toolbar .search-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
+/* search box collapsed to an icon; expands into the input on click */
+.search-wrap{display:inline-flex;align-items:center;}
+.search-wrap .search-input{width:0;min-width:0;opacity:0;padding:0;border-width:0;margin-left:0;overflow:hidden;transition:width .2s ease,opacity .15s ease,margin .2s ease,padding .2s ease;}
+.search-wrap.open .search-input{width:200px;opacity:1;padding:7px 11px;border-width:1.5px;margin-left:8px;}
+.search-wrap .search-icon-btn.active{border-color:var(--accent);color:var(--accent);}
+/* column filter icon + popover (Fleet Log: Pushed By / Trip Date) */
+.th-filter{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:4px;border:none;border-radius:5px;background:transparent;color:var(--text3);font-size:11px;cursor:pointer;vertical-align:middle;}
+.th-filter:hover{color:var(--accent);background:var(--surface2);}
+.th-filter.active{color:var(--accent);background:var(--accent-dim);}
+.th-label{display:inline-flex;align-items:center;}
+.filter-pop{position:fixed;z-index:500;display:none;flex-direction:column;min-width:170px;max-width:260px;max-height:260px;overflow:auto;padding:6px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);}
+.filter-pop.show{display:flex;}
+.fp-item{padding:7px 10px;border-radius:var(--radius);font-size:12px;font-family:var(--font);text-transform:none;letter-spacing:0;font-weight:500;color:var(--text2);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fp-item:hover{background:var(--surface2);color:var(--text);}
+.fp-item.active{background:var(--accent-dim);color:var(--accent);font-weight:700;}
 .toolbar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .panel-toolbar .label{font-size:12px;color:var(--text3);}
 .table-scroll{max-height:max(320px,calc(100vh - 260px));max-height:max(320px,calc(100dvh - 260px));overflow:auto;}
@@ -186,12 +201,16 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 .spinner{animation:spin 1s linear infinite;display:inline-flex;}
 /* ═══ MODULE CAPSULE — active module = icon (left) + name (right); the others are icon-only ═══ */
 .capsule{display:flex;align-items:center;gap:2px;padding:3px;background:var(--bg3);border:1px solid var(--border);border-radius:999px;width:fit-content;max-width:100%;}
-.cap-btn{display:inline-flex;align-items:center;justify-content:center;height:30px;min-width:32px;padding:0 8px;border:none;border-radius:999px;background:transparent;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .18s,color .18s;}
+/* fixed-size capsule: every tab is always rendered at its full (expanded) width, so the
+   capsule's overall size never changes when a different module is selected \u2014 only the
+   active button's background/highlight changes. */
+.cap-btn{display:inline-flex;align-items:center;justify-content:center;height:30px;min-width:32px;padding:0 12px 0 9px;border:none;border-radius:999px;background:transparent;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .18s,color .18s;}
 .cap-btn i{font-size:16px;line-height:1;flex-shrink:0;}
-.cap-txt{display:inline-flex;align-items:center;gap:6px;max-width:0;opacity:0;overflow:hidden;transition:max-width .22s ease,opacity .18s ease,margin .22s ease;}
-.cap-btn.active{background:var(--accent);color:#fff;box-shadow:0 0 10px var(--accent-glow);padding:0 12px 0 9px;}
-.cap-btn.active .cap-txt{max-width:200px;opacity:1;margin-left:7px;}
-.cap-btn .count{font-family:var(--mono);font-weight:500;font-size:10.5px;background:rgba(255,255,255,.25);border-radius:20px;padding:1px 7px;}
+.cap-txt{display:inline-flex;align-items:center;gap:6px;margin-left:7px;opacity:0;pointer-events:none;transition:opacity .15s ease;}
+.cap-btn.active .cap-txt{opacity:1;pointer-events:auto;}
+.cap-btn.active{background:var(--accent);color:#fff;box-shadow:0 0 10px var(--accent-glow);}
+.cap-btn .count{font-family:var(--mono);font-weight:500;font-size:10.5px;border-radius:20px;padding:1px 7px;background:rgba(255,255,255,.25);}
+.cap-btn:not(.active) .count{background:var(--surface2);color:var(--text2);}
 .cap-btn:not(.active):hover{background:var(--surface2);color:var(--text);}
 .cap-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 .btn i.spin{animation:spin 1s linear infinite;}
@@ -203,32 +222,35 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 .up-drawer.show{transform:translateX(0);visibility:visible;transition:transform .25s cubic-bezier(.4,0,.2,1),visibility 0s;}
 .up-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;padding-top:max(12px,env(safe-area-inset-top));border-bottom:1px solid var(--border);}
 .up-head h3{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;}
-.up-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--border);}
-.up-file{flex:1;min-width:0;font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.up-tools .config-row{flex:1 1 100%;}
+.up-tools{display:flex;align-items:center;gap:12px;flex-wrap:nowrap;padding:12px 16px;border-bottom:1px solid var(--border);overflow-x:auto;}
+.up-file{flex:0 1 auto;min-width:0;max-width:140px;font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.up-tools .config-row{flex:0 0 auto;}
+/* keep the reconciliation options in the same single row as the upload button, regardless of viewport width (id beats the responsive .config-row overrides below) */
+#configRow{display:flex;flex-wrap:nowrap;}
+#configRow .field{flex:0 0 auto;min-width:0;}
+#configRow .field label{white-space:nowrap;}
 .up-body{flex:1;min-height:0;overflow:auto;}
 .up-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;padding-bottom:max(10px,env(safe-area-inset-bottom));border-top:1px solid var(--border);}
 .up-status{min-width:0;font-size:11.5px;color:var(--text3);}
 
-/* ═══ RECONCILIATION — batches (grouped by Pushed At + Pushed By) ═══ */
-.batches-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;padding:14px;}
-.batch-item{display:flex;flex-direction:column;gap:10px;padding:14px 16px;min-width:0;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);cursor:pointer;transition:background .12s,border-color .12s;}
-.batch-item:hover{background:var(--surface2);border-color:var(--border2);}
-.batch-item:focus-visible{outline:none;border-color:var(--accent);}
-.b-head{display:flex;align-items:center;gap:12px;min-width:0;}
-.b-icon{width:38px;height:38px;flex-shrink:0;border-radius:9px;background:var(--accent-dim);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;}
-.b-info{flex:1;min-width:0;}
-.b-name{font-family:var(--mono);font-size:13px;font-weight:600;}
-.b-meta{margin-top:2px;font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.b-via,.b-dates{font-size:11.5px;color:var(--text2);}
-.b-dates{display:flex;gap:16px;flex-wrap:wrap;font-family:var(--mono);}
+/* ═══ RECONCILIATION — batches (grouped by Pushed At + Pushed By), flat list rows, not cards ═══ */
+.batches-list{display:flex;flex-direction:column;}
+.batch-row{display:flex;flex-direction:column;gap:7px;padding:14px 18px;min-width:0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;}
+.batch-row:last-child{border-bottom:none;}
+.batch-row:hover{background:var(--surface2);}
+.batch-row:focus-visible{outline:none;background:var(--surface2);}
+.br-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.br-icon{width:34px;height:34px;flex-shrink:0;border-radius:9px;background:var(--accent-dim);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:16px;}
+.br-name{font-family:var(--mono);font-size:13.5px;font-weight:700;}
+.br-spacer{flex:1;}
+.br-amount{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--purple);white-space:nowrap;}
+.br-row{display:flex;flex-wrap:wrap;gap:16px;padding-left:44px;font-size:11.5px;color:var(--text2);}
+.br-row b{color:var(--text);font-weight:600;}
 .bk{margin-right:4px;font-family:var(--font);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);}
-.bs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-.bs{min-width:0;padding:7px 8px;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
-.bs-v{font-family:var(--mono);font-size:14px;font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;}
-.bs-v.ok{color:var(--teal);}
-.bs-v.warn{color:var(--amber);}
-.bs-l{margin-top:2px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);}
+.br-stats{display:flex;flex-wrap:wrap;gap:16px;padding-left:44px;font-size:11px;color:var(--text3);}
+.br-stats .st-v{font-family:var(--mono);font-weight:700;}
+.br-stats .st-v.ok{color:var(--teal);}
+.br-stats .st-v.warn{color:var(--amber);}
 .ib:disabled{opacity:.45;cursor:not-allowed;}
 .ib:disabled:hover{border-color:var(--border);color:var(--text2);}
 .ib i.spin{animation:spin 1s linear infinite;}
@@ -268,9 +290,9 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
   .toast{left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));max-width:none;}
 }
 @media(max-width:520px){
-  .capsule{order:4;flex:1 1 100%;width:100%;justify-content:space-between;}
+  .capsule{order:4;flex:1 1 100%;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
   .vb-spacer{flex:1;}
-  .bs-grid{grid-template-columns:repeat(2,1fr);}
+  .br-row,.br-stats{padding-left:0;gap:10px 14px;}
   .config-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
   .config-row .field:last-child{grid-column:1/-1;}
   .tab-btn{padding:7px 10px;}
@@ -302,13 +324,13 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 
   <div class="vb-actions">
   <button type="button" class="ib" id="btnInfo" title="Information" aria-label="Information" aria-expanded="false"><i class="ti ti-info-circle"></i></button>
-  <!-- "+" : inactive until the fleet log cache is available; then active — press to load it, step 2 follows -->
-  <button type="button" id="cache-status" data-mode="checking" title="Checking for cache&hellip;" aria-label="Upload Salik data" onclick="onPlusClick()" disabled><i class="ti ti-loader spin"></i></button>
+  <!-- "+" : inactive until the fleet log data is available; then active — press to load it, step 2 follows -->
+  <button type="button" id="cache-status" data-mode="checking" title="Checking for fleet log data&hellip;" aria-label="Upload Salik data" onclick="onPlusClick()" disabled><i class="ti ti-loader spin"></i></button>
 
   <div class="info-pop" id="infoPop" role="dialog" aria-label="Information">
     <div class="info-row"><span class="k">About</span><span class="v" id="vbSub">Toll trips &times; fleet check-in / check-out log</span></div>
-    <div class="info-row"><span class="k">Fleet log cache</span><span class="v" id="infoCache">Checking for cache&hellip;</span></div>
-    <div class="info-row"><span class="k">salikDump cache</span><span class="v" id="infoHist">Checking for cache&hellip;</span></div>
+    <div class="info-row"><span class="k">Fleet log</span><span class="v" id="infoCache">Checking&hellip;</span></div>
+    <div class="info-row"><span class="k">Salik trip history</span><span class="v" id="infoHist">Checking&hellip;</span></div>
     <div class="info-row" id="pdfRow" style="display:none;"><span class="k">Salik PDF</span><span class="v" id="infoPdf"></span></div>
     <div class="info-row" id="acctRow" style="display:none;"><span class="k">Salik account</span><span id="acctBadge" class="badge purple" style="align-self:flex-start;"></span></div>
   </div>
@@ -322,7 +344,10 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
     <div class="results-panel">
       <div class="panel-toolbar">
         <div class="tb-left">
-          <input type="text" class="search-input" id="searchBox" placeholder="Filter rows&hellip;">
+          <div class="search-wrap" id="searchWrap">
+            <button type="button" class="ib search-icon-btn" id="searchToggle" aria-label="Search" title="Search"><i class="ti ti-search"></i></button>
+            <input type="text" class="search-input" id="searchBox" placeholder="Filter rows&hellip;">
+          </div>
         </div>
         <div class="toolbar-actions">
           <span class="label" id="rowCountLabel"></span>
@@ -338,6 +363,8 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 
 
 </div>
+
+<div class="filter-pop" id="filterPop" role="dialog" aria-label="Column filter"></div>
 
 <div class="modal-back" id="dupModal" role="dialog" aria-modal="true" aria-labelledby="dupTitle">
   <div class="modal">
@@ -358,7 +385,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 <div class="up-back" id="upBack"></div>
 <aside class="up-drawer" id="upDrawer" role="dialog" aria-label="Upload Salik data" aria-hidden="true">
   <div class="up-head">
-    <h3><i class="ti ti-file-upload"></i>Upload data</h3>
+    <h3><i class="ti ti-file-upload"></i>Upload PDF</h3>
     <button type="button" class="ib" id="upClose" aria-label="Close"><i class="ti ti-x"></i></button>
   </div>
   <div class="up-tools">
@@ -400,7 +427,10 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
       <button class="tab-btn" data-tab="exceptions">Exceptions <span class="count" id="cntExceptions">0</span></button>
     </div>
     <div class="tb-left">
-      <input type="text" class="search-input" id="upSearch" placeholder="Filter rows&hellip;">
+      <div class="search-wrap" id="upSearchWrap">
+        <button type="button" class="ib search-icon-btn" id="upSearchToggle" aria-label="Search" title="Search"><i class="ti ti-search"></i></button>
+        <input type="text" class="search-input" id="upSearch" placeholder="Filter rows&hellip;">
+      </div>
       <select class="tb-select" id="excFilter" style="display:none;" aria-label="Filter exceptions">
         <option value="all">All exceptions</option>
         <option value="Assigned">Assigned (filled)</option>
@@ -505,6 +535,7 @@ const state = {
   activeTab: 'log',
   upOpen: false, upTab: 'details', reconShown: [],   // upload panel + visible Reconciliation batches
   excFilter: 'all',
+  logFilters: { pushedBy: 'all', tripDay: 'all' },
   histCache: [], savedRows: [], hist: [], histMap: new Map(),
   histLoaded: null, histSub: false, histTimer: null,
   pendingUpload: null
@@ -525,14 +556,14 @@ function showToast(msg, type){
   showToast._t = setTimeout(() => { t.classList.remove('show'); }, 2800);
 }
 
-// "+" : inactive (spinner / greyed) until the fleet log cache is loaded; then active — press to open the upload panel
+// "+" : inactive (spinner / greyed) until the fleet log data is loaded; then active — press to open the upload panel
 function setCacheStatus(mode, info){
   const el = $('#cache-status');
   state.addMode = mode;
   el.dataset.mode = mode;
   el.className = mode === 'ok' ? 'ready' : '';
   el.disabled = mode !== 'ok';
-  el.title = mode === 'ok' ? 'Upload Salik data' : mode === 'off' ? 'Waiting for the fleet log cache' : 'Loading fleet log cache\u2026';
+  el.title = mode === 'ok' ? 'Upload Salik data' : mode === 'off' ? 'Waiting for the fleet log' : 'Loading fleet log\u2026';
   el.innerHTML = (mode === 'checking' || mode === 'loading') ? '<i class="ti ti-loader spin"></i>' : '<i class="ti ti-plus"></i>';
   const ic = $('#infoCache');
   ic.textContent = info || '';
@@ -579,7 +610,7 @@ async function readCioRaw(){
     state.watcherInit = true;
   }
   let raw = await AP2CacheWatcher.readKey('ap2_cioLog');
-  let sourceLabel = 'shared cache watcher';
+  let sourceLabel = 'live sync';
   if (!raw){
     const found = await scanAllStoresForKey('ap2_cioLog');
     raw = found.value;
@@ -598,7 +629,7 @@ async function loadCache(){
   if (state.loading) return;
   state.loading = true;
   clearTimeout(state.probeTimer);
-  if (state.addMode !== 'off') setCacheStatus('loading', 'Reading cache\u2026');
+  if (state.addMode !== 'off') setCacheStatus('loading', 'Loading\u2026');
   try{
     const { arr, sourceLabel } = await readCioRaw();
     state.cioRaw = arr;
@@ -611,7 +642,7 @@ async function loadCache(){
       });
     }
   }catch(err){
-    setCacheStatus('off', 'Cache not available \u2014 ' + err.message);
+    setCacheStatus('off', 'Not available yet \u2014 ' + err.message);
     state.probeTimer = setTimeout(probeCache, 5000);
   }finally{ state.loading = false; }
 }
@@ -737,7 +768,7 @@ async function loadHist(){
     }
   }catch(err){
     state.histLoaded = false;
-    setHistStatus('off', 'Cache not available \u2014 ' + err.message);
+    setHistStatus('off', 'Not available yet \u2014 ' + err.message);
     rebuildHist();
     state.histTimer = setTimeout(loadHist, 5000);
   }
@@ -957,11 +988,13 @@ const fillLabel = v => v === 'fill down' ? 'Fill down \u00b7 old person' : v ===
 const TAB_DEFS = {
   log: { sheet: 'salikDump', cols: [
     {key:'transactionId', label:'Transaction ID'}, {key:'riderId', label:'Rider ID'}, {key:'plate', label:'Plate'},
-    {key:'itemId', label:'Item ID'}, {key:'tripTs', label:'Trip Date/Time', fmt: v => v ? fmtTripTs(v) : '\u2014'},
+    {key:'itemId', label:'Item ID'}, {key:'tripTs', label:'Trip Date/Time', fmt: v => v ? fmtTripTs(v) : '\u2014',
+      filterKey:'tripDay', filterValues: rows => Array.from(new Set(rows.map(r => fmtDay(r.tripTs)).filter(v => v && v !== '\u2014'))).sort().reverse()},
     {key:'amount', label:'Amount (AED)', num:true, fmt: v => v.toFixed(2)}, {key:'location', label:'Location'},
     {key:'matchType', label:'Match', fmt: v => v || '\u2014', badge: v => v === 'Proper' ? 'ok' : v === 'Exception' ? 'warn' : ''},
     {key:'assignedVia', label:'Assigned via', fmt: v => v || '\u2014'},
-    {key:'pushedAt', label:'Pushed At'}, {key:'pushedBy', label:'Pushed By'}
+    {key:'pushedAt', label:'Pushed At'},
+    {key:'pushedBy', label:'Pushed By', filterKey:'pushedBy', filterValues: rows => Array.from(new Set(rows.map(r => r.pushedBy).filter(Boolean))).sort()}
   ]},
   summary: { cols: [
     {key:'month', label:'Month', fmt: monthLabel}, {key:'riderId', label:'Rider ID'}, {key:'plates', label:'Plate(s)'},
@@ -1044,12 +1077,17 @@ function tabCtx(tab){
     : { host: $('#tableHost'), search: $('#searchBox'), count: $('#rowCountLabel') };
 }
 
-function tableHtml(cols, rows, sortState, tabName){
+function tableHtml(cols, rows, sortState, tabName, baseRows){
   let html = '<table class="log-table"><thead><tr>';
   cols.forEach(c => {
     let arrow = '';
     if (sortState && sortState.key === c.key) arrow = sortState.dir === 'asc' ? '&uarr;' : '&darr;';
-    html += `<th data-key="${c.key}" data-tab="${tabName || ''}">${c.label}<span class="arrow">${arrow}</span></th>`;
+    let filterBtn = '';
+    if (c.filterKey){
+      const activeVal = state.logFilters[c.filterKey];
+      filterBtn = `<button type="button" class="th-filter${activeVal && activeVal !== 'all' ? ' active' : ''}" data-filter-key="${c.filterKey}" title="Filter ${escapeHtml(c.label)}" aria-label="Filter ${escapeHtml(c.label)}"><i class="ti ti-filter"></i></button>`;
+    }
+    html += `<th data-key="${c.key}" data-tab="${tabName || ''}"><span class="th-label">${c.label}<span class="arrow">${arrow}</span></span>${filterBtn}</th>`;
   });
   html += '</tr></thead><tbody>';
   rows.forEach(r => {
@@ -1071,8 +1109,13 @@ function tableHtml(cols, rows, sortState, tabName){
 function renderTable(tabName, searchTerm){
   if (tabName === 'recon') return renderRecon(searchTerm);
   const def = TAB_DEFS[tabName], ctx = tabCtx(tabName);
-  let rows = state.results[tabName].slice();
+  const baseRows = state.results[tabName]; // unfiltered, used to populate column-filter option lists
+  let rows = baseRows.slice();
   if (tabName === 'exceptions' && state.excFilter !== 'all') rows = rows.filter(r => r.status === state.excFilter);
+  if (tabName === 'log'){
+    if (state.logFilters.pushedBy !== 'all') rows = rows.filter(r => r.pushedBy === state.logFilters.pushedBy);
+    if (state.logFilters.tripDay !== 'all') rows = rows.filter(r => fmtDay(r.tripTs) === state.logFilters.tripDay);
+  }
 
   if (searchTerm){
     const s = searchTerm.toLowerCase();
@@ -1095,19 +1138,20 @@ function renderTable(tabName, searchTerm){
   if (rows.length === 0){
     let msg;
     if (searchTerm) msg = 'No rows match "' + escapeHtml(searchTerm) + '".';
-    else if (['log','summary'].includes(tabName) && !state.histLoaded) msg = state.histLoaded === null ? 'Checking for the salikDump cache\u2026' : 'salikDump cache not available yet \u2014 open the fleet app in this browser. This page keeps checking.';
-    else if (tabName === 'sessions' && !state.cioRaw) msg = 'Waiting for the fleet log cache\u2026';
-    else if (['details','exceptions'].includes(tabName) && state.salikRows.length === 0) msg = state.addMode === 'ok' ? 'Press Upload PDF to add the Salik PDF.' : 'Waiting for the fleet log cache\u2026';
+    else if (['log','summary'].includes(tabName) && !state.histLoaded) msg = state.histLoaded === null ? 'Checking for the salikDump trip history\u2026' : 'salikDump trip history not available yet \u2014 open the fleet app in this browser. This page keeps checking.';
+    else if (tabName === 'sessions' && !state.cioRaw) msg = 'Waiting for the fleet log\u2026';
+    else if (['details','exceptions'].includes(tabName) && state.salikRows.length === 0) msg = state.addMode === 'ok' ? 'Press Upload PDF to add the Salik PDF.' : 'Waiting for the fleet log\u2026';
     else if (tabName === 'exceptions' && state.excFilter !== 'all') msg = 'No ' + state.excFilter.toLowerCase() + ' trips.';
     else msg = 'No rows yet.';
     ctx.host.innerHTML = '<div class="empty-state"><i class="ti ti-mood-empty"></i>' + msg + '</div>';
     return;
   }
 
-  ctx.host.innerHTML = tableHtml(def.cols, rows, sortState, tabName);
+  ctx.host.innerHTML = tableHtml(def.cols, rows, sortState, tabName, baseRows);
 
   ctx.host.querySelectorAll('thead th').forEach(th => {
-    th.addEventListener('click', () => {
+    th.addEventListener('click', (e) => {
+      if (e.target.closest('.th-filter')) return; // filter icon handles its own click
       const key = th.dataset.key, tab = th.dataset.tab;
       const cur = state.sort[tab];
       let dir = 'asc';
@@ -1116,25 +1160,73 @@ function renderTable(tabName, searchTerm){
       renderTable(tab, tabCtx(tab).search.value);
     });
   });
+
+  ctx.host.querySelectorAll('.th-filter').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const key = btn.dataset.filterKey;
+      const col = def.cols.find(c => c.filterKey === key);
+      if (!col) return;
+      openFilterPopover(btn, key, col.filterValues(baseRows), state.logFilters[key], tabName);
+    });
+  });
 }
+
+/* column-filter popover: shared by every filterable column (Fleet Log: Pushed By, Trip Date/Time) */
+function openFilterPopover(anchorEl, filterKey, options, current, tabName){
+  const pop = $('#filterPop');
+  pop.dataset.filterKey = filterKey;
+  pop.dataset.tab = tabName;
+  pop.innerHTML = '<div class="fp-item' + (current === 'all' ? ' active' : '') + '" data-v="all">All</div>' +
+    options.map(o => '<div class="fp-item' + (o === current ? ' active' : '') + '" data-v="' + escapeHtml(o) + '">' + escapeHtml(o) + '</div>').join('');
+  const r = anchorEl.getBoundingClientRect();
+  pop.style.display = 'flex'; // measure before final positioning
+  const popW = pop.offsetWidth || 200;
+  pop.style.top = Math.min(r.bottom + 6, window.innerHeight - 20) + 'px';
+  pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - popW - 8)) + 'px';
+  pop.classList.add('show');
+}
+function closeFilterPopover(){ $('#filterPop').classList.remove('show'); }
+$('#filterPop').addEventListener('click', (e) => {
+  const item = e.target.closest('.fp-item');
+  if (!item) return;
+  const pop = $('#filterPop'), key = pop.dataset.filterKey, tab = pop.dataset.tab;
+  state.logFilters[key] = item.dataset.v;
+  closeFilterPopover();
+  renderTable(tab, tabCtx(tab).search.value);
+});
+document.addEventListener('click', (e) => {
+  const pop = $('#filterPop');
+  if (pop.classList.contains('show') && !pop.contains(e.target) && !e.target.closest('.th-filter')) closeFilterPopover();
+});
 
 /* ===================== RECONCILIATION (batches) ===================== */
 const fmtDay = ts => ts ? fmtTripTs(ts).slice(0, 10) : '\u2014';
 const fmtAed = n => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 function batchViaText(b){ return b.via.size ? Array.from(b.via, ([k, n]) => k + ' (' + n + ')').join(' \u00b7 ') : '\u2014'; }
 function batchStatsHtml(b){
-  const cell = (v, l, cls) => '<div class="bs"><div class="bs-v ' + (cls || '') + '">' + v + '</div><div class="bs-l">' + l + '</div></div>';
-  return '<div class="bs-grid">' + cell(b.total, 'Total Salik') + cell(b.zero, 'Zero Salik') + cell(b.proper, 'Proper', 'ok') +
-    cell(b.exceptions, 'Exceptions', 'warn') + cell(b.records, 'Records') + cell(fmtAed(b.amount), 'Amount (AED)') + '</div>';
+  const stat = (v, l, cls) => '<span><span class="st-v ' + (cls || '') + '">' + v + '</span> <span class="bk" style="margin-right:0;">' + l + '</span></span>';
+  return '<div class="br-stats">' + stat(b.total, 'Total', '') + stat(b.proper, 'Proper', 'ok') +
+    stat(b.exceptions, 'Exceptions', 'warn') + stat(b.zero, 'Zero') + stat(b.records, 'Records') + '</div>';
 }
-function batchCardHtml(b, i){
-  return '<div class="batch-item" data-i="' + i + '" tabindex="0" role="button">' +
-    '<div class="b-head"><div class="b-icon"><i class="ti ti-stack-2"></i></div><div class="b-info">' +
-      '<div class="b-name">' + escapeHtml(b.pushedAt || 'Unknown') + '</div>' +
-      '<div class="b-meta">Pushed by ' + escapeHtml(b.pushedBy || '\u2014') + '</div></div></div>' +
-    '<div class="b-via"><span class="bk">Assigned via</span>' + escapeHtml(batchViaText(b)) + '</div>' +
+function batchRowHtml(b, i){
+  return '<div class="batch-row" data-i="' + i + '" tabindex="0" role="button">' +
+    '<div class="br-top">' +
+      '<div class="br-icon"><i class="ti ti-stack-2"></i></div>' +
+      '<span class="br-name">' + escapeHtml(b.pushedAt || 'Unknown') + '</span>' +
+      '<span class="badge ok"><i class="ti ti-check"></i> Saved</span>' +
+      '<div class="br-spacer"></div>' +
+      '<span class="br-amount">AED ' + fmtAed(b.amount) + '</span>' +
+    '</div>' +
+    '<div class="br-row">' +
+      '<span><span class="bk">Range</span>' + fmtDay(b.minTs) + ' \u2192 ' + fmtDay(b.maxTs) + '</span>' +
+      '<span><span class="bk">Records</span><b>' + b.records + '</b></span>' +
+      '<span><span class="bk">Assigned via</span>' + escapeHtml(batchViaText(b)) + '</span>' +
+    '</div>' +
+    '<div class="br-row">' +
+      '<span>Pushed by <b>' + escapeHtml(b.pushedBy || '\u2014') + '</b></span>' +
+    '</div>' +
     batchStatsHtml(b) +
-    '<div class="b-dates"><span><span class="bk">From</span>' + fmtDay(b.minTs) + '</span><span><span class="bk">To</span>' + fmtDay(b.maxTs) + '</span></div>' +
   '</div>';
 }
 function renderRecon(searchTerm){
@@ -1146,12 +1238,12 @@ function renderRecon(searchTerm){
   if (!list.length){
     let msg;
     if (s) msg = 'No batches match "' + escapeHtml(searchTerm) + '".';
-    else if (!state.histLoaded) msg = state.histLoaded === null ? 'Checking for the salikDump cache\u2026' : 'salikDump cache not available yet \u2014 open the fleet app in this browser. This page keeps checking.';
+    else if (!state.histLoaded) msg = state.histLoaded === null ? 'Checking for the salikDump trip history\u2026' : 'salikDump trip history not available yet \u2014 open the fleet app in this browser. This page keeps checking.';
     else msg = 'No batches yet \u2014 save Trip Details to Sheet from the + panel.';
     $('#tableHost').innerHTML = '<div class="empty-state"><i class="ti ti-stack-2"></i>' + msg + '</div>';
     return;
   }
-  $('#tableHost').innerHTML = '<div class="batches-grid">' + list.map(batchCardHtml).join('') + '</div>';
+  $('#tableHost').innerHTML = '<div class="batches-list">' + list.map(batchRowHtml).join('') + '</div>';
 }
 function openBatch(i){
   const b = state.reconShown[i];
@@ -1208,7 +1300,7 @@ function openUploadPreview(fresh, dups){
   $('#dupTitle').textContent = dups.length ? 'Duplicate Transaction IDs found' : 'Upload preview';
   let note = '<div class="modal-note"><b>' + fresh.length + '</b> new trip(s) will be uploaded' +
     (dups.length ? ' \u00b7 <b>' + dups.length + '</b> already in salikDump and will be skipped' : '') + '.</div>';
-  if (!state.histLoaded) note += '<div class="modal-note warn">The salikDump cache is not loaded, so duplicates could not be checked against the sheet.</div>';
+  if (!state.histLoaded) note += '<div class="modal-note warn">The salikDump trip history is not loaded, so duplicates could not be checked against the sheet.</div>';
   $('#dupSummary').innerHTML = note;
   $('#dupTable').innerHTML = !dups.length ? '' : '<table class="log-table"><thead><tr><th>Transaction ID</th><th>Plate</th><th>Trip Date/Time</th><th>Amount (AED)</th><th>Saved at</th><th>Saved by</th></tr></thead><tbody>' +
     dups.map(d => { const h = state.histMap.get(txKey(d.transactionId)) || {};
@@ -1311,6 +1403,8 @@ function activateTab(name){
   state.activeTab = name;
   $$('.cap-btn').forEach(t => { const on = t.dataset.tab === name; t.classList.toggle('active', on); t.setAttribute('aria-selected', String(on)); });
   $('#searchBox').value = '';
+  $('#searchWrap').classList.remove('open');
+  $('#searchToggle').classList.remove('active');
   renderTable(name, '');
   renderMeta();
 }
@@ -1319,6 +1413,8 @@ function activateUpTab(name){
   state.upTab = name;
   $$('#upTabs .tab-btn').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   $('#upSearch').value = '';
+  $('#upSearchWrap').classList.remove('open');
+  $('#upSearchToggle').classList.remove('active');
   $('#excFilter').style.display = name === 'exceptions' ? '' : 'none';
   renderTable(name, '');
 }
@@ -1327,13 +1423,27 @@ $$('#upTabs .tab-btn').forEach(tab => tab.addEventListener('click', () => activa
 
 $('#searchBox').addEventListener('input', (e) => { renderTable(state.activeTab, e.target.value); });
 $('#upSearch').addEventListener('input', (e) => { renderTable(state.upTab, e.target.value); });
+
+/* search boxes collapse to a plain icon; clicking the icon reveals the input */
+function bindSearchToggle(wrapSel, toggleSel, inputSel){
+  const wrap = $(wrapSel), toggle = $(toggleSel), input = $(inputSel);
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = wrap.classList.toggle('open');
+    toggle.classList.toggle('active', open);
+    if (open) input.focus(); else if (!input.value) { /* stays collapsed, empty */ }
+  });
+  input.addEventListener('blur', () => { if (!input.value){ wrap.classList.remove('open'); toggle.classList.remove('active'); } });
+}
+bindSearchToggle('#searchWrap', '#searchToggle', '#searchBox');
+bindSearchToggle('#upSearchWrap', '#upSearchToggle', '#upSearch');
 $('#btnSaveSheet').addEventListener('click', saveToSheet);
 $('#btnUpload').addEventListener('click', () => $('#pdfInput').click());
 $('#upClose').addEventListener('click', closeUpload);
 $('#upBack').addEventListener('click', closeUpload);
 $('#excFilter').addEventListener('change', (e) => { state.excFilter = e.target.value; renderTable('exceptions', $('#upSearch').value); });
-$('#tableHost').addEventListener('click', (e) => { const c = e.target.closest('.batch-item'); if (c) openBatch(+c.dataset.i); });
-$('#tableHost').addEventListener('keydown', (e) => { if (e.key !== 'Enter' && e.key !== ' ') return; const c = e.target.closest('.batch-item'); if (c){ e.preventDefault(); openBatch(+c.dataset.i); } });
+$('#tableHost').addEventListener('click', (e) => { const c = e.target.closest('.batch-row'); if (c) openBatch(+c.dataset.i); });
+$('#tableHost').addEventListener('keydown', (e) => { if (e.key !== 'Enter' && e.key !== ' ') return; const c = e.target.closest('.batch-row'); if (c){ e.preventDefault(); openBatch(+c.dataset.i); } });
 $('#batchClose').addEventListener('click', closeBatch);
 $('#batchDone').addEventListener('click', closeBatch);
 $('#batchModal').addEventListener('click', (e) => { if (e.target.id === 'batchModal') closeBatch(); });
@@ -1358,6 +1468,7 @@ document.addEventListener('click', (e) => { if (!infoPop.contains(e.target)) tog
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   toggleInfo(false);
+  closeFilterPopover();
   if ($('#dupModal').classList.contains('show')) closeUploadPreview();
   else if ($('#batchModal').classList.contains('show')) closeBatch();
   else if (state.upOpen) closeUpload();
@@ -1367,7 +1478,7 @@ document.addEventListener('keydown', (e) => {
  *  INIT
  * ═══════════════════════════════════════════════════════ */
 async function init(){
-  setCacheStatus('checking', 'Checking for cache\u2026');
+  setCacheStatus('checking', 'Checking\u2026');
   renderResults();
   loadHist();
   await probeCache(); // "+" becomes active once the fleet log cache is available
