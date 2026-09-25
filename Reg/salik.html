@@ -255,6 +255,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 #upDrawer:not(.has-pdf) #upCount,
 #upDrawer:not(.has-pdf) #upSearchWrap,
 #upDrawer:not(.has-pdf) #btnSaveSheet,
+#upDrawer:not(.has-pdf) #btnHideZeroAmtUp,
 #upDrawer:not(.has-pdf) .up-body,
 #upDrawer:not(.has-pdf) .up-foot{display:none;}
 /* Exceptions-only: the fill options only affect exception trips, so keep them collapsed on Trip Details */
@@ -395,7 +396,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
         </div>
         <div class="toolbar-actions">
           <span class="label" id="rowCountLabel"></span>
-          <button type="button" class="ib" id="btnHideZeroAmt" aria-label="Remove zero-amount rows" aria-pressed="false" title="Remove rows with Amount (AED) = 0"><i class="ti ti-currency-dirham-off"></i></button>
+          <button type="button" class="ib btn-hide-zero-amt" id="btnHideZeroAmt" aria-label="Remove zero-amount rows" aria-pressed="false" title="Remove rows with Amount (AED) = 0"><i class="ti ti-filter-off"></i></button>
           <button type="button" class="ib" id="labelUploadBtn" aria-label="Upload label data" title="Upload data to label a Fleet Log column"><i class="ti ti-cloud-upload"></i></button>
           <input type="file" id="labelFileInput" accept=".csv,.txt" style="display:none;">
         </div>
@@ -518,6 +519,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
       <input type="text" class="search-input" id="upSearch" placeholder="Filter rows&hellip;">
     </div>
     <button type="button" class="btn btn-primary btn-sm" id="btnSaveSheet" title="Save data" disabled><i class="ti ti-cloud-upload"></i>Save</button>
+    <button type="button" class="ib btn-hide-zero-amt" id="btnHideZeroAmtUp" aria-label="Remove zero-amount rows" aria-pressed="false" title="Remove rows with Amount (AED) = 0"><i class="ti ti-filter-off"></i></button>
     <button type="button" class="ib" id="upClose" aria-label="Close"><i class="ti ti-x"></i></button>
   </div>
   <div class="up-empty" id="upEmpty">
@@ -1404,6 +1406,7 @@ function openUpload(){
   $('#upDrawer').classList.add('show');
   $('#upDrawer').setAttribute('aria-hidden', 'false');
   toggleInfo(false);
+  closeFilterPopover();
   renderUpload();
 }
 function closeUpload(){
@@ -1411,6 +1414,7 @@ function closeUpload(){
   $('#upBack').classList.remove('show');
   $('#upDrawer').classList.remove('show');
   $('#upDrawer').setAttribute('aria-hidden', 'true');
+  closeFilterPopover();
 }
 
 /* ===================== SAVE DATA =====================
@@ -1561,6 +1565,7 @@ function sizeCapsule(){
 }
 function activateTab(name){
   state.activeTab = name;
+  closeFilterPopover(); // a column filter is specific to the table it was opened on
   $$('.cap-btn').forEach(t => { const on = t.dataset.tab === name; t.classList.toggle('active', on); t.setAttribute('aria-selected', String(on)); });
   $('#searchBox').value = '';
   $('#searchWrap').classList.remove('open');
@@ -1572,6 +1577,7 @@ function activateTab(name){
 // upload-panel tabs
 function activateUpTab(name){
   state.upTab = name;
+  closeFilterPopover();
   $$('#upTabs .tab-btn').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   $('#upSearch').value = '';
   $('#upSearchWrap').classList.remove('open');
@@ -1648,12 +1654,16 @@ $('#pushedByFilterBtn').addEventListener('click', (e) => {
   openFilterPopover(e.currentTarget, 'pushedBy', values, state.logFilters.pushedBy, 'log', true);
 });
 $('#btnSaveSheet').addEventListener('click', saveToSheet);
-$('#btnHideZeroAmt').addEventListener('click', () => {
-  state.hideZeroAmount = !state.hideZeroAmount;
-  $('#btnHideZeroAmt').classList.toggle('active', state.hideZeroAmount);
-  $('#btnHideZeroAmt').setAttribute('aria-pressed', String(state.hideZeroAmount));
+function setHideZeroAmt(val){
+  state.hideZeroAmount = val;
+  $$('.btn-hide-zero-amt').forEach(btn => {
+    btn.classList.toggle('active', val);
+    btn.setAttribute('aria-pressed', String(val));
+  });
   renderTable(state.activeTab, $('#searchBox').value);
-});
+  if (state.upOpen) renderTable(state.upTab, $('#upSearch').value);
+}
+$$('.btn-hide-zero-amt').forEach(btn => btn.addEventListener('click', () => setHideZeroAmt(!state.hideZeroAmount)));
 $('#btnUpload').addEventListener('click', () => $('#pdfInput').click());
 $('#upClose').addEventListener('click', closeUpload);
 $('#upBack').addEventListener('click', closeUpload);
