@@ -159,7 +159,7 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidd
 .tab-btn:not(.active):hover{background:var(--surface2);color:var(--text);}
 
 .results-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);overflow:hidden;}
-.panel-toolbar{display:flex;justify-content:flex-start;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap;}
+.panel-toolbar{display:flex;justify-content:flex-start;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:nowrap;overflow-x:auto;}
 .panel-toolbar .search-input{font-family:var(--mono);font-size:12px;border:1.5px solid var(--border2);border-radius:var(--radius);padding:7px 11px;width:220px;background:var(--surface2);color:var(--text);}
 .panel-toolbar .search-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
 /* search box collapsed to an icon; expands into the input on click */
@@ -183,7 +183,7 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidd
 .fp-item.active i{color:var(--accent);}
 .fp-item:hover{background:var(--surface2);color:var(--text);}
 .fp-item.active{background:var(--accent-dim);color:var(--accent);font-weight:700;}
-.toolbar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto;}
+.toolbar-actions{display:flex;gap:8px;align-items:center;flex-wrap:nowrap;flex-shrink:0;margin-left:auto;}
 .label{font-size:12px;color:var(--text3);white-space:nowrap;}
 .table-scroll{flex:1 1 auto;min-height:160px;max-height:none;overflow:auto;}
 /* ═══ RESULTS AREA — fixed to the available viewport height, module stays responsive at any width; no page scrollbar, only the table scrolls ═══ */
@@ -255,7 +255,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 #upDrawer:not(.has-pdf) #upCount,
 #upDrawer:not(.has-pdf) #upSearchWrap,
 #upDrawer:not(.has-pdf) #btnSaveSheet,
-#upDrawer:not(.has-pdf) #btnHideZeroAmtUp,
+#upDrawer:not(.has-pdf) #btnHideZeroAmt,
 #upDrawer:not(.has-pdf) .up-body,
 #upDrawer:not(.has-pdf) .up-foot{display:none;}
 /* Exceptions-only: the fill options only affect exception trips, so keep them collapsed on Trip Details */
@@ -285,7 +285,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 .ib:disabled{opacity:.45;cursor:not-allowed;}
 .ib:disabled:hover{border-color:var(--border);color:var(--text2);}
 .ib i.spin{animation:spin 1s linear infinite;}
-.tb-left{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.tb-left{display:flex;gap:8px;align-items:center;flex-wrap:nowrap;flex-shrink:0;}
 .tb-select{padding:7px 10px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:12px;}
 @media(pointer:coarse){.tb-select{font-size:16px;padding:8px 10px;}}
 .modal-back{position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;padding:14px;background:rgba(0,0,0,.55);}
@@ -310,12 +310,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 @media(max-width:700px){
   .portal-wrap{padding:8px max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));gap:10px;}
   .panel-toolbar{padding:10px 12px;}
-  .panel-toolbar .search-input{width:100%;flex:1 1 100%;}
-  .tb-left{width:100%;}
-  .toolbar-actions{width:100%;justify-content:flex-end;}
-  .toolbar-actions .label{flex:1 1 auto;text-align:right;}
-  .toolbar-actions .btn{flex:1;justify-content:center;}
-  .date-filters{flex-wrap:wrap;}
+  .date-filters{flex-wrap:nowrap;}
   .log-table th,.log-table td{padding:7px 10px;}
   footer.meta{flex-direction:column;}
   .toast{left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));max-width:none;}
@@ -396,7 +391,6 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
         </div>
         <div class="toolbar-actions">
           <span class="label" id="rowCountLabel"></span>
-          <button type="button" class="ib btn-hide-zero-amt" id="btnHideZeroAmt" aria-label="Remove zero-amount rows" aria-pressed="false" title="Remove rows with Amount (AED) = 0"><i class="ti ti-filter-off"></i></button>
           <button type="button" class="ib" id="labelUploadBtn" aria-label="Upload label data" title="Upload data to label a Fleet Log column"><i class="ti ti-cloud-upload"></i></button>
           <input type="file" id="labelFileInput" accept=".csv,.txt" style="display:none;">
         </div>
@@ -519,7 +513,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
       <input type="text" class="search-input" id="upSearch" placeholder="Filter rows&hellip;">
     </div>
     <button type="button" class="btn btn-primary btn-sm" id="btnSaveSheet" title="Save data" disabled><i class="ti ti-cloud-upload"></i>Save</button>
-    <button type="button" class="ib btn-hide-zero-amt" id="btnHideZeroAmtUp" aria-label="Remove zero-amount rows" aria-pressed="false" title="Remove rows with Amount (AED) = 0"><i class="ti ti-filter-off"></i></button>
+    <button type="button" class="ib" id="btnHideZeroAmt" aria-label="Remove zero-amount rows" aria-pressed="false" title="Remove rows with Amount (AED) = 0"><i class="ti ti-filter-off"></i></button>
     <button type="button" class="ib" id="upClose" aria-label="Close"><i class="ti ti-x"></i></button>
   </div>
   <div class="up-empty" id="upEmpty">
@@ -1225,7 +1219,7 @@ function renderTable(tabName, searchTerm){
     if (state.logFilters.toDate) rows = rows.filter(r => fmtDay(r.tripTs) <= state.logFilters.toDate);
   }
 
-  if (state.hideZeroAmount){
+  if (state.hideZeroAmount && UP_TABS.includes(tabName)){
     const amtCol = def.cols.find(c => c.label === 'Amount (AED)');
     if (amtCol) rows = rows.filter(r => Number(r[amtCol.key]) !== 0);
   }
@@ -1307,7 +1301,15 @@ function openFilterPopover(anchorEl, filterKey, options, current, tabName, multi
   filterHovering = true; // the click that opened it means the pointer is on the trigger right now
   cancelFilterAutoClose();
 }
-function closeFilterPopover(){ $('#filterPop').classList.remove('show'); cancelFilterAutoClose(); filterHovering = false; }
+function closeFilterPopover(){
+  const pop = $('#filterPop');
+  pop.classList.remove('show');
+  pop.style.display = ''; // openFilterPopover sets an inline display to measure width before
+                           // positioning; clear it here or the popover stays visible forever,
+                           // since an inline style always wins over the .show CSS rule.
+  cancelFilterAutoClose();
+  filterHovering = false;
+}
 /* the popover closes on a click outside it, 3s after the pointer is no longer over the
    filter icon or the popover itself, or immediately on an explicit "All"/single-value pick. */
 let filterAutoCloseTimer = null, filterHovering = false;
@@ -1656,14 +1658,11 @@ $('#pushedByFilterBtn').addEventListener('click', (e) => {
 $('#btnSaveSheet').addEventListener('click', saveToSheet);
 function setHideZeroAmt(val){
   state.hideZeroAmount = val;
-  $$('.btn-hide-zero-amt').forEach(btn => {
-    btn.classList.toggle('active', val);
-    btn.setAttribute('aria-pressed', String(val));
-  });
-  renderTable(state.activeTab, $('#searchBox').value);
+  $('#btnHideZeroAmt').classList.toggle('active', val);
+  $('#btnHideZeroAmt').setAttribute('aria-pressed', String(val));
   if (state.upOpen) renderTable(state.upTab, $('#upSearch').value);
 }
-$$('.btn-hide-zero-amt').forEach(btn => btn.addEventListener('click', () => setHideZeroAmt(!state.hideZeroAmount)));
+$('#btnHideZeroAmt').addEventListener('click', () => setHideZeroAmt(!state.hideZeroAmount));
 $('#btnUpload').addEventListener('click', () => $('#pdfInput').click());
 $('#upClose').addEventListener('click', closeUpload);
 $('#upBack').addEventListener('click', closeUpload);
