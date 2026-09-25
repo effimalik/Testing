@@ -166,6 +166,10 @@ body{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;overf
 .search-wrap .search-input{width:0;min-width:0;opacity:0;padding:0;border-width:0;margin-left:0;overflow:hidden;transition:width .2s ease,opacity .15s ease,margin .2s ease,padding .2s ease;}
 .search-wrap.open .search-input{width:200px;opacity:1;padding:7px 11px;border-width:1.5px;margin-left:8px;}
 .search-wrap .search-icon-btn.active{border-color:var(--accent);color:var(--accent);}
+/* Fleet Log toolbar: From/To date range + Pushed By filter, next to the search icon */
+.date-filters{display:inline-flex;align-items:center;gap:8px;}
+#fromDateWrap.open .search-input,#toDateWrap.open .search-input{width:150px;opacity:1;padding:7px 11px;border-width:1.5px;margin-left:8px;}
+#pushedByFilterBtn.active{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
 /* column filter icon + popover (Fleet Log: Pushed By / Trip Date) */
 .th-filter{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:4px;border:none;border-radius:5px;background:transparent;color:var(--text3);font-size:11px;cursor:pointer;vertical-align:middle;}
 .th-filter:hover{color:var(--accent);background:var(--surface2);}
@@ -225,7 +229,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 .up-head h3{display:flex;align-items:center;gap:8px;flex:0 0 auto;font-size:14px;font-weight:700;}
 .up-head #upClose{margin-left:auto;}
 .up-file{flex:0 1 auto;min-width:0;max-width:140px;font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.up-head .config-row{flex:0 0 auto;}
+.up-head .config-row{flex:0 0 100%;}
 /* keep the reconciliation options in the same single row as the upload button, regardless of viewport width (id beats the responsive .config-row overrides below) */
 #configRow{display:flex;flex-wrap:nowrap;}
 #configRow .field{flex:0 0 auto;min-width:0;}
@@ -348,6 +352,17 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
           <span class="label" id="rowCountLabel"></span>
         </div>
         <div class="tb-left">
+          <div class="date-filters" id="logDateFilters">
+            <div class="search-wrap" id="fromDateWrap">
+              <button type="button" class="ib search-icon-btn" id="fromDateToggle" aria-label="Filter from date" title="From date"><i class="ti ti-calendar-event"></i></button>
+              <input type="date" class="search-input" id="fromDateInput" aria-label="From date">
+            </div>
+            <div class="search-wrap" id="toDateWrap">
+              <button type="button" class="ib search-icon-btn" id="toDateToggle" aria-label="Filter to date" title="To date"><i class="ti ti-calendar-event"></i></button>
+              <input type="date" class="search-input" id="toDateInput" aria-label="To date">
+            </div>
+            <button type="button" class="ib" id="pushedByFilterBtn" aria-label="Filter by Pushed By" title="Pushed by"><i class="ti ti-filter"></i></button>
+          </div>
           <div class="search-wrap" id="searchWrap">
             <button type="button" class="ib search-icon-btn" id="searchToggle" aria-label="Search" title="Search"><i class="ti ti-search"></i></button>
             <input type="text" class="search-input" id="searchBox" placeholder="Filter rows&hellip;">
@@ -386,7 +401,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 <div class="up-back" id="upBack"></div>
 <aside class="up-drawer" id="upDrawer" role="dialog" aria-label="Upload Salik data" aria-hidden="true">
   <div class="up-head">
-    <h3><i class="ti ti-file-upload"></i>Upload PDF</h3>
+    <h3 title="Upload PDF"><i class="ti ti-file-upload"></i></h3>
     <button type="button" class="btn btn-primary" id="btnUpload"><i class="ti ti-upload"></i>Upload PDF</button>
     <span class="up-file" id="upFile">No PDF selected</span>
     <!-- options: changing them re-runs reconciliation automatically -->
@@ -394,8 +409,8 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
       <div class="field">
         <label>Fill method</label>
         <select id="fillMethod" title="Exception trips (outside any check-out to check-in window) get a rider like Power Query fill. Fill down = old person: the rider of the session that ended just before the trip. Fill up = latest person: the rider of the session that starts just after the trip.">
-          <option value="up" selected>Fill up &middot; latest person</option>
-          <option value="down">Fill down &middot; old person</option>
+          <option value="up" selected title="Fill up &middot; latest person">Up</option>
+          <option value="down" title="Fill down &middot; old person">Down</option>
         </select>
       </div>
       <div class="field">
@@ -534,7 +549,7 @@ const state = {
   activeTab: 'log',
   upOpen: false, upTab: 'details', reconShown: [],   // upload panel + visible Reconciliation batches
   excFilter: 'all',
-  logFilters: { pushedBy: 'all', tripDay: 'all' },
+  logFilters: { pushedBy: 'all', fromDate: '', toDate: '' },
   histCache: [], savedRows: [], hist: [], histMap: new Map(),
   histLoaded: null, histSub: false, histTimer: null,
   pendingUpload: null
@@ -987,13 +1002,10 @@ const fillLabel = v => v === 'fill down' ? 'Fill down \u00b7 old person' : v ===
 const TAB_DEFS = {
   log: { sheet: 'salikDump', cols: [
     {key:'transactionId', label:'Transaction ID'}, {key:'riderId', label:'Rider ID'}, {key:'plate', label:'Plate'},
-    {key:'itemId', label:'Item ID'}, {key:'tripTs', label:'Trip Date/Time', fmt: v => v ? fmtTripTs(v) : '\u2014',
-      filterKey:'tripDay', filterValues: rows => Array.from(new Set(rows.map(r => fmtDay(r.tripTs)).filter(v => v && v !== '\u2014'))).sort().reverse()},
+    {key:'itemId', label:'Item ID'}, {key:'tripTs', label:'Trip Date/Time', fmt: v => v ? fmtTripTs(v) : '\u2014'},
     {key:'amount', label:'Amount (AED)', num:true, fmt: v => v.toFixed(2)}, {key:'location', label:'Location'},
     {key:'matchType', label:'Match', fmt: v => v || '\u2014', badge: v => v === 'Proper' ? 'ok' : v === 'Exception' ? 'warn' : ''},
-    {key:'assignedVia', label:'Assigned via', fmt: v => v || '\u2014'},
-    {key:'pushedAt', label:'Pushed At'},
-    {key:'pushedBy', label:'Pushed By', filterKey:'pushedBy', filterValues: rows => Array.from(new Set(rows.map(r => r.pushedBy).filter(Boolean))).sort()}
+    {key:'assignedVia', label:'Assigned via', fmt: v => v || '\u2014'}
   ]},
   summary: { cols: [
     {key:'month', label:'Month', fmt: monthLabel}, {key:'riderId', label:'Rider ID'}, {key:'plates', label:'Plate(s)'},
@@ -1114,7 +1126,8 @@ function renderTable(tabName, searchTerm){
   if (tabName === 'exceptions' && state.excFilter !== 'all') rows = rows.filter(r => r.status === state.excFilter);
   if (tabName === 'log'){
     if (state.logFilters.pushedBy !== 'all') rows = rows.filter(r => r.pushedBy === state.logFilters.pushedBy);
-    if (state.logFilters.tripDay !== 'all') rows = rows.filter(r => fmtDay(r.tripTs) === state.logFilters.tripDay);
+    if (state.logFilters.fromDate) rows = rows.filter(r => fmtDay(r.tripTs) >= state.logFilters.fromDate);
+    if (state.logFilters.toDate) rows = rows.filter(r => fmtDay(r.tripTs) <= state.logFilters.toDate);
   }
 
   if (searchTerm){
@@ -1193,6 +1206,7 @@ $('#filterPop').addEventListener('click', (e) => {
   const pop = $('#filterPop'), key = pop.dataset.filterKey, tab = pop.dataset.tab;
   state.logFilters[key] = item.dataset.v;
   closeFilterPopover();
+  updateLogFilterUI();
   renderTable(tab, tabCtx(tab).search.value);
 });
 document.addEventListener('click', (e) => {
@@ -1423,6 +1437,7 @@ function activateTab(name){
   $('#searchBox').value = '';
   $('#searchWrap').classList.remove('open');
   $('#searchToggle').classList.remove('active');
+  $('#logDateFilters').style.display = name === 'log' ? 'inline-flex' : 'none';
   renderTable(name, '');
   renderMeta();
 }
@@ -1458,6 +1473,30 @@ function bindSearchToggle(wrapSel, toggleSel, inputSel){
 }
 bindSearchToggle('#searchWrap', '#searchToggle', '#searchBox');
 bindSearchToggle('#upSearchWrap', '#upSearchToggle', '#upSearch');
+bindSearchToggle('#fromDateWrap', '#fromDateToggle', '#fromDateInput');
+bindSearchToggle('#toDateWrap', '#toDateToggle', '#toDateInput');
+
+/* Fleet Log: From/To date range + Pushed By filter (toolbar, next to search) */
+function updateLogFilterUI(){
+  $('#fromDateToggle').classList.toggle('active', !!state.logFilters.fromDate);
+  $('#toDateToggle').classList.toggle('active', !!state.logFilters.toDate);
+  $('#pushedByFilterBtn').classList.toggle('active', state.logFilters.pushedBy !== 'all');
+}
+$('#fromDateInput').addEventListener('change', (e) => {
+  state.logFilters.fromDate = e.target.value;
+  updateLogFilterUI();
+  renderTable('log', $('#searchBox').value);
+});
+$('#toDateInput').addEventListener('change', (e) => {
+  state.logFilters.toDate = e.target.value;
+  updateLogFilterUI();
+  renderTable('log', $('#searchBox').value);
+});
+$('#pushedByFilterBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const values = Array.from(new Set(state.results.log.map(r => r.pushedBy).filter(Boolean))).sort();
+  openFilterPopover(e.currentTarget, 'pushedBy', values, state.logFilters.pushedBy, 'log');
+});
 $('#btnSaveSheet').addEventListener('click', saveToSheet);
 $('#btnUpload').addEventListener('click', () => $('#pdfInput').click());
 $('#upClose').addEventListener('click', closeUpload);
