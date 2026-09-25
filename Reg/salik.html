@@ -182,9 +182,13 @@ body{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;overf
 .fp-item.active i{color:var(--accent);}
 .fp-item:hover{background:var(--surface2);color:var(--text);}
 .fp-item.active{background:var(--accent-dim);color:var(--accent);font-weight:700;}
-.toolbar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.panel-toolbar .label{font-size:12px;color:var(--text3);}
-.table-scroll{max-height:max(320px,calc(100vh - 260px));max-height:max(320px,calc(100dvh - 260px));overflow:auto;}
+.toolbar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto;}
+.panel-toolbar .label{font-size:12px;color:var(--text3);white-space:nowrap;}
+.table-scroll{flex:1 1 auto;min-height:160px;max-height:none;overflow:auto;}
+/* ═══ RESULTS AREA — fills the bulk of the viewport, module stays responsive at any width ═══ */
+#resultsArea{flex:1 1 auto;min-height:0;height:95vh;height:95dvh;max-height:95vh;max-height:95dvh;display:flex;flex-direction:column;gap:10px;width:100%;min-width:0;}
+.results-panel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;width:100%;min-width:0;}
+footer.meta{flex:0 0 auto;}
 
 .log-table{width:100%;border-collapse:collapse;font-size:12.5px;}
 .log-table th{padding:9px 14px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--border);background:var(--bg3);cursor:pointer;white-space:nowrap;position:sticky;top:0;z-index:2;}
@@ -288,10 +292,11 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
   .panel-toolbar{padding:10px 12px;}
   .panel-toolbar .search-input{width:100%;flex:1 1 100%;}
   .tb-left{width:100%;}
-  .toolbar-actions{width:100%;}
-  .toolbar-actions .label{flex:1 1 100%;}
+  .toolbar-actions{width:100%;justify-content:flex-end;}
+  .toolbar-actions .label{flex:1 1 auto;text-align:right;}
   .toolbar-actions .btn{flex:1;justify-content:center;}
-  .table-scroll{max-height:65vh;max-height:65dvh;}
+  .date-filters{flex-wrap:wrap;}
+  #resultsArea{height:95vh;height:95dvh;}
   .log-table th,.log-table td{padding:7px 10px;}
   footer.meta{flex-direction:column;}
   .toast{left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));max-width:none;}
@@ -347,12 +352,9 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 <div class="portal-wrap">
 
   <!-- default view: Fleet Log / Summary / Checkout Sessions / Reconciliation batches -->
-  <div id="resultsArea" style="display:flex;flex-direction:column;gap:10px;">
+  <div id="resultsArea">
     <div class="results-panel">
       <div class="panel-toolbar">
-        <div class="toolbar-actions">
-          <span class="label" id="rowCountLabel"></span>
-        </div>
         <div class="tb-left">
           <div class="date-filters" id="logDateFilters">
             <div class="search-wrap" id="fromDateWrap">
@@ -370,6 +372,11 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
             <input type="text" class="search-input" id="searchBox" placeholder="Filter rows&hellip;">
           </div>
         </div>
+        <div class="toolbar-actions">
+          <span class="label" id="rowCountLabel"></span>
+          <button type="button" class="ib" id="labelUploadBtn" aria-label="Upload label data" title="Upload data to label a Fleet Log column"><i class="ti ti-cloud-upload"></i></button>
+          <input type="file" id="labelFileInput" accept=".csv,.txt" style="display:none;">
+        </div>
       </div>
       <div class="table-scroll" id="tableHost"></div>
     </div>
@@ -383,6 +390,44 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 </div>
 
 <div class="filter-pop" id="filterPop" role="dialog" aria-label="Column filter"></div>
+
+<div class="modal-back" id="labelModal" role="dialog" aria-modal="true" aria-labelledby="labelModalTitle">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="labelModalTitle"><i class="ti ti-cloud-upload"></i>&nbsp; Upload label data</h3>
+      <button type="button" class="ib" id="labelModalClose" aria-label="Close"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-note">File <b id="labelFileName">&mdash;</b> &middot; <span id="labelRowCount"></span></div>
+      <div class="modal-note">Match rows to the Fleet Log by, then pick the uploaded columns to use as the key and the label.</div>
+      <div class="config-row">
+        <div class="field">
+          <label>Fleet Log column</label>
+          <select id="labelMatchField">
+            <option value="transactionId">Transaction ID</option>
+            <option value="riderId">Rider ID</option>
+            <option value="plate">Plate</option>
+            <option value="itemId">Item ID</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Uploaded key column</label>
+          <select id="labelKeyCol"></select>
+        </div>
+        <div class="field">
+          <label>Uploaded label column</label>
+          <select id="labelValCol"></select>
+        </div>
+      </div>
+      <div id="labelSummary"></div>
+      <div class="table-scroll" id="labelPreview" style="max-height:30vh;"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" id="labelModalCancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="labelModalApply">Apply labels</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-back" id="dupModal" role="dialog" aria-modal="true" aria-labelledby="dupTitle">
   <div class="modal">
@@ -554,7 +599,8 @@ const state = {
   logFilters: { pushedBy: [], fromDate: '', toDate: '' },
   histCache: [], savedRows: [], hist: [], histMap: new Map(),
   histLoaded: null, histSub: false, histTimer: null,
-  pendingUpload: null
+  pendingUpload: null,
+  labelMap: new Map(), labelMatchField: 'transactionId', pendingLabelFile: null
 };
 const UP_TABS = ['details','exceptions'];   // shown in the upload panel; everything else is the default view
 
@@ -794,7 +840,14 @@ function rebuildHist(){
   const seen = new Set(state.histCache.map(r => txKey(r.transactionId)));
   state.hist = state.histCache.concat(state.savedRows.filter(r => !seen.has(txKey(r.transactionId))));
   state.histMap = new Map(state.hist.map(r => [txKey(r.transactionId), r]));
+  applyLabels();
   recompute();
+}
+// stamp r.label on every Fleet Log row from the uploaded key -> label map, matched on state.labelMatchField
+function applyLabels(){
+  if (!state.labelMap.size){ state.hist.forEach(r => { r.label = ''; }); return; }
+  const field = state.labelMatchField;
+  state.hist.forEach(r => { r.label = state.labelMap.get(String(r[field] == null ? '' : r[field]).trim().toLowerCase()) || ''; });
 }
 // month-wise, per rider; a rider with two bikes in a month shows both plates, comma-separated
 function buildHistSummary(rows){
@@ -1007,7 +1060,8 @@ const TAB_DEFS = {
     {key:'itemId', label:'Item ID'}, {key:'tripTs', label:'Trip Date/Time', fmt: v => v ? fmtTripTs(v) : '\u2014'},
     {key:'amount', label:'Amount (AED)', num:true, fmt: v => v.toFixed(2)}, {key:'location', label:'Location'},
     {key:'matchType', label:'Match', fmt: v => v || '\u2014', badge: v => v === 'Proper' ? 'ok' : v === 'Exception' ? 'warn' : ''},
-    {key:'assignedVia', label:'Assigned via', fmt: v => v || '\u2014'}
+    {key:'assignedVia', label:'Assigned via', fmt: v => v || '\u2014'},
+    {key:'label', label:'Label', fmt: v => v || '\u2014'}
   ]},
   summary: { cols: [
     {key:'month', label:'Month', fmt: monthLabel}, {key:'riderId', label:'Rider ID'}, {key:'plates', label:'Plate(s)'},
@@ -1206,8 +1260,23 @@ function openFilterPopover(anchorEl, filterKey, options, current, tabName, multi
   pop.style.top = Math.min(r.bottom + 6, window.innerHeight - 20) + 'px';
   pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - popW - 8)) + 'px';
   pop.classList.add('show');
+  filterHovering = true; // the click that opened it means the pointer is on the trigger right now
+  cancelFilterAutoClose();
 }
-function closeFilterPopover(){ $('#filterPop').classList.remove('show'); }
+function closeFilterPopover(){ $('#filterPop').classList.remove('show'); cancelFilterAutoClose(); filterHovering = false; }
+/* the popover opens on click and never closes just because the user clicks elsewhere on the
+   window; it only auto-closes 3s after the pointer is no longer over the filter icon or the
+   popover itself (or immediately, on an explicit "All"/single-value pick — see below). */
+let filterAutoCloseTimer = null, filterHovering = false;
+function cancelFilterAutoClose(){ clearTimeout(filterAutoCloseTimer); filterAutoCloseTimer = null; }
+function scheduleFilterAutoClose(){ cancelFilterAutoClose(); filterAutoCloseTimer = setTimeout(closeFilterPopover, 3000); }
+function isOverFilterTrigger(el){ return !!(el && el.closest && (el.closest('.filter-pop') || el.closest('.th-filter') || el.closest('#pushedByFilterBtn'))); }
+document.addEventListener('mouseover', (e) => {
+  if (!$('#filterPop').classList.contains('show')) return;
+  const over = isOverFilterTrigger(e.target);
+  if (over && !filterHovering){ filterHovering = true; cancelFilterAutoClose(); }
+  else if (!over && filterHovering){ filterHovering = false; scheduleFilterAutoClose(); }
+});
 $('#filterPop').addEventListener('click', (e) => {
   const item = e.target.closest('.fp-item');
   if (!item) return;
@@ -1234,10 +1303,6 @@ $('#filterPop').addEventListener('click', (e) => {
   }
   updateLogFilterUI();
   renderTable(tab, tabCtx(tab).search.value);
-});
-document.addEventListener('click', (e) => {
-  const pop = $('#filterPop');
-  if (pop.classList.contains('show') && !pop.contains(e.target) && !e.target.closest('.th-filter')) closeFilterPopover();
 });
 
 /* ===================== RECONCILIATION (batches) ===================== */
@@ -1538,6 +1603,100 @@ $('#dupCancel').addEventListener('click', closeUploadPreview);
 $('#dupModal').addEventListener('click', (e) => { if (e.target.id === 'dupModal') closeUploadPreview(); });
 $('#dupConfirm').addEventListener('click', () => { const rows = state.pendingUpload || []; closeUploadPreview(); if (rows.length) uploadRows(rows); });
 
+/* ===================== FLEET LOG: LABEL UPLOAD ===================== */
+// tiny CSV parser: handles quoted fields (incl. embedded commas/newlines) and "" escapes
+function parseCsv(text){
+  const rows = []; let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (inQuotes){
+      if (c === '"'){ if (text[i + 1] === '"'){ field += '"'; i++; } else inQuotes = false; }
+      else field += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === ','){ row.push(field); field = ''; }
+    else if (c === '\r'){ /* skip */ }
+    else if (c === '\n'){ row.push(field); rows.push(row); row = []; field = ''; }
+    else field += c;
+  }
+  if (field.length || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+function renderLabelPreview(){
+  const pf = state.pendingLabelFile;
+  if (!pf) return;
+  const keyI = +$('#labelKeyCol').value, valI = +$('#labelValCol').value;
+  const head = '<table class="log-table"><thead><tr><th>' + escapeHtml(pf.headers[keyI] || 'Key') +
+    '</th><th>' + escapeHtml(pf.headers[valI] || 'Label') + '</th></tr></thead><tbody>' +
+    pf.rows.slice(0, 20).map(r => '<tr><td>' + escapeHtml(r[keyI] || '') + '</td><td>' + escapeHtml(r[valI] || '') + '</td></tr>').join('') +
+    '</tbody></table>';
+  $('#labelPreview').innerHTML = head;
+  $('#labelSummary').innerHTML = '<div class="modal-note">Previewing ' + Math.min(20, pf.rows.length) + ' of ' + pf.rows.length + ' row' + (pf.rows.length === 1 ? '' : 's') + '&hellip;</div>';
+}
+function openLabelModal(headers, rows, fileName){
+  state.pendingLabelFile = { headers, rows };
+  $('#labelFileName').textContent = fileName;
+  $('#labelRowCount').textContent = rows.length + ' row' + (rows.length === 1 ? '' : 's');
+  const opts = headers.map((h, i) => '<option value="' + i + '">' + escapeHtml(h || ('Column ' + (i + 1))) + '</option>').join('');
+  $('#labelKeyCol').innerHTML = opts;
+  $('#labelValCol').innerHTML = opts;
+  if (headers.length > 1) $('#labelValCol').value = '1';
+  $('#labelMatchField').value = state.labelMatchField;
+  renderLabelPreview();
+  $('#labelModal').classList.add('show');
+}
+function closeLabelModal(){
+  $('#labelModal').classList.remove('show');
+  state.pendingLabelFile = null;
+  $('#labelFileInput').value = '';
+}
+$('#labelUploadBtn').addEventListener('click', () => $('#labelFileInput').click());
+$('#labelFileInput').addEventListener('change', async (e) => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = ''; // allow re-picking the same file later
+  if (!file) return;
+  try{
+    const text = await file.text();
+    const grid = parseCsv(text).filter(r => r.length > 1 || (r.length === 1 && String(r[0]).trim() !== ''));
+    if (!grid.length){ showToast('That file has no rows.', 'error'); return; }
+    const headers = grid[0];
+    const rows = grid.slice(1);
+    if (!rows.length){ showToast('That file has no data rows.', 'error'); return; }
+    openLabelModal(headers, rows, file.name);
+  }catch(err){
+    showToast('Could not read file \u2014 ' + err.message, 'error');
+  }
+});
+$('#labelKeyCol').addEventListener('change', renderLabelPreview);
+$('#labelValCol').addEventListener('change', renderLabelPreview);
+$('#labelModalClose').addEventListener('click', closeLabelModal);
+$('#labelModalCancel').addEventListener('click', closeLabelModal);
+$('#labelModal').addEventListener('click', (e) => { if (e.target.id === 'labelModal') closeLabelModal(); });
+$('#labelModalApply').addEventListener('click', () => {
+  const pf = state.pendingLabelFile;
+  if (!pf) return;
+  const keyI = +$('#labelKeyCol').value, valI = +$('#labelValCol').value, field = $('#labelMatchField').value;
+  const map = new Map();
+  pf.rows.forEach(r => {
+    const k = String(r[keyI] == null ? '' : r[keyI]).trim().toLowerCase();
+    if (k) map.set(k, String(r[valI] == null ? '' : r[valI]).trim());
+  });
+  state.labelMap = map;
+  state.labelMatchField = field;
+  try{ localStorage.setItem('ap2_salikLabelMap', JSON.stringify({ field, entries: Array.from(map.entries()) })); }catch(_){}
+  applyLabels();
+  renderTable('log', $('#searchBox').value);
+  closeLabelModal();
+  showToast('Applied ' + map.size + ' label' + (map.size === 1 ? '' : 's') + ' to the Fleet Log.', 'success');
+});
+// restore a label map uploaded in an earlier session
+try{
+  const savedLabels = JSON.parse(localStorage.getItem('ap2_salikLabelMap') || 'null');
+  if (savedLabels && Array.isArray(savedLabels.entries)){
+    state.labelMap = new Map(savedLabels.entries);
+    state.labelMatchField = savedLabels.field || 'transactionId';
+  }
+}catch(_){}
+
 /* re-check for the cache when the user comes back to this tab */
 window.addEventListener('focus', () => { if (state.addMode === 'off') probeCache(); if (state.histLoaded === false) loadHist(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && state.addMode === 'off') probeCache(); if (!document.hidden && state.histLoaded === false) loadHist(); });
@@ -1555,7 +1714,8 @@ document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   toggleInfo(false);
   closeFilterPopover();
-  if ($('#dupModal').classList.contains('show')) closeUploadPreview();
+  if ($('#labelModal').classList.contains('show')) closeLabelModal();
+  else if ($('#dupModal').classList.contains('show')) closeUploadPreview();
   else if ($('#batchModal').classList.contains('show')) closeBatch();
   else if (state.upOpen) closeUpload();
 });
