@@ -291,7 +291,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 .modal-back{position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;padding:14px;background:rgba(0,0,0,.55);}
 .modal-back.show{display:flex;}
 .modal{width:min(760px,100%);max-height:calc(100dvh - 28px);display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);overflow:hidden;}
-.modal-head,.modal-foot{display:flex;align-items:center;gap:10px;padding:12px 16px;}
+.modal-head,.modal-foot{display:flex;align-items:center;gap:10px;padding:12px 16px;flex-wrap:wrap;}
 .modal-head{justify-content:space-between;border-bottom:1px solid var(--border);}
 .modal-head h3{font-size:14px;font-weight:700;}
 .modal-foot{justify-content:flex-end;border-top:1px solid var(--border);}
@@ -391,7 +391,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
         </div>
         <div class="toolbar-actions">
           <span class="label" id="rowCountLabel"></span>
-          <button type="button" class="ib" id="labelUploadBtn" aria-label="Upload label data" title="Upload data to label a Fleet Log column"><i class="ti ti-cloud-upload"></i></button>
+          <button type="button" class="ib" id="labelUploadBtn" aria-label="Update Assigned via" title="Set Assigned via (by month) on the filtered rows that don't have one yet"><i class="ti ti-calendar-plus"></i></button>
           <input type="file" id="labelFileInput" accept=".csv,.txt" style="display:none;">
         </div>
       </div>
@@ -442,6 +442,27 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
     <div class="modal-foot">
       <button type="button" class="btn btn-ghost" id="labelModalCancel">Cancel</button>
       <button type="button" class="btn btn-primary" id="labelModalApply">Apply labels</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="assignViaModal" role="dialog" aria-modal="true" aria-labelledby="assignViaTitle">
+  <div class="modal" style="width:min(480px,100%);">
+    <div class="modal-head">
+      <h3 id="assignViaTitle"><i class="ti ti-calendar-plus"></i>&nbsp; Update Assigned via</h3>
+      <button type="button" class="ib" id="assignViaClose" aria-label="Close"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-note">Sets <b>Assigned via</b> to the chosen month for every row currently shown in the Fleet Log (with your search/date/Pushed&nbsp;by filters applied) that doesn't have an Assigned via value yet.</div>
+      <div class="field">
+        <label>Month</label>
+        <select id="assignViaMonth"></select>
+      </div>
+      <div class="modal-note" id="assignViaSummary"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" id="assignViaCancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="assignViaApply">Update</button>
     </div>
   </div>
 </div>
@@ -1171,6 +1192,25 @@ function sizeUpDrawerToTable(){
 }
 window.addEventListener('resize', () => { if (state.upOpen) sizeUpDrawerToTable(); });
 
+// same idea as sizeUpDrawerToTable, for the data-preview modals (label preview / upload preview / batch):
+// the modal box widens/narrows to fit however wide its inner table naturally is, clamped to [minW, 96vw]
+// so a 3-column preview doesn't open as wide as a 10-column one.
+function sizeModalToContent(modalBackSel, hostSel, minW){
+  const modalBack = $(modalBackSel);
+  if (!modalBack || !modalBack.classList.contains('show')) return;
+  const modal = modalBack.querySelector('.modal');
+  const table = document.querySelector(hostSel + ' table');
+  const maxW = Math.floor(window.innerWidth * 0.96);
+  if (!table){ modal.style.width = Math.min(minW, maxW) + 'px'; return; }
+  const natural = table.scrollWidth + 40; // account for modal-body padding
+  modal.style.width = Math.max(minW, Math.min(natural, maxW)) + 'px';
+}
+window.addEventListener('resize', () => {
+  sizeModalToContent('#labelModal', '#labelPreview', 480);
+  sizeModalToContent('#dupModal', '#dupTable', 480);
+  sizeModalToContent('#batchModal', '#batchTable', 560);
+});
+
 // where each tab draws: upload-panel tabs into the panel, everything else into the main panel
 function tabCtx(tab){
   return UP_TABS.includes(tab)
@@ -1207,27 +1247,34 @@ function tableHtml(cols, rows, sortState, tabName, baseRows){
   return html + '</tbody></table>';
 }
 
+// Fleet Log toolbar filters (Pushed by / From-To date) — shared by the table render and the
+// Assigned-via update modal, so "update" always targets exactly what's on screen.
+function applyLogFilters(rows){
+  if (state.logFilters.pushedBy.length) rows = rows.filter(r => state.logFilters.pushedBy.includes(r.pushedBy));
+  if (state.logFilters.fromDate) rows = rows.filter(r => fmtDay(r.tripTs) >= state.logFilters.fromDate);
+  if (state.logFilters.toDate) rows = rows.filter(r => fmtDay(r.tripTs) <= state.logFilters.toDate);
+  return rows;
+}
+function applySearchFilter(rows, def, searchTerm){
+  if (!searchTerm) return rows;
+  const s = searchTerm.toLowerCase();
+  return rows.filter(r => def.cols.some(c => String(c.fmt ? c.fmt(r[c.key]) : r[c.key]).toLowerCase().includes(s)));
+}
+
 function renderTable(tabName, searchTerm){
   if (tabName === 'recon') return renderRecon(searchTerm);
   const def = TAB_DEFS[tabName], ctx = tabCtx(tabName);
   const baseRows = state.results[tabName]; // unfiltered, used to populate column-filter option lists
   let rows = baseRows.slice();
   if (tabName === 'exceptions' && state.excFilter !== 'all') rows = rows.filter(r => r.status === state.excFilter);
-  if (tabName === 'log'){
-    if (state.logFilters.pushedBy.length) rows = rows.filter(r => state.logFilters.pushedBy.includes(r.pushedBy));
-    if (state.logFilters.fromDate) rows = rows.filter(r => fmtDay(r.tripTs) >= state.logFilters.fromDate);
-    if (state.logFilters.toDate) rows = rows.filter(r => fmtDay(r.tripTs) <= state.logFilters.toDate);
-  }
+  if (tabName === 'log') rows = applyLogFilters(rows);
 
   if (state.hideZeroAmount && UP_TABS.includes(tabName)){
     const amtCol = def.cols.find(c => c.label === 'Amount (AED)');
     if (amtCol) rows = rows.filter(r => Number(r[amtCol.key]) !== 0);
   }
 
-  if (searchTerm){
-    const s = searchTerm.toLowerCase();
-    rows = rows.filter(r => def.cols.some(c => String(c.fmt ? c.fmt(r[c.key]) : r[c.key]).toLowerCase().includes(s)));
-  }
+  rows = applySearchFilter(rows, def, searchTerm);
 
   const sortState = state.sort[tabName];
   if (sortState){
@@ -1399,6 +1446,7 @@ function openBatch(i){
   $('#batchMeta').innerHTML = '<div class="modal-note" style="margin-bottom:10px;">Pushed by <b>' + escapeHtml(b.pushedBy || '\u2014') + '</b> \u00b7 Assigned via <b>' + escapeHtml(batchViaText(b)) + '</b> \u00b7 ' + fmtDay(b.minTs) + ' \u2192 ' + fmtDay(b.maxTs) + '</div>' + batchStatsHtml(b);
   $('#batchTable').innerHTML = tableHtml(TAB_DEFS.log.cols.slice(0, 9), b.rows.slice().sort((x, y) => y.tripTs - x.tripTs), null, '');
   $('#batchModal').classList.add('show');
+  sizeModalToContent('#batchModal', '#batchTable', 560);
 }
 function closeBatch(){ $('#batchModal').classList.remove('show'); }
 
@@ -1458,6 +1506,7 @@ function openUploadPreview(fresh, dups){
   ok.textContent = fresh.length ? 'Upload ' + fresh.length + ' new row' + (fresh.length === 1 ? '' : 's') : 'Nothing new to upload';
   ok.disabled = !fresh.length;
   $('#dupModal').classList.add('show');
+  sizeModalToContent('#dupModal', '#dupTable', 480);
 }
 function closeUploadPreview(){ $('#dupModal').classList.remove('show'); state.pendingUpload = null; }
 
@@ -1714,6 +1763,7 @@ function renderLabelPreview(){
     '</tbody></table>';
   $('#labelPreview').innerHTML = head;
   $('#labelSummary').innerHTML = '<div class="modal-note">Previewing ' + Math.min(20, pf.rows.length) + ' of ' + pf.rows.length + ' row' + (pf.rows.length === 1 ? '' : 's') + '&hellip;</div>';
+  sizeModalToContent('#labelModal', '#labelPreview', 480);
 }
 function openLabelModal(headers, rows, fileName){
   state.pendingLabelFile = { headers, rows };
@@ -1732,7 +1782,7 @@ function closeLabelModal(){
   state.pendingLabelFile = null;
   $('#labelFileInput').value = '';
 }
-$('#labelUploadBtn').addEventListener('click', () => $('#labelFileInput').click());
+$('#labelUploadBtn').addEventListener('click', openAssignViaModal);
 $('#labelFileInput').addEventListener('change', async (e) => {
   const file = e.target.files && e.target.files[0];
   e.target.value = ''; // allow re-picking the same file later
@@ -1771,6 +1821,103 @@ $('#labelModalApply').addEventListener('click', () => {
   closeLabelModal();
   showToast('Updated Assigned via for ' + map.size + ' matching row' + (map.size === 1 ? '' : 's') + '.', 'success');
 });
+/* ===================== FLEET LOG: UPDATE "ASSIGNED VIA" BY MONTH =====================
+ * Sets Assigned via to the picked month on every Fleet Log row that is currently visible
+ * under the active search / Pushed by / date-range filters AND has no Assigned via yet —
+ * i.e. exactly the rows applyLogFilters()+applySearchFilter() would put on screen right now. */
+// current month, 1 month back, and the 4 months after — in that chronological order
+function assignViaMonthOptions(){
+  const now = new Date();
+  const opts = [];
+  for (let i = -1; i <= 4; i++){
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    const value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    opts.push({ value, label: monthLabel(value) + (i === 0 ? ' (current)' : '') });
+  }
+  return opts;
+}
+function assignViaTargetRows(){
+  let rows = applyLogFilters(state.results.log.slice());
+  rows = applySearchFilter(rows, TAB_DEFS.log, $('#searchBox').value);
+  return rows.filter(r => !r.assignedVia);
+}
+function refreshAssignViaSummary(){
+  const n = assignViaTargetRows().length;
+  $('#assignViaSummary').innerHTML = n
+    ? '<b>' + n + '</b> filtered row' + (n === 1 ? '' : 's') + ' without an Assigned via value will be updated.'
+    : 'No filtered row is missing an Assigned via value \u2014 nothing to update.';
+  $('#assignViaApply').disabled = !n;
+}
+function openAssignViaModal(){
+  const opts = assignViaMonthOptions();
+  $('#assignViaMonth').innerHTML = opts.map(o => '<option value="' + o.value + '">' + escapeHtml(o.label) + '</option>').join('');
+  $('#assignViaMonth').value = opts[1].value; // i = 0 → current month
+  refreshAssignViaSummary();
+  $('#assignViaModal').classList.add('show');
+}
+function closeAssignViaModal(){ $('#assignViaModal').classList.remove('show'); }
+$('#assignViaClose').addEventListener('click', closeAssignViaModal);
+$('#assignViaCancel').addEventListener('click', closeAssignViaModal);
+$('#assignViaModal').addEventListener('click', (e) => { if (e.target.id === 'assignViaModal') closeAssignViaModal(); });
+
+// Same POST convention as uploadRows() below: Web App URL from apiConfig.js, session from
+// sessionStorage('ap_session'). Matches existing salikDump rows by Transaction ID and sets
+// their Assigned via cell. NOTE: adjust the "action" name / payload shape here if the Apps
+// Script web app expects a different contract for updating existing rows (this file only
+// had an "appendRows" action to go on) \u2014 everything else (matching, local state, re-render)
+// is independent of that.
+async function updateAssignedViaOnSheet(rows, label){
+  const session = getSession();
+  const payload = {
+    action:       'updateCells',
+    type:         SALIK_GS.SHEET_NAME,
+    sheetName:    SALIK_GS.SHEET_NAME,
+    sessionId:    session.sessionId || '',
+    token:        session.token || '',
+    matchColumn:  'Transaction ID',
+    updateColumn: 'Assigned via',
+    updates:      rows.map(r => ({ match: r.transactionId, value: label }))
+  };
+  const res = await fetch(SALIK_GS.webAppUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  });
+  const rawText = await res.text();
+  if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}: ${rawText.slice(0,200)}`);
+  let data;
+  try { data = JSON.parse(rawText); }
+  catch (e) { throw new Error('Apps Script returned non-JSON: ' + rawText.slice(0,300)); }
+  if (data.status !== 'ok' && data.success !== true) throw new Error(data.message || data.error || JSON.stringify(data));
+}
+$('#assignViaApply').addEventListener('click', async () => {
+  if (!SALIK_GS.webAppUrl){ showToast('API_URL is not available \u2014 check that apiConfig.js loaded.', 'error'); return; }
+  const rows = assignViaTargetRows();
+  if (!rows.length){ showToast('No rows to update.', 'error'); return; }
+  const label = monthLabel($('#assignViaMonth').value);
+  const btn = $('#assignViaApply');
+  const origHtml = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader spin"></i>';
+  try{
+    await updateAssignedViaOnSheet(rows, label);
+    rows.forEach(r => { r.assignedVia = label; }); // these are the same objects backing state.hist
+    closeAssignViaModal();
+    recompute();
+    showToast('\u2713 Updated Assigned via for ' + rows.length + ' row' + (rows.length === 1 ? '' : 's'), 'success');
+  }catch(err){
+    showToast('Update failed: ' + err.message, 'error');
+  }finally{
+    btn.innerHTML = origHtml; btn.disabled = !assignViaTargetRows().length;
+  }
+});
+// re-check the eligible count whenever the filters or search behind the Fleet Log table change,
+// so the summary in an already-open modal always matches the current filter state
+['#searchBox','#fromDateInput','#toDateInput'].forEach(sel => {
+  const el = $(sel);
+  if (el) el.addEventListener('input', () => { if ($('#assignViaModal').classList.contains('show')) refreshAssignViaSummary(); });
+});
+$('#filterPop').addEventListener('click', () => { if ($('#assignViaModal').classList.contains('show')) refreshAssignViaSummary(); });
+
 // restore a label map uploaded in an earlier session
 try{
   const savedLabels = JSON.parse(localStorage.getItem('ap2_salikLabelMap') || 'null');
@@ -1797,7 +1944,8 @@ document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   toggleInfo(false);
   closeFilterPopover();
-  if ($('#labelModal').classList.contains('show')) closeLabelModal();
+  if ($('#assignViaModal').classList.contains('show')) closeAssignViaModal();
+  else if ($('#labelModal').classList.contains('show')) closeLabelModal();
   else if ($('#dupModal').classList.contains('show')) closeUploadPreview();
   else if ($('#batchModal').classList.contains('show')) closeBatch();
   else if (state.upOpen) closeUpload();
