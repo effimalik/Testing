@@ -98,6 +98,7 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidd
 .vb-spacer{flex:1;}
 .ib{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:var(--radius-lg);background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:15px;line-height:1;cursor:pointer;transition:color .15s,border-color .15s,background .15s;}
 .ib:hover{border-color:var(--accent);color:var(--accent);}
+.ib.active{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
 
 /* cache status indicator */
 #cache-status{padding:0;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;cursor:pointer;border-radius:var(--radius-lg);background:var(--bg3);border:1px solid var(--border);color:var(--text2);transition:color .2s,border-color .2s,background .2s;}
@@ -234,7 +235,8 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 /* up-head doubles as the panel toolbar once a PDF is loaded — everything sits in one wrapping row instead of two stacked bars */
 .up-head{display:flex;align-items:center;gap:10px;row-gap:8px;flex-wrap:wrap;padding:12px 16px;padding-top:max(12px,env(safe-area-inset-top));border-bottom:1px solid var(--border);flex:0 0 auto;}
 .up-head h3{display:flex;align-items:center;gap:8px;flex:0 0 auto;font-size:14px;font-weight:700;}
-.up-head #upClose{margin-left:auto;flex:0 0 auto;}
+.up-head #btnSaveSheet{margin-left:auto;flex:0 0 auto;}
+.up-head #upClose{flex:0 0 auto;}
 .up-file{flex:0 0 auto;min-width:0;max-width:180px;font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .up-head .config-row{flex:0 0 auto;}
 #configRow{display:flex;flex-wrap:wrap;}
@@ -252,8 +254,12 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 #upDrawer:not(.has-pdf) #excFilter,
 #upDrawer:not(.has-pdf) #upCount,
 #upDrawer:not(.has-pdf) #upSearchWrap,
+#upDrawer:not(.has-pdf) #btnSaveSheet,
 #upDrawer:not(.has-pdf) .up-body,
 #upDrawer:not(.has-pdf) .up-foot{display:none;}
+/* Exceptions-only: the fill options only affect exception trips, so keep them collapsed on Trip Details */
+#upDrawer.has-pdf .config-row{display:none;}
+#upDrawer.has-pdf.up-tab-exceptions .config-row{display:flex;}
 #upDrawer.has-pdf .up-empty{display:none;}
 
 /* ═══ RECONCILIATION — batches as a responsive grid of individual bordered cards ═══ */
@@ -389,6 +395,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
         </div>
         <div class="toolbar-actions">
           <span class="label" id="rowCountLabel"></span>
+          <button type="button" class="ib" id="btnHideZeroAmt" aria-label="Remove zero-amount rows" aria-pressed="false" title="Remove rows with Amount (AED) = 0"><i class="ti ti-currency-dirham-off"></i></button>
           <button type="button" class="ib" id="labelUploadBtn" aria-label="Upload label data" title="Upload data to label a Fleet Log column"><i class="ti ti-cloud-upload"></i></button>
           <input type="file" id="labelFileInput" accept=".csv,.txt" style="display:none;">
         </div>
@@ -466,7 +473,12 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
     <h3 title="Upload PDF"><i class="ti ti-file-upload"></i></h3>
     <button type="button" class="ib" id="btnUpload" aria-label="Upload PDF" title="Upload PDF"><i class="ti ti-upload"></i></button>
     <span class="up-file" id="upFile">No PDF selected</span>
-    <!-- options: changing them re-runs reconciliation automatically; hidden until a PDF is loaded -->
+    <!-- panel-toolbar controls merged into the same row as the head, shown once a PDF is loaded -->
+    <div class="tab-nav" id="upTabs">
+      <button class="tab-btn active" data-tab="details">Trip Details <span class="count" id="cntDetails">0</span></button>
+      <button class="tab-btn" data-tab="exceptions">Exceptions <span class="count" id="cntExceptions">0</span></button>
+    </div>
+    <!-- options: changing them re-runs reconciliation automatically; only relevant to (and shown on) the Exceptions tab -->
     <div class="config-row" id="configRow" title="Reconciles automatically when changed">
       <div class="field">
         <label>Fill method</label>
@@ -495,11 +507,6 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
         </select>
       </div>
     </div>
-    <!-- panel-toolbar controls merged into the same row as the head, shown once a PDF is loaded -->
-    <div class="tab-nav" id="upTabs">
-      <button class="tab-btn active" data-tab="details">Trip Details <span class="count" id="cntDetails">0</span></button>
-      <button class="tab-btn" data-tab="exceptions">Exceptions <span class="count" id="cntExceptions">0</span></button>
-    </div>
     <select class="tb-select" id="excFilter" style="display:none;" aria-label="Filter exceptions">
       <option value="all">All exceptions</option>
       <option value="Assigned">Assigned (filled)</option>
@@ -510,6 +517,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
       <button type="button" class="ib search-icon-btn" id="upSearchToggle" aria-label="Search" title="Search"><i class="ti ti-search"></i></button>
       <input type="text" class="search-input" id="upSearch" placeholder="Filter rows&hellip;">
     </div>
+    <button type="button" class="btn btn-primary btn-sm" id="btnSaveSheet" title="Save data" disabled><i class="ti ti-cloud-upload"></i>Save</button>
     <button type="button" class="ib" id="upClose" aria-label="Close"><i class="ti ti-x"></i></button>
   </div>
   <div class="up-empty" id="upEmpty">
@@ -519,7 +527,6 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
   <div class="up-body" id="upTable"></div>
   <div class="up-foot">
     <span class="up-status" id="upStatus"></span>
-    <button type="button" class="btn btn-primary" id="btnSaveSheet" title="Save data" disabled><i class="ti ti-cloud-upload"></i>Save</button>
   </div>
 </aside>
 
@@ -612,6 +619,7 @@ const state = {
   activeTab: 'log',
   upOpen: false, upTab: 'details', reconShown: [],   // upload panel + visible Reconciliation batches
   excFilter: 'all',
+  hideZeroAmount: false,
   logFilters: { pushedBy: [], fromDate: '', toDate: '' },
   histCache: [], savedRows: [], hist: [], histMap: new Map(),
   histLoaded: null, histSub: false, histTimer: null,
@@ -1215,6 +1223,11 @@ function renderTable(tabName, searchTerm){
     if (state.logFilters.toDate) rows = rows.filter(r => fmtDay(r.tripTs) <= state.logFilters.toDate);
   }
 
+  if (state.hideZeroAmount){
+    const amtCol = def.cols.find(c => c.label === 'Amount (AED)');
+    if (amtCol) rows = rows.filter(r => Number(r[amtCol.key]) !== 0);
+  }
+
   if (searchTerm){
     const s = searchTerm.toLowerCase();
     rows = rows.filter(r => def.cols.some(c => String(c.fmt ? c.fmt(r[c.key]) : r[c.key]).toLowerCase().includes(s)));
@@ -1293,9 +1306,8 @@ function openFilterPopover(anchorEl, filterKey, options, current, tabName, multi
   cancelFilterAutoClose();
 }
 function closeFilterPopover(){ $('#filterPop').classList.remove('show'); cancelFilterAutoClose(); filterHovering = false; }
-/* the popover opens on click and never closes just because the user clicks elsewhere on the
-   window; it only auto-closes 3s after the pointer is no longer over the filter icon or the
-   popover itself (or immediately, on an explicit "All"/single-value pick — see below). */
+/* the popover closes on a click outside it, 3s after the pointer is no longer over the
+   filter icon or the popover itself, or immediately on an explicit "All"/single-value pick. */
 let filterAutoCloseTimer = null, filterHovering = false;
 function cancelFilterAutoClose(){ clearTimeout(filterAutoCloseTimer); filterAutoCloseTimer = null; }
 function scheduleFilterAutoClose(){ cancelFilterAutoClose(); filterAutoCloseTimer = setTimeout(closeFilterPopover, 3000); }
@@ -1305,6 +1317,11 @@ document.addEventListener('mouseover', (e) => {
   const over = isOverFilterTrigger(e.target);
   if (over && !filterHovering){ filterHovering = true; cancelFilterAutoClose(); }
   else if (!over && filterHovering){ filterHovering = false; scheduleFilterAutoClose(); }
+});
+/* also close on a click anywhere outside the popover / its trigger buttons */
+document.addEventListener('click', (e) => {
+  if (!$('#filterPop').classList.contains('show')) return;
+  if (!isOverFilterTrigger(e.target)) closeFilterPopover();
 });
 $('#filterPop').addEventListener('click', (e) => {
   const item = e.target.closest('.fp-item');
@@ -1560,6 +1577,7 @@ function activateUpTab(name){
   $('#upSearchWrap').classList.remove('open');
   $('#upSearchToggle').classList.remove('active');
   $('#excFilter').style.display = name === 'exceptions' ? '' : 'none';
+  $('#upDrawer').classList.toggle('up-tab-exceptions', name === 'exceptions');
   renderTable(name, '');
   sizeUpDrawerToTable();
 }
@@ -1572,16 +1590,36 @@ $$('#upTabs .tab-btn').forEach(tab => tab.addEventListener('click', () => activa
 $('#searchBox').addEventListener('input', (e) => { renderTable(state.activeTab, e.target.value); });
 $('#upSearch').addEventListener('input', (e) => { renderTable(state.upTab, e.target.value); });
 
-/* search boxes collapse to a plain icon; clicking the icon reveals the input */
+/* search boxes collapse to a plain icon; clicking the icon reveals the input.
+   Once open, it closes on a click anywhere outside it, or 3s after the pointer
+   stops hovering it (matching the column-filter popover behaviour below). */
 function bindSearchToggle(wrapSel, toggleSel, inputSel){
   const wrap = $(wrapSel), toggle = $(toggleSel), input = $(inputSel);
+  let closeTimer = null, hovering = false;
+  function cancelClose(){ clearTimeout(closeTimer); closeTimer = null; }
+  function scheduleClose(){ cancelClose(); closeTimer = setTimeout(closeWrap, 3000); }
+  function closeWrap(){
+    wrap.classList.remove('open');
+    if (!input.value) toggle.classList.remove('active');
+    cancelClose(); hovering = false;
+  }
   toggle.addEventListener('click', (e) => {
     e.stopPropagation();
     const open = wrap.classList.toggle('open');
     toggle.classList.toggle('active', open);
-    if (open) input.focus(); else if (!input.value) { /* stays collapsed, empty */ }
+    if (open){ input.focus(); hovering = true; cancelClose(); } else cancelClose();
   });
-  input.addEventListener('blur', () => { if (!input.value){ wrap.classList.remove('open'); toggle.classList.remove('active'); } });
+  input.addEventListener('blur', () => { if (!input.value) closeWrap(); });
+  document.addEventListener('mouseover', (e) => {
+    if (!wrap.classList.contains('open')) return;
+    const over = wrap.contains(e.target);
+    if (over && !hovering){ hovering = true; cancelClose(); }
+    else if (!over && hovering){ hovering = false; scheduleClose(); }
+  });
+  document.addEventListener('click', (e) => {
+    if (!wrap.classList.contains('open')) return;
+    if (!wrap.contains(e.target)) closeWrap();
+  });
 }
 bindSearchToggle('#searchWrap', '#searchToggle', '#searchBox');
 bindSearchToggle('#upSearchWrap', '#upSearchToggle', '#upSearch');
@@ -1610,6 +1648,12 @@ $('#pushedByFilterBtn').addEventListener('click', (e) => {
   openFilterPopover(e.currentTarget, 'pushedBy', values, state.logFilters.pushedBy, 'log', true);
 });
 $('#btnSaveSheet').addEventListener('click', saveToSheet);
+$('#btnHideZeroAmt').addEventListener('click', () => {
+  state.hideZeroAmount = !state.hideZeroAmount;
+  $('#btnHideZeroAmt').classList.toggle('active', state.hideZeroAmount);
+  $('#btnHideZeroAmt').setAttribute('aria-pressed', String(state.hideZeroAmount));
+  renderTable(state.activeTab, $('#searchBox').value);
+});
 $('#btnUpload').addEventListener('click', () => $('#pdfInput').click());
 $('#upClose').addEventListener('click', closeUpload);
 $('#upBack').addEventListener('click', closeUpload);
