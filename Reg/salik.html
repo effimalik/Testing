@@ -158,7 +158,7 @@ body{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;overf
 .tab-btn:not(.active):hover{background:var(--surface2);color:var(--text);}
 
 .results-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);overflow:hidden;}
-.panel-toolbar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap;}
+.panel-toolbar{display:flex;justify-content:flex-start;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap;}
 .panel-toolbar .search-input{font-family:var(--mono);font-size:12px;border:1.5px solid var(--border2);border-radius:var(--radius);padding:7px 11px;width:220px;background:var(--surface2);color:var(--text);}
 .panel-toolbar .search-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
 /* search box collapsed to an icon; expands into the input on click */
@@ -177,7 +177,9 @@ body{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;overf
 .th-label{display:inline-flex;align-items:center;}
 .filter-pop{position:fixed;z-index:500;display:none;flex-direction:column;min-width:170px;max-width:260px;max-height:260px;overflow:auto;padding:6px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);}
 .filter-pop.show{display:flex;}
-.fp-item{padding:7px 10px;border-radius:var(--radius);font-size:12px;font-family:var(--font);text-transform:none;letter-spacing:0;font-weight:500;color:var(--text2);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fp-item{display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:var(--radius);font-size:12px;font-family:var(--font);text-transform:none;letter-spacing:0;font-weight:500;color:var(--text2);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fp-item i{flex-shrink:0;font-size:14px;color:var(--text3);}
+.fp-item.active i{color:var(--accent);}
 .fp-item:hover{background:var(--surface2);color:var(--text);}
 .fp-item.active{background:var(--accent-dim);color:var(--accent);font-weight:700;}
 .toolbar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
@@ -223,13 +225,13 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 /* ═══ UPLOAD PANEL — right-side div opened from + ═══ */
 .up-back{position:fixed;inset:0;z-index:340;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .2s;}
 .up-back.show{opacity:1;pointer-events:auto;}
-.up-drawer{position:fixed;top:0;right:0;bottom:0;z-index:350;width:min(780px,100vw);display:flex;flex-direction:column;background:var(--bg2);border-left:1px solid var(--border2);box-shadow:var(--shadow-lg);transform:translateX(100%);visibility:hidden;transition:transform .25s cubic-bezier(.4,0,.2,1),visibility 0s .25s;}
+.up-drawer{position:fixed;top:0;right:0;bottom:0;z-index:350;width:clamp(320px,75vw,100vw);display:flex;flex-direction:column;background:var(--bg2);border-left:1px solid var(--border2);box-shadow:var(--shadow-lg);transform:translateX(100%);visibility:hidden;transition:transform .25s cubic-bezier(.4,0,.2,1),visibility 0s .25s;}
 .up-drawer.show{transform:translateX(0);visibility:visible;transition:transform .25s cubic-bezier(.4,0,.2,1),visibility 0s;}
-.up-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;padding-top:max(12px,env(safe-area-inset-top));border-bottom:1px solid var(--border);}
+.up-head{display:flex;align-items:center;gap:12px;flex-wrap:nowrap;overflow-x:auto;padding:12px 16px;padding-top:max(12px,env(safe-area-inset-top));border-bottom:1px solid var(--border);}
 .up-head h3{display:flex;align-items:center;gap:8px;flex:0 0 auto;font-size:14px;font-weight:700;}
-.up-head #upClose{margin-left:auto;}
-.up-file{flex:0 1 auto;min-width:0;max-width:140px;font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.up-head .config-row{flex:0 0 100%;}
+.up-head #upClose{margin-left:auto;flex:0 0 auto;}
+.up-file{flex:0 0 auto;min-width:0;max-width:140px;font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.up-head .config-row{flex:0 0 auto;}
 /* keep the reconciliation options in the same single row as the upload button, regardless of viewport width (id beats the responsive .config-row overrides below) */
 #configRow{display:flex;flex-wrap:nowrap;}
 #configRow .field{flex:0 0 auto;min-width:0;}
@@ -549,7 +551,7 @@ const state = {
   activeTab: 'log',
   upOpen: false, upTab: 'details', reconShown: [],   // upload panel + visible Reconciliation batches
   excFilter: 'all',
-  logFilters: { pushedBy: 'all', fromDate: '', toDate: '' },
+  logFilters: { pushedBy: [], fromDate: '', toDate: '' },
   histCache: [], savedRows: [], hist: [], histMap: new Map(),
   histLoaded: null, histSub: false, histTimer: null,
   pendingUpload: null
@@ -1125,7 +1127,7 @@ function renderTable(tabName, searchTerm){
   let rows = baseRows.slice();
   if (tabName === 'exceptions' && state.excFilter !== 'all') rows = rows.filter(r => r.status === state.excFilter);
   if (tabName === 'log'){
-    if (state.logFilters.pushedBy !== 'all') rows = rows.filter(r => r.pushedBy === state.logFilters.pushedBy);
+    if (state.logFilters.pushedBy.length) rows = rows.filter(r => state.logFilters.pushedBy.includes(r.pushedBy));
     if (state.logFilters.fromDate) rows = rows.filter(r => fmtDay(r.tripTs) >= state.logFilters.fromDate);
     if (state.logFilters.toDate) rows = rows.filter(r => fmtDay(r.tripTs) <= state.logFilters.toDate);
   }
@@ -1185,13 +1187,19 @@ function renderTable(tabName, searchTerm){
   });
 }
 
-/* column-filter popover: shared by every filterable column (Fleet Log: Pushed By, Trip Date/Time) */
-function openFilterPopover(anchorEl, filterKey, options, current, tabName){
+/* column-filter popover: shared by every filterable column (Fleet Log: Pushed By, Trip Date/Time).
+   multi=true renders checkboxes and lets the user pick more than one value; the popover then stays
+   open across individual picks and only closes on "All" or on an outside click (see below). */
+function openFilterPopover(anchorEl, filterKey, options, current, tabName, multi){
   const pop = $('#filterPop');
   pop.dataset.filterKey = filterKey;
   pop.dataset.tab = tabName;
-  pop.innerHTML = '<div class="fp-item' + (current === 'all' ? ' active' : '') + '" data-v="all">All</div>' +
-    options.map(o => '<div class="fp-item' + (o === current ? ' active' : '') + '" data-v="' + escapeHtml(o) + '">' + escapeHtml(o) + '</div>').join('');
+  pop.dataset.multi = multi ? '1' : '';
+  const sel = multi ? (current || []) : current;
+  const isChecked = (o) => multi ? sel.includes(o) : o === sel;
+  pop.innerHTML = '<div class="fp-item' + ((multi ? sel.length === 0 : current === 'all') ? ' active' : '') + '" data-v="all">All</div>' +
+    options.map(o => '<div class="fp-item' + (isChecked(o) ? ' active' : '') + '" data-v="' + escapeHtml(o) + '">' +
+      (multi ? '<i class="ti ti-' + (isChecked(o) ? 'square-check' : 'square') + '"></i>' : '') + escapeHtml(o) + '</div>').join('');
   const r = anchorEl.getBoundingClientRect();
   pop.style.display = 'flex'; // measure before final positioning
   const popW = pop.offsetWidth || 200;
@@ -1203,9 +1211,27 @@ function closeFilterPopover(){ $('#filterPop').classList.remove('show'); }
 $('#filterPop').addEventListener('click', (e) => {
   const item = e.target.closest('.fp-item');
   if (!item) return;
-  const pop = $('#filterPop'), key = pop.dataset.filterKey, tab = pop.dataset.tab;
-  state.logFilters[key] = item.dataset.v;
-  closeFilterPopover();
+  const pop = $('#filterPop'), key = pop.dataset.filterKey, tab = pop.dataset.tab, multi = pop.dataset.multi === '1';
+  if (multi){
+    if (item.dataset.v === 'all'){
+      state.logFilters[key] = [];
+      closeFilterPopover(); // explicit "All" reset closes the dropdown
+    } else {
+      const arr = state.logFilters[key];
+      const idx = arr.indexOf(item.dataset.v);
+      const nowChecked = idx === -1;
+      if (nowChecked) arr.push(item.dataset.v); else arr.splice(idx, 1);
+      // update this item + the "All" row in place, keep the dropdown open for more picks
+      item.classList.toggle('active', nowChecked);
+      const icon = item.querySelector('i');
+      if (icon) icon.className = 'ti ti-' + (nowChecked ? 'square-check' : 'square');
+      const allItem = pop.querySelector('.fp-item[data-v="all"]');
+      if (allItem) allItem.classList.toggle('active', arr.length === 0);
+    }
+  } else {
+    state.logFilters[key] = item.dataset.v;
+    closeFilterPopover(); // single-select closes as soon as a value is chosen
+  }
   updateLogFilterUI();
   renderTable(tab, tabCtx(tab).search.value);
 });
@@ -1480,7 +1506,7 @@ bindSearchToggle('#toDateWrap', '#toDateToggle', '#toDateInput');
 function updateLogFilterUI(){
   $('#fromDateToggle').classList.toggle('active', !!state.logFilters.fromDate);
   $('#toDateToggle').classList.toggle('active', !!state.logFilters.toDate);
-  $('#pushedByFilterBtn').classList.toggle('active', state.logFilters.pushedBy !== 'all');
+  $('#pushedByFilterBtn').classList.toggle('active', state.logFilters.pushedBy.length > 0);
 }
 $('#fromDateInput').addEventListener('change', (e) => {
   state.logFilters.fromDate = e.target.value;
@@ -1495,7 +1521,7 @@ $('#toDateInput').addEventListener('change', (e) => {
 $('#pushedByFilterBtn').addEventListener('click', (e) => {
   e.stopPropagation();
   const values = Array.from(new Set(state.results.log.map(r => r.pushedBy).filter(Boolean))).sort();
-  openFilterPopover(e.currentTarget, 'pushedBy', values, state.logFilters.pushedBy, 'log');
+  openFilterPopover(e.currentTarget, 'pushedBy', values, state.logFilters.pushedBy, 'log', true);
 });
 $('#btnSaveSheet').addEventListener('click', saveToSheet);
 $('#btnUpload').addEventListener('click', () => $('#pdfInput').click());
