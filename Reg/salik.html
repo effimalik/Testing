@@ -127,6 +127,13 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidd
 
 /* ═══ FIELD / FORM ═══ */
 .field{display:flex;flex-direction:column;gap:5px;}
+.override-toggle{display:flex;align-items:center;gap:8px;margin:10px 0 4px;font-size:12.5px;color:var(--text2);cursor:pointer;}
+.override-toggle input{accent-color:var(--text2);width:15px;height:15px;flex-shrink:0;cursor:pointer;}
+.override-toggle.override-active{color:#e5484d;font-weight:600;}
+.override-toggle.override-active input{accent-color:#e5484d;}
+.assign-via-stats{display:flex;gap:14px;font-size:12px;color:var(--text2);margin-bottom:6px;flex-wrap:wrap;}
+.assign-via-stats .warn{color:#e5484d;font-weight:600;}
+.assign-via-action{font-size:12.5px;color:var(--text);}
 .field label{font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;}
 .field select,.field input[type=text]{padding:8px 11px;border:1.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:12.5px;}
 .field select:focus,.field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
@@ -391,6 +398,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
         </div>
         <div class="toolbar-actions">
           <span class="label" id="rowCountLabel"></span>
+          <span class="label" id="assignedViaCountLabel" title="Assigned via, in the currently filtered rows"></span>
           <button type="button" class="ib" id="labelUploadBtn" aria-label="Update Assigned via" title="Set Assigned via (by month) on the filtered rows that don't have one yet"><i class="ti ti-calendar-plus"></i></button>
           <input type="file" id="labelFileInput" accept=".csv,.txt" style="display:none;">
         </div>
@@ -458,6 +466,10 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
         <label>Month</label>
         <select id="assignViaMonth"></select>
       </div>
+      <label class="override-toggle" id="overrideLabel" for="assignViaOverride">
+        <input type="radio" id="assignViaOverride">
+        <span>Overwrite rows that already have an Assigned via value</span>
+      </label>
       <div class="modal-note" id="assignViaSummary"></div>
     </div>
     <div class="modal-foot">
@@ -1288,6 +1300,10 @@ function renderTable(tabName, searchTerm){
   }
 
   ctx.count.textContent = rows.length + ' row' + (rows.length===1?'':'s');
+  if (tabName === 'log'){
+    const assignedN = rows.filter(r => r.assignedVia).length;
+    $('#assignedViaCountLabel').textContent = '\u00b7 ' + assignedN + ' assigned \u00b7 ' + (rows.length - assignedN) + ' empty';
+  }
 
   if (rows.length === 0){
     let msg;
@@ -1623,6 +1639,8 @@ function activateTab(name){
   $('#searchWrap').classList.remove('open');
   $('#searchToggle').classList.remove('active');
   $('#logDateFilters').style.display = name === 'log' ? 'inline-flex' : 'none';
+  $('#labelUploadBtn').style.display = name === 'log' ? 'inline-flex' : 'none'; // Assigned via updater is Fleet Log-only
+  $('#assignedViaCountLabel').style.display = name === 'log' ? '' : 'none'; // assigned/empty counts are Fleet Log-only
   renderTable(name, '');
   renderMeta();
 }
@@ -1836,22 +1854,66 @@ function assignViaMonthOptions(){
   }
   return opts;
 }
-function assignViaTargetRows(){
+// Overwrite mode needs two separate approvals before it actually touches rows
+// that already have an Assigned via value. States:
+//   'idle'           - default; ticking the radio + clicking Update triggers confirm() #1
+//   'awaitingRetick' - confirm() #1 was accepted; radio was auto-unticked and must be
+//                      re-ticked by the user (their 2nd approval action) before anything runs
+//   'armed'          - radio was re-ticked while awaitingRetick; the NEXT Update click
+//                      triggers confirm() #2, and only after that does the sheet update run
+// Any unrelated change (unticking, closing/reopening the modal, the filtered rows changing)
+// drops back to 'idle' so a stale confirmation can never carry over.
+let assignViaStage = 'idle';
+function isAssignViaOverrideOn(){ return $('#assignViaOverride').checked; }
+function assignViaFilteredRows(){
   let rows = applyLogFilters(state.results.log.slice());
-  rows = applySearchFilter(rows, TAB_DEFS.log, $('#searchBox').value);
-  return rows.filter(r => !r.assignedVia);
+  return applySearchFilter(rows, TAB_DEFS.log, $('#searchBox').value);
+}
+function assignViaTargetRows(){
+  const rows = assignViaFilteredRows();
+  return isAssignViaOverrideOn() ? rows : rows.filter(r => !r.assignedVia);
 }
 function refreshAssignViaSummary(){
-  const n = assignViaTargetRows().length;
-  $('#assignViaSummary').innerHTML = n
-    ? '<b>' + n + '</b> filtered row' + (n === 1 ? '' : 's') + ' without an Assigned via value will be updated.'
-    : 'No filtered row is missing an Assigned via value \u2014 nothing to update.';
-  $('#assignViaApply').disabled = !n;
+  const override = isAssignViaOverrideOn();
+  const filtered = assignViaFilteredRows();
+  const total = filtered.length;
+  const already = filtered.filter(r => r.assignedVia).length;
+  const empty = total - already;
+  const willUpdate = override ? total : empty;
+  const month = escapeHtml(monthLabel($('#assignViaMonth').value));
+
+  const stats = '<div class="assign-via-stats">' +
+      '<span><b>' + total + '</b> total filtered</span>' +
+      '<span><b>' + empty + '</b> empty</span>' +
+      '<span' + (already ? (override ? ' class="warn"' : '') : '') + '><b>' + already + '</b> already assigned</span>' +
+    '</div>';
+  const action = willUpdate
+    ? 'Will set <b>' + willUpdate + '</b> row' + (willUpdate === 1 ? '' : 's') + ' to "<b>' + month + '</b>"' +
+      (override && already ? ', overwriting <b>' + already + '</b> existing value' + (already === 1 ? '' : 's') : '') + '.'
+    : (override ? 'No filtered rows to update.' : 'No filtered row is missing an Assigned via value \u2014 nothing to update.');
+  $('#assignViaSummary').innerHTML = stats + '<div class="assign-via-action">' + action + '</div>';
+  $('#assignViaApply').disabled = !willUpdate;
+}
+$('#assignViaMonth').addEventListener('change', () => { resetAssignViaOverride(); refreshAssignViaSummary(); });
+$('#assignViaOverride').addEventListener('change', () => {
+  const checked = $('#assignViaOverride').checked;
+  $('#overrideLabel').classList.toggle('override-active', checked);
+  // the one case where ticking should NOT reset progress: the user re-ticking it
+  // as their 2nd approval right after confirm() #1 accepted it
+  if (checked && assignViaStage === 'awaitingRetick') assignViaStage = 'armed';
+  else assignViaStage = 'idle';
+  refreshAssignViaSummary();
+});
+function resetAssignViaOverride(){
+  $('#assignViaOverride').checked = false;
+  $('#overrideLabel').classList.remove('override-active');
+  assignViaStage = 'idle';
 }
 function openAssignViaModal(){
   const opts = assignViaMonthOptions();
   $('#assignViaMonth').innerHTML = opts.map(o => '<option value="' + o.value + '">' + escapeHtml(o.label) + '</option>').join('');
   $('#assignViaMonth').value = opts[1].value; // i = 0 → current month
+  resetAssignViaOverride(); // start every open with overwrite off and un-armed
   refreshAssignViaSummary();
   $('#assignViaModal').classList.add('show');
 }
@@ -1895,12 +1957,44 @@ $('#assignViaApply').addEventListener('click', async () => {
   const rows = assignViaTargetRows();
   if (!rows.length){ showToast('No rows to update.', 'error'); return; }
   const label = monthLabel($('#assignViaMonth').value);
+  const override = isAssignViaOverrideOn();
+  const alreadySetCount = rows.filter(r => r.assignedVia).length;
+
+  // Overwrite mode needs two separate approvals before anything is sent:
+  //  1) tick the red "Overwrite" radio + click Update -> confirm() #1
+  //  2) re-tick the radio (auto-cleared after #1) + click Update again -> confirm() #2
+  // Only after both does the sheet actually get updated.
+  if (override && alreadySetCount > 0){
+    if (assignViaStage !== 'armed'){
+      const ok = confirm(
+        'This will overwrite the existing Assigned via value on ' + alreadySetCount +
+        ' row' + (alreadySetCount === 1 ? '' : 's') + ' with "' + label + '". Continue?'
+      );
+      if (ok){
+        assignViaStage = 'awaitingRetick';
+        $('#assignViaOverride').checked = false; // force the 2nd approval: user must re-tick it
+        $('#overrideLabel').classList.remove('override-active');
+        showToast('Re-tick "Overwrite" and click Update again to confirm.', 'error');
+      } else {
+        resetAssignViaOverride();
+      }
+      refreshAssignViaSummary();
+      return;
+    }
+    const ok2 = confirm(
+      'Final confirmation: overwrite ' + alreadySetCount + ' existing value' +
+      (alreadySetCount === 1 ? '' : 's') + ' with "' + label + '"? This cannot be undone.'
+    );
+    if (!ok2){ resetAssignViaOverride(); refreshAssignViaSummary(); return; }
+  }
+
   const btn = $('#assignViaApply');
   const origHtml = btn.innerHTML;
   btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader spin"></i>';
   try{
     await updateAssignedViaOnSheet(rows, label);
     rows.forEach(r => { r.assignedVia = label; }); // these are the same objects backing state.hist
+    resetAssignViaOverride();
     closeAssignViaModal();
     recompute();
     showToast('\u2713 Updated Assigned via for ' + rows.length + ' row' + (rows.length === 1 ? '' : 's'), 'success');
@@ -1914,9 +2008,17 @@ $('#assignViaApply').addEventListener('click', async () => {
 // so the summary in an already-open modal always matches the current filter state
 ['#searchBox','#fromDateInput','#toDateInput'].forEach(sel => {
   const el = $(sel);
-  if (el) el.addEventListener('input', () => { if ($('#assignViaModal').classList.contains('show')) refreshAssignViaSummary(); });
+  if (el) el.addEventListener('input', () => {
+    if (!$('#assignViaModal').classList.contains('show')) return;
+    resetAssignViaOverride(); // target rows just changed \u2014 don't carry a stale overwrite confirmation into them
+    refreshAssignViaSummary();
+  });
 });
-$('#filterPop').addEventListener('click', () => { if ($('#assignViaModal').classList.contains('show')) refreshAssignViaSummary(); });
+$('#filterPop').addEventListener('click', () => {
+  if (!$('#assignViaModal').classList.contains('show')) return;
+  resetAssignViaOverride();
+  refreshAssignViaSummary();
+});
 
 // restore a label map uploaded in an earlier session
 try{
