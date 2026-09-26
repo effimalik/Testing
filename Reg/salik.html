@@ -286,12 +286,13 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 #upDrawer.has-pdf .up-empty{display:none;}
 
 /* ═══ RECONCILIATION — batches as a responsive grid of individual bordered cards ═══ */
-.batches-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;padding:14px;align-items:stretch;}
+.batches-list{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;padding:14px;align-items:stretch;}
 .batch-card{position:relative;display:flex;align-items:center;gap:12px;padding:16px 18px;min-width:0;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--bg2);cursor:pointer;transition:background .12s,border-color .12s;}
 .batch-card:hover{background:var(--surface2);border-color:var(--border2);}
 .batch-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 .bc-icon{width:34px;height:34px;flex-shrink:0;border-radius:9px;background:var(--accent-dim);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:16px;}
-.bc-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+.bc-body{flex:1;min-width:0;display:grid;grid-template-columns:1fr 1fr;column-gap:18px;row-gap:6px;align-content:start;}
+.bc-col{display:flex;flex-direction:column;gap:6px;min-width:0;}
 .bc-title-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .bc-name{font-family:var(--mono);font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .bc-meta-row{display:flex;flex-wrap:wrap;gap:10px;font-size:11.5px;color:var(--text2);}
@@ -303,7 +304,6 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
 .bc-stats .st-v{font-family:var(--mono);font-weight:700;}
 .bc-stats .st-v.ok{color:var(--teal);}
 .bc-stats .st-v.warn{color:var(--amber);}
-.bc-saved{flex-shrink:0;align-self:center;white-space:nowrap;}
 .ib:disabled{opacity:.45;cursor:not-allowed;}
 .ib:disabled:hover{border-color:var(--border);color:var(--text2);}
 .ib i.spin{animation:spin 1s linear infinite;}
@@ -342,7 +342,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
   .vb-spacer{flex:1;}
   .batches-list{grid-template-columns:1fr;padding:10px;}
   .batch-card{flex-wrap:wrap;}
-  .bc-saved{margin-left:auto;}
+  .bc-body{grid-template-columns:1fr;}
   .config-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
   .config-row .field:last-child{grid-column:1/-1;}
   .tab-btn{padding:7px 10px;}
@@ -364,10 +364,10 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
   <div class="vb-brand"><i class="ti ti-road"></i></div>
   <!-- modules: default = Fleet Log. Active one shows icon + name, the others are icon-only -->
   <div class="capsule" id="capsule" role="tablist" aria-label="Salik modules">
-    <button type="button" class="cap-btn" data-tab="recon" role="tab" aria-selected="false" title="Reconciliation &middot; batches" aria-label="Reconciliation"><i class="ti ti-stack-2"></i><span class="cap-txt">Reconciliation <span class="count" id="cntRecon">0</span></span></button>
+    <button type="button" class="cap-btn active" data-tab="recon" role="tab" aria-selected="true" title="Reconciliation &middot; batches" aria-label="Reconciliation"><i class="ti ti-stack-2"></i><span class="cap-txt">Reconciliation <span class="count" id="cntRecon">0</span></span></button>
     <button type="button" class="cap-btn" data-tab="sessions" role="tab" aria-selected="false" title="Checkout Sessions (bikes &amp; cars)" aria-label="Checkout Sessions"><i class="ti ti-car"></i><span class="cap-txt">Checkout Sessions <span class="count" id="cntSessions">0</span></span></button>
     <button type="button" class="cap-btn" data-tab="summary" role="tab" aria-selected="false" title="Summary" aria-label="Summary"><i class="ti ti-chart-bar"></i><span class="cap-txt">Summary <span class="count" id="cntSummary">0</span></span></button>
-    <button type="button" class="cap-btn active" data-tab="log" role="tab" aria-selected="true" title="Fleet Log" aria-label="Fleet Log"><i class="ti ti-list-details"></i><span class="cap-txt">Fleet Log <span class="count" id="cntLog">0</span></span></button>
+    <button type="button" class="cap-btn" data-tab="log" role="tab" aria-selected="false" title="Fleet Log" aria-label="Fleet Log"><i class="ti ti-list-details"></i><span class="cap-txt">Fleet Log <span class="count" id="cntLog">0</span></span></button>
   </div>
 
   <div class="vb-spacer"></div>
@@ -394,7 +394,7 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
     <div class="results-panel">
       <div class="panel-toolbar">
         <div class="tb-left">
-          <div class="date-filters" id="logDateFilters">
+          <div class="date-filters" id="logDateFilters" style="display:none;">
             <div class="search-wrap" id="fromDateWrap">
               <!-- From = calendar-event (start), To = calendar-check (end) so the two are visually distinct -->
               <button type="button" class="ib search-icon-btn" id="fromDateToggle" aria-label="Filter from date" title="From date"><i class="ti ti-calendar-event"></i></button>
@@ -410,14 +410,14 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
             <button type="button" class="ib search-icon-btn" id="searchToggle" aria-label="Search" title="Search"><i class="ti ti-search"></i></button>
             <input type="text" class="search-input" id="searchBox" placeholder="Filter rows&hellip;">
           </div>
-          <button type="button" class="ib" id="clearFilterBtn" aria-label="Clear filters" title="Clear all filters"><i class="ti ti-filter-x"></i></button>
-          <button type="button" class="ib" id="summaryRiderFilterBtn" aria-label="Filter by rider" title="Filter by rider" style="display:none;"><i class="ti ti-filter"></i></button>
+          <button type="button" class="ib" id="summaryMonthFilterBtn" aria-label="Filter by month" title="Filter by month" style="display:none;"><i class="ti ti-filter"></i></button>
+          <button type="button" class="ib" id="clearFilterBtn" aria-label="Clear filters" title="Clear all filters"><i class="ti ti-eraser"></i></button>
         </div>
         <div class="toolbar-actions">
           <span class="label" id="rowCountLabel"></span>
-          <span class="label" id="assignedViaCountLabel" title="Assigned via, in the currently filtered rows"></span>
+          <span class="label" id="assignedViaCountLabel" title="Assigned via, in the currently filtered rows" style="display:none;"></span>
           <button type="button" class="btn btn-ghost btn-sm" id="exportSummaryBtn" style="display:none;" title="Export Summary as Excel"><i class="ti ti-file-spreadsheet"></i>Export</button>
-          <button type="button" class="ib" id="labelUploadBtn" aria-label="Update Assigned via" title="Set Assigned via (by month) on the filtered rows that don't have one yet"><i class="ti ti-calendar-plus"></i></button>
+          <button type="button" class="ib" id="labelUploadBtn" aria-label="Update Assigned via" title="Pick a From and To date filter first" disabled style="display:none;"><i class="ti ti-calendar-plus"></i></button>
           <input type="file" id="labelFileInput" accept=".csv,.txt" style="display:none;">
         </div>
       </div>
@@ -676,11 +676,11 @@ const state = {
   pdfMeta: {},
   results: { log: [], summary: [], details: [], exceptions: [], sessions: [], recon: [] },
   sort: { log: { key: 'tripTs', dir: 'desc' }, summary: { key: 'month', dir: 'desc' } },
-  activeTab: 'log',
+  activeTab: 'recon', // lands on Reconciliation
   upOpen: false, upTab: 'details', reconShown: [],   // upload panel + visible Reconciliation batches
   excFilter: 'all',
   hideZeroAmount: false,
-  logFilters: { pushedBy: [], fromDate: '', toDate: '', summaryRider: [] },
+  logFilters: { pushedBy: [], fromDate: '', toDate: '', summaryMonth: [] },
   histCache: [], savedRows: [], hist: [], histMap: new Map(),
   histLoaded: null, histSub: false, histTimer: null,
   pendingUpload: null,
@@ -1364,7 +1364,7 @@ function renderTable(tabName, searchTerm){
   let rows = baseRows.slice();
   if (tabName === 'exceptions' && state.excFilter !== 'all') rows = rows.filter(r => r.status === state.excFilter);
   if (tabName === 'log') rows = applyLogFilters(rows);
-  if (tabName === 'summary' && state.logFilters.summaryRider.length) rows = rows.filter(r => state.logFilters.summaryRider.includes(r.riderId));
+  if (tabName === 'summary' && state.logFilters.summaryMonth.length) rows = rows.filter(r => state.logFilters.summaryMonth.includes(monthLabel(r.month)));
 
   if (state.hideZeroAmount && UP_TABS.includes(tabName)){
     const amtCol = def.cols.find(c => c.label === 'Amount (AED)');
@@ -1470,7 +1470,7 @@ function closeFilterPopover(){
 let filterAutoCloseTimer = null, filterHovering = false;
 function cancelFilterAutoClose(){ clearTimeout(filterAutoCloseTimer); filterAutoCloseTimer = null; }
 function scheduleFilterAutoClose(){ cancelFilterAutoClose(); filterAutoCloseTimer = setTimeout(closeFilterPopover, 3000); }
-function isOverFilterTrigger(el){ return !!(el && el.closest && (el.closest('.filter-pop') || el.closest('.th-filter') || el.closest('#pushedByFilterBtn') || el.closest('#summaryRiderFilterBtn'))); }
+function isOverFilterTrigger(el){ return !!(el && el.closest && (el.closest('.filter-pop') || el.closest('.th-filter') || el.closest('#pushedByFilterBtn') || el.closest('#summaryMonthFilterBtn'))); }
 document.addEventListener('mouseover', (e) => {
   if (!$('#filterPop').classList.contains('show')) return;
   const over = isOverFilterTrigger(e.target);
@@ -1515,19 +1515,22 @@ function batchRowHtml(b, i){
   return '<div class="batch-card" data-i="' + i + '" tabindex="0" role="button">' +
     '<div class="bc-icon"><i class="ti ti-stack-2"></i></div>' +
     '<div class="bc-body">' +
-      '<div class="bc-title-row">' +
-        '<span class="bc-name">' + escapeHtml(b.pushedAt || 'Unknown') + '</span>' +
-        '<span class="badge ok"><i class="ti ti-check"></i> Saved</span>' +
+      '<div class="bc-col">' +
+        '<div class="bc-title-row">' +
+          '<span class="bc-name">' + escapeHtml(b.pushedAt || 'Unknown') + '</span>' +
+          '<span class="badge ok"><i class="ti ti-check"></i> Saved</span>' +
+        '</div>' +
+        '<div class="bc-meta-row">' +
+          '<span>' + fmtDay(b.minTs) + ' \u2192 ' + fmtDay(b.maxTs) + '</span>' +
+          '<span>' + b.records + ' record' + (b.records === 1 ? '' : 's') + '</span>' +
+          '<span class="bc-amount">AED ' + fmtAed(b.amount) + '</span>' +
+        '</div>' +
       '</div>' +
-      '<div class="bc-meta-row">' +
-        '<span>' + fmtDay(b.minTs) + ' \u2192 ' + fmtDay(b.maxTs) + '</span>' +
-        '<span>' + b.records + ' record' + (b.records === 1 ? '' : 's') + '</span>' +
-        '<span class="bc-amount">AED ' + fmtAed(b.amount) + '</span>' +
+      '<div class="bc-col">' +
+        '<div class="bc-uploaded">Pushed by <b>' + escapeHtml(b.pushedBy || '\u2014') + '</b> &middot; <span class="bk" style="margin-right:0;">Assigned via</span> ' + escapeHtml(batchViaText(b)) + '</div>' +
+        batchStatsHtml(b) +
       '</div>' +
-      '<div class="bc-uploaded">Pushed by <b>' + escapeHtml(b.pushedBy || '\u2014') + '</b> &middot; <span class="bk" style="margin-right:0;">Assigned via</span> ' + escapeHtml(batchViaText(b)) + '</div>' +
-      batchStatsHtml(b) +
     '</div>' +
-    '<span class="badge ok bc-saved"><i class="ti ti-check"></i> Saved</span>' +
   '</div>';
 }
 function renderRecon(searchTerm){
@@ -1732,7 +1735,7 @@ function activateTab(name){
   $('#logDateFilters').style.display = name === 'log' ? 'inline-flex' : 'none';
   $('#labelUploadBtn').style.display = name === 'log' ? 'inline-flex' : 'none'; // Assigned via updater is Fleet Log-only
   $('#assignedViaCountLabel').style.display = name === 'log' ? '' : 'none'; // assigned/empty counts are Fleet Log-only
-  $('#summaryRiderFilterBtn').style.display = name === 'summary' ? 'inline-flex' : 'none'; // rider multi-select is Summary-only
+  $('#summaryMonthFilterBtn').style.display = name === 'summary' ? 'inline-flex' : 'none'; // month multi-select is Summary-only
   $('#exportSummaryBtn').style.display = name === 'summary' ? 'inline-flex' : 'none'; // Export as Excel is Summary-only
   renderTable(name, '');
   renderMeta();
@@ -1808,7 +1811,21 @@ function updateLogFilterUI(){
   $('#fromDateToggle').classList.toggle('active', !!state.logFilters.fromDate);
   $('#toDateToggle').classList.toggle('active', !!state.logFilters.toDate);
   $('#pushedByFilterBtn').classList.toggle('active', state.logFilters.pushedBy.length > 0);
-  $('#summaryRiderFilterBtn').classList.toggle('active', state.logFilters.summaryRider.length > 0);
+  $('#summaryMonthFilterBtn').classList.toggle('active', state.logFilters.summaryMonth.length > 0);
+  updateLabelUploadBtnState();
+}
+// Safety gate: "Update Assigned via" bulk-writes to every row currently on screen. Without both
+// a From and a To date chosen, "currently on screen" could silently mean the WHOLE sheet, and one
+// click would overwrite Assigned via on rows nobody meant to touch. So the button stays disabled
+// until the rows it will act on are a deliberately bounded, dated slice \u2014 never the full history.
+function assignViaDatesReady(){ return !!(state.logFilters.fromDate && state.logFilters.toDate); }
+function updateLabelUploadBtnState(){
+  const btn = $('#labelUploadBtn');
+  const ready = assignViaDatesReady();
+  btn.disabled = !ready;
+  btn.title = ready
+    ? "Set Assigned via (by month) on the filtered rows that don't have one yet"
+    : 'Pick a From and To date filter first \u2014 required so this only ever updates that bounded date range, never the whole sheet.';
 }
 $('#fromDateInput').addEventListener('change', (e) => {
   state.logFilters.fromDate = e.target.value;
@@ -1835,10 +1852,12 @@ $('#pushedByFilterBtn').addEventListener('click', (e) => {
   const values = Array.from(new Set(state.results.log.map(r => r.pushedBy).filter(Boolean))).sort();
   toggleFilterPopover(e.currentTarget, 'pushedBy', values, state.logFilters.pushedBy, 'log', true);
 });
-$('#summaryRiderFilterBtn').addEventListener('click', (e) => {
+$('#summaryMonthFilterBtn').addEventListener('click', (e) => {
   e.stopPropagation();
-  const values = Array.from(new Set(state.results.summary.map(r => r.riderId).filter(v => v && v !== '\u2014'))).sort();
-  toggleFilterPopover(e.currentTarget, 'summaryRider', values, state.logFilters.summaryRider, 'summary', true);
+  // newest month first, and shown as "Dec 2026" (the filter matches on that same formatted label)
+  const months = Array.from(new Set(state.results.summary.map(r => r.month).filter(m => m && m !== '\u2014'))).sort().reverse();
+  const values = months.map(monthLabel);
+  toggleFilterPopover(e.currentTarget, 'summaryMonth', values, state.logFilters.summaryMonth, 'summary', true);
 });
 // Clear filter: resets search + every column/toolbar filter for every tab, then re-renders the current one
 function clearFilters(){
@@ -1848,7 +1867,7 @@ function clearFilters(){
   state.logFilters.pushedBy = [];
   state.logFilters.fromDate = '';
   state.logFilters.toDate = '';
-  state.logFilters.summaryRider = [];
+  state.logFilters.summaryMonth = [];
   updateLogFilterUI();
   closeFilterPopover();
   renderTable(state.activeTab, '');
@@ -1937,7 +1956,13 @@ function closeLabelModal(){
   state.pendingLabelFile = null;
   $('#labelFileInput').value = '';
 }
-$('#labelUploadBtn').addEventListener('click', openAssignViaModal);
+$('#labelUploadBtn').addEventListener('click', () => {
+  if (!assignViaDatesReady()){
+    showToast('Pick a From and To date filter first \u2014 needed so this can\u2019t accidentally overwrite Assigned via on the whole sheet.', 'error');
+    return;
+  }
+  openAssignViaModal();
+});
 $('#labelFileInput').addEventListener('change', async (e) => {
   const file = e.target.files && e.target.files[0];
   e.target.value = ''; // allow re-picking the same file later
