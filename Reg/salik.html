@@ -11,6 +11,7 @@
 <script src="https://effimalik.github.io/Testing/shared/cacheWatcher.js?v=1"></script>
 <script src="https://effimalik.github.io/Testing/shared/cioView.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
 /* ═══ THEME — kept identical to the shared module chrome ═══ */
@@ -109,6 +110,11 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidd
 #cache-status.ready{color:#fff;background:var(--accent);border-color:var(--accent);box-shadow:0 0 10px var(--accent-glow);}
 #cache-status.ready:hover{color:#fff;filter:brightness(1.12);}
 #cache-status:focus-visible,.ib:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+/* Information icon: no border, ever (still gets the accent color/background on hover/open) */
+#btnInfo{border:none;}
+
+/* panel-toolbar: highlight the "assigned" count in red once it's above zero */
+.assigned-warn{color:var(--red);font-weight:700;}
 
 /* info popover (subtitle, cache status, Salik account) */
 .vb-actions{position:relative;display:flex;align-items:center;gap:8px;flex-shrink:0;}
@@ -358,10 +364,10 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
   <div class="vb-brand"><i class="ti ti-road"></i></div>
   <!-- modules: default = Fleet Log. Active one shows icon + name, the others are icon-only -->
   <div class="capsule" id="capsule" role="tablist" aria-label="Salik modules">
-    <button type="button" class="cap-btn active" data-tab="log" role="tab" aria-selected="true" title="Fleet Log" aria-label="Fleet Log"><i class="ti ti-list-details"></i><span class="cap-txt">Fleet Log <span class="count" id="cntLog">0</span></span></button>
-    <button type="button" class="cap-btn" data-tab="summary" role="tab" aria-selected="false" title="Summary" aria-label="Summary"><i class="ti ti-chart-bar"></i><span class="cap-txt">Summary <span class="count" id="cntSummary">0</span></span></button>
-    <button type="button" class="cap-btn" data-tab="sessions" role="tab" aria-selected="false" title="Checkout Sessions (bikes &amp; cars)" aria-label="Checkout Sessions"><i class="ti ti-car"></i><span class="cap-txt">Checkout Sessions <span class="count" id="cntSessions">0</span></span></button>
     <button type="button" class="cap-btn" data-tab="recon" role="tab" aria-selected="false" title="Reconciliation &middot; batches" aria-label="Reconciliation"><i class="ti ti-stack-2"></i><span class="cap-txt">Reconciliation <span class="count" id="cntRecon">0</span></span></button>
+    <button type="button" class="cap-btn" data-tab="sessions" role="tab" aria-selected="false" title="Checkout Sessions (bikes &amp; cars)" aria-label="Checkout Sessions"><i class="ti ti-car"></i><span class="cap-txt">Checkout Sessions <span class="count" id="cntSessions">0</span></span></button>
+    <button type="button" class="cap-btn" data-tab="summary" role="tab" aria-selected="false" title="Summary" aria-label="Summary"><i class="ti ti-chart-bar"></i><span class="cap-txt">Summary <span class="count" id="cntSummary">0</span></span></button>
+    <button type="button" class="cap-btn active" data-tab="log" role="tab" aria-selected="true" title="Fleet Log" aria-label="Fleet Log"><i class="ti ti-list-details"></i><span class="cap-txt">Fleet Log <span class="count" id="cntLog">0</span></span></button>
   </div>
 
   <div class="vb-spacer"></div>
@@ -404,10 +410,13 @@ footer.meta{display:flex;justify-content:space-between;font-size:11.5px;color:va
             <button type="button" class="ib search-icon-btn" id="searchToggle" aria-label="Search" title="Search"><i class="ti ti-search"></i></button>
             <input type="text" class="search-input" id="searchBox" placeholder="Filter rows&hellip;">
           </div>
+          <button type="button" class="ib" id="clearFilterBtn" aria-label="Clear filters" title="Clear all filters"><i class="ti ti-filter-x"></i></button>
+          <button type="button" class="ib" id="summaryRiderFilterBtn" aria-label="Filter by rider" title="Filter by rider" style="display:none;"><i class="ti ti-filter"></i></button>
         </div>
         <div class="toolbar-actions">
           <span class="label" id="rowCountLabel"></span>
           <span class="label" id="assignedViaCountLabel" title="Assigned via, in the currently filtered rows"></span>
+          <button type="button" class="btn btn-ghost btn-sm" id="exportSummaryBtn" style="display:none;" title="Export Summary as Excel"><i class="ti ti-file-spreadsheet"></i>Export</button>
           <button type="button" class="ib" id="labelUploadBtn" aria-label="Update Assigned via" title="Set Assigned via (by month) on the filtered rows that don't have one yet"><i class="ti ti-calendar-plus"></i></button>
           <input type="file" id="labelFileInput" accept=".csv,.txt" style="display:none;">
         </div>
@@ -671,11 +680,13 @@ const state = {
   upOpen: false, upTab: 'details', reconShown: [],   // upload panel + visible Reconciliation batches
   excFilter: 'all',
   hideZeroAmount: false,
-  logFilters: { pushedBy: [], fromDate: '', toDate: '' },
+  logFilters: { pushedBy: [], fromDate: '', toDate: '', summaryRider: [] },
   histCache: [], savedRows: [], hist: [], histMap: new Map(),
   histLoaded: null, histSub: false, histTimer: null,
   pendingUpload: null,
-  labelMap: new Map(), labelMatchField: 'transactionId', pendingLabelFile: null
+  labelMap: new Map(), labelMatchField: 'transactionId', pendingLabelFile: null,
+  employeeMap: new Map(), empSub: false, empTimer: null, // Rider ID -> Name, from the ap2_employee cache
+  lastRendered: {} // tabName -> rows actually shown after every filter/search/sort (used by Export)
 };
 const UP_TABS = ['details','exceptions'];   // shown in the upload panel; everything else is the default view
 
@@ -848,6 +859,18 @@ const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'
 // Sheets can turn an 11-digit id into a number and drop a leading zero, so ids are compared without it.
 function txKey(v){ return String(v == null ? '' : v).trim().replace(/^0+/, ''); }
 function monthLabel(v){ const m = /^(\d{4})-(\d{2})$/.exec(v || ''); return m ? MONTH_NAMES[+m[2]-1] + ' ' + m[1] : (v || '\u2014'); }
+// "Assigned via" is meant to hold a month label like "Dec 2026", but a sheet cell that was
+// ever set as an actual Date comes back as a full timestamp (e.g. 2026-12-31T20:00:00.000Z) —
+// collapse that down to the same Month/Year format the dropdown uses, everywhere else is left as-is.
+function assignedViaLabel(v){
+  const s = String(v == null ? '' : v).trim();
+  if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/.test(s)){
+    const t = Date.parse(s);
+    if (!isNaN(t)){ const d = new Date(t); return MONTH_NAMES[d.getMonth()] + ' ' + d.getFullYear(); }
+  }
+  return s;
+}
 function parseHistTs(v){
   if (v instanceof Date) return v.getTime() || 0;
   const s = String(v == null ? '' : v).trim();
@@ -882,7 +905,7 @@ function normaliseHistRow(r){
   const d = new Date(ts);
   return { transactionId: tx, riderId: S(1), plate: S(2), itemId: S(3), tripTs: ts,
     month: ts ? d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') : '\u2014',
-    amount: parseFloat(S(5).replace(/,/g,'')) || 0, location: S(6), matchType: S(7), assignedVia: S(8),
+    amount: parseFloat(S(5).replace(/,/g,'')) || 0, location: S(6), matchType: S(7), assignedVia: assignedViaLabel(S(8)),
     pushedAt: fmtCell(a[9]), pushedBy: S(10) };
 }
 function setHistStatus(mode, info){
@@ -938,8 +961,46 @@ function buildHistSummary(rows){
     g.count++; g.totalAmount += r.amount;
   });
   return Array.from(map.values())
-    .map(g => ({ month: g.month, riderId: g.riderId, plates: Array.from(g.plateSet).sort().join(', '), count: g.count, totalAmount: g.totalAmount }))
+    .map(g => ({ month: g.month, riderId: g.riderId, riderName: state.employeeMap.get(String(g.riderId).trim()) || '',
+      plates: Array.from(g.plateSet).sort().join(', '), count: g.count, totalAmount: g.totalAmount }))
     .sort((a,b) => b.count - a.count);
+}
+
+/* ===================== RIDER NAMES (ap2_employee cache) ===================== */
+// Normalises one ap2_employee row — array form [Emp ID, Name, ...] or object form keyed by header —
+// into { id, name }. Only Rider ID -> Name lookups are needed here, nothing else from that cache.
+function normaliseEmployeeRow(r){
+  if (!r) return null;
+  if (Array.isArray(r)){
+    const id = String(r[0] == null ? '' : r[0]).trim();
+    if (!id || id === 'Emp ID') return null;
+    const name = String(r[1] == null ? '' : r[1]).trim();
+    if (!name) return null;
+    return { id, name };
+  }
+  const id = String(r['Emp ID'] ?? r.EmpID ?? r.empId ?? r.EID ?? r.ID ?? '').trim();
+  const name = String(r['Name'] ?? r.name ?? '').trim();
+  if (!id || !name) return null;
+  return { id, name };
+}
+async function loadEmployees(){
+  clearTimeout(state.empTimer);
+  try{
+    let raw = await AP2CacheWatcher.readKey('ap2_employee');
+    if (!raw) raw = (await scanAllStoresForKey('ap2_employee')).value;
+    const arr = normalizeArr(raw, 'ap2_employee');
+    const map = new Map();
+    arr.forEach(r => { const e = normaliseEmployeeRow(r); if (e) map.set(e.id, e.name); });
+    state.employeeMap = map;
+    recompute();
+    if (typeof AP2CacheWatcher.subscribe === 'function' && !state.empSub){
+      state.empSub = true;
+      AP2CacheWatcher.subscribe((key) => { if (key === 'ap2_employee') loadEmployees(); });
+    }
+  }catch(err){
+    // ap2_employee cache not available yet \u2014 Name just stays blank; keep checking quietly
+    state.empTimer = setTimeout(loadEmployees, 5000);
+  }
 }
 
 // Reconciliation batches: salikDump has no batch id column, so one save = one batch = rows sharing Pushed At + Pushed By.
@@ -1141,7 +1202,8 @@ const TAB_DEFS = {
     {key:'assignedVia', label:'Assigned via', fmt: v => v || '\u2014'}
   ]},
   summary: { cols: [
-    {key:'month', label:'Month', fmt: monthLabel}, {key:'riderId', label:'Rider ID'}, {key:'plates', label:'Plate(s)'},
+    {key:'month', label:'Month', fmt: monthLabel}, {key:'riderId', label:'Rider ID'},
+    {key:'riderName', label:'Name', fmt: v => v || '\u2014'}, {key:'plates', label:'Plate(s)'},
     {key:'count', label:'Salik (Count)', num:true},
     {key:'totalAmount', label:'Amount (AED)', num:true, fmt: v => v.toFixed(2)}
   ]},
@@ -1302,6 +1364,7 @@ function renderTable(tabName, searchTerm){
   let rows = baseRows.slice();
   if (tabName === 'exceptions' && state.excFilter !== 'all') rows = rows.filter(r => r.status === state.excFilter);
   if (tabName === 'log') rows = applyLogFilters(rows);
+  if (tabName === 'summary' && state.logFilters.summaryRider.length) rows = rows.filter(r => state.logFilters.summaryRider.includes(r.riderId));
 
   if (state.hideZeroAmount && UP_TABS.includes(tabName)){
     const amtCol = def.cols.find(c => c.label === 'Amount (AED)');
@@ -1321,10 +1384,12 @@ function renderTable(tabName, searchTerm){
     });
   }
 
+  state.lastRendered[tabName] = rows; // what's actually on screen right now, for e.g. Export
+
   ctx.count.textContent = rows.length + ' row' + (rows.length===1?'':'s');
   if (tabName === 'log'){
     const assignedN = rows.filter(r => r.assignedVia).length;
-    $('#assignedViaCountLabel').textContent = '\u00b7 ' + assignedN + ' assigned \u00b7 ' + (rows.length - assignedN) + ' empty';
+    $('#assignedViaCountLabel').innerHTML = '\u00b7 <span class="' + (assignedN > 0 ? 'assigned-warn' : '') + '">' + assignedN + ' assigned</span> \u00b7 ' + (rows.length - assignedN) + ' empty';
   }
 
   if (rows.length === 0){
@@ -1357,6 +1422,10 @@ function renderTable(tabName, searchTerm){
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const key = btn.dataset.filterKey;
+      const pop = $('#filterPop');
+      if (pop.classList.contains('show') && pop.dataset.filterKey === key && pop.dataset.tab === tabName){
+        closeFilterPopover(); return; // second click on the same filter icon closes it
+      }
       const col = def.cols.find(c => c.filterKey === key);
       if (!col) return;
       openFilterPopover(btn, key, col.filterValues(baseRows), state.logFilters[key], tabName);
@@ -1401,7 +1470,7 @@ function closeFilterPopover(){
 let filterAutoCloseTimer = null, filterHovering = false;
 function cancelFilterAutoClose(){ clearTimeout(filterAutoCloseTimer); filterAutoCloseTimer = null; }
 function scheduleFilterAutoClose(){ cancelFilterAutoClose(); filterAutoCloseTimer = setTimeout(closeFilterPopover, 3000); }
-function isOverFilterTrigger(el){ return !!(el && el.closest && (el.closest('.filter-pop') || el.closest('.th-filter') || el.closest('#pushedByFilterBtn'))); }
+function isOverFilterTrigger(el){ return !!(el && el.closest && (el.closest('.filter-pop') || el.closest('.th-filter') || el.closest('#pushedByFilterBtn') || el.closest('#summaryRiderFilterBtn'))); }
 document.addEventListener('mouseover', (e) => {
   if (!$('#filterPop').classList.contains('show')) return;
   const over = isOverFilterTrigger(e.target);
@@ -1663,6 +1732,8 @@ function activateTab(name){
   $('#logDateFilters').style.display = name === 'log' ? 'inline-flex' : 'none';
   $('#labelUploadBtn').style.display = name === 'log' ? 'inline-flex' : 'none'; // Assigned via updater is Fleet Log-only
   $('#assignedViaCountLabel').style.display = name === 'log' ? '' : 'none'; // assigned/empty counts are Fleet Log-only
+  $('#summaryRiderFilterBtn').style.display = name === 'summary' ? 'inline-flex' : 'none'; // rider multi-select is Summary-only
+  $('#exportSummaryBtn').style.display = name === 'summary' ? 'inline-flex' : 'none'; // Export as Excel is Summary-only
   renderTable(name, '');
   renderMeta();
 }
@@ -1737,6 +1808,7 @@ function updateLogFilterUI(){
   $('#fromDateToggle').classList.toggle('active', !!state.logFilters.fromDate);
   $('#toDateToggle').classList.toggle('active', !!state.logFilters.toDate);
   $('#pushedByFilterBtn').classList.toggle('active', state.logFilters.pushedBy.length > 0);
+  $('#summaryRiderFilterBtn').classList.toggle('active', state.logFilters.summaryRider.length > 0);
 }
 $('#fromDateInput').addEventListener('change', (e) => {
   state.logFilters.fromDate = e.target.value;
@@ -1748,11 +1820,54 @@ $('#toDateInput').addEventListener('change', (e) => {
   updateLogFilterUI();
   renderTable('log', $('#searchBox').value);
 });
+// clicking a filter icon a second time (while its own popover is already open) closes it instead
+// of re-opening the same list \u2014 shared by Pushed By and the Summary rider filter below.
+function toggleFilterPopover(anchorEl, filterKey, options, current, tabName, multi){
+  const pop = $('#filterPop');
+  if (pop.classList.contains('show') && pop.dataset.filterKey === filterKey && pop.dataset.tab === tabName){
+    closeFilterPopover();
+    return;
+  }
+  openFilterPopover(anchorEl, filterKey, options, current, tabName, multi);
+}
 $('#pushedByFilterBtn').addEventListener('click', (e) => {
   e.stopPropagation();
   const values = Array.from(new Set(state.results.log.map(r => r.pushedBy).filter(Boolean))).sort();
-  openFilterPopover(e.currentTarget, 'pushedBy', values, state.logFilters.pushedBy, 'log', true);
+  toggleFilterPopover(e.currentTarget, 'pushedBy', values, state.logFilters.pushedBy, 'log', true);
 });
+$('#summaryRiderFilterBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const values = Array.from(new Set(state.results.summary.map(r => r.riderId).filter(v => v && v !== '\u2014'))).sort();
+  toggleFilterPopover(e.currentTarget, 'summaryRider', values, state.logFilters.summaryRider, 'summary', true);
+});
+// Clear filter: resets search + every column/toolbar filter for every tab, then re-renders the current one
+function clearFilters(){
+  $('#searchBox').value = '';
+  $('#fromDateInput').value = '';
+  $('#toDateInput').value = '';
+  state.logFilters.pushedBy = [];
+  state.logFilters.fromDate = '';
+  state.logFilters.toDate = '';
+  state.logFilters.summaryRider = [];
+  updateLogFilterUI();
+  closeFilterPopover();
+  renderTable(state.activeTab, '');
+}
+$('#clearFilterBtn').addEventListener('click', clearFilters);
+// Summary: Export as Excel \u2014 exports exactly the rows currently on screen (search + rider filter applied)
+function exportSummaryToExcel(){
+  const rows = state.lastRendered.summary || [];
+  if (!rows.length){ showToast('No rows to export.', 'error'); return; }
+  if (typeof XLSX === 'undefined'){ showToast('Excel export library did not load.', 'error'); return; }
+  const cols = TAB_DEFS.summary.cols;
+  const aoa = [cols.map(c => c.label)];
+  rows.forEach(r => aoa.push(cols.map(c => { const v = r[c.key]; return c.fmt ? c.fmt(v) : v; })));
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Summary');
+  XLSX.writeFile(wb, 'salik-summary-' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+$('#exportSummaryBtn').addEventListener('click', exportSummaryToExcel);
 $('#btnSaveSheet').addEventListener('click', saveToSheet);
 function setHideZeroAmt(val){
   state.hideZeroAmount = val;
@@ -2037,8 +2152,8 @@ try{
 }catch(_){}
 
 /* re-check for the cache when the user comes back to this tab */
-window.addEventListener('focus', () => { if (state.addMode === 'off') probeCache(); if (state.histLoaded === false) loadHist(); });
-document.addEventListener('visibilitychange', () => { if (!document.hidden && state.addMode === 'off') probeCache(); if (!document.hidden && state.histLoaded === false) loadHist(); });
+window.addEventListener('focus', () => { if (state.addMode === 'off') probeCache(); if (state.histLoaded === false) loadHist(); if (!state.employeeMap.size) loadEmployees(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && state.addMode === 'off') probeCache(); if (!document.hidden && state.histLoaded === false) loadHist(); if (!document.hidden && !state.employeeMap.size) loadEmployees(); });
 
 /* info popover */
 const infoBtn = $('#btnInfo'), infoPop = $('#infoPop');
@@ -2067,6 +2182,7 @@ async function init(){
   setCacheStatus('checking', 'Checking\u2026');
   renderResults();
   loadHist();
+  loadEmployees(); // Rider ID -> Name, for the Summary tab
   await probeCache(); // "+" becomes active once the fleet log cache is available
 }
 document.addEventListener('DOMContentLoaded', init);
