@@ -728,19 +728,64 @@ function normalizeCioValue(val){
   return arr;
 }
 
-// Reads go solely through AP2CacheWatcher.readKey() — same protected path as
-// allEmp.html. That function already handles the iPad "several frames open
-// IndexedDB at once" hang internally (random stagger + timeout + one retry),
-// so no raw/unprotected indexedDB.open() fallback is needed here — adding one
-// only reintroduces the exact hang risk cacheWatcher.js was built to avoid.
+// Timeout-protected fallback: AP2CacheWatcher.readKey() only ever looks in
+// the 'datasets' store. If this browser's copy of the cache uses a
+// differently-named store, readKey() will keep returning null even though
+// the data is really there. This scans every store for the key as a
+// fallback — but unlike the old scanAllStoresForKey, it's capped with a
+// timeout so a stuck indexedDB.open() can never hang the caller forever
+// (that hang was the original iPad freeze cause).
+function scanAllStoresForKey(key){
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const req = indexedDB.open(_IDB_NAME);
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error('idb-scan-timeout'));
+    }, 2000);
+    req.onerror = () => {
+      if (settled) return;
+      settled = true; clearTimeout(timer);
+      reject(new Error('Could not open IndexedDB "' + _IDB_NAME + '".'));
+    };
+    req.onsuccess = (e) => {
+      if (settled) return;
+      settled = true; clearTimeout(timer);
+      const db = e.target.result;
+      const storeNames = Array.from(db.objectStoreNames);
+      if (storeNames.length === 0){ db.close(); reject(new Error('Database exists but has no object stores.')); return; }
+      let found = null, remaining = storeNames.length;
+      const tx = db.transaction(storeNames, 'readonly');
+      storeNames.forEach(storeName => {
+        const getReq = tx.objectStore(storeName).get(key);
+        getReq.onsuccess = () => {
+          if (getReq.result !== undefined && found === null) found = { store: storeName, value: getReq.result };
+          if (--remaining === 0){ db.close(); found ? resolve(found) : reject(new Error('No object store contained key "' + key + '". Checked: ' + storeNames.join(', '))); }
+        };
+        getReq.onerror = () => { if (--remaining === 0){ db.close(); found ? resolve(found) : reject(new Error('Error reading object stores.')); } };
+      });
+    };
+  });
+}
+
+// Reads try the protected AP2CacheWatcher.readKey() first (same path
+// allEmp.html uses). Only if that comes back empty do we fall back to the
+// timeout-protected store scan above — so the common case never touches a
+// raw indexedDB.open(), and the fallback can't hang even when it's needed.
 async function readCioRaw(){
   if (!state.watcherInit){
     if (typeof AP2CacheWatcher.init === 'function') AP2CacheWatcher.init();
     state.watcherInit = true;
   }
-  const raw = await AP2CacheWatcher.readKey('ap2_cioLog');
-  if (!raw) throw new Error('ap2_cioLog not in cache yet');
-  return { arr: normalizeCioValue(raw), sourceLabel: 'live sync' };
+  let raw = await AP2CacheWatcher.readKey('ap2_cioLog');
+  let sourceLabel = 'live sync';
+  if (!raw){
+    const found = await scanAllStoresForKey('ap2_cioLog');
+    raw = found.value;
+    sourceLabel = 'store "' + found.store + '"';
+  }
+  return { arr: normalizeCioValue(raw), sourceLabel };
 }
 
 // Checked on open, then every 5 s while the cache is missing. Once found it loads automatically and "+" turns active.
@@ -896,8 +941,8 @@ function setHistStatus(mode, info){
 async function loadHist(){
   clearTimeout(state.histTimer);
   try{
-    const raw = await AP2CacheWatcher.readKey('ap2_salikDump');
-    if (!raw) throw new Error('ap2_salikDump not in cache yet');
+    let raw = await AP2CacheWatcher.readKey('ap2_salikDump');
+    if (!raw) raw = (await scanAllStoresForKey('ap2_salikDump')).value;
     state.histCache = normalizeArr(raw, 'ap2_salikDump').map(normaliseHistRow).filter(Boolean);
     state.histLoaded = true;
     setHistStatus('ok', state.histCache.length + ' saved trips');
@@ -966,8 +1011,8 @@ function normaliseEmployeeRow(r){
 async function loadEmployees(){
   clearTimeout(state.empTimer);
   try{
-    const raw = await AP2CacheWatcher.readKey('ap2_employee');
-    if (!raw) throw new Error('ap2_employee not in cache yet');
+    let raw = await AP2CacheWatcher.readKey('ap2_employee');
+    if (!raw) raw = (await scanAllStoresForKey('ap2_employee')).value;
     const arr = normalizeArr(raw, 'ap2_employee');
     const map = new Map();
     arr.forEach(r => { const e = normaliseEmployeeRow(r); if (e) map.set(e.id, e.name); });
