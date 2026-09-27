@@ -627,9 +627,23 @@ window.addEventListener('message', (e)=>{
 });
 try{ window.parent.postMessage({ type:'ap-session-request' }, '*'); }catch(e){}
 
+function _currentSession(){
+  // Same session the doc portal reads before every write — checked here first so
+  // this portal's writes pass the backend auth gate the same way theirs do.
+  let s = {};
+  try{ s = JSON.parse(sessionStorage.getItem('ap_session') || '{}'); }catch(e){}
+  if(s.sessionId || s.token) return { sessionId: s.sessionId||'', token: s.token||'', email: s.email||'' };
+  if(AP2_SESSION) return AP2_SESSION; // fallback: parent-frame handshake, for when this portal is embedded cross-origin
+  return null;
+}
 async function apiPost(action, payload){
   const body = { action, payload };
-  if(AP2_SESSION){ body.sessionId = AP2_SESSION.sessionId; body.token = AP2_SESSION.token; }
+  const session = _currentSession();
+  if(!session || (!session.sessionId && !session.token)){
+    showToast('You must be logged in to save changes','error');
+    return { success:false, error:'Not logged in' };
+  }
+  body.sessionId = session.sessionId; body.token = session.token;
   const res = await fetch(APPSCRIPT_URL, {
     method:'POST',
     headers:{ 'Content-Type':'text/plain;charset=utf-8' }, // avoids a CORS preflight Apps Script can't answer
@@ -1089,7 +1103,7 @@ function accountRowHtml(acc){
       ${acc.isPrimary ? '<span class="badge primary">PRIMARY</span>' : '<span class="badge secondary">SECONDARY</span>'}
       ${isAuto ? '<span class="badge auto-badge">SYNCED</span>' : `<span class="upd">Upd ${esc(fmtTs(acc.updatedAt))}</span>`}
     </div>
-    ${!isAuto ? `<button class="ib sm" type="button" title="Edit account" onclick="openEditFromRow(event,'${acc.id}')"><i class="ti ti-pencil"></i></button>` : ''}
+    <button class="ib sm" type="button" title="Edit account" onclick="openEditFromRow(event,'${acc.id}')"><i class="ti ti-pencil"></i></button>
   </div>`;
 }
 function accountPreviewHtml(acc){
@@ -1109,12 +1123,12 @@ function accountPreviewHtml(acc){
       <div class="pmi"><span class="k">Updated</span><span class="v">${esc(fmtTs(acc.updatedAt))}</span></div>
       <div class="pmi"><span class="k">Source</span><span class="v">${isAuto ? 'Synced' : 'Manual'}</span></div>
     </div>
-    ${!isAuto ? `<div class="ppf" style="padding:14px 0 0;border-top:none;">
+    <div class="ppf" style="padding:14px 0 0;border-top:none;">
       <button class="btn btn-ghost btn-sm" title="${acc.isPrimary?'Already primary':'Set as primary'}" ${acc.isPrimary?'disabled':''} onclick="setPrimary('${acc.id}')"><i class="ti ti-star"></i> Primary</button>
       <button class="btn btn-ghost btn-sm" onclick="toggleActive('${acc.id}')"><i class="ti ${acc.active?'ti-toggle-right':'ti-toggle-left'}"></i> ${acc.active?'Deactivate':'Activate'}</button>
       <button class="btn btn-ghost btn-sm" onclick="openEditForm('${acc.id}')"><i class="ti ti-pencil"></i> Edit</button>
       <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red);" onclick="deleteAccount('${acc.id}')"><i class="ti ti-trash"></i></button>
-    </div>` : `<div class="hint-note" style="margin-top:10px;">Synced from ap2_accLog — add a manual account to override.</div>`}
+    </div>
   `;
 }
 function openAddForm(label){ manageAddOpen = label; editingAccountId = null; selectedAccountId = null; renderManagePreview(); }
