@@ -214,6 +214,31 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
 #accP .hist-side{margin-left:auto;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:5px;}
 #accP .hist-side .upd{font-size:9.5px;color:var(--text3);white-space:nowrap;}
 
+/* ═══ ACCOUNT HISTORY TIMELINE — added → changed → current, nothing dropped ═══ */
+#accP .hist-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:14px 16px;box-shadow:var(--shadow);margin-bottom:10px;}
+#accP .hist-card-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+#accP .hist-card-head .hn{font-weight:700;font-size:13px;color:var(--text);}
+#accP .hist-card-head .hid{font-family:var(--mono);font-size:11px;color:var(--text3);}
+#accP .hev-count{margin-left:auto;font-size:10.5px;color:var(--text3);font-weight:600;white-space:nowrap;}
+#accP .hev-track{display:flex;flex-direction:column;gap:0;}
+#accP .hev{position:relative;padding:0 0 14px 18px;border-left:2px solid var(--border);}
+#accP .hev:last-child{border-left-color:transparent;padding-bottom:0;}
+#accP .hev::before{content:'';position:absolute;left:-6px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--accent);border:2px solid var(--surface);}
+#accP .hev.hev-added::before{background:var(--teal);}
+#accP .hev.hev-frozen::before{background:var(--text3);}
+#accP .hev.hev-current::before{background:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
+#accP .hev-title{font-size:12.5px;font-weight:700;color:var(--text);}
+#accP .hev-changes{margin-top:5px;display:flex;flex-direction:column;gap:2px;}
+#accP .hev-change-line{font-size:11px;color:var(--text2);font-family:var(--mono);}
+#accP .hev-change-line b{color:var(--text);font-weight:700;}
+#accP .hev-reason{margin-top:4px;font-size:11px;color:var(--amber);}
+#accP .hev-date{margin-top:6px;font-size:10.5px;color:var(--text3);display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+/* frozen events read as a muted, secondary line — smaller text, faded, no bold emphasis */
+#accP .hev.hev-frozen{opacity:.62;}
+#accP .hev.hev-frozen .hev-title{font-size:11px;font-weight:600;font-style:italic;color:var(--text2);}
+#accP .hev.hev-frozen .hev-change-line{font-size:10px;}
+#accP .hev.hev-current .hev-title{font-size:13px;}
+
 #accP .doc-preview-panel{width:0;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);overflow:hidden;transition:width .26s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;}
 #accP .doc-preview-panel.open{width:340px;}
 #accP .pph{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;flex-shrink:0;}
@@ -276,6 +301,8 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
 #accP .badge i{margin-right:2px;font-size:9px;}
 #accP .badge.active{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(57,211,83,.3);}
 #accP .badge.inactive{background:var(--bg3);color:var(--text3);border:1px solid var(--border);}
+#accP .badge.frozen{background:var(--bg3);color:var(--text3);border:1px solid var(--border2);opacity:.7;font-style:italic;}
+#accP .badge.frozen i{color:var(--text3);}
 #accP .badge.expired{background:var(--red-dim);color:var(--red);border:1px solid rgba(248,81,73,.3);}
 #accP .badge.upcoming{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(163,113,247,.3);}
 #accP .badge.primary{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(88,166,255,.3);}
@@ -291,6 +318,7 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
 #accP .stat{flex:1;min-width:92px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius-lg);padding:7px 11px;box-shadow:var(--shadow);}
 #accP .stat.s-active{border-left-color:var(--teal);}
 #accP .stat.s-inactive{border-left-color:var(--text3);}
+#accP .stat.s-frozen{border-left-color:var(--text3);opacity:.8;}
 #accP .stat.s-expired{border-left-color:var(--red);}
 #accP .stat.s-upcoming{border-left-color:var(--purple);}
 #accP .stat.s-primary{border-left-color:var(--accent);}
@@ -350,6 +378,7 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
     <div class="tab-nav">
       <button class="tab-btn active" id="tab-manage-btn" title="Manage accounts" onclick="switchPortalTab('manage')"><i class="ti ti-users"></i><span class="tlabel">Manage</span><span class="tab-count" id="tab-manage-count">0</span></button>
       <button class="tab-btn" id="tab-all-btn" title="All Accounts" onclick="switchPortalTab('all')"><i class="ti ti-list-details"></i><span class="tlabel">All Accounts</span><span class="tab-count" id="tab-all-count">0</span></button>
+      <button class="tab-btn" id="tab-history-btn" title="Account History" onclick="switchPortalTab('history')"><i class="ti ti-history"></i><span class="tlabel">History</span><span class="tab-count" id="tab-history-count">0</span></button>
       <button class="tab-btn" id="tab-upload-btn" title="Upload & export" onclick="switchPortalTab('upload')"><i class="ti ti-file-upload"></i><span class="tlabel">Upload</span><span class="tab-count" id="tab-upload-count">0</span></button>
     </div>
     <span class="vb-flex-spacer"></span>
@@ -413,13 +442,29 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
         </div>
         <div class="filters" style="margin-top:10px;">
           <div><label>Label</label><select class="date-input" id="f2-label"><option value="">All</option><option value="WPS">WPS</option><option value="Salary">Salary</option><option value="Other">Other</option></select></div>
-          <div><label>Status</label><select class="date-input" id="f2-status"><option value="">All</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="expired">Expired</option><option value="upcoming">Upcoming</option></select></div>
+          <div><label>Status</label><select class="date-input" id="f2-status"><option value="">All</option><option value="active">Active</option><option value="frozen">Frozen</option><option value="inactive">Inactive</option><option value="expired">Expired</option><option value="upcoming">Upcoming</option></select></div>
           <div><label>Primary</label><select class="date-input" id="f2-primary"><option value="">All</option><option value="primary">Primary only</option><option value="secondary">Secondary only</option></select></div>
           <div><label>Search</label><input class="date-input" id="f2-search" type="text" placeholder="EID or name…"></div>
         </div>
       </div>
       <div class="panel tab-scroll" style="flex:1;">
         <div id="all-table" class="tablewrap"></div>
+      </div>
+    </div>
+
+    <!-- ══════════════ ACCOUNT HISTORY ══════════════ -->
+    <div class="tab-panel" id="tab-history">
+      <div class="panel" style="flex:0 0 auto;">
+        <div class="toolbar">
+          <div class="stat-row" id="history-stats"></div>
+        </div>
+        <div class="filters" style="margin-top:10px;">
+          <div style="flex:1;min-width:220px;"><label>Search</label><input class="date-input" id="hist-search" type="text" placeholder="EID, name or account no…"></div>
+        </div>
+        <p class="panel-hint" style="margin-top:8px;">Every recorded change is shown — nothing is filtered out. Each card is one account: when it was added, every AccType / Status / Rank change since, and its state right now. <span class="badge frozen" style="vertical-align:middle;">FROZEN</span> entries are muted and shown in smaller text to set them apart from live changes.</p>
+      </div>
+      <div class="panel tab-scroll" style="flex:1;">
+        <div id="history-list"></div>
       </div>
     </div>
 
@@ -698,6 +743,7 @@ function accountsForEidLabel(eid,label){ return allAccounts().filter(a=>a.eid===
 function distinctEIDs(){ return [...new Set(allAccounts().map(a=>a.eid))].filter(Boolean).sort(); }
 
 function statusOf(acc){
+  if(acc.frozen) return 'frozen';
   if(!acc.active) return 'inactive';
   if(acc.hasExpiry){
     const t = todayISO();
@@ -706,11 +752,18 @@ function statusOf(acc){
   }
   return 'active';
 }
+/* The exact status word as it currently stands (Active / Frozen / Inactive) —
+   distinct from statusOf(), which also folds in expiry (expired/upcoming). */
+function rawStatusLabel(acc){
+  if(acc.frozen) return 'Frozen';
+  return acc.active ? 'Active' : 'Inactive';
+}
 function isLive(acc){ return statusOf(acc)==='active'; }
 function statusBadgeHtml(s){
   const map = {
     active:'<span class="badge active"><i class="ti ti-check"></i>ACTIVE</span>',
     inactive:'<span class="badge inactive">INACTIVE</span>',
+    frozen:'<span class="badge frozen"><i class="ti ti-snowflake"></i>FROZEN</span>',
     expired:'<span class="badge expired">EXPIRED</span>',
     upcoming:'<span class="badge upcoming">UPCOMING</span>'
   };
@@ -783,6 +836,10 @@ function mapAutoAccountRow(row, idx, cacheTs){
   const sd = _parseDate(startRaw);
   const ed = _parseDate(expRaw);
   const tsNum = Number(ts) || (cacheTs || Date.now()) + idx;
+  // Status can come back as Active / Inactive / Frozen (or freeze/freezed variants).
+  // Frozen must NOT collapse into "active" just because it isn't literally "inactive".
+  const statusRaw = String(status || 'Active').trim().toLowerCase();
+  const isFrozen = statusRaw === 'frozen' || statusRaw === 'freeze' || statusRaw === 'freezed' || statusRaw === 'frozen account';
   return {
     id: 'auto_' + tsNum,
     timestamp: tsNum,             // the exact key updateAccLog/setAccLogStatus need back
@@ -791,7 +848,8 @@ function mapAutoAccountRow(row, idx, cacheTs){
     accountNo: String(accountNo),
     addDetail: (addDetail ?? '').toString().trim(),
     isPrimary: String(rank || '').toLowerCase() === 'primary',
-    active: String(status || 'Active').toLowerCase() !== 'inactive',
+    frozen: isFrozen,
+    active: !isFrozen && statusRaw !== 'inactive',
     hasExpiry: !!(sd && ed),
     startDate: sd ? toISO(sd) : '',
     expDate: ed ? toISO(ed) : '',
@@ -1035,7 +1093,7 @@ function accountFormHtml(mode, label, acc){
   const accountNo = acc ? esc(acc.accountNo) : '';
   const addDetail = acc ? esc(acc.addDetail) : '';
   const primaryVal = acc && acc.isPrimary ? 'primary' : 'secondary';
-  const activeVal = acc ? (acc.active ? 'active' : 'inactive') : 'active';
+  const activeVal = acc ? (acc.frozen ? 'frozen' : (acc.active ? 'active' : 'inactive')) : 'active';
   const hasExpiry = acc ? !!acc.hasExpiry : false;
   const startDate = acc ? (acc.startDate||'') : '';
   const expDate = acc ? (acc.expDate||'') : '';
@@ -1065,6 +1123,7 @@ function accountFormHtml(mode, label, acc){
       <div class="field"><label>Status</label>
         <select id="${idp}-active" class="date-input">
           <option value="active" ${activeVal==='active'?'selected':''}>Active</option>
+          <option value="frozen" ${activeVal==='frozen'?'selected':''}>Frozen</option>
           <option value="inactive" ${activeVal==='inactive'?'selected':''}>Inactive</option>
         </select>
       </div>
@@ -1198,11 +1257,13 @@ function readFormValues(idp){
   const labelEl = document.getElementById(idp+'-label');
   const category = labelEl ? labelEl.value : null;
   const primary = document.getElementById(idp+'-primary').value === 'primary';
-  const active = document.getElementById(idp+'-active').value === 'active';
+  const statusSel = document.getElementById(idp+'-active').value; // 'active' | 'frozen' | 'inactive'
+  const active = statusSel === 'active';
+  const statusText = statusSel === 'frozen' ? 'Frozen' : (statusSel === 'inactive' ? 'Inactive' : 'Active');
   const hasExpiry = document.getElementById(idp+'-hasexp').checked;
   const startDate = hasExpiry ? document.getElementById(idp+'-start').value : '';
   const expDate = hasExpiry ? document.getElementById(idp+'-exp').value : '';
-  return { accountNo, addDetail, category, primary, active, hasExpiry, startDate, expDate };
+  return { accountNo, addDetail, category, primary, active, statusText, hasExpiry, startDate, expDate };
 }
 async function submitAdd(label){
   if(!manageEid){ showToast('Select an employee first','error'); return; }
@@ -1212,7 +1273,7 @@ async function submitAdd(label){
   try{
     const data = await apiPost('addAccLog', {
       eid: manageEid, accType: label, accountNo: v.accountNo, addDetail: v.addDetail,
-      status: v.active ? 'Active' : 'Inactive', startDate: v.startDate, expDate: v.expDate,
+      status: v.statusText, startDate: v.startDate, expDate: v.expDate,
       rank: v.primary ? 'Primary' : 'Secondary'
     });
     if(!data.success){ showToast(data.error || 'Could not save', 'error'); return; }
@@ -1231,7 +1292,7 @@ async function submitEdit(id){
     const data = await apiPost('updateAccLog', {
       timestamp: acc.timestamp,
       accType: v.category || acc.label, accountNo: v.accountNo, addDetail: v.addDetail,
-      status: v.active ? 'Active' : 'Inactive', startDate: v.startDate, expDate: v.expDate,
+      status: v.statusText, startDate: v.startDate, expDate: v.expDate,
       rank: v.primary ? 'Primary' : 'Secondary'
     });
     if(!data.success){ showToast(data.error || 'Could not save', 'error'); return; }
@@ -1311,6 +1372,7 @@ function renderAllTab(){
   const statuses = all.map(statusOf);
   document.getElementById('all-stats').innerHTML = [
     ['s-active','Active', statuses.filter(s=>s==='active').length],
+    ['s-frozen','Frozen', statuses.filter(s=>s==='frozen').length],
     ['s-inactive','Inactive', statuses.filter(s=>s==='inactive').length],
     ['s-expired','Expired', statuses.filter(s=>s==='expired').length],
     ['s-upcoming','Upcoming', statuses.filter(s=>s==='upcoming').length],
@@ -1509,6 +1571,136 @@ document.getElementById('batch-export').addEventListener('click', ()=>{
 });
 
 /* ═══════════════════════════════════════════════════════
+   ACCOUNT HISTORY TAB
+   Every raw ap2_accLog row is already its own timestamped entry
+   (see mapAutoAccountRow) — nothing here drops a single one of them.
+   This groups those entries back into one timeline per account
+   (same EID + same Account No) so you can see: when it was added,
+   every AccType / Status / Rank change since, and what it is right
+   now — with Frozen periods shown muted/faded and in smaller text
+   so they read as "paused", not as just another normal change.
+═══════════════════════════════════════════════════════ */
+function historyGroups(){
+  const groups = {};
+  allAccounts().forEach(a=>{
+    const key = a.eid + '||' + a.accountNo;
+    (groups[key] = groups[key] || []).push(a);
+  });
+  return Object.keys(groups).map(key=>{
+    const entries = groups[key].slice().sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+    return { key, eid: entries[0].eid, accountNo: entries[0].accountNo, entries };
+  });
+}
+/* What actually changed between two consecutive log rows for the same account.
+   Checks AccType, Status and Rank first (the fields the business cares about);
+   only falls back to detail/validity/account-no if none of those three moved. */
+function diffEntries(prev, cur){
+  const lines = [];
+  if(prev.label !== cur.label) lines.push({field:'Type', from:prev.label, to:cur.label});
+  const sPrev = rawStatusLabel(prev), sCur = rawStatusLabel(cur);
+  if(sPrev !== sCur) lines.push({field:'Status', from:sPrev, to:sCur});
+  const rPrev = prev.isPrimary ? 'Primary' : 'Secondary', rCur = cur.isPrimary ? 'Primary' : 'Secondary';
+  if(rPrev !== rCur) lines.push({field:'Rank', from:rPrev, to:rCur});
+  if(!lines.length){
+    if((prev.addDetail||'') !== (cur.addDetail||'')){
+      lines.push({field:'Add Detail', from: prev.addDetail || '—', to: cur.addDetail || '—'});
+    }
+    const prevVal = prev.hasExpiry ? `${prev.startDate||'—'} → ${prev.expDate||'—'}` : 'No expiry';
+    const curVal  = cur.hasExpiry  ? `${cur.startDate||'—'} → ${cur.expDate||'—'}`  : 'No expiry';
+    if(prevVal !== curVal) lines.push({field:'Validity', from: prevVal, to: curVal});
+    if((prev.accountNo||'') !== (cur.accountNo||'')) lines.push({field:'Account No', from: prev.accountNo, to: cur.accountNo});
+  }
+  return lines;
+}
+function historyEventHtml(entry, i, entries){
+  const isFirst = i===0, isLast = i===entries.length-1, prev = entries[i-1];
+  const isFrozenNow = !!entry.frozen;
+  const cls = ['hev'];
+  if(isFirst) cls.push('hev-added'); else if(isFrozenNow) cls.push('hev-frozen');
+  if(isLast) cls.push('hev-current');
+
+  let title;
+  let changeHtml = '';
+  if(isFirst){
+    title = `Added — ${esc(entry.label)} account, ${esc(rawStatusLabel(entry))}, ${entry.isPrimary?'Primary':'Secondary'}`;
+  } else {
+    const changes = diffEntries(prev, entry);
+    if(changes.length){
+      title = changes.map(c=>c.field).join(' & ') + ' changed';
+      changeHtml = `<div class="hev-changes">${changes.map(c=>
+        `<div class="hev-change-line"><b>${esc(c.field)}</b>: ${esc(c.from)} → ${esc(c.to)}</div>`
+      ).join('')}</div>`;
+    } else {
+      title = 'Record updated (no type/status/rank change)';
+    }
+  }
+  if(isLast) title += isFirst ? '' : ' — current state';
+  else if(isFirst && entries.length===1) title += ' — current state';
+
+  // Reason: whenever a row is Frozen, surface its Add Detail as the reason on file (if any).
+  const reasonHtml = isFrozenNow && entry.addDetail
+    ? `<div class="hev-reason"><i class="ti ti-info-circle"></i> Reason on file: ${esc(entry.addDetail)}</div>`
+    : (isFrozenNow ? `<div class="hev-reason">No reason logged for this freeze — add one via Edit → Add Detail.</div>` : '');
+
+  return `<div class="${cls.join(' ')}">
+    <div class="hev-title">${title}</div>
+    ${changeHtml}
+    ${reasonHtml}
+    <div class="hev-date"><i class="ti ti-clock"></i> ${esc(fmtTs(entry.updatedAt))} &nbsp;${labelBadgeHtml(entry.label)} ${statusBadgeHtml(statusOf(entry))} ${entry.isPrimary?'<span class="badge primary">PRIMARY</span>':'<span class="badge secondary">SECONDARY</span>'}</div>
+  </div>`;
+}
+function historyCardHtml(group){
+  const entries = group.entries;
+  const last = entries[entries.length-1];
+  const nm = nameForEid(group.eid) || '—';
+  const eventsHtml = entries.map((e,i)=>historyEventHtml(e,i,entries)).join('');
+  return `<div class="hist-card">
+    <div class="hist-card-head">
+      <span class="hn">${esc(nm)}</span>
+      <span class="hid">${esc(group.eid)}</span>
+      <span class="acc-cell" style="font-size:11.5px;">${esc(group.accountNo)}</span>
+      ${labelBadgeHtml(last.label)}
+      ${statusBadgeHtml(statusOf(last))}
+      ${last.isPrimary?'<span class="badge primary">PRIMARY</span>':'<span class="badge secondary">SECONDARY</span>'}
+      <span class="hev-count">${entries.length} event${entries.length>1?'s':''} on file</span>
+    </div>
+    <div class="hev-track">${eventsHtml}</div>
+  </div>`;
+}
+function renderHistoryTab(){
+  const groups = historyGroups(); // nothing removed — every account, every logged entry
+  const searchEl = document.getElementById('hist-search');
+  const q = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  let shown = groups;
+  if(q){
+    shown = groups.filter(g=>{
+      const nm = (nameForEid(g.eid)||'').toLowerCase();
+      return g.eid.toLowerCase().includes(q) || nm.includes(q) || (g.accountNo||'').toLowerCase().includes(q);
+    });
+  }
+  shown = shown.slice().sort((a,b)=>{
+    const la = a.entries[a.entries.length-1].updatedAt || 0;
+    const lb = b.entries[b.entries.length-1].updatedAt || 0;
+    return lb - la;
+  });
+
+  const totalEvents = groups.reduce((n,g)=>n+g.entries.length,0);
+  const frozenNow = groups.filter(g=>g.entries[g.entries.length-1].frozen).length;
+  const changedEver = groups.filter(g=>g.entries.length>1).length;
+  document.getElementById('history-stats').innerHTML = [
+    ['s-primary','Accounts', groups.length],
+    ['','Logged events', totalEvents],
+    ['s-active','Ever changed', changedEver],
+    ['s-frozen','Frozen now', frozenNow],
+  ].map(([cls,l,n])=>`<div class="stat ${cls}"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+
+  const el = document.getElementById('history-list');
+  el.innerHTML = shown.length ? shown.map(historyCardHtml).join('') : '<div class="empty">No account history to show.</div>';
+  document.getElementById('tab-history-count').textContent = groups.length;
+}
+document.getElementById('hist-search').addEventListener('input', renderHistoryTab);
+
+/* ═══════════════════════════════════════════════════════
    TOAST
 ═══════════════════════════════════════════════════════ */
 function showToast(msg,type){
@@ -1529,6 +1721,7 @@ function renderAll(){
   if(!loaded) return;
   renderManage();
   renderAllTab();
+  renderHistoryTab();
   renderUploadEmpSummary();
   renderUploadTable();
   renderSyncBar();
