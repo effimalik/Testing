@@ -1,11 +1,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
-<script src="https://effimalik.github.io/Testing/shared/auth.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/cacheWatcher.js?v=1"></script>
 <script src="https://effimalik.github.io/Testing/shared/code.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/dataLayer.js"></script>
-<script src="https://effimalik.github.io/Testing/shared/devPre.js"></script>
 <script src="https://effimalik.github.io/Testing/shared/cioView.js"></script>
 
 <style>
@@ -78,46 +76,54 @@
   --shadow:0 1px 3px rgba(0,0,0,.45);--shadow-md:0 4px 16px rgba(0,0,0,.5);--shadow-lg:0 8px 32px rgba(0,0,0,.6);
 }
 
+*,*::before,*::after{box-sizing:border-box;}
+html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-adjust:100%;}
 #accP *,#accP *::before,#accP *::after{box-sizing:border-box;margin:0;padding:0;}
 #accP{font-family:var(--font);color:var(--text);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;background:var(--bg);height:100%;display:flex;flex-direction:column;}
 #accP ::-webkit-scrollbar{width:5px;height:5px;}
 #accP ::-webkit-scrollbar-track{background:transparent;}
 #accP ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
 
 /* ═══ LAYOUT ═══ */
 #accP .portal-wrap{display:flex;flex-direction:column;flex:1;min-height:0;width:100%;max-width:1600px;margin:0 auto;padding:10px;gap:8px;}
 
-/* ═══ VIEW BAR ═══ */
+/* ═══ VIEW BAR — brand · pill tabs · info/sync popover · add button ═══ */
 #accP .view-bar{position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);}
-#accP .vb-brand{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:var(--radius-lg);background:var(--accent-dim);color:var(--accent);border:1px solid var(--border);font-size:16px;}
-#accP .vb-title{font-weight:700;font-size:13.5px;white-space:nowrap;}
+#accP .vb-brand{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:var(--radius-lg);background:var(--bg3);color:var(--text2);border:1px solid var(--border);font-size:16px;}
+#accP .vb-flex-spacer{flex:1 1 auto;}
 #accP .vb-sep{width:1px;height:20px;background:var(--border);flex-shrink:0;}
 #accP .ib{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:var(--radius-lg);background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:15px;line-height:1;cursor:pointer;transition:color .15s,border-color .15s,background .15s;}
 #accP .ib:hover{border-color:var(--accent);color:var(--accent);}
-#accP .ib.sm{width:26px;height:26px;font-size:13px;border-radius:var(--radius);}
+#accP .ib.sm{width:26px;height:26px;font-size:13px;}
 #accP .ib:disabled{opacity:.4;cursor:not-allowed;}
+#accP .ib-primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 10px var(--accent-glow);}
+#accP .ib-primary:hover{filter:brightness(1.1);border-color:var(--accent);color:#fff;}
 
-/* tabs */
-#accP .tab-nav{display:flex;gap:3px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:3px;}
-#accP .tab-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 14px;border-radius:var(--radius);border:none;background:transparent;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;white-space:nowrap;}
-#accP .tab-btn i{font-size:14px;}
-#accP .tab-btn.active{background:var(--accent);color:#fff;box-shadow:0 0 10px var(--accent-glow);}
+/* pill tabs */
+#accP .tab-nav{display:flex;align-items:center;gap:4px;}
+#accP .vb-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+#accP .tab-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:9px;border-radius:999px;border:none;background:transparent;color:var(--text2);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;transition:all .18s;white-space:nowrap;}
+#accP .tab-btn i{font-size:16px;}
 #accP .tab-btn:not(.active):hover{background:var(--surface2);color:var(--text);}
-#accP .tab-btn span.sub{display:block;font-size:8.5px;font-weight:500;opacity:.8;text-transform:uppercase;letter-spacing:.04em;}
-@media(max-width:700px){#accP .tab-btn span.sub{display:none;}}
+#accP .tab-btn.active{padding:9px 14px 9px 12px;background:var(--accent);color:#fff;box-shadow:0 0 12px var(--accent-glow);}
+#accP .tab-btn .tlabel{display:none;}
+#accP .tab-btn.active .tlabel{display:inline;}
+#accP .tab-count{display:none;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:rgba(255,255,255,.28);color:#fff;font-size:10.5px;font-weight:800;}
+#accP .tab-btn.active .tab-count{display:inline-flex;}
+@media(max-width:700px){#accP .tab-btn.active{padding:9px 12px;}}
 
-#cache-status{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;cursor:default;border-radius:var(--radius-lg);background:var(--bg3);border:1px solid var(--border);color:var(--text2);transition:color .2s,border-color .2s;margin-left:auto;}
-#cache-status i{font-size:15px;line-height:1;}
-#cache-status i.spin{animation:spin 1s linear infinite;}
+/* info / sync popover (replaces the old sync-strip bar) */
+#accP .sync-wrap{position:relative;}
+#accP .sync-popover{display:none;position:absolute;top:calc(100% + 8px);right:0;width:270px;background:var(--surface2);border:1.5px solid var(--border2);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:12px;z-index:400;font-size:11.5px;color:var(--text2);}
+#accP .sync-popover.open{display:block;}
+#accP .sync-popover-row{margin-bottom:10px;line-height:1.6;}
+#accP .sync-popover-row strong{color:var(--text);}
+#accP .spin{animation:spin 1s linear infinite;display:inline-block;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
-/* sync strip */
-#accP .sync-strip{flex:0 0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:7px 13px;font-size:11.5px;color:var(--text2);box-shadow:var(--shadow);}
-#accP .sync-strip .dot{width:8px;height:8px;border-radius:50%;background:var(--text3);flex:none;}
-#accP .sync-strip.live .dot{background:var(--teal);box-shadow:0 0 0 3px var(--teal-dim);}
-#accP .sync-strip strong{color:var(--text);}
-#accP .sync-strip .spacer{flex:1;}
-#accP .sync-strip button.btn-ghost{padding:5px 10px;font-size:11px;}
 
 /* ═══ FIELD / FORM ═══ */
 #accP .field{display:flex;flex-direction:column;gap:5px;}
@@ -170,18 +176,64 @@
 #accP .manage-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;color:var(--text3);gap:10px;text-align:center;padding:40px;}
 #accP .manage-placeholder i{font-size:36px;opacity:.3;}
 #accP .manage-body{display:none;flex-direction:column;gap:10px;flex:1;min-height:0;}
-#accP .manage-emp-head{display:flex;align-items:center;gap:10px;}
-#accP .manage-emp-head .ca{width:38px;height:38px;font-size:13px;}
-#accP .manage-emp-head .nm{font-weight:700;font-size:14.5px;}
-#accP .manage-emp-head .id{font-family:var(--mono);font-size:11px;color:var(--text3);}
-#accP .manage-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;flex:1;min-height:0;align-items:start;}
-@media(max-width:980px){#accP .manage-cols{grid-template-columns:1fr;}}
-#accP .manage-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:12px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px;}
-#accP .manage-col-head{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);}
-#accP .manage-col-head .dot{width:8px;height:8px;border-radius:50%;}
-#accP .manage-col-head.wps .dot{background:var(--amber);}
-#accP .manage-col-head.salary .dot{background:var(--teal);}
-#accP .manage-col-head.other .dot{background:var(--purple);}
+/* ═══ MANAGE MAIN-SPLIT: sidebar / center / preview (matches shared module structure) ═══ */
+#accP .main-split{flex:1;display:flex;gap:10px;min-height:0;}
+
+#accP .doc-center{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;}
+#accP .doc-center-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;flex-shrink:0;}
+#accP .doc-center-header h3{flex:1;min-width:0;font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#accP .doc-center-header h3 i{color:var(--accent);font-size:17px;flex-shrink:0;}
+#accP .dch-count{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--bg3);color:var(--text2);font-size:10.5px;font-weight:800;flex-shrink:0;}
+#accP .doc-center-body{flex:1;overflow-y:auto;padding:14px 16px;}
+
+/* MANAGE — one main toolbar (search + add) above three per-type divs, side by side as columns */
+#accP .manage-toolbar{position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;padding:8px 12px;background:var(--bg2);border-radius:var(--radius-xl);box-shadow:var(--shadow);}
+#accP .manage-toolbar-count{font-size:11.5px;color:var(--text3);font-weight:600;white-space:nowrap;}
+
+#accP .manage-types{flex:1;min-width:0;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+#accP .manage-types .doc-center{min-height:0;}
+#accP .manage-types .doc-center-body{max-height:none;}
+@media(max-width:1000px){
+  #accP .manage-types{grid-template-columns:1fr;grid-auto-rows:minmax(220px,auto);overflow-y:auto;}
+}
+#accP .doc-center-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:160px;color:var(--text3);gap:10px;text-align:center;padding:24px;}
+#accP .doc-center-placeholder i{font-size:30px;opacity:.3;}
+#accP .doc-center-placeholder span{font-size:12px;}
+
+/* account cards inside each type column — same card language as the Salik batch cards */
+#accP .hist-list{display:flex;flex-direction:column;gap:10px;}
+#accP .hist-rec{display:flex;gap:12px;align-items:flex-start;padding:13px 15px;background:var(--bg3);border-radius:var(--radius-lg);transition:background .12s,box-shadow .12s;cursor:pointer;}
+#accP .hist-rec:hover{background:var(--surface2);}
+#accP .hist-rec.active{background:var(--accent-dim);box-shadow:0 0 0 1px var(--accent);}
+#accP .hist-icon{width:38px;height:38px;border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px;}
+#accP .hist-meta{flex:1;min-width:0;}
+#accP .hist-row1{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+#accP .hist-accno{font-family:var(--mono);font-weight:700;font-size:13.5px;color:var(--text);word-break:break-all;}
+#accP .hist-date{font-size:11px;color:var(--text2);margin-top:6px;display:flex;align-items:center;gap:4px;}
+#accP .hist-detail{font-family:var(--mono);font-weight:700;font-size:12.5px;color:var(--purple);margin-top:6px;}
+#accP .hist-side{margin-left:auto;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:5px;}
+#accP .hist-side .upd{font-size:9.5px;color:var(--text3);white-space:nowrap;}
+
+#accP .doc-preview-panel{width:0;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow);overflow:hidden;transition:width .26s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;}
+#accP .doc-preview-panel.open{width:340px;}
+#accP .pph{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:9px;flex-shrink:0;}
+#accP .pph h3{font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#accP .pph h3 i{color:var(--accent);font-size:16px;flex-shrink:0;}
+#accP .pph-close{margin-left:auto;width:26px;height:26px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s;flex-shrink:0;}
+#accP .pph-close:hover{background:var(--red-dim);color:var(--red);border-color:var(--red);}
+#accP .ppb{flex:1;overflow-y:auto;padding:14px;}
+#accP .preview-meta{display:flex;flex-direction:column;gap:8px;margin-top:12px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);}
+#accP .pmi{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+#accP .pmi .k{font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;}
+#accP .pmi .v{font-size:11.5px;font-weight:600;color:var(--text);font-family:var(--mono);text-align:right;}
+#accP .ppf{padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;display:flex;gap:7px;flex-wrap:wrap;}
+
+@media(max-width:900px){
+  #accP .doc-preview-panel.open{width:100%;position:fixed;inset:0;z-index:300;border-radius:0;}
+}
+@media(max-width:700px){
+  #accP .main-split{flex-direction:column;}
+}
 
 #accP .acc-empty{font-size:11.5px;color:var(--text3);text-align:center;padding:14px 6px;}
 #accP .acc-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 11px;display:flex;flex-direction:column;gap:5px;}
@@ -212,6 +264,7 @@
 #accP .btn-block{width:100%;justify-content:center;}
 
 #accP .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:9.5px;font-weight:700;letter-spacing:.03em;white-space:nowrap;}
+#accP .badge i{margin-right:2px;font-size:9px;}
 #accP .badge.active{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(57,211,83,.3);}
 #accP .badge.inactive{background:var(--bg3);color:var(--text3);border:1px solid var(--border);}
 #accP .badge.expired{background:var(--red-dim);color:var(--red);border:1px solid rgba(248,81,73,.3);}
@@ -265,88 +318,95 @@
 #accP .toast.error{background:var(--red-dim);color:var(--red);border-color:rgba(248,81,73,.25);}
 
 @media(max-width:700px){
-  #accP .vb-title{display:none;}
   #accP .portal-wrap{padding:8px;gap:7px;}
   #accP .filters>div{min-width:120px;}
 }
+
+/* ═══ MODAL — the "select category" window opened by the manage-toolbar + button ═══ */
+#accP .modal-back{position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;padding:14px;background:rgba(0,0,0,.55);}
+#accP .modal-back.show{display:flex;}
+#accP .modal{width:min(340px,100%);display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);overflow:hidden;}
+#accP .modal-head{display:flex;align-items:center;gap:9px;padding:12px 14px;border-bottom:1px solid var(--border);}
+#accP .modal-head h3{flex:1;font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:7px;}
+#accP .modal-head h3 i{color:var(--accent);font-size:17px;}
+#accP .modal-body{display:flex;flex-direction:column;gap:8px;padding:14px;}
+#accP .cat-choice{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--radius-lg);border:1.5px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;text-align:left;}
+#accP .cat-choice i{font-size:19px;color:var(--accent);flex-shrink:0;}
+#accP .cat-choice:hover{border-color:var(--accent);background:var(--accent-dim);color:var(--accent);}
 </style>
 
 <div id="accP">
   <div class="view-bar">
     <div class="vb-brand" title="Account Portal"><i class="ti ti-building-bank"></i></div>
-    <span class="vb-title">Account Portal</span>
-    <span class="vb-sep"></span>
     <div class="tab-nav">
-      <button class="tab-btn active" id="tab-manage-btn" onclick="switchPortalTab('manage')"><i class="ti ti-users"></i><span>Manage<span class="sub">accounts</span></span></button>
-      <button class="tab-btn" id="tab-all-btn" onclick="switchPortalTab('all')"><i class="ti ti-list-details"></i><span>All Accounts<span class="sub">filter & export</span></span></button>
-      <button class="tab-btn" id="tab-upload-btn" onclick="switchPortalTab('upload')"><i class="ti ti-file-upload"></i><span>Upload<span class="sub">sheet & export</span></span></button>
+      <button class="tab-btn active" id="tab-manage-btn" title="Manage accounts" onclick="switchPortalTab('manage')"><i class="ti ti-users"></i><span class="tlabel">Manage</span><span class="tab-count" id="tab-manage-count">0</span></button>
+      <button class="tab-btn" id="tab-all-btn" title="All Accounts" onclick="switchPortalTab('all')"><i class="ti ti-list-details"></i><span class="tlabel">All Accounts</span><span class="tab-count" id="tab-all-count">0</span></button>
+      <button class="tab-btn" id="tab-upload-btn" title="Upload & export" onclick="switchPortalTab('upload')"><i class="ti ti-file-upload"></i><span class="tlabel">Upload</span><span class="tab-count" id="tab-upload-count">0</span></button>
     </div>
-    <div id="cache-status" title="Loading cache…"><i class="ti ti-loader spin"></i></div>
+    <span class="vb-flex-spacer"></span>
+    <div class="sync-wrap">
+      <button class="ib" id="cache-status" type="button" title="Sync status" onclick="toggleSyncPopover()"><i class="ti ti-loader spin"></i></button>
+      <div class="sync-popover" id="sync-popover">
+        <div class="sync-popover-row" id="sync-label">Checking cache…</div>
+        <button class="btn btn-ghost btn-sm btn-block" id="sync-refresh">Refresh</button>
+      </div>
+    </div>
   </div>
 
   <div class="portal-wrap">
 
-    <div class="sync-strip none" id="syncbar">
-      <span class="dot"></span>
-      <span id="sync-label"><strong>ap2_accLog</strong> — checking cache…</span>
-      <span class="spacer"></span>
-      <button class="btn btn-ghost" id="sync-refresh">Refresh</button>
-    </div>
-
     <!-- ══════════════ MANAGE ══════════════ -->
     <div class="tab-panel active" id="tab-manage">
-      <div class="panel" style="flex:0 0 auto;">
-        <h2><i class="ti ti-search"></i>Find an employee</h2>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <div class="sdw vb-search" id="manage-sdw" style="flex:0 0 auto;">
-            <button class="ib" type="button" title="Search" onclick="openSearch('manage-sdw')"><i class="ti ti-search"></i></button>
-            <input id="manage-search" type="text" placeholder="Search by EID or name…" autocomplete="off"
-              oninput="filterDrop('manage',this.value)"
-              onfocus="filterDrop('manage',this.value)"
-              onkeydown="if(event.key==='Escape')this.blur()"
-              onblur="setTimeout(()=>{if(document.activeElement===this)return;closeDrop('manage');},160)"/>
-            <button class="clr-btn" type="button" tabindex="-1" onclick="document.getElementById('manage-search').value='';openSearch('manage-sdw')"><i class="ti ti-x"></i></button>
-            <div class="dropdown-list" id="manage-dropdown"></div>
-          </div>
-          <div id="manage-confirm" class="confirm-strip">
-            <div class="ca" id="manage-avatar"></div>
-            <div>
-              <div class="cn" id="manage-confirm-name">—</div>
-              <div class="cs" id="manage-confirm-id">—</div>
-            </div>
-            <button class="ib sm" type="button" onclick="clearManage()" title="Change"><i class="ti ti-replace"></i></button>
-          </div>
-        </div>
-      </div>
-
       <div class="manage-placeholder" id="manage-placeholder">
         <i class="ti ti-user-search"></i>
         <span>Search and select an employee above to view and manage their WPS, Salary and Other accounts.</span>
       </div>
 
       <div class="manage-body" id="manage-body">
-        <div class="panel" style="flex:0 0 auto;">
-          <div class="manage-emp-head">
-            <div class="ca"></div>
-            <div>
-              <div class="nm" id="manage-emp-name">—</div>
-              <div class="id" id="manage-emp-eid">—</div>
+        <div class="manage-toolbar" id="manage-toolbar">
+          <div class="vb-group" id="selector-manage">
+            <div class="sdw vb-search" id="manage-sdw" style="flex:0 0 auto;">
+              <button class="ib" type="button" title="Search" onclick="openSearch('manage-sdw')"><i class="ti ti-search"></i></button>
+              <input id="manage-search" type="text" placeholder="Search by EID or name…" autocomplete="off"
+                oninput="filterDrop('manage',this.value)"
+                onfocus="filterDrop('manage',this.value)"
+                onkeydown="if(event.key==='Escape')this.blur()"
+                onblur="setTimeout(()=>{if(document.activeElement===this)return;closeDrop('manage');},160)"/>
+              <button class="clr-btn" type="button" tabindex="-1" onclick="document.getElementById('manage-search').value='';openSearch('manage-sdw')"><i class="ti ti-x"></i></button>
+              <div class="dropdown-list" id="manage-dropdown"></div>
+            </div>
+            <div id="manage-confirm" class="confirm-strip">
+              <div class="ca" id="manage-avatar"></div>
+              <div>
+                <div class="cn" id="manage-confirm-name">—</div>
+                <div class="cs" id="manage-confirm-id">—</div>
+              </div>
+              <button class="ib sm" type="button" onclick="clearManage()" title="Change"><i class="ti ti-replace"></i></button>
             </div>
           </div>
+          <span class="vb-flex-spacer"></span>
+          <span class="manage-toolbar-count" id="manage-toolbar-count"></span>
+          <button class="ib ib-primary" id="manage-add-btn" type="button" title="Add account" onclick="openCategoryPicker()"><i class="ti ti-plus"></i></button>
         </div>
-        <div class="manage-cols tab-scroll">
-          <div class="manage-col">
-            <div class="manage-col-head wps"><span class="dot"></span>WPS</div>
-            <div id="manage-col-WPS"></div>
+        <div class="main-split" style="flex:1;min-height:0;">
+          <div class="manage-types" id="manage-types"></div>
+          <div class="doc-preview-panel" id="manage-preview-panel">
+            <div class="pph"><h3><i class="ti ti-file-invoice"></i><span id="manage-preview-title">Account</span></h3><button class="pph-close" onclick="closeManagePreview()"><i class="ti ti-x"></i></button></div>
+            <div class="ppb" id="manage-preview-body"></div>
           </div>
-          <div class="manage-col">
-            <div class="manage-col-head salary"><span class="dot"></span>Salary</div>
-            <div id="manage-col-Salary"></div>
-          </div>
-          <div class="manage-col">
-            <div class="manage-col-head other"><span class="dot"></span>Other</div>
-            <div id="manage-col-Other"></div>
-          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- + button opens this window to pick which account type to add -->
+    <div class="modal-back" id="catPickBack">
+      <div class="modal">
+        <div class="modal-head"><h3><i class="ti ti-folder-plus"></i> Add account</h3><button class="pph-close" onclick="closeCategoryPicker()"><i class="ti ti-x"></i></button></div>
+        <div class="modal-body">
+          <div class="panel-hint" style="margin:0 0 2px;">Choose a category</div>
+          <button type="button" class="cat-choice" onclick="pickAddCategory('WPS')"><i class="ti ti-briefcase"></i> WPS</button>
+          <button type="button" class="cat-choice" onclick="pickAddCategory('Salary')"><i class="ti ti-cash"></i> Salary</button>
+          <button type="button" class="cat-choice" onclick="pickAddCategory('Other')"><i class="ti ti-dots-circle-horizontal"></i> Other</button>
         </div>
       </div>
     </div>
@@ -551,8 +611,9 @@ let cacheReady = false, empCacheReady = false;
 
 let activePortalTab = 'manage';
 let manageEid = null, manageName = '';
-let manageAddOpen = {};     // { WPS:true, Salary:false, Other:false }
-let editingAccountId = null;
+let selectedAccountId = null;   // row shown read-only in the preview panel
+let manageAddOpen = null;       // holds the account-type label (WPS/Salary/Other) when its add-form is open in the preview panel
+let editingAccountId = null;    // edit-form shown in the preview panel
 
 function uid(){ return 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function esc(s){ return (s??'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -607,7 +668,7 @@ function statusOf(acc){
 function isLive(acc){ return statusOf(acc)==='active'; }
 function statusBadgeHtml(s){
   const map = {
-    active:'<span class="badge active">ACTIVE</span>',
+    active:'<span class="badge active"><i class="ti ti-check"></i>ACTIVE</span>',
     inactive:'<span class="badge inactive">INACTIVE</span>',
     expired:'<span class="badge expired">EXPIRED</span>',
     upcoming:'<span class="badge upcoming">UPCOMING</span>'
@@ -645,6 +706,7 @@ function deleteAccount(id){
   if(!confirm('Delete this account permanently? This cannot be undone.')) return;
   ACCOUNTS = ACCOUNTS.filter(a=>a.id!==id);
   editingAccountId = null;
+  if(selectedAccountId === id) selectedAccountId = null;
   saveAccounts().then(()=>{ renderManage(); renderAllTab(); showToast('Account deleted','success'); });
 }
 
@@ -735,17 +797,33 @@ async function saveBatchSheet(){ try{ await window.storage.set('ap2acc-batchshee
    SYNC BAR + CACHE LOAD
 ═══════════════════════════════════════════════════════ */
 function renderSyncBar(){
-  const bar = document.getElementById('syncbar');
   const label = document.getElementById('sync-label');
   const cacheIcon = document.getElementById('cache-status');
   const anyLive = cacheReady || empCacheReady;
-  bar.classList.toggle('live', anyLive);
   const accPart = cacheReady ? `<strong>ap2_accLog</strong> live (${AUTO_ACCOUNTS.length})` : `<strong>ap2_accLog</strong> not connected`;
   const empPart = empCacheReady ? `<strong>ap2_employee</strong> live (${AUTO_EMPLOYEES.length})` : `<strong>ap2_employee</strong> not connected (${EMPLOYEES.length} manual)`;
-  label.innerHTML = `${accPart} &nbsp;·&nbsp; ${empPart} &nbsp;·&nbsp; ${ACCOUNTS.length} manual account(s)`;
+  label.innerHTML = `${accPart}<br>${empPart}<br>${ACCOUNTS.length} manual account(s)`;
   cacheIcon.innerHTML = anyLive ? '<i class="ti ti-plug-connected"></i>' : '<i class="ti ti-plug-connected-x"></i>';
   cacheIcon.title = anyLive ? 'Live cache connected' : 'Cache not connected — using manual/local data';
+  renderTabCounts();
 }
+function renderTabCounts(){
+  document.getElementById('tab-manage-count').textContent = manageEid ? accountsForEid(manageEid).length : 0;
+  document.getElementById('tab-all-count').textContent = allAccounts().length;
+  document.getElementById('tab-upload-count').textContent = BATCH_SHEET.length;
+}
+function toggleSyncPopover(){
+  document.getElementById('sync-popover').classList.toggle('open');
+}
+document.addEventListener('click', e=>{
+  const wrap = document.querySelector('#accP .sync-wrap');
+  if(wrap && !wrap.contains(e.target)) document.getElementById('sync-popover').classList.remove('open');
+});
+document.getElementById('catPickBack').addEventListener('click', e=>{ if(e.target.id === 'catPickBack') closeCategoryPicker(); });
+document.addEventListener('keydown', e=>{
+  if(e.key !== 'Escape') return;
+  closeCategoryPicker();
+});
 document.getElementById('sync-refresh').addEventListener('click', async ()=>{ await tryApplyCache(); await tryApplyEmpCache(); renderAll(); });
 
 async function tryApplyCache(){
@@ -876,6 +954,10 @@ document.getElementById('manage-dropdown').addEventListener('mousedown', e=>{
   const item = e.target.closest('[data-eid]');
   if(item) selectManageEmployee(item.dataset.eid);
 });
+document.getElementById('manage-types').addEventListener('click', e=>{
+  const row = e.target.closest('[data-acc-id]');
+  if(row) selectAccount(row.dataset.accId);
+});
 
 function selectManageEmployee(eid){
   manageEid = eid;
@@ -886,7 +968,8 @@ function selectManageEmployee(eid){
   document.getElementById('manage-confirm-name').textContent = manageName || '(name unknown)';
   document.getElementById('manage-confirm-id').textContent = eid;
   document.getElementById('manage-avatar').textContent = initialsFor(manageName, eid);
-  manageAddOpen = {};
+  selectedAccountId = null;
+  manageAddOpen = null;
   editingAccountId = null;
   renderManage();
 }
@@ -915,7 +998,7 @@ function accountFormHtml(mode, label, acc){
   const startDate = acc ? (acc.startDate||'') : '';
   const expDate = acc ? (acc.expDate||'') : '';
   const submitCall = mode==='add' ? `submitAdd('${label}')` : `submitEdit('${acc.id}')`;
-  const cancelCall = mode==='add' ? `closeAddForm('${label}')` : `closeEditForm()`;
+  const cancelCall = mode==='add' ? `closeAddForm()` : `closeEditForm()`;
   return `
   <div class="acc-form" id="${idp}">
     <div class="field"><label>Account No <span class="req">*</span></label><input type="text" id="${idp}-accno" class="date-input" value="${accountNo}" placeholder="e.g. AE070331234567890123456"></div>
@@ -949,32 +1032,105 @@ function accountFormHtml(mode, label, acc){
     </div>
   </div>`;
 }
-function accountCardHtml(acc){
+function accountRowHtml(acc){
   const st = statusOf(acc);
   const isAuto = acc.source === 'auto';
-  if(editingAccountId === acc.id) return accountFormHtml('edit', acc.label, acc);
-  return `<div class="acc-card">
-    <div class="acc-card-top">
-      <span class="acc-cell">${esc(acc.accountNo)}</span>
-      <div class="acc-card-badges">
-        ${acc.isPrimary ? '<span class="badge primary">PRIMARY</span>' : '<span class="badge secondary">SECONDARY</span>'}
+  const activeCls = selectedAccountId === acc.id ? ' active' : '';
+  const expText = acc.hasExpiry ? (esc(acc.startDate||'—') + ' \u2192 ' + esc(acc.expDate||'—')) : 'No expiry';
+  return `<div class="hist-rec${activeCls}" data-acc-id="${acc.id}">
+    <div class="hist-icon" style="background:var(--accent-dim);color:var(--accent);"><i class="ti ti-credit-card"></i></div>
+    <div class="hist-meta">
+      <div class="hist-row1">
+        <span class="hist-accno">${esc(acc.accountNo)}</span>
         ${statusBadgeHtml(st)}
-        ${isAuto ? '<span class="badge auto-badge">SYNCED</span>' : ''}
       </div>
+      <div class="hist-date"><i class="ti ti-calendar-event"></i> ${expText}</div>
+      ${acc.addDetail ? `<div class="hist-detail">${esc(acc.addDetail)}</div>` : ''}
     </div>
-    <div class="acc-card-detail">${esc(acc.addDetail || '—')}</div>
-    <div class="acc-card-validity">${acc.hasExpiry ? esc(acc.startDate||'—') + ' → ' + esc(acc.expDate||'—') : 'No expiry'}</div>
-    <div class="acc-card-actions">
-      ${!isAuto ? `<button class="ib sm" title="${acc.isPrimary?'Already primary':'Set as primary'}" ${acc.isPrimary?'disabled':''} onclick="setPrimary('${acc.id}')"><i class="ti ti-star"></i></button>` : ''}
-      ${!isAuto ? `<button class="ib sm" title="${acc.active?'Deactivate':'Activate'}" onclick="toggleActive('${acc.id}')"><i class="ti ${acc.active?'ti-toggle-right':'ti-toggle-left'}"></i></button>` : ''}
-      ${!isAuto ? `<button class="ib sm" title="Update" onclick="openEditForm('${acc.id}')"><i class="ti ti-pencil"></i></button>` : `<span class="hint-note">Synced from ap2_accLog — add a manual account below to override</span>`}
+    <div class="hist-side">
+      ${acc.isPrimary ? '<span class="badge primary">PRIMARY</span>' : '<span class="badge secondary">SECONDARY</span>'}
+      ${isAuto ? '<span class="badge auto-badge">SYNCED</span>' : `<span class="upd">Upd ${esc(fmtTs(acc.updatedAt))}</span>`}
     </div>
   </div>`;
 }
-function openAddForm(label){ manageAddOpen[label] = true; editingAccountId = null; renderManage(); }
-function closeAddForm(label){ manageAddOpen[label] = false; renderManage(); }
-function openEditForm(id){ editingAccountId = id; manageAddOpen = {}; renderManage(); }
-function closeEditForm(){ editingAccountId = null; renderManage(); }
+function accountPreviewHtml(acc){
+  const st = statusOf(acc);
+  const isAuto = acc.source === 'auto';
+  return `
+    <div class="acc-card-badges" style="margin-bottom:10px;">
+      ${acc.isPrimary ? '<span class="badge primary">PRIMARY</span>' : '<span class="badge secondary">SECONDARY</span>'}
+      ${statusBadgeHtml(st)}
+      ${isAuto ? '<span class="badge auto-badge">SYNCED</span>' : ''}
+    </div>
+    <div class="acc-cell" style="font-size:14px;">${esc(acc.accountNo)}</div>
+    <div class="preview-meta">
+      <div class="pmi"><span class="k">Type</span><span class="v">${esc(acc.label)}</span></div>
+      <div class="pmi"><span class="k">Add Detail</span><span class="v">${esc(acc.addDetail || '—')}</span></div>
+      <div class="pmi"><span class="k">Validity</span><span class="v">${acc.hasExpiry ? esc(acc.startDate||'—') + ' → ' + esc(acc.expDate||'—') : 'No expiry'}</span></div>
+      <div class="pmi"><span class="k">Updated</span><span class="v">${esc(fmtTs(acc.updatedAt))}</span></div>
+      <div class="pmi"><span class="k">Source</span><span class="v">${isAuto ? 'Synced' : 'Manual'}</span></div>
+    </div>
+    ${!isAuto ? `<div class="ppf" style="padding:14px 0 0;border-top:none;">
+      <button class="btn btn-ghost btn-sm" title="${acc.isPrimary?'Already primary':'Set as primary'}" ${acc.isPrimary?'disabled':''} onclick="setPrimary('${acc.id}')"><i class="ti ti-star"></i> Primary</button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleActive('${acc.id}')"><i class="ti ${acc.active?'ti-toggle-right':'ti-toggle-left'}"></i> ${acc.active?'Deactivate':'Activate'}</button>
+      <button class="btn btn-ghost btn-sm" onclick="openEditForm('${acc.id}')"><i class="ti ti-pencil"></i> Edit</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red);" onclick="deleteAccount('${acc.id}')"><i class="ti ti-trash"></i></button>
+    </div>` : `<div class="hint-note" style="margin-top:10px;">Synced from ap2_accLog — add a manual account to override.</div>`}
+  `;
+}
+function openAddForm(label){ manageAddOpen = label; editingAccountId = null; selectedAccountId = null; renderManagePreview(); }
+function closeAddForm(){ manageAddOpen = null; renderManagePreview(); }
+function openEditForm(id){ editingAccountId = id; manageAddOpen = null; renderManagePreview(); }
+function closeEditForm(){ editingAccountId = null; renderManagePreview(); }
+function selectAccount(id){ selectedAccountId = id; editingAccountId = null; manageAddOpen = null; renderManagePreview(); renderManageTypes(); }
+function closeManagePreview(){ selectedAccountId = null; editingAccountId = null; manageAddOpen = null; renderManagePreview(); renderManageTypes(); }
+
+function filteredAccsForLabel(label){
+  return accountsForEidLabel(manageEid, label).slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+}
+function typeCenterBodyHtml(label){
+  if(!manageEid){
+    return `<div class="doc-center-placeholder"><i class="ti ti-user-search"></i><span>Select an employee above to view ${esc(label)} accounts.</span></div>`;
+  }
+  const accs = filteredAccsForLabel(label);
+  return accs.length
+    ? `<div class="hist-list">${accs.map(accountRowHtml).join('')}</div>`
+    : `<div class="doc-center-placeholder"><i class="ti ti-credit-card-off"></i><span>No ${esc(label)} accounts yet.</span></div>`;
+}
+function refreshTypeBody(label){
+  const body = document.querySelector(`.doc-center-body[data-body-for="${label}"]`);
+  if(body) body.innerHTML = typeCenterBodyHtml(label);
+}
+function updateManageToolbarCount(){
+  const el = document.getElementById('manage-toolbar-count');
+  if(!el) return;
+  if(!manageEid){ el.textContent = ''; return; }
+  const n = accountsForEid(manageEid).length;
+  el.textContent = n + (n===1 ? ' account' : ' accounts');
+}
+
+/* ---- + button: opens a window to pick a category (WPS / Salary / Other) first ---- */
+function openCategoryPicker(){
+  if(!manageEid){ showToast('Select an employee first','error'); return; }
+  document.getElementById('catPickBack').classList.add('show');
+}
+function closeCategoryPicker(){ document.getElementById('catPickBack').classList.remove('show'); }
+function pickAddCategory(label){ closeCategoryPicker(); openAddForm(label); }
+
+function manageTypeSectionHtml(label){
+  const iconFor = { WPS:'ti-briefcase', Salary:'ti-cash', Other:'ti-dots-circle-horizontal' };
+  const count = accountsForEidLabel(manageEid, label).length;
+  return `
+  <div class="doc-center" data-label="${label}">
+    <div class="doc-center-header">
+      <h3><i class="ti ${iconFor[label]||'ti-dots'}"></i><span>${label} accounts</span><span class="dch-count">${count}</span></h3>
+    </div>
+    <div class="doc-center-body" data-body-for="${label}">${typeCenterBodyHtml(label)}</div>
+  </div>`;
+}
+function renderManageTypes(){
+  document.getElementById('manage-types').innerHTML = LABELS.map(manageTypeSectionHtml).join('');
+}
 
 function readFormValues(idp){
   const accountNo = document.getElementById(idp+'-accno').value.trim();
@@ -998,7 +1154,8 @@ function submitAdd(label){
   };
   ACCOUNTS.push(acc);
   applyPrimaryFlag(acc, v.primary);
-  manageAddOpen[label] = false;
+  manageAddOpen = null;
+  selectedAccountId = acc.id;
   saveAccounts().then(()=>{ renderManage(); renderAllTab(); showToast(`${label} account added`,'success'); });
 }
 function submitEdit(id){
@@ -1012,27 +1169,50 @@ function submitEdit(id){
   acc.updatedAt = Date.now();
   applyPrimaryFlag(acc, v.primary);
   editingAccountId = null;
+  selectedAccountId = id;
   saveAccounts().then(()=>{ renderManage(); renderAllTab(); showToast('Saved','success'); });
 }
 
 function renderManage(){
-  const placeholder = document.getElementById('manage-placeholder');
-  const body = document.getElementById('manage-body');
-  if(!manageEid){ placeholder.style.display = 'flex'; body.style.display = 'none'; return; }
-  placeholder.style.display = 'none'; body.style.display = 'flex';
-  document.getElementById('manage-emp-name').textContent = manageName || '(name unknown)';
-  document.getElementById('manage-emp-eid').textContent = manageEid;
-  const avatarBox = document.querySelector('#manage-body .manage-emp-head .ca');
-  if(avatarBox) avatarBox.textContent = initialsFor(manageName, manageEid);
-  LABELS.forEach(label=>{
-    const col = document.getElementById('manage-col-'+label);
-    const accs = accountsForEidLabel(manageEid, label).slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
-    const cardsHtml = accs.map(accountCardHtml).join('') || `<div class="acc-empty">No ${label} accounts yet.</div>`;
-    const addHtml = manageAddOpen[label]
-      ? accountFormHtml('add', label, null)
-      : `<button class="acc-add-btn" onclick="openAddForm('${label}')"><i class="ti ti-plus"></i> Add ${label} account</button>`;
-    col.innerHTML = cardsHtml + addHtml;
-  });
+  // Manage opens by default — the three type columns are always visible,
+  // even before an employee is picked (each column shows its own empty state).
+  document.getElementById('manage-placeholder').style.display = 'none';
+  document.getElementById('manage-body').style.display = 'flex';
+  renderManageTypes();
+  renderManagePreview();
+  updateManageToolbarCount();
+  renderTabCounts();
+}
+function renderManagePreview(){
+  const panel = document.getElementById('manage-preview-panel');
+  const title = document.getElementById('manage-preview-title');
+  const body = document.getElementById('manage-preview-body');
+  if(manageAddOpen){
+    panel.classList.add('open');
+    title.textContent = 'Add ' + manageAddOpen + ' account';
+    body.innerHTML = accountFormHtml('add', manageAddOpen, null);
+    return;
+  }
+  if(editingAccountId){
+    const acc = allAccounts().find(a=>a.id===editingAccountId);
+    if(acc){
+      panel.classList.add('open');
+      title.textContent = 'Edit account';
+      body.innerHTML = accountFormHtml('edit', acc.label, acc);
+      return;
+    }
+  }
+  if(selectedAccountId){
+    const acc = allAccounts().find(a=>a.id===selectedAccountId);
+    if(acc){
+      panel.classList.add('open');
+      title.textContent = acc.label + ' account';
+      body.innerHTML = accountPreviewHtml(acc);
+      return;
+    }
+  }
+  panel.classList.remove('open');
+  body.innerHTML = '';
 }
 
 /* ═══════════════════════════════════════════════════════
