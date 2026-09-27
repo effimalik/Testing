@@ -608,6 +608,40 @@ let selectedAccountId = null;   // row shown read-only in the preview panel
 let manageAddOpen = null;       // holds the account-type label (WPS/Salary/Other) when its add-form is open in the preview panel
 let editingAccountId = null;    // edit-form shown in the preview panel
 
+/* ═══════════════════════════════════════════════════════
+   BACKEND WRITE BRIDGE
+   This iframe never holds a login form or the raw session token itself —
+   it asks the parent frame for one, the same way it already asks the
+   parent for cache data (see the 'ap-cache-request' messages above).
+   ASSUMPTION: the parent listens for 'ap-session-request' and replies
+   with { type:'ap-session-ready', sessionId, token, email }. If your
+   parent portal does something different, only getSession() below
+   needs to change — everything that calls apiPost() stays the same.
+═══════════════════════════════════════════════════════ */
+const APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycby4tIXdd3FJII9S3FBWFYvwz4X8in5fTDOUWfrJ_gg-KLvM6LXrW4bgknFb38FdOhD8/exec';
+let AP2_SESSION = null;
+window.addEventListener('message', (e)=>{
+  if(e.data && e.data.type === 'ap-session-ready'){
+    AP2_SESSION = { sessionId: e.data.sessionId, token: e.data.token, email: e.data.email };
+  }
+});
+try{ window.parent.postMessage({ type:'ap-session-request' }, '*'); }catch(e){}
+
+async function apiPost(action, payload){
+  const body = { action, payload };
+  if(AP2_SESSION){ body.sessionId = AP2_SESSION.sessionId; body.token = AP2_SESSION.token; }
+  const res = await fetch(APPSCRIPT_URL, {
+    method:'POST',
+    headers:{ 'Content-Type':'text/plain;charset=utf-8' }, // avoids a CORS preflight Apps Script can't answer
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+/** After a successful write, ask the parent to refetch ap2_accLog so AUTO_ACCOUNTS reflects it. */
+function requestAccLogRefresh(){
+  try{ window.parent.postMessage({ type:'ap-cache-request', key:_AP2_CACHE_KEY, force:true }, '*'); }catch(e){}
+}
+
 function uid(){ return 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function esc(s){ return (s??'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function normLabel(t){
@@ -681,26 +715,32 @@ function applyPrimaryFlag(acc, wantPrimary){
     acc.isPrimary = false;
   }
 }
-function setPrimary(id){
-  const acc = ACCOUNTS.find(a=>a.id===id);
-  if(!acc){ showToast('Synced accounts can\'t be edited here — add a manual account to override.','error'); return; }
-  applyPrimaryFlag(acc, true);
-  acc.updatedAt = Date.now();
-  saveAccounts().then(()=>{ renderManage(); renderAllTab(); showToast('Marked as primary','success'); });
+async function setPrimary(id){
+  const acc = allAccounts().find(a=>a.id===id);
+  if(!acc) return;
+  try{
+    const data = await apiPost('setAccLogStatus', { timestamp: acc.timestamp, rank:'Primary' });
+    if(!data.success){ showToast(data.error || 'Could not save', 'error'); return; }
+    requestAccLogRefresh();
+    showToast('Marked as primary','success');
+  }catch(e){ showToast('Could not save: ' + e.message, 'error'); }
 }
-function toggleActive(id){
-  const acc = ACCOUNTS.find(a=>a.id===id);
-  if(!acc){ showToast('Synced accounts can\'t be edited here — add a manual account to override.','error'); return; }
-  acc.active = !acc.active;
-  acc.updatedAt = Date.now();
-  saveAccounts().then(()=>{ renderManage(); renderAllTab(); showToast(acc.active?'Account activated':'Account deactivated','success'); });
+async function toggleActive(id){
+  const acc = allAccounts().find(a=>a.id===id);
+  if(!acc) return;
+  try{
+    const newStatus = acc.active ? 'Inactive' : 'Active';
+    const data = await apiPost('setAccLogStatus', { timestamp: acc.timestamp, status: newStatus });
+    if(!data.success){ showToast(data.error || 'Could not save', 'error'); return; }
+    requestAccLogRefresh();
+    showToast(acc.active?'Account deactivated':'Account activated','success');
+  }catch(e){ showToast('Could not save: ' + e.message, 'error'); }
 }
+/* No backend delete action — AccLog is an audit log, not a table you erase from.
+   Deactivating (above) is the supported way to retire an account; its full
+   history stays visible in the History panel. */
 function deleteAccount(id){
-  if(!confirm('Delete this account permanently? This cannot be undone.')) return;
-  ACCOUNTS = ACCOUNTS.filter(a=>a.id!==id);
-  editingAccountId = null;
-  if(selectedAccountId === id) selectedAccountId = null;
-  saveAccounts().then(()=>{ renderManage(); renderAllTab(); showToast('Account deleted','success'); });
+  showToast('Accounts can\'t be deleted — use Deactivate to retire one instead.','error');
 }
 
 /* Resolve the account to use for a given EID + account type:
@@ -722,25 +762,27 @@ function resolvePrimary(eid, label){
 /* ---- mapping legacy ap2_accLog cache rows into the account model ---- */
 function mapAutoAccountRow(row, idx, cacheTs){
   if(!Array.isArray(row) || row.length < 2) return null;
-  const [eid, accType, accountNo, addDetail, comment, startRaw, expRaw] = row;
+  // getAccountLog() now returns: [Timestamp, EID, AccType, AccountNo, AddDetail, Status, StartDate, ExpDate, Rank]
+  const [ts, eid, accType, accountNo, addDetail, status, startRaw, expRaw, rank] = row;
   if(!accountNo && accountNo !== 0) return null;
   if(!accType) return null;
   const sd = _parseDate(startRaw);
   const ed = _parseDate(expRaw);
-  const base = cacheTs || Date.now();
+  const tsNum = Number(ts) || (cacheTs || Date.now()) + idx;
   return {
-    id: 'auto_' + idx,
+    id: 'auto_' + tsNum,
+    timestamp: tsNum,             // the exact key updateAccLog/setAccLogStatus need back
     eid: (eid === undefined || eid === null) ? '' : String(eid),
     label: normLabel(accType),
     accountNo: String(accountNo),
     addDetail: (addDetail ?? '').toString().trim(),
-    isPrimary: false,
-    active: true,
+    isPrimary: String(rank || '').toLowerCase() === 'primary',
+    active: String(status || 'Active').toLowerCase() !== 'inactive',
     hasExpiry: !!(sd && ed),
     startDate: sd ? toISO(sd) : '',
     expDate: ed ? toISO(ed) : '',
-    createdAt: base + idx,
-    updatedAt: base + idx,
+    createdAt: tsNum,
+    updatedAt: tsNum,
     source: 'auto'
   };
 }
@@ -1148,36 +1190,41 @@ function readFormValues(idp){
   const expDate = hasExpiry ? document.getElementById(idp+'-exp').value : '';
   return { accountNo, addDetail, category, primary, active, hasExpiry, startDate, expDate };
 }
-function submitAdd(label){
+async function submitAdd(label){
   if(!manageEid){ showToast('Select an employee first','error'); return; }
   const idp = `af-${label}`;
   const v = readFormValues(idp);
   if(!v.accountNo){ showToast('Account number is required','error'); return; }
-  const acc = {
-    id: uid(), eid: manageEid, label, accountNo: v.accountNo, addDetail: v.addDetail,
-    isPrimary: false, active: v.active, hasExpiry: v.hasExpiry, startDate: v.startDate, expDate: v.expDate,
-    createdAt: Date.now(), updatedAt: Date.now(), source: 'manual'
-  };
-  ACCOUNTS.push(acc);
-  applyPrimaryFlag(acc, v.primary);
-  manageAddOpen = null;
-  selectedAccountId = acc.id;
-  saveAccounts().then(()=>{ renderManage(); renderAllTab(); showToast(`${label} account added`,'success'); });
+  try{
+    const data = await apiPost('addAccLog', {
+      eid: manageEid, accType: label, accountNo: v.accountNo, addDetail: v.addDetail,
+      status: v.active ? 'Active' : 'Inactive', startDate: v.startDate, expDate: v.expDate,
+      rank: v.primary ? 'Primary' : 'Secondary'
+    });
+    if(!data.success){ showToast(data.error || 'Could not save', 'error'); return; }
+    manageAddOpen = null;
+    requestAccLogRefresh();
+    showToast(`${label} account added`,'success');
+  }catch(e){ showToast('Could not save: ' + e.message, 'error'); }
 }
-function submitEdit(id){
-  const acc = ACCOUNTS.find(a=>a.id===id);
+async function submitEdit(id){
+  const acc = allAccounts().find(a=>a.id===id); // any account — synced or manual — not just ACCOUNTS
   if(!acc) return;
   const idp = `ef-${id}`;
   const v = readFormValues(idp);
   if(!v.accountNo){ showToast('Account number is required','error'); return; }
-  acc.accountNo = v.accountNo; acc.addDetail = v.addDetail; acc.active = v.active;
-  if(v.category) acc.label = v.category;
-  acc.hasExpiry = v.hasExpiry; acc.startDate = v.startDate; acc.expDate = v.expDate;
-  acc.updatedAt = Date.now();
-  applyPrimaryFlag(acc, v.primary);
-  editingAccountId = null;
-  selectedAccountId = id;
-  saveAccounts().then(()=>{ renderManage(); renderAllTab(); showToast('Saved','success'); });
+  try{
+    const data = await apiPost('updateAccLog', {
+      timestamp: acc.timestamp,
+      accType: v.category || acc.label, accountNo: v.accountNo, addDetail: v.addDetail,
+      status: v.active ? 'Active' : 'Inactive', startDate: v.startDate, expDate: v.expDate,
+      rank: v.primary ? 'Primary' : 'Secondary'
+    });
+    if(!data.success){ showToast(data.error || 'Could not save', 'error'); return; }
+    editingAccountId = null;
+    requestAccLogRefresh();
+    showToast('Saved','success');
+  }catch(e){ showToast('Could not save: ' + e.message, 'error'); }
 }
 
 function renderManage(){
