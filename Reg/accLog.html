@@ -418,6 +418,8 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
 #accP .rank-seg button.on{background:var(--accent);color:#fff;cursor:default;box-shadow:0 0 8px var(--accent-glow);}
 #accP .rank-seg button.on:hover{background:var(--accent);color:#fff;}
 #accP .rank-seg.busy{opacity:.55;pointer-events:none;}
+#accP .rank-badge{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 9px;border-radius:999px;font-size:9.5px;font-weight:700;letter-spacing:.03em;white-space:nowrap;}
+#accP .rank-badge i{font-size:11px;line-height:1;}
 #accP .rank-seg.lg button{height:28px;padding:0 13px;font-size:10.5px;}
 
 /* ═══ SEGMENTED CONTROL + VIEW-BAR BUTTONS (upload toolbar) ═══ */
@@ -1323,6 +1325,12 @@ function rankToggleHtml(acc, size){
   const btn = (rank, on, icon) => `<button type="button" class="${on?'on':''}" aria-pressed="${on}" ${on?'aria-disabled="true" tabindex="-1"':''} title="${on?'Current rank: '+rank:'Change to '+rank}" onclick="event.stopPropagation();${on?'':`setRank('${acc.id}','${rank}',this)`}"><i class="ti ${icon}"></i>${rank}</button>`;
   return `<div class="rank-seg ${size||''}" role="group" aria-label="Account rank">${btn('Primary',p,'ti-star-filled')}${btn('Secondary',!p,'ti-star')}</div>`;
 }
+/* Read-only rank indicator for the list rows: shows ONLY the current rank, no way to change it here.
+   Changing the rank happens in the preview panel (rankToggleHtml). */
+function rankBadgeHtml(acc){
+  const p = !!acc.isPrimary;
+  return `<span class="badge rank-badge ${p?'primary':'secondary'}" title="Current rank: ${p?'Primary':'Secondary'}"><i class="ti ${p?'ti-star-filled':'ti-star'}"></i>${p?'PRIMARY':'SECONDARY'}</span>`;
+}
 function accountRowHtml(acc){
   const st = statusOf(acc);
   const isAuto = acc.source === 'auto';
@@ -1339,7 +1347,7 @@ function accountRowHtml(acc){
       ${acc.addDetail ? `<div class="hist-detail">${esc(acc.addDetail)}</div>` : ''}
     </div>
     <div class="hist-side">
-      ${rankToggleHtml(acc)}
+      ${rankBadgeHtml(acc)}
       ${isAuto ? '<span class="badge auto-badge">SYNCED</span>' : `<span class="upd">Upd ${esc(fmtTs(acc.updatedAt))}</span>`}
     </div>
     <button class="ib sm" type="button" title="Edit account" onclick="openEditFromRow(event,'${acc.id}')"><i class="ti ti-pencil"></i></button>
