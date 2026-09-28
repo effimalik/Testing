@@ -162,7 +162,8 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
 #accP .di .dn em{color:var(--accent);font-style:normal;}
 #accP .di .ds{font-family:var(--mono);font-size:10.5px;color:var(--text3);}
 
-#accP .confirm-strip{display:none;align-items:center;gap:7px;background:var(--accent-dim);border:1px solid rgba(88,166,255,.25);border-radius:var(--radius-lg);padding:6px 10px;flex-shrink:0;flex-wrap:wrap;min-width:0;}
+#accP .vb-group{display:flex;align-items:center;flex-wrap:nowrap;gap:8px;min-width:0;}
+#accP .confirm-strip{display:none;flex-wrap:nowrap;align-items:center;gap:7px;background:var(--accent-dim);border:1px solid rgba(88,166,255,.25);border-radius:var(--radius-lg);padding:3px 4px 3px 8px;flex-shrink:1;min-width:0;}
 #accP .ca{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;flex-shrink:0;background:var(--accent);color:#fff;}
 #accP .cn{font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;}
 #accP .cs{font-size:10px;color:var(--text3);font-family:var(--mono);white-space:nowrap;}
@@ -388,7 +389,7 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
   #accP .view-bar{gap:8px;padding:8px max(10px,env(safe-area-inset-right)) 8px max(10px,env(safe-area-inset-left));padding-top:max(8px,env(safe-area-inset-top));}
 }
 @media(max-width:520px){
-  #accP .capsule{order:4;flex:1 1 100%;width:100%!important;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  #accP .vb-brand{display:none;}
   #accP .view-bar .manage-toolbar.vb-ctx{order:5;flex:1 1 100%;}
   #accP .vb-flex-spacer{flex:1;}
 }
@@ -408,6 +409,58 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
 #accP .cat-choice{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--radius-lg);border:1.5px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;text-align:left;}
 #accP .cat-choice i{font-size:19px;color:var(--accent);flex-shrink:0;}
 #accP .cat-choice:hover{border-color:var(--accent);background:var(--accent-dim);color:var(--accent);}
+
+/* ═══ PRIMARY / SECONDARY — two-way switch; the current rank is lit, the other one is the button to change it ═══ */
+#accP .rank-seg{display:inline-flex;padding:2px;gap:2px;background:var(--bg2);border:1px solid var(--border);border-radius:999px;flex-shrink:0;}
+#accP .rank-seg button{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 9px;border:none;border-radius:999px;background:transparent;color:var(--text2);font-family:var(--font);font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;}
+#accP .rank-seg button i{font-size:11px;line-height:1;}
+#accP .rank-seg button:hover{background:var(--surface2);color:var(--accent);}
+#accP .rank-seg button.on{background:var(--accent);color:#fff;cursor:default;box-shadow:0 0 8px var(--accent-glow);}
+#accP .rank-seg button.on:hover{background:var(--accent);color:#fff;}
+#accP .rank-seg.busy{opacity:.55;pointer-events:none;}
+#accP .rank-seg.lg button{height:28px;padding:0 13px;font-size:10.5px;}
+
+/* ═══ SEGMENTED CONTROL + VIEW-BAR BUTTONS (upload toolbar) ═══ */
+#accP .seg{display:inline-flex;align-items:center;gap:2px;padding:2px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);flex-shrink:0;}
+#accP .seg button{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:26px;min-width:30px;padding:0 10px;border:none;border-radius:calc(var(--radius-lg) - 3px);background:transparent;color:var(--text2);font-family:var(--font);font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;}
+#accP .seg button i{font-size:15px;line-height:1;}
+#accP .seg button:hover{background:var(--surface2);color:var(--text);}
+#accP .seg button.on{background:var(--accent);color:#fff;box-shadow:0 0 8px var(--accent-glow);}
+#accP .vb-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;min-width:32px;padding:0 12px;flex-shrink:0;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s,background .15s;}
+#accP .vb-btn i{font-size:16px;line-height:1;}
+#accP .vb-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+#accP .vb-btn.has-file{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+#accP .vb-btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 10px var(--accent-glow);}
+#accP .vb-btn-primary:hover:not(:disabled){filter:brightness(1.1);color:#fff;}
+#accP .vb-btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;}
+#accP .up-fname{font-family:var(--mono);font-size:11px;color:var(--text2);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#accP .up-fname:empty{display:none;}
+#accP .view-bar .vb-ctx #up-export{margin-left:auto;}
+#accP .vb-actions{margin-left:auto;}
+
+/* upload data view — fills the whole tab now that the upload panels live in the view-bar */
+#accP .up-panel{flex:1;min-height:0;display:flex;flex-direction:column;}
+#accP .up-panel .tablewrap{flex:1;min-height:0;}
+#accP .up-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
+#accP .up-head h2{margin:0;}
+#accP .up-head .stat-row{margin-left:auto;flex:0 0 auto;}
+
+/* ═══ SMALL SCREENS — icons only; only the data keeps its words ═══ */
+@media(max-width:700px){
+  #accP .capsule{width:fit-content!important;}
+  #accP .cap-btn.active{flex:0 0 auto;padding:0 9px;}
+  #accP .cap-btn.active .cap-txt{display:none;}
+  #accP .seg-txt,#accP .vb-txt,#accP .up-fname,#accP .manage-toolbar-count{display:none;}
+  #accP .seg button{padding:0;width:32px;}
+  #accP .vb-btn{padding:0;width:32px;}
+  #accP #manage-confirm-name{display:none;}
+  #accP .confirm-strip .cn{max-width:90px;}
+}
+@media(max-width:700px) and (pointer:coarse){
+  #accP .seg button{height:34px;width:38px;}
+  #accP .vb-btn{width:40px;height:40px;}
+}
+@media(pointer:coarse){#accP .vb-btn{height:40px;min-width:40px;}}
 </style>
 
 <div id="accP">
@@ -461,6 +514,26 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
         <button class="clr-btn" type="button" tabindex="-1" onclick="clearBarSearch('hist-search','hist-sdw')"><i class="ti ti-x"></i></button>
       </div>
     </div>
+    <!-- Upload controls: one shared set of buttons — the target picked on the left decides what Upload / Load / Template do -->
+    <div class="manage-toolbar vb-ctx" id="upload-toolbar" data-for="upload" style="display:none;">
+      <div class="seg" id="up-mode" role="group" aria-label="What are you uploading?">
+        <button type="button" class="on" data-mode="sheet" title="Sheet for this run" aria-label="Sheet for this run"><i class="ti ti-file-spreadsheet"></i><span class="seg-txt">Run sheet</span></button>
+        <button type="button" data-mode="emp" title="Employee master list" aria-label="Employee master list"><i class="ti ti-users"></i><span class="seg-txt">Master list</span></button>
+      </div>
+      <div class="seg" id="up-type" role="group" aria-label="Account type">
+        <button type="button" class="on" data-label="WPS" title="Account type: WPS" aria-label="WPS"><i class="ti ti-briefcase"></i><span class="seg-txt">WPS</span></button>
+        <button type="button" data-label="Salary" title="Account type: Salary" aria-label="Salary"><i class="ti ti-cash"></i><span class="seg-txt">Salary</span></button>
+        <button type="button" data-label="Other" title="Account type: Other" aria-label="Other"><i class="ti ti-dots-circle-horizontal"></i><span class="seg-txt">Other</span></button>
+      </div>
+      <span class="vb-sep"></span>
+      <input type="file" id="up-file" accept=".csv" hidden>
+      <button type="button" class="vb-btn" id="up-pick"><i class="ti ti-upload"></i><span class="vb-txt">Upload</span></button>
+      <span class="up-fname" id="up-fname"></span>
+      <button type="button" class="vb-btn vb-btn-primary" id="up-run" disabled><i class="ti ti-table-import"></i><span class="vb-txt">Load sheet</span></button>
+      <button type="button" class="vb-btn" id="up-tpl"><i class="ti ti-file-download"></i><span class="vb-txt">Template</span></button>
+      <button type="button" class="ib" id="up-clear"><i class="ti ti-trash"></i></button>
+      <button type="button" class="ib" id="up-export" title="Export resolved accounts" aria-label="Export resolved accounts"><i class="ti ti-download"></i></button>
+    </div>
     <span class="vb-flex-spacer" id="vb-spacer"></span>
     <div class="sync-wrap vb-actions">
       <button class="ib" id="cache-status" type="button" title="Information" aria-label="Information" aria-expanded="false" onclick="toggleSyncPopover()"><i class="ti ti-info-circle"></i></button>
@@ -513,51 +586,13 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
 
     <!-- ══════════════ UPLOAD & EXPORT ══════════════ -->
     <div class="tab-panel" id="tab-upload">
-      <div class="tab-scroll">
-        <div class="grid2">
-          <div class="panel">
-            <h2><i class="ti ti-users"></i>Employee master list</h2>
-            <p class="panel-hint">Columns exactly: <span style="font-family:var(--mono);">EmpID, Name</span>. Used to show names next to EIDs everywhere in this app.</p>
-            <div class="import-drop">
-              <input type="file" id="emp-csv-file" accept=".csv">
-              <div class="btn-row">
-                <button class="btn btn-primary btn-sm" id="emp-csv-import">Save employees</button>
-                <button class="btn btn-ghost btn-sm" id="emp-csv-template">Template</button>
-                <button class="btn btn-ghost btn-sm" id="emp-clear">Clear manual list</button>
-              </div>
-            </div>
-            <div id="emp-csv-error" class="error"></div>
-            <div id="emp-summary" class="panel-hint" style="margin-top:8px;margin-bottom:0;"></div>
-          </div>
-
-          <div class="panel">
-            <h2><i class="ti ti-file-spreadsheet"></i>Sheet for this run</h2>
-            <p class="panel-hint">Columns: <span style="font-family:var(--mono);">EmpID, Name</span> (extra columns are ignored). Pick the default account type to resolve below — you can override it per row.</p>
-            <div class="field" style="margin-bottom:10px;max-width:220px;">
-              <label>Default account type</label>
-              <select class="date-input" id="batch-default-label" onchange="renderUploadTable()">
-                <option value="WPS">WPS</option><option value="Salary">Salary</option><option value="Other">Other</option>
-              </select>
-            </div>
-            <div class="import-drop">
-              <input type="file" id="batch-csv-file" accept=".csv">
-              <div class="btn-row">
-                <button class="btn btn-primary btn-sm" id="batch-csv-load">Load sheet</button>
-                <button class="btn btn-ghost btn-sm" id="batch-csv-template">Template</button>
-                <button class="btn btn-ghost btn-sm" id="batch-clear">Clear</button>
-              </div>
-            </div>
-            <div id="batch-csv-error" class="error"></div>
-          </div>
+      <div class="panel up-panel">
+        <div class="up-head">
+          <h2 id="up-title"><i class="ti ti-file-spreadsheet"></i><span>Sheet for this run</span></h2>
+          <div class="stat-row" id="up-stats"></div>
         </div>
-
-        <div class="panel" style="flex:1;min-height:320px;display:flex;flex-direction:column;">
-          <div class="toolbar" style="margin-bottom:10px;">
-            <div class="stat-row" id="batch-stats"></div>
-            <button class="btn btn-ghost" id="batch-export"><i class="ti ti-download"></i> Export resolved accounts</button>
-          </div>
-          <div id="batch-table" class="tablewrap" style="flex:1;"></div>
-        </div>
+        <p class="panel-hint" id="up-hint" style="margin:0 0 8px;"></p>
+        <div id="up-table" class="tablewrap"></div>
       </div>
     </div>
 
@@ -863,16 +898,20 @@ function applyPrimaryFlag(acc, wantPrimary){
     acc.isPrimary = false;
   }
 }
-async function setPrimary(id){
+async function setRank(id, rank, btnEl){
   const acc = allAccounts().find(a=>a.id===id);
   if(!acc) return;
+  if(!!acc.isPrimary === (rank==='Primary')) return;   // already that rank — only the other side is clickable
+  const wrap = btnEl && btnEl.closest('.rank-seg');
+  if(wrap) wrap.classList.add('busy');
   try{
-    const data = await apiPost('setAccLogStatus', { timestamp: acc.timestamp, rank:'Primary' });
-    if(!data.success){ showToast(data.error || 'Could not save', 'error'); return; }
+    const data = await apiPost('setAccLogStatus', { timestamp: acc.timestamp, rank });
+    if(!data.success){ showToast(data.error || 'Could not save', 'error'); if(wrap) wrap.classList.remove('busy'); return; }
     requestAccLogRefresh();
-    showToast('Marked as primary','success');
-  }catch(e){ showToast('Could not save: ' + e.message, 'error'); }
+    showToast('Marked as ' + rank.toLowerCase(),'success');
+  }catch(e){ showToast('Could not save: ' + e.message, 'error'); if(wrap) wrap.classList.remove('busy'); }
 }
+function setPrimary(id){ return setRank(id,'Primary'); }
 async function toggleActive(id){
   const acc = allAccounts().find(a=>a.id===id);
   if(!acc) return;
@@ -1100,6 +1139,7 @@ function switchPortalTab(tab){
 function sizeCapsule(){
   const capsule=document.getElementById('capsule');
   if(!capsule) return;
+  if(window.matchMedia('(max-width:700px)').matches){ capsule.style.width=''; return; }
   const buttons=[...capsule.querySelectorAll('.cap-btn')];
   if(!buttons.length) return;
   const current=buttons.find(b=>b.classList.contains('active'))||buttons[0];
@@ -1277,6 +1317,12 @@ function accountFormHtml(mode, label, acc){
     </div>
   </div>`;
 }
+/* Primary | Secondary switch. The account's current rank is lit and does nothing; the other side is the button that changes it. */
+function rankToggleHtml(acc, size){
+  const p = !!acc.isPrimary;
+  const btn = (rank, on, icon) => `<button type="button" class="${on?'on':''}" aria-pressed="${on}" ${on?'aria-disabled="true" tabindex="-1"':''} title="${on?'Current rank: '+rank:'Change to '+rank}" onclick="event.stopPropagation();${on?'':`setRank('${acc.id}','${rank}',this)`}"><i class="ti ${icon}"></i>${rank}</button>`;
+  return `<div class="rank-seg ${size||''}" role="group" aria-label="Account rank">${btn('Primary',p,'ti-star-filled')}${btn('Secondary',!p,'ti-star')}</div>`;
+}
 function accountRowHtml(acc){
   const st = statusOf(acc);
   const isAuto = acc.source === 'auto';
@@ -1293,7 +1339,7 @@ function accountRowHtml(acc){
       ${acc.addDetail ? `<div class="hist-detail">${esc(acc.addDetail)}</div>` : ''}
     </div>
     <div class="hist-side">
-      ${acc.isPrimary ? '<span class="badge primary">PRIMARY</span>' : '<span class="badge secondary">SECONDARY</span>'}
+      ${rankToggleHtml(acc)}
       ${isAuto ? '<span class="badge auto-badge">SYNCED</span>' : `<span class="upd">Upd ${esc(fmtTs(acc.updatedAt))}</span>`}
     </div>
     <button class="ib sm" type="button" title="Edit account" onclick="openEditFromRow(event,'${acc.id}')"><i class="ti ti-pencil"></i></button>
@@ -1304,7 +1350,6 @@ function accountPreviewHtml(acc){
   const isAuto = acc.source === 'auto';
   return `
     <div class="acc-card-badges" style="margin-bottom:10px;">
-      ${acc.isPrimary ? '<span class="badge primary">PRIMARY</span>' : '<span class="badge secondary">SECONDARY</span>'}
       ${statusBadgeHtml(st)}
       ${isAuto ? '<span class="badge auto-badge">SYNCED</span>' : ''}
     </div>
@@ -1317,7 +1362,7 @@ function accountPreviewHtml(acc){
       <div class="pmi"><span class="k">Source</span><span class="v">${isAuto ? 'Synced' : 'Manual'}</span></div>
     </div>
     <div class="ppf" style="padding:14px 0 0;border-top:none;">
-      <button class="btn btn-ghost btn-sm" title="${acc.isPrimary?'Already primary':'Set as primary'}" ${acc.isPrimary?'disabled':''} onclick="setPrimary('${acc.id}')"><i class="ti ti-star"></i> Primary</button>
+      ${rankToggleHtml(acc,'lg')}
       <button class="btn btn-ghost btn-sm" onclick="toggleActive('${acc.id}')"><i class="ti ${acc.active?'ti-toggle-right':'ti-toggle-left'}"></i> ${acc.active?'Deactivate':'Activate'}</button>
       <button class="btn btn-ghost btn-sm" onclick="openEditForm('${acc.id}')"><i class="ti ti-pencil"></i> Edit</button>
       <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red);" onclick="deleteAccount('${acc.id}')"><i class="ti ti-trash"></i></button>
@@ -1572,82 +1617,134 @@ document.getElementById('all-export').addEventListener('click', ()=>{
 /* ═══════════════════════════════════════════════════════
    UPLOAD & EXPORT TAB
 ═══════════════════════════════════════════════════════ */
-document.getElementById('emp-csv-template').addEventListener('click', ()=>{
-  downloadCSV('ap2_employee-template.csv', ['EmpID','Name'], [['40231','Amir Farooq'],['40232','Sana Iqbal']]);
-});
-document.getElementById('emp-csv-import').addEventListener('click', async ()=>{
-  const fileInput = document.getElementById('emp-csv-file');
-  const errEl = document.getElementById('emp-csv-error');
-  errEl.textContent = '';
-  if(!fileInput.files.length){ errEl.textContent = 'Choose a CSV file first.'; return; }
-  const text = await fileInput.files[0].text();
-  let rows;
-  try{ rows = parseCSV(text); } catch(e){ errEl.textContent = 'Could not read that file as CSV.'; return; }
-  if(!rows.length){ errEl.textContent = 'No rows found in the file.'; return; }
-  let added = 0, updated = 0;
-  rows.forEach(row=>{
-    const empid = (row.empid||'').trim();
-    const name = (row.name||'').trim();
-    if(!empid) return;
-    const existing = EMPLOYEES.find(e=>e.empid===empid);
-    if(existing){ existing.name = name; updated++; } else { EMPLOYEES.push({ empid, name }); added++; }
-  });
-  await saveEmployees();
-  fileInput.value = '';
-  renderAll();
-  showToast(`Saved ${added} new, updated ${updated} existing employee(s).`,'success');
-});
-document.getElementById('emp-clear').addEventListener('click', async ()=>{
-  if(!confirm('Clear the manual employee list? The live ap2_employee cache (if connected) is unaffected.')) return;
-  EMPLOYEES = [];
-  await saveEmployees();
-  renderAll();
-});
-function renderUploadEmpSummary(){
-  document.getElementById('emp-summary').textContent = `${allEmployees().length} employee(s) known (${AUTO_EMPLOYEES.length} live, ${EMPLOYEES.length} manual).`;
-}
+const UP_MODES = {
+  sheet:{ title:'Sheet for this run', icon:'ti-file-spreadsheet',
+    hint:'Columns: EmpID, Name (extra columns are ignored). Pick the account type in the bar above to resolve — you can override it per row.',
+    uploadTip:'Upload the run sheet (CSV)', actionIcon:'ti-table-import', actionTxt:'Load sheet', actionTip:'Load the run sheet',
+    tplTip:'Download the run-sheet template', clearTip:'Clear the sheet' },
+  emp:{ title:'Employee master list', icon:'ti-users',
+    hint:'Columns exactly: EmpID, Name. Used to show names next to EIDs everywhere in this app.',
+    uploadTip:'Upload the employee master list (CSV)', actionIcon:'ti-device-floppy', actionTxt:'Save employees', actionTip:'Save the employee master list',
+    tplTip:'Download the employee-master template', clearTip:'Clear the manual employee list' }
+};
+let upMode = 'sheet', upType = 'WPS', upFile = null;
+function defaultLabel(){ return upType; }
 
-document.getElementById('batch-csv-template').addEventListener('click', ()=>{
-  downloadCSV('accounts-run-template.csv', ['EmpID','Name'], [['40231','Amir Farooq'],['40232','Sana Iqbal']]);
+function syncUploadBar(){
+  const m = UP_MODES[upMode];
+  document.querySelectorAll('#up-mode button').forEach(b=>b.classList.toggle('on', b.dataset.mode===upMode));
+  document.querySelectorAll('#up-type button').forEach(b=>b.classList.toggle('on', b.dataset.label===upType));
+  document.getElementById('up-type').style.display = upMode==='sheet' ? '' : 'none';
+  document.getElementById('up-export').style.display = upMode==='sheet' ? '' : 'none';
+  const pick = document.getElementById('up-pick'), run = document.getElementById('up-run');
+  pick.title = m.uploadTip; pick.setAttribute('aria-label', m.uploadTip);
+  pick.classList.toggle('has-file', !!upFile);
+  run.innerHTML = `<i class="ti ${m.actionIcon}"></i><span class="vb-txt">${m.actionTxt}</span>`;
+  run.title = m.actionTip; run.setAttribute('aria-label', m.actionTip);
+  run.disabled = !upFile;
+  const tpl = document.getElementById('up-tpl'); tpl.title = m.tplTip; tpl.setAttribute('aria-label', m.tplTip);
+  const clr = document.getElementById('up-clear'); clr.title = m.clearTip; clr.setAttribute('aria-label', m.clearTip);
+  document.getElementById('up-fname').textContent = upFile ? upFile.name : '';
+}
+function resetUpFile(){ upFile = null; document.getElementById('up-file').value = ''; syncUploadBar(); }
+
+document.getElementById('up-mode').addEventListener('click', e=>{
+  const b = e.target.closest('button[data-mode]'); if(!b || b.dataset.mode===upMode) return;
+  upMode = b.dataset.mode; resetUpFile(); renderUploadTable();
 });
-document.getElementById('batch-csv-load').addEventListener('click', async ()=>{
-  const fileInput = document.getElementById('batch-csv-file');
-  const errEl = document.getElementById('batch-csv-error');
-  errEl.textContent = '';
-  if(!fileInput.files.length){ errEl.textContent = 'Choose a CSV file first.'; return; }
-  const text = await fileInput.files[0].text();
+document.getElementById('up-type').addEventListener('click', e=>{
+  const b = e.target.closest('button[data-label]'); if(!b) return;
+  upType = b.dataset.label; syncUploadBar(); renderUploadTable();
+});
+document.getElementById('up-pick').addEventListener('click', ()=>document.getElementById('up-file').click());
+document.getElementById('up-file').addEventListener('change', e=>{
+  upFile = e.target.files.length ? e.target.files[0] : null; syncUploadBar();
+});
+
+document.getElementById('up-tpl').addEventListener('click', ()=>{
+  if(upMode==='emp') downloadCSV('ap2_employee-template.csv', ['EmpID','Name'], [['40231','Amir Farooq'],['40232','Sana Iqbal']]);
+  else downloadCSV('accounts-run-template.csv', ['EmpID','Name'], [['40231','Amir Farooq'],['40232','Sana Iqbal']]);
+});
+
+document.getElementById('up-run').addEventListener('click', async ()=>{
+  if(!upFile){ showToast('Choose a CSV file first — use the Upload button.','error'); return; }
   let rows;
-  try{ rows = parseCSV(text); } catch(e){ errEl.textContent = 'Could not read that file as CSV.'; return; }
-  if(!rows.length){ errEl.textContent = 'No rows found in the file.'; return; }
-  BATCH_SHEET = rows.map(row=>({ eid: (row.empid||row.eid||'').trim(), name: (row.name||'').trim() })).filter(r=>r.eid);
-  ROW_LABEL = {};
-  await saveBatchSheet();
-  fileInput.value = '';
-  renderUploadTable();
+  try{ rows = parseCSV(await upFile.text()); } catch(e){ showToast('Could not read that file as CSV.','error'); return; }
+  if(!rows.length){ showToast('No rows found in the file.','error'); return; }
+  if(upMode==='emp'){
+    let added = 0, updated = 0;
+    rows.forEach(row=>{
+      const empid = (row.empid||'').trim();
+      const name = (row.name||'').trim();
+      if(!empid) return;
+      const existing = EMPLOYEES.find(e=>e.empid===empid);
+      if(existing){ existing.name = name; updated++; } else { EMPLOYEES.push({ empid, name }); added++; }
+    });
+    await saveEmployees();
+    resetUpFile();
+    renderAll();
+    showToast(`Saved ${added} new, updated ${updated} existing employee(s).`,'success');
+  } else {
+    BATCH_SHEET = rows.map(row=>({ eid: (row.empid||row.eid||'').trim(), name: (row.name||'').trim() })).filter(r=>r.eid);
+    ROW_LABEL = {};
+    await saveBatchSheet();
+    resetUpFile();
+    renderAll();
+    showToast(`Loaded ${BATCH_SHEET.length} row(s).`,'success');
+  }
 });
-document.getElementById('batch-clear').addEventListener('click', async ()=>{
-  BATCH_SHEET = []; ROW_LABEL = {};
-  await saveBatchSheet();
-  renderUploadTable();
+
+document.getElementById('up-clear').addEventListener('click', async ()=>{
+  if(upMode==='emp'){
+    if(!confirm('Clear the manual employee list? The live ap2_employee cache (if connected) is unaffected.')) return;
+    EMPLOYEES = [];
+    await saveEmployees();
+  } else {
+    BATCH_SHEET = []; ROW_LABEL = {};
+    await saveBatchSheet();
+  }
+  renderAll();
 });
-document.getElementById('batch-table').addEventListener('change', e=>{
+
+document.getElementById('up-table').addEventListener('change', e=>{
   if(e.target.classList.contains('batch-label-select')){
     ROW_LABEL[e.target.dataset.eid] = e.target.value;
     renderUploadTable();
   }
 });
+
 function renderUploadTable(){
-  const statsEl = document.getElementById('batch-stats');
-  const el = document.getElementById('batch-table');
-  if(!BATCH_SHEET.length){
-    statsEl.innerHTML = '';
-    el.innerHTML = '<div class="empty">No sheet loaded yet — upload the employees for this run above.</div>';
+  syncUploadBar();
+  const m = UP_MODES[upMode];
+  document.getElementById('up-title').innerHTML = `<i class="ti ${m.icon}"></i><span>${m.title}</span>`;
+  document.getElementById('up-hint').textContent = m.hint;
+  const statsEl = document.getElementById('up-stats');
+  const el = document.getElementById('up-table');
+  const statHtml = arr => arr.map(([cls,l,n])=>`<div class="stat ${cls}"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+
+  /* ---- Employee master list view ---- */
+  if(upMode==='emp'){
+    const live = new Set(AUTO_EMPLOYEES.map(e=>e.empid));
+    const list = allEmployees().slice().sort((a,b)=>String(a.empid).localeCompare(String(b.empid),undefined,{numeric:true}));
+    statsEl.innerHTML = statHtml([['s-primary','Known', list.length],['s-active','Live', AUTO_EMPLOYEES.length],['s-amber','Manual', EMPLOYEES.length]]);
+    if(!list.length){ el.innerHTML = '<div class="empty">No employees yet — upload a master list, then press Save employees.</div>'; return; }
+    const MAX = 1000;
+    el.innerHTML = `<table><thead><tr><th>EID</th><th>Name</th><th>Source</th></tr></thead><tbody>${
+      list.slice(0,MAX).map(e=>`<tr><td class="acc-cell" style="font-size:11.5px;">${esc(e.empid)}</td><td>${esc(e.name||'—')}</td><td>${live.has(e.empid)?'<span class="badge auto-badge">SYNCED</span>':'<span class="badge secondary">MANUAL</span>'}</td></tr>`).join('')
+    }</tbody></table>${list.length>MAX?`<div class="empty">Showing the first ${MAX} of ${list.length}.</div>`:''}`;
     return;
   }
-  const defaultLabel = document.getElementById('batch-default-label').value || 'WPS';
+
+  /* ---- Sheet for this run view ---- */
+  if(!BATCH_SHEET.length){
+    statsEl.innerHTML = '';
+    el.innerHTML = '<div class="empty">No sheet loaded yet — press Upload, choose the CSV, then Load sheet.</div>';
+    return;
+  }
+  const defLabel = defaultLabel();
   let nOk=0, nMissing=0, nAmbig=0;
   const rowsHtml = BATCH_SHEET.map(({eid,name})=>{
-    const label = ROW_LABEL[eid] || defaultLabel;
+    const label = ROW_LABEL[eid] || defLabel;
     const opts = LABELS.map(l=>`<option value="${l}" ${l===label?'selected':''}>${l}</option>`).join('');
     const selectHtml = `<select class="date-input batch-label-select" data-eid="${esc(eid)}">${opts}</select>`;
     const result = resolvePrimary(eid, label);
@@ -1676,21 +1773,15 @@ function renderUploadTable(){
       <td style="font-family:var(--mono);font-size:11px;">${r.hasExpiry ? esc(r.startDate||'—')+' → '+esc(r.expDate||'—') : 'No expiry'}</td>
     </tr>`;
   }).join('');
-
-  statsEl.innerHTML = [
-    ['s-active','Resolved', nOk],
-    ['s-amber','Ambiguous', nAmbig],
-    ['s-inactive','Missing', nMissing],
-  ].map(([cls,l,n])=>`<div class="stat ${cls}"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
-
+  statsEl.innerHTML = statHtml([['s-active','Resolved', nOk],['s-amber','Ambiguous', nAmbig],['s-inactive','Missing', nMissing]]);
   el.innerHTML = `<table><thead><tr>
     <th>EID</th><th>Name</th><th>Type</th><th>Account No</th><th>Add Detail</th><th>Rank</th><th>Validity</th>
   </tr></thead><tbody>${rowsHtml}</tbody></table>`;
 }
-document.getElementById('batch-export').addEventListener('click', ()=>{
-  const defaultLabel = document.getElementById('batch-default-label').value || 'WPS';
+document.getElementById('up-export').addEventListener('click', ()=>{
+  const defLabel = defaultLabel();
   const rows = BATCH_SHEET.map(({eid,name})=>{
-    const label = ROW_LABEL[eid] || defaultLabel;
+    const label = ROW_LABEL[eid] || defLabel;
     const result = resolvePrimary(eid, label);
     const displayName = name || nameForEid(eid) || '';
     if(result.status !== 'ok') return null;
@@ -1844,7 +1935,6 @@ function renderAll(){
   renderManage();
   renderAllTab();
   renderHistoryTab();
-  renderUploadEmpSummary();
   renderUploadTable();
   renderSyncBar();
 }
