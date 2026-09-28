@@ -91,8 +91,8 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
 #accP .portal-wrap{display:flex;flex-direction:column;flex:1;min-height:0;width:100%;max-width:1600px;margin:0 auto;padding:10px;gap:8px;}
 
 /* ═══ VIEW BAR — brand · pill tabs · info/sync popover · add button ═══ */
-#accP .view-bar{position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);}
-#accP .vb-brand{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:var(--radius-lg);background:var(--bg3);color:var(--text2);border:1px solid var(--border);font-size:16px;}
+#accP .view-bar{position:relative;display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0;padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);}
+#accP .vb-brand{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:var(--radius-lg);background:var(--accent-dim);color:var(--accent);border:1px solid var(--border);font-size:16px;}
 #accP .vb-flex-spacer{flex:1 1 auto;}
 #accP .vb-sep{width:1px;height:20px;background:var(--border);flex-shrink:0;}
 #accP .ib{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border-radius:var(--radius-lg);background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:15px;line-height:1;cursor:pointer;transition:color .15s,border-color .15s,background .15s;}
@@ -102,25 +102,33 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
 #accP .ib-primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 10px var(--accent-glow);}
 #accP .ib-primary:hover{filter:brightness(1.1);border-color:var(--accent);color:#fff;}
 
-/* pill tabs */
-#accP .tab-nav{display:flex;align-items:center;gap:4px;}
-#accP .vb-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-#accP .tab-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:9px;border-radius:999px;border:none;background:transparent;color:var(--text2);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;transition:all .18s;white-space:nowrap;}
-#accP .tab-btn i{font-size:16px;}
-#accP .tab-btn:not(.active):hover{background:var(--surface2);color:var(--text);}
-#accP .tab-btn.active{padding:9px 14px 9px 12px;background:var(--accent);color:#fff;box-shadow:0 0 12px var(--accent-glow);}
-#accP .tab-btn .tlabel{display:none;}
-#accP .tab-btn.active .tlabel{display:inline;}
-#accP .tab-count{display:none;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:rgba(255,255,255,.28);color:#fff;font-size:10.5px;font-weight:800;}
-#accP .tab-btn.active .tab-count{display:inline-flex;}
-@media(max-width:700px){#accP .tab-btn.active{padding:9px 12px;}}
+/* ═══ MODULE CAPSULE — active module = icon + name, filling the available space; the others are icon-only ═══
+   the capsule's overall width is fixed by JS (sizeCapsule) to whichever single tab needs the most room
+   when active, plus the icon-only width of the rest — so it never changes size when switching tabs. */
+#accP .capsule{display:flex;align-items:center;gap:2px;padding:3px;background:var(--bg3);border:1px solid var(--border);border-radius:999px;width:fit-content;max-width:100%;flex-shrink:0;}
+#accP .cap-btn{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;height:30px;min-width:32px;padding:0 9px;border:none;border-radius:999px;background:transparent;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .18s,color .18s,flex-grow .18s,padding .18s;}
+#accP .cap-btn i{font-size:16px;line-height:1;flex-shrink:0;}
+#accP .cap-txt{display:none;align-items:center;gap:6px;margin-left:7px;}
+#accP .cap-btn.active{flex:1 1 auto;justify-content:center;padding:0 14px 0 11px;background:var(--accent);color:#fff;box-shadow:0 0 10px var(--accent-glow);}
+#accP .cap-btn.active .cap-txt{display:inline-flex;}
+#accP .cap-btn .count{font-family:var(--mono);font-weight:500;font-size:10.5px;border-radius:20px;padding:1px 7px;background:rgba(255,255,255,.25);}
+#accP .cap-btn:not(.active) .count{background:var(--surface2);color:var(--text2);}
+#accP .cap-btn:not(.active):hover{background:var(--surface2);color:var(--text);}
+#accP .cap-btn:focus-visible,#accP .ib:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+#accP .vb-actions{position:relative;display:flex;align-items:center;gap:8px;flex-shrink:0;}
 
 /* info / sync popover (replaces the old sync-strip bar) */
 #accP .sync-wrap{position:relative;}
-#accP .sync-popover{display:none;position:absolute;top:calc(100% + 8px);right:0;width:270px;background:var(--surface2);border:1.5px solid var(--border2);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:12px;z-index:400;font-size:11.5px;color:var(--text2);}
-#accP .sync-popover.open{display:block;}
-#accP .sync-popover-row{margin-bottom:10px;line-height:1.6;}
-#accP .sync-popover-row strong{color:var(--text);}
+#accP .sync-popover{display:none;position:absolute;top:calc(100% + 8px);right:0;width:min(340px,calc(100vw - 28px));flex-direction:column;gap:12px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:14px;z-index:400;}
+#accP .sync-popover.open{display:flex;}
+#accP .info-row{display:flex;flex-direction:column;gap:3px;}
+#accP .info-row .k{font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;}
+#accP .info-row .v{font-size:12px;color:var(--text2);word-break:break-word;}
+#accP .info-row .v.ok{color:var(--teal);}
+#accP .info-row .v.warn{color:var(--amber);}
+/* Information icon: no border, ever (still gets the accent color/background on hover/open) */
+#accP #cache-status{border:none;}
+#accP .ib[aria-expanded="true"]{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
 #accP .spin{animation:spin 1s linear infinite;display:inline-block;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
@@ -188,6 +196,22 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
 
 /* MANAGE — one main toolbar (search + add) above three per-type divs, side by side as columns */
 #accP .manage-toolbar{position:relative;display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;padding:8px 12px;background:var(--bg2);border-radius:var(--radius-xl);box-shadow:var(--shadow);}
+#accP .view-bar .manage-toolbar.vb-ctx{padding:0;background:none;box-shadow:none;border-radius:0;flex:1 1 0;min-width:0;gap:8px;}
+#accP .view-bar .vb-ctx #all-export{margin-left:auto;}
+#accP .vb-sel{width:auto;min-width:104px;max-width:150px;padding:6px 9px;height:32px;}
+/* filter = icon + select; on small screens only the icon shows (the select is invisible on top of it, so tapping still opens the picker) */
+#accP .fsel{position:relative;display:inline-flex;align-items:center;flex-shrink:0;}
+#accP .fsel>i{position:absolute;left:10px;font-size:15px;line-height:1;color:var(--text2);pointer-events:none;z-index:1;transition:color .15s;}
+#accP .fsel select.vb-sel{padding-left:31px;}
+#accP .fsel.active>i{color:var(--accent);}
+#accP .fsel.active select.vb-sel{border-color:var(--accent);}
+@media(max-width:700px){
+  #accP .fsel{width:32px;height:32px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);}
+  #accP .fsel>i{left:0;right:0;margin:auto;text-align:center;}
+  #accP .fsel select.vb-sel{position:absolute;inset:0;width:100%;min-width:0;max-width:none;height:100%;padding:0;opacity:0;cursor:pointer;}
+  #accP .fsel.active{border-color:var(--accent);background:var(--accent-dim);}
+}
+@media(max-width:700px) and (pointer:coarse){#accP .fsel{width:40px;height:40px;}}
 #accP .manage-toolbar-count{font-size:11.5px;color:var(--text3);font-weight:600;white-space:nowrap;}
 
 #accP .manage-types{flex:1;min-width:0;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
@@ -359,6 +383,20 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
   #accP .filters>div{min-width:120px;}
 }
 
+/* view-bar responsive — same behaviour as the Salik view-bar */
+@media(max-width:1280px){
+  #accP .view-bar{gap:8px;padding:8px max(10px,env(safe-area-inset-right)) 8px max(10px,env(safe-area-inset-left));padding-top:max(8px,env(safe-area-inset-top));}
+}
+@media(max-width:520px){
+  #accP .capsule{order:4;flex:1 1 100%;width:100%!important;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  #accP .view-bar .manage-toolbar.vb-ctx{order:5;flex:1 1 100%;}
+  #accP .vb-flex-spacer{flex:1;}
+}
+@media(pointer:coarse){
+  #accP .ib,#accP .vb-brand{width:40px;height:40px;}
+  #accP .cap-btn{height:36px;min-width:40px;}
+}
+
 /* ═══ MODAL — the "select category" window opened by the manage-toolbar + button ═══ */
 #accP .modal-back{position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;padding:14px;background:rgba(0,0,0,.55);}
 #accP .modal-back.show{display:flex;}
@@ -375,33 +413,14 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
 <div id="accP">
   <div class="view-bar">
     <div class="vb-brand" title="Account Portal"><i class="ti ti-building-bank"></i></div>
-    <div class="tab-nav">
-      <button class="tab-btn active" id="tab-manage-btn" title="Manage accounts" onclick="switchPortalTab('manage')"><i class="ti ti-users"></i><span class="tlabel">Manage</span><span class="tab-count" id="tab-manage-count">0</span></button>
-      <button class="tab-btn" id="tab-all-btn" title="All Accounts" onclick="switchPortalTab('all')"><i class="ti ti-list-details"></i><span class="tlabel">All Accounts</span><span class="tab-count" id="tab-all-count">0</span></button>
-      <button class="tab-btn" id="tab-history-btn" title="Account History" onclick="switchPortalTab('history')"><i class="ti ti-history"></i><span class="tlabel">History</span><span class="tab-count" id="tab-history-count">0</span></button>
-      <button class="tab-btn" id="tab-upload-btn" title="Upload & export" onclick="switchPortalTab('upload')"><i class="ti ti-file-upload"></i><span class="tlabel">Upload</span><span class="tab-count" id="tab-upload-count">0</span></button>
+    <div class="capsule" id="capsule" role="tablist" aria-label="Account modules">
+      <button type="button" class="cap-btn active" id="tab-manage-btn" data-tab="manage" role="tab" aria-selected="true" title="Manage accounts" aria-label="Manage" onclick="switchPortalTab('manage')"><i class="ti ti-users"></i><span class="cap-txt">Manage <span class="count" id="tab-manage-count">0</span></span></button>
+      <button type="button" class="cap-btn" id="tab-all-btn" data-tab="all" role="tab" aria-selected="false" title="All Accounts" aria-label="All Accounts" onclick="switchPortalTab('all')"><i class="ti ti-list-details"></i><span class="cap-txt">All Accounts <span class="count" id="tab-all-count">0</span></span></button>
+      <button type="button" class="cap-btn" id="tab-history-btn" data-tab="history" role="tab" aria-selected="false" title="Account History" aria-label="History" onclick="switchPortalTab('history')"><i class="ti ti-history"></i><span class="cap-txt">History <span class="count" id="tab-history-count">0</span></span></button>
+      <button type="button" class="cap-btn" id="tab-upload-btn" data-tab="upload" role="tab" aria-selected="false" title="Upload &amp; export" aria-label="Upload" onclick="switchPortalTab('upload')"><i class="ti ti-file-upload"></i><span class="cap-txt">Upload <span class="count" id="tab-upload-count">0</span></span></button>
     </div>
-    <span class="vb-flex-spacer"></span>
-    <div class="sync-wrap">
-      <button class="ib" id="cache-status" type="button" title="Sync status" onclick="toggleSyncPopover()"><i class="ti ti-loader spin"></i></button>
-      <div class="sync-popover" id="sync-popover">
-        <div class="sync-popover-row" id="sync-label">Checking cache…</div>
-        <button class="btn btn-ghost btn-sm btn-block" id="sync-refresh">Refresh</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="portal-wrap">
-
-    <!-- ══════════════ MANAGE ══════════════ -->
-    <div class="tab-panel active" id="tab-manage">
-      <div class="manage-placeholder" id="manage-placeholder">
-        <i class="ti ti-user-search"></i>
-        <span>Search and select an employee above to view and manage their WPS, Salary and Other accounts.</span>
-      </div>
-
-      <div class="manage-body" id="manage-body">
-        <div class="manage-toolbar" id="manage-toolbar">
+    <!-- Manage controls (moved from the Manage panel) -->
+    <div class="manage-toolbar vb-ctx" id="manage-toolbar" data-for="manage">
           <div class="vb-group" id="selector-manage">
             <div class="sdw vb-search" id="manage-sdw" style="flex:0 0 auto;">
               <button class="ib" type="button" title="Search" onclick="openSearch('manage-sdw')"><i class="ti ti-search"></i></button>
@@ -421,8 +440,50 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
           </div>
           <span class="vb-flex-spacer"></span>
           <span class="manage-toolbar-count" id="manage-toolbar-count"></span>
-          <button class="ib ib-primary" id="manage-add-btn" type="button" title="Add account" onclick="openCategoryPicker()"><i class="ti ti-plus"></i></button>
-        </div>
+    </div>
+    <!-- All Accounts filters (replaces the stat cards + filter row) -->
+    <div class="manage-toolbar vb-ctx" id="all-toolbar" data-for="all" style="display:none;">
+      <div class="fsel"><i class="ti ti-tag"></i><select class="date-input vb-sel" id="f2-label" title="Label" aria-label="Label"><option value="">All labels</option><option value="WPS">WPS</option><option value="Salary">Salary</option><option value="Other">Other</option></select></div>
+      <div class="fsel"><i class="ti ti-circle-check"></i><select class="date-input vb-sel" id="f2-status" title="Status" aria-label="Status"><option value="">All statuses</option><option value="active">Active</option><option value="frozen">Frozen</option><option value="inactive">Inactive</option><option value="expired">Expired</option><option value="upcoming">Upcoming</option></select></div>
+      <div class="fsel"><i class="ti ti-star"></i><select class="date-input vb-sel" id="f2-primary" title="Rank" aria-label="Rank"><option value="">All ranks</option><option value="primary">Primary only</option><option value="secondary">Secondary only</option></select></div>
+      <div class="sdw vb-search" id="f2-sdw" style="flex:0 0 auto;">
+        <button class="ib" type="button" title="Search" onclick="openSearch('f2-sdw')"><i class="ti ti-search"></i></button>
+        <input id="f2-search" type="text" placeholder="EID or name…" autocomplete="off" onkeydown="if(event.key==='Escape')this.blur()"/>
+        <button class="clr-btn" type="button" tabindex="-1" onclick="clearBarSearch('f2-search','f2-sdw')"><i class="ti ti-x"></i></button>
+      </div>
+      <button class="ib" id="all-export" type="button" title="Export CSV"><i class="ti ti-download"></i></button>
+    </div>
+    <!-- History search (moved from the History panel) -->
+    <div class="manage-toolbar vb-ctx" id="history-toolbar" data-for="history" style="display:none;">
+      <div class="sdw vb-search" id="hist-sdw" style="flex:0 0 auto;">
+        <button class="ib" type="button" title="Search" onclick="openSearch('hist-sdw')"><i class="ti ti-search"></i></button>
+        <input id="hist-search" type="text" placeholder="EID, name or account no…" autocomplete="off" onkeydown="if(event.key==='Escape')this.blur()"/>
+        <button class="clr-btn" type="button" tabindex="-1" onclick="clearBarSearch('hist-search','hist-sdw')"><i class="ti ti-x"></i></button>
+      </div>
+    </div>
+    <span class="vb-flex-spacer" id="vb-spacer"></span>
+    <div class="sync-wrap vb-actions">
+      <button class="ib" id="cache-status" type="button" title="Information" aria-label="Information" aria-expanded="false" onclick="toggleSyncPopover()"><i class="ti ti-info-circle"></i></button>
+      <div class="sync-popover" id="sync-popover" role="dialog" aria-label="Information">
+        <div class="info-row"><span class="k">Account log</span><span class="v" id="infoAcc">Checking…</span></div>
+        <div class="info-row"><span class="k">Employees</span><span class="v" id="infoEmp">Checking…</span></div>
+        <div class="info-row"><span class="k">Manual entries</span><span class="v" id="infoManual"></span></div>
+        <button class="btn btn-ghost btn-sm btn-block" id="sync-refresh">Refresh</button>
+      </div>
+      <button class="ib ib-primary" id="manage-add-btn" type="button" title="Add account" aria-label="Add account" onclick="openCategoryPicker()"><i class="ti ti-plus"></i></button>
+    </div>
+  </div>
+
+  <div class="portal-wrap">
+
+    <!-- ══════════════ MANAGE ══════════════ -->
+    <div class="tab-panel active" id="tab-manage">
+      <div class="manage-placeholder" id="manage-placeholder">
+        <i class="ti ti-user-search"></i>
+        <span>Search and select an employee above to view and manage their WPS, Salary and Other accounts.</span>
+      </div>
+
+      <div class="manage-body" id="manage-body">
         <div class="main-split" style="flex:1;min-height:0;">
           <div class="manage-types" id="manage-types"></div>
           <div class="doc-preview-panel" id="manage-preview-panel">
@@ -435,18 +496,6 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
 
     <!-- ══════════════ ALL ACCOUNTS ══════════════ -->
     <div class="tab-panel" id="tab-all">
-      <div class="panel" style="flex:0 0 auto;">
-        <div class="toolbar">
-          <div class="stat-row" id="all-stats"></div>
-          <button class="btn btn-ghost" id="all-export"><i class="ti ti-download"></i> Export CSV</button>
-        </div>
-        <div class="filters" style="margin-top:10px;">
-          <div><label>Label</label><select class="date-input" id="f2-label"><option value="">All</option><option value="WPS">WPS</option><option value="Salary">Salary</option><option value="Other">Other</option></select></div>
-          <div><label>Status</label><select class="date-input" id="f2-status"><option value="">All</option><option value="active">Active</option><option value="frozen">Frozen</option><option value="inactive">Inactive</option><option value="expired">Expired</option><option value="upcoming">Upcoming</option></select></div>
-          <div><label>Primary</label><select class="date-input" id="f2-primary"><option value="">All</option><option value="primary">Primary only</option><option value="secondary">Secondary only</option></select></div>
-          <div><label>Search</label><input class="date-input" id="f2-search" type="text" placeholder="EID or name…"></div>
-        </div>
-      </div>
       <div class="panel tab-scroll" style="flex:1;">
         <div id="all-table" class="tablewrap"></div>
       </div>
@@ -455,13 +504,7 @@ html,body{height:100%;margin:0;padding:0;background:var(--bg);-webkit-text-size-
     <!-- ══════════════ ACCOUNT HISTORY ══════════════ -->
     <div class="tab-panel" id="tab-history">
       <div class="panel" style="flex:0 0 auto;">
-        <div class="toolbar">
-          <div class="stat-row" id="history-stats"></div>
-        </div>
-        <div class="filters" style="margin-top:10px;">
-          <div style="flex:1;min-width:220px;"><label>Search</label><input class="date-input" id="hist-search" type="text" placeholder="EID, name or account no…"></div>
-        </div>
-        <p class="panel-hint" style="margin-top:8px;">Every recorded change is shown — nothing is filtered out. Each card is one account: when it was added, every AccType / Status / Rank change since, and its state right now. <span class="badge frozen" style="vertical-align:middle;">FROZEN</span> entries are muted and shown in smaller text to set them apart from live changes.</p>
+        <p class="panel-hint" style="margin:0;">Every recorded change is shown — nothing is filtered out. Each card is one account: when it was added, every AccType / Status / Rank change since, and its state right now. <span class="badge frozen" style="vertical-align:middle;">FROZEN</span> entries are muted and shown in smaller text to set them apart from live changes.</p>
       </div>
       <div class="panel tab-scroll" style="flex:1;">
         <div id="history-list"></div>
@@ -596,11 +639,49 @@ async function _readRawTs(key) {
     return (rec && rec.ts) ? rec.ts : 0;
   } catch (e) { return 0; }
 }
+// Timeout-protected fallback: readKey() only looks in the 'datasets' store. If this browser's copy of the
+// cache uses a differently-named store it keeps returning null, so scan every store for the key —
+// capped with a timeout so a stuck indexedDB.open() can never hang the caller.
+function scanAllStoresForKey(key){
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const req = indexedDB.open(_IDB_NAME_TS);
+    const timer = setTimeout(() => { if (settled) return; settled = true; reject(new Error('idb-scan-timeout')); }, 2000);
+    req.onerror = () => { if (settled) return; settled = true; clearTimeout(timer); reject(new Error('Could not open IndexedDB "' + _IDB_NAME_TS + '".')); };
+    req.onsuccess = (e) => {
+      if (settled) return;
+      settled = true; clearTimeout(timer);
+      const db = e.target.result;
+      const storeNames = Array.from(db.objectStoreNames);
+      if (storeNames.length === 0){ db.close(); reject(new Error('Database exists but has no object stores.')); return; }
+      let found = null, remaining = storeNames.length;
+      const tx = db.transaction(storeNames, 'readonly');
+      storeNames.forEach(storeName => {
+        const getReq = tx.objectStore(storeName).get(key);
+        getReq.onsuccess = () => {
+          if (getReq.result !== undefined && found === null) found = { store: storeName, value: getReq.result };
+          if (--remaining === 0){ db.close(); found ? resolve(found) : reject(new Error('No object store contained key "' + key + '". Checked: ' + storeNames.join(', '))); }
+        };
+        getReq.onerror = () => { if (--remaining === 0){ db.close(); found ? resolve(found) : reject(new Error('Error reading object stores.')); } };
+      });
+    };
+  });
+}
+function normalizeArr(val, key){
+  let arr = null;
+  if (Array.isArray(val)) arr = val;
+  else if (val && Array.isArray(val.data)) arr = val.data;
+  else if (val && val.value && Array.isArray(val.value.data)) arr = val.value.data;
+  if (!arr) throw new Error('Unrecognized ' + key + ' shape — expected an array of rows or {data:[...]}.');
+  return arr;
+}
+// throws when the key isn't available yet — callers show that in the info popover and retry
 async function _readCache(key) {
-  const data = await _readCache_bareArray(key);
-  if (!data || !Array.isArray(data) || !data.length) return null;
-  const ts = await _readRawTs(key);
-  return { ts: ts || Date.now(), data };
+  let raw = await AP2CacheWatcher.readKey(key);
+  if (!raw) raw = (await scanAllStoresForKey(key)).value;
+  const data = normalizeArr(raw, key);
+  const ts = (raw && !Array.isArray(raw) && raw.ts) || await _readRawTs(key) || Date.now();
+  return { ts, data };
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -864,6 +945,7 @@ function applyCacheData(payload){
   if(!Array.isArray(data)) return false;
   AUTO_ACCOUNTS = data.map((row,i)=>mapAutoAccountRow(row,i,ts)).filter(Boolean);
   cacheReady = true;
+  setSyncStatus('acc', 'ok', AUTO_ACCOUNTS.length + ' account entries');
   return true;
 }
 const _s = v => (v!==null && v!==undefined && v!=='') ? String(v).trim() : '';
@@ -885,6 +967,7 @@ function applyEmpCacheData(data){
   if(!fresh.length) return false;
   AUTO_EMPLOYEES = fresh;
   empCacheReady = true;
+  setSyncStatus('emp', 'ok', AUTO_EMPLOYEES.length + ' employees');
   return true;
 }
 
@@ -903,15 +986,21 @@ async function saveBatchSheet(){ try{ await window.storage.set('ap2acc-batchshee
 /* ═══════════════════════════════════════════════════════
    SYNC BAR + CACHE LOAD
 ═══════════════════════════════════════════════════════ */
+const SYNC = { acc:{ mode:'checking', info:'Checking…', busy:false, sub:false, timer:null }, emp:{ mode:'checking', info:'Checking…', busy:false, sub:false, timer:null } };
+function setSyncStatus(which, mode, info){
+  SYNC[which].mode = mode; SYNC[which].info = info || '';
+  updateInfoRows();
+}
+function updateInfoRows(){
+  [['acc','infoAcc'],['emp','infoEmp']].forEach(([k,id])=>{
+    const el = document.getElementById(id);
+    el.textContent = SYNC[k].info;
+    el.className = 'v ' + (SYNC[k].mode === 'ok' ? 'ok' : SYNC[k].mode === 'off' ? 'warn' : '');
+  });
+  document.getElementById('infoManual').textContent = ACCOUNTS.length + ' account(s) · ' + EMPLOYEES.length + ' employee(s)';
+}
 function renderSyncBar(){
-  const label = document.getElementById('sync-label');
-  const cacheIcon = document.getElementById('cache-status');
-  const anyLive = cacheReady || empCacheReady;
-  const accPart = cacheReady ? `<strong>ap2_accLog</strong> live (${AUTO_ACCOUNTS.length})` : `<strong>ap2_accLog</strong> not connected`;
-  const empPart = empCacheReady ? `<strong>ap2_employee</strong> live (${AUTO_EMPLOYEES.length})` : `<strong>ap2_employee</strong> not connected (${EMPLOYEES.length} manual)`;
-  label.innerHTML = `${accPart}<br>${empPart}<br>${ACCOUNTS.length} manual account(s)`;
-  cacheIcon.innerHTML = anyLive ? '<i class="ti ti-plug-connected"></i>' : '<i class="ti ti-plug-connected-x"></i>';
-  cacheIcon.title = anyLive ? 'Live cache connected' : 'Cache not connected — using manual/local data';
+  updateInfoRows();
   renderTabCounts();
 }
 function renderTabCounts(){
@@ -919,41 +1008,53 @@ function renderTabCounts(){
   document.getElementById('tab-all-count').textContent = allAccounts().length;
   document.getElementById('tab-upload-count').textContent = BATCH_SHEET.length;
 }
-function toggleSyncPopover(){
-  document.getElementById('sync-popover').classList.toggle('open');
+function toggleSyncPopover(force){
+  const pop = document.getElementById('sync-popover');
+  const show = force !== undefined ? force : !pop.classList.contains('open');
+  pop.classList.toggle('open', show);
+  document.getElementById('cache-status').setAttribute('aria-expanded', String(show));
 }
 document.addEventListener('click', e=>{
   const wrap = document.querySelector('#accP .sync-wrap');
-  if(wrap && !wrap.contains(e.target)) document.getElementById('sync-popover').classList.remove('open');
+  if(wrap && !wrap.contains(e.target)) toggleSyncPopover(false);
 });
-document.getElementById('sync-refresh').addEventListener('click', async ()=>{ await tryApplyCache(); await tryApplyEmpCache(); renderAll(); });
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape') toggleSyncPopover(false); });
+document.getElementById('sync-refresh').addEventListener('click', async ()=>{ await loadAccCache(); await loadEmpCache(); renderAll(); });
 
-async function tryApplyCache(){
-  try{ const rec = await _readCache(_AP2_CACHE_KEY); if(rec){ applyCacheData(rec); return true; } }
-  catch(e){ console.error('[accPortal] cache read error:', e); }
-  return false;
+// Same load method as salik: read (watcher -> store scan), subscribe for live updates,
+// and while the cache is missing show why in the info popover and retry every 5 s.
+async function loadCacheKey(which, key, apply, noun){
+  const S = SYNC[which];
+  if(S.busy) return;
+  S.busy = true;
+  clearTimeout(S.timer);
+  try{
+    const rec = await _readCache(key);
+    if(!apply(rec)) throw new Error('No ' + noun + ' rows found');
+    if(typeof AP2CacheWatcher.subscribe === 'function' && !S.sub){
+      S.sub = true;
+      AP2CacheWatcher.subscribe(k => { if(k === key) loadCacheKey(which, key, apply, noun).then(renderAll); });
+    }
+  }catch(err){
+    setSyncStatus(which, 'off', 'Not available yet \u2014 ' + err.message);
+    S.timer = setTimeout(() => loadCacheKey(which, key, apply, noun).then(renderAll), 5000);
+  }finally{ S.busy = false; }
 }
-async function tryApplyEmpCache(){
-  try{ const rec = await _readCache(_AP2_CACHE_KEY_EMP); if(rec && rec.data){ return applyEmpCacheData(rec.data); } }
-  catch(e){ console.error('[accPortal] ap2_employee cache read error:', e); }
-  return false;
-}
+function loadAccCache(){ return loadCacheKey('acc', _AP2_CACHE_KEY, applyCacheData, 'account'); }
+function loadEmpCache(){ return loadCacheKey('emp', _AP2_CACHE_KEY_EMP, applyEmpCacheData, 'employee'); }
 async function loadAllWithRetries(){
-  const gotAcc = await tryApplyCache();
-  const gotEmp = await tryApplyEmpCache();
-  if(gotAcc && gotEmp){ renderAll(); return; }
-  for(let attempt=0; attempt<6; attempt++){
-    await new Promise(r=>setTimeout(r, 300 + attempt*200));
-    if(!cacheReady) await tryApplyCache();
-    if(!empCacheReady) await tryApplyEmpCache();
-    if(cacheReady && empCacheReady){ renderAll(); return; }
-  }
+  await Promise.all([loadAccCache(), loadEmpCache()]);
   renderAll();
 }
-try{
-  AP2CacheWatcher.init();
-  AP2CacheWatcher.subscribe(async ()=>{ await tryApplyCache(); await tryApplyEmpCache(); renderAll(); });
-}catch(e){ console.warn('[accPortal] cacheWatcher wiring failed:', e.message); }
+/* re-check when the user comes back to this tab */
+function recheckCache(){
+  if(document.hidden) return;
+  if(SYNC.acc.mode !== 'ok') loadAccCache().then(renderAll);
+  if(SYNC.emp.mode !== 'ok') loadEmpCache().then(renderAll);
+}
+window.addEventListener('focus', recheckCache);
+document.addEventListener('visibilitychange', recheckCache);
+try{ AP2CacheWatcher.init(); }catch(e){ console.warn('[accPortal] cacheWatcher wiring failed:', e.message); }
 window.addEventListener('message', (e)=>{
   if(!e.data) return;
   if(e.data.type === 'ap-cache-preload' && e.data.datasets){
@@ -981,10 +1082,43 @@ try{
 ═══════════════════════════════════════════════════════ */
 function switchPortalTab(tab){
   document.querySelectorAll('#accP .tab-panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('#accP .tab-nav .tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#accP .cap-btn').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-selected','false');});
   document.getElementById('tab-'+tab).classList.add('active');
-  document.getElementById('tab-'+tab+'-btn').classList.add('active');
+  const _tb=document.getElementById('tab-'+tab+'-btn'); _tb.classList.add('active'); _tb.setAttribute('aria-selected','true');
   activePortalTab = tab;
+  let any=false;
+  document.querySelectorAll('#accP .vb-ctx').forEach(t=>{
+    const on = t.dataset.for===tab;
+    t.style.display = on ? 'flex' : 'none';
+    if(on) any=true;
+  });
+  const sp=document.getElementById('vb-spacer'); if(sp) sp.style.display = any ? 'none' : '';
+  const add=document.getElementById('manage-add-btn'); if(add) add.style.display = tab==='manage' ? '' : 'none';
+}
+/* capsule is pinned to a fixed width: whichever tab needs the most room when active (icon + label)
+   plus the icon-only width of the others, so it never resizes while switching tabs. */
+function sizeCapsule(){
+  const capsule=document.getElementById('capsule');
+  if(!capsule) return;
+  const buttons=[...capsule.querySelectorAll('.cap-btn')];
+  if(!buttons.length) return;
+  const current=buttons.find(b=>b.classList.contains('active'))||buttons[0];
+  capsule.style.width='auto';
+  let max=0;
+  buttons.forEach(btn=>{
+    buttons.forEach(b=>b.classList.toggle('active',b===btn));
+    max=Math.max(max,capsule.scrollWidth);
+  });
+  buttons.forEach(b=>b.classList.toggle('active',b===current));
+  capsule.style.width=max+'px';
+}
+window.addEventListener('resize',sizeCapsule);
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(sizeCapsule);
+setTimeout(()=>{ switchPortalTab(activePortalTab); sizeCapsule(); },0);
+function clearBarSearch(inputId,sdwId){
+  const i=document.getElementById(inputId);
+  i.value=''; i.dispatchEvent(new Event('input'));
+  openSearch(sdwId);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1356,7 +1490,15 @@ function renderManagePreview(){
    ALL ACCOUNTS TAB
 ═══════════════════════════════════════════════════════ */
 ['f2-label','f2-status','f2-primary'].forEach(id=>{
-  document.getElementById(id).addEventListener('change', renderAllTab);
+  const el = document.getElementById(id);
+  const base = el.getAttribute('aria-label');
+  const sync = ()=>{
+    const on = !!el.value;
+    el.parentElement.classList.toggle('active', on);
+    el.title = on ? base + ': ' + el.options[el.selectedIndex].text : base;
+  };
+  el.addEventListener('change', ()=>{ sync(); renderAllTab(); });
+  sync();
 });
 document.getElementById('f2-search').addEventListener('input', renderAllTab);
 document.getElementById('all-table').addEventListener('click', e=>{
@@ -1370,16 +1512,6 @@ function jumpToManage(eid){
 function renderAllTab(){
   const all = allAccounts();
   const statuses = all.map(statusOf);
-  document.getElementById('all-stats').innerHTML = [
-    ['s-active','Active', statuses.filter(s=>s==='active').length],
-    ['s-frozen','Frozen', statuses.filter(s=>s==='frozen').length],
-    ['s-inactive','Inactive', statuses.filter(s=>s==='inactive').length],
-    ['s-expired','Expired', statuses.filter(s=>s==='expired').length],
-    ['s-upcoming','Upcoming', statuses.filter(s=>s==='upcoming').length],
-    ['s-primary','Primary', all.filter(a=>a.isPrimary).length],
-  ].map(([cls,l,n])=>`<div class="stat ${cls}"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('')
-    + `<div class="stat"><div class="n">${all.length}</div><div class="l">Total</div></div>`;
-
   const labelF = document.getElementById('f2-label').value;
   const statusF = document.getElementById('f2-status').value;
   const primaryF = document.getElementById('f2-primary').value;
@@ -1683,16 +1815,6 @@ function renderHistoryTab(){
     const lb = b.entries[b.entries.length-1].updatedAt || 0;
     return lb - la;
   });
-
-  const totalEvents = groups.reduce((n,g)=>n+g.entries.length,0);
-  const frozenNow = groups.filter(g=>g.entries[g.entries.length-1].frozen).length;
-  const changedEver = groups.filter(g=>g.entries.length>1).length;
-  document.getElementById('history-stats').innerHTML = [
-    ['s-primary','Accounts', groups.length],
-    ['','Logged events', totalEvents],
-    ['s-active','Ever changed', changedEver],
-    ['s-frozen','Frozen now', frozenNow],
-  ].map(([cls,l,n])=>`<div class="stat ${cls}"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
 
   const el = document.getElementById('history-list');
   el.innerHTML = shown.length ? shown.map(historyCardHtml).join('') : '<div class="empty">No account history to show.</div>';
